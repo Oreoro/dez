@@ -171,10 +171,12 @@ Any explicit Workspaces command or focus cancels the pending automatic close.
 
 Dez renders no persistent Workspaces footer. Secondary destinations live behind
 one named **Workspaces Menu** in the overview: **Command Palette…**, **Open
-Recent Workspaces…**, Workspace activity and attention filters, **Workspaces
-Settings…**, and **Hide Workspaces**. Recovery notices open the global Recent
-Workspaces surface rather than relying on a hidden popover anchor. Official Zed
-retains its inherited footer.
+Recent Workspaces…**, conditional Search and Previous/Next Workspace routes,
+Workspace activity and attention filters, **Workspaces Settings…**, and **Hide
+Workspaces**. The navigation routes appear only when more than one searchable
+item or Workspace makes them useful. Recovery notices open the global Recent
+Workspaces surface rather than relying on a hidden popover anchor. Official
+Zed retains its inherited footer.
 
 Workspaces and the Main Work Area form one continuous window shell. Dez does not
 put a desktop-colored gutter or four-sided floating-card frame between them.

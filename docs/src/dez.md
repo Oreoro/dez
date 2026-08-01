@@ -1025,7 +1025,9 @@ collapses the Workspace's Sessions. **View → Navigate Workspaces** collects
 Workspace**, and **Next Workspace**. Search opens a closed navigator before
 focusing its native filter, and matches Workspace names as well as Sessions.
 The same actions use Workspace vocabulary in Command Palette and remain
-rebindable through **Keyboard & Vim**.
+rebindable through **Keyboard & Vim**. The Workspaces ellipsis menu mirrors
+Search and Previous/Next only when there is enough Workspace activity to make
+them useful, keeping the single-Workspace case compact.
 
 Workspaces intentionally omits the inherited Workspace Bar, centered Command
 Search row, and duplicate project/branch identity strip. Each Workspace row

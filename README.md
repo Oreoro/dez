@@ -112,7 +112,9 @@ Workspace's Sessions. **View → Navigate Workspaces** exposes Focus, Search,
 Previous, and Next routes without requiring the navigator to be open first.
 Search opens Workspaces when needed, focuses its native filter, and matches
 Workspace names alongside Sessions. The same actions remain discoverable and
-rebindable in Command Palette and Keyboard & Vim.
+rebindable in Command Palette and Keyboard & Vim. The Workspaces ellipsis menu
+mirrors Search and Previous/Next when the current inventory makes those actions
+useful; a one-Workspace, one-item window stays quiet.
 
 Inside an active Workspace, Home makes the **Start → Watch → Inspect → Verify**
 route concrete with four actions in order: **Open Terminal**, **Browse Running

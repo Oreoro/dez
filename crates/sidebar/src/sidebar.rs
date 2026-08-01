@@ -1292,6 +1292,18 @@ fn session_rail_menu_label(app_name: &str) -> &'static str {
     }
 }
 
+fn workspace_navigation_menu_actions_visible(
+    app_name: &str,
+    workspace_count: usize,
+    searchable_item_count: usize,
+) -> (bool, bool) {
+    if app_name == "Zed" {
+        (false, false)
+    } else {
+        (searchable_item_count > 1, workspace_count > 1)
+    }
+}
+
 fn session_empty_state_uses_icon_badge(app_name: &str) -> bool {
     app_name == "Zed"
 }
@@ -2602,6 +2614,22 @@ mod session_start_state_tests {
         );
         assert_eq!(session_rail_hide_label("Dez"), "Hide Workspaces");
         assert_eq!(session_rail_menu_label("Dez"), "Workspaces Menu");
+        assert_eq!(
+            workspace_navigation_menu_actions_visible("Dez", 1, 1),
+            (false, false)
+        );
+        assert_eq!(
+            workspace_navigation_menu_actions_visible("Dez", 1, 2),
+            (true, false)
+        );
+        assert_eq!(
+            workspace_navigation_menu_actions_visible("Dez", 2, 2),
+            (true, true)
+        );
+        assert_eq!(
+            workspace_navigation_menu_actions_visible("Zed", 3, 4),
+            (false, false)
+        );
         assert_eq!(session_rail_search_label("Zed"), "Search Sessions");
         assert_eq!(session_rail_search_placeholder("Zed"), "Search sessions…");
         assert_eq!(
@@ -18232,6 +18260,15 @@ impl Sidebar {
             "Show Only Attention"
         };
         let attention_filter_available = self.contents.attention_count > 0 || self.attention_only;
+        let workspace_count = self.contents.project_header_indices.len();
+        let searchable_item_count =
+            workspace_count + self.contents.session_count + self.contents.observed_terminal_count;
+        let (workspace_search_available, workspace_cycle_available) =
+            workspace_navigation_menu_actions_visible(
+                APP_NAME,
+                workspace_count,
+                searchable_item_count,
+            );
         let sidebar_can_hide = !SidebarSettings::get_global(cx).always_open;
         let menu_open = self.agent_options_menu_handle.is_deployed();
         let trigger = ButtonLike::new("agent-sidebar-options-menu-trigger")
@@ -18307,11 +18344,25 @@ impl Sidebar {
                                     "Open Recent Workspaces…",
                                     Box::new(OpenRecent::default()),
                                 )
+                                .when(workspace_search_available, |menu| {
+                                    menu.action(
+                                        "Search Workspaces and Sessions…",
+                                        Box::new(FocusSidebarFilter),
+                                    )
+                                })
+                                .when(workspace_cycle_available, |menu| {
+                                    menu.separator()
+                                        .action(
+                                            "Previous Workspace",
+                                            Box::new(PreviousProject),
+                                        )
+                                        .action("Next Workspace", Box::new(NextProject))
+                                })
+                                .separator()
                                 .action(
                                     "Browse Running Sessions…",
                                     Box::new(BrowseRunningSessions),
                                 )
-                                .separator()
                                 .action(workspace_history_label, Box::new(ToggleThreadHistory))
                                 .when(attention_filter_available, |menu| {
                                     menu.action(
