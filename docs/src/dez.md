@@ -172,6 +172,10 @@ reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Terminals can
 be split below or beside code while keeping their Workspace ownership.
 
+When tabs overflow, **Switch Tab** opens a native **Tabs in This Pane** menu.
+Its rows retain active, modified, and pinned state, so compact navigation does
+not flatten pane ownership or conceal unsaved work.
+
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 a **Workspace tmux** session, Codex, Claude Code, or OpenCode. **More Agent

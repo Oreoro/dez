@@ -4484,6 +4484,15 @@ impl Pane {
             .map(|((ix, item), detail)| {
                 let label = item.tab_content_text(detail, cx);
                 let is_active = ix == self.active_item_index;
+                let label = if paths::APP_NAME == "Zed" {
+                    label
+                } else {
+                    pane_tab_overflow_entry_label(
+                        &label,
+                        item.is_dirty(cx),
+                        ix < self.pinned_tab_count,
+                    )
+                };
                 (ix, label, is_active)
             })
             .collect::<Vec<_>>();
@@ -5981,7 +5990,20 @@ fn pane_tab_overflow_copy(app_name: &str) -> (&'static str, &'static str) {
     if app_name == "Zed" {
         ("Open Tab", "Tabs")
     } else {
-        ("Switch Tab", "Tabs")
+        ("Switch Tab", "Tabs in This Pane")
+    }
+}
+
+fn pane_tab_overflow_entry_label(
+    label: &SharedString,
+    is_dirty: bool,
+    is_pinned: bool,
+) -> SharedString {
+    match (is_dirty, is_pinned) {
+        (true, true) => format!("{label} · Modified, pinned").into(),
+        (true, false) => format!("{label} · Modified").into(),
+        (false, true) => format!("{label} · Pinned").into(),
+        (false, false) => label.clone(),
     }
 }
 
@@ -6878,8 +6900,28 @@ mod tests {
             pane_split_control_copy("Dez", true),
             ("Split Pane", "Split Pane")
         );
-        assert_eq!(pane_tab_overflow_copy("Dez"), ("Switch Tab", "Tabs"));
+        assert_eq!(
+            pane_tab_overflow_copy("Dez"),
+            ("Switch Tab", "Tabs in This Pane")
+        );
         assert_eq!(pane_tab_overflow_copy("Zed"), ("Open Tab", "Tabs"));
+        let overflow_label = SharedString::from("Terminal · Codex");
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, false, false),
+            "Terminal · Codex"
+        );
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, true, false),
+            "Terminal · Codex · Modified"
+        );
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, false, true),
+            "Terminal · Codex · Pinned"
+        );
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, true, true),
+            "Terminal · Codex · Modified, pinned"
+        );
         assert!(
             !pane_tab_end_control_requires_hover("Dez", true, true, false),
             "the active Dez tab close control should not require pointer hover"
