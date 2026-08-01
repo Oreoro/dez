@@ -41,9 +41,12 @@ Workspace instead of separate applications or hidden panel modes.
   most specific Workspace with source, state, and working-directory metadata.
   Discovered tmux, Herdr, and cmux activity without a matching open root stays
   reachable in **Other Running Sessions** instead of being hidden or assigned
-  to the wrong codebase. Workspace headers show live Git branch and
-  changed-file counts when available. Unrelated machine terminals do not leak
-  into the list.
+  to the wrong codebase. Opening an unmatched tmux or Herdr item with a known
+  working directory first establishes that directory as a native Workspace,
+  then attaches the external client there. Pathless items use the active
+  Workspace; cmux remains an external handoff. Workspace headers show live Git
+  branch and changed-file counts when available. Unrelated machine terminals
+  do not leak into the list.
 - **Workspace tools** — Files, Outline, Git, Debug, and the optional
   provider-backed Built-in Agent are ordinary draggable and closeable native
   tabs. They are not nested panels or a mandatory second sidebar.
@@ -228,9 +231,12 @@ large endpoint set cannot extend one refresh indefinitely. **Browse Running
 Sessions…** clears transient navigator filters, refreshes all sources, expands
 matching Workspace groups, and focuses Workspaces. Matching items appear under
 the most specific Workspace; unmatched or pathless items remain visible under
-**Other Running Sessions**. Process and layout ownership always stays with the
-external application. **Terminal: Open tmux Session** attaches or creates a
-stable session named from the active Workspace with `tmux new-session -A`;
+**Other Running Sessions**. Selecting an unmatched tmux or Herdr item with a
+known working directory opens that directory as a Workspace before attaching;
+it never borrows a lexically similar remote Workspace. Process and layout
+ownership always stays with the external application. **Terminal: Open tmux
+Session** attaches or creates a stable session named from the active Workspace
+with `tmux new-session -A`;
 discovered sessions remain available individually in Workspaces. Arbitrary
 machine PTYs remain excluded.
 

@@ -3367,6 +3367,16 @@ fn external_multiplexer_project_group<'a>(
     best_local_project_group_for_path(session.working_directory.as_deref()?, project_group_keys)
 }
 
+fn external_session_requires_workspace(
+    open_mode: ExternalSessionOpenMode,
+    has_working_directory: bool,
+    has_matching_workspace: bool,
+) -> bool {
+    open_mode == ExternalSessionOpenMode::AttachInTerminal
+        && has_working_directory
+        && !has_matching_workspace
+}
+
 fn best_local_project_group_for_path<'a>(
     working_directory: &Path,
     project_group_keys: &'a [ProjectGroupKey],
@@ -3418,6 +3428,49 @@ mod external_multiplexer_project_group_tests {
             best_local_project_group_for_path(Path::new("/unrelated"), &project_group_keys),
             None
         );
+
+        let local_and_remote_keys = vec![
+            ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/workspace")])),
+            ProjectGroupKey::new(
+                Some(RemoteConnectionOptions::Ssh(remote::SshConnectionOptions {
+                    host: "example.com".into(),
+                    ..Default::default()
+                })),
+                PathList::new(&[PathBuf::from("/workspace/dez")]),
+            ),
+        ];
+        assert_eq!(
+            best_local_project_group_for_path(
+                Path::new("/workspace/dez/crates/sidebar"),
+                &local_and_remote_keys,
+            ),
+            local_and_remote_keys.first(),
+            "local external sessions must never activate a lexically matching remote Workspace"
+        );
+    }
+
+    #[test]
+    fn unmatched_attach_sessions_establish_workspace_context() {
+        assert!(external_session_requires_workspace(
+            ExternalSessionOpenMode::AttachInTerminal,
+            true,
+            false,
+        ));
+        assert!(!external_session_requires_workspace(
+            ExternalSessionOpenMode::AttachInTerminal,
+            false,
+            false,
+        ));
+        assert!(!external_session_requires_workspace(
+            ExternalSessionOpenMode::AttachInTerminal,
+            true,
+            true,
+        ));
+        assert!(!external_session_requires_workspace(
+            ExternalSessionOpenMode::RevealExternal,
+            true,
+            false,
+        ));
     }
 
     #[test]
@@ -15124,34 +15177,45 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.open_external_multiplexer_session_in_workspace(session, None, window, cx);
+    }
+
+    fn open_external_multiplexer_session_in_workspace(
+        &mut self,
+        session: ExternalMultiplexerSession,
+        preferred_workspace: Option<Entity<Workspace>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
             return;
         };
 
-        let target_workspace = {
+        let open = session.open_command();
+        let target_workspace = preferred_workspace.or_else(|| {
             let multi_workspace = multi_workspace.read(cx);
-            let mut best_match = None;
-            if let Some(working_directory) = &session.working_directory {
-                for workspace in multi_workspace.workspaces() {
-                    for root in workspace_path_list(workspace, cx).paths() {
-                        if working_directory.starts_with(root) {
-                            let score = root.components().count();
-                            if best_match
-                                .as_ref()
-                                .map_or(true, |(best_score, _): &(usize, Entity<Workspace>)| {
-                                    score > *best_score
-                                })
-                            {
-                                best_match = Some((score, workspace.clone()));
-                            }
-                        }
-                    }
-                }
-            }
-            best_match
-                .map(|(_, workspace)| workspace)
-                .unwrap_or_else(|| multi_workspace.workspace().clone())
-        };
+            let project_group_keys = multi_workspace.project_group_keys().to_vec();
+            external_multiplexer_project_group(&session, &project_group_keys).and_then(
+                |project_group_key| {
+                    multi_workspace.workspace_for_paths(
+                        project_group_key.path_list(),
+                        project_group_key.host().as_ref(),
+                        cx,
+                    )
+                },
+            )
+        });
+
+        if external_session_requires_workspace(
+            open.mode,
+            session.working_directory.is_some(),
+            target_workspace.is_some(),
+        ) {
+            self.open_workspace_and_attach_external_session(session, window, cx);
+            return;
+        }
+        let target_workspace =
+            target_workspace.unwrap_or_else(|| multi_workspace.read(cx).workspace().clone());
 
         multi_workspace.update(cx, |multi_workspace, cx| {
             multi_workspace.activate(target_workspace.clone(), None, window, cx);
@@ -15181,7 +15245,6 @@ impl Sidebar {
             return;
         }
 
-        let open = session.open_command();
         if open.mode == ExternalSessionOpenMode::RevealExternal {
             struct ExternalWorkspaceOpenToast;
             target_workspace.update(cx, |workspace, cx| {
@@ -15329,6 +15392,79 @@ impl Sidebar {
             }
         })
         .detach();
+    }
+
+    fn open_workspace_and_attach_external_session(
+        &mut self,
+        session: ExternalMultiplexerSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(working_directory) = session.working_directory.clone() else {
+            return;
+        };
+        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+            return;
+        };
+
+        let path_list = PathList::new(std::slice::from_ref(&working_directory));
+        let provisional_key = Some(ProjectGroupKey::new(None, path_list.clone()));
+        let active_workspace = multi_workspace.read(cx).workspace().clone();
+        let notification_workspace = active_workspace.clone();
+        let open_task = multi_workspace.update(cx, |multi_workspace, cx| {
+            multi_workspace.find_or_create_workspace(
+                path_list,
+                None,
+                provisional_key,
+                |options, window, cx| connect_remote(active_workspace, options, window, cx),
+                &[],
+                None,
+                OpenMode::Activate,
+                window,
+                cx,
+            )
+        });
+
+        let session_title = session.title.clone();
+        cx.spawn_in(window, async move |this, cx| {
+            let outcome = open_task.await;
+            remote_connection::dismiss_connection_modal(&notification_workspace, cx);
+            match outcome {
+                Ok(workspace) => {
+                    this.update_in(cx, |this, window, cx| {
+                        this.open_external_multiplexer_session_in_workspace(
+                            session,
+                            Some(workspace),
+                            window,
+                            cx,
+                        );
+                    })?;
+                }
+                Err(error) => {
+                    log::error!(
+                        "could not open Workspace for external session {session_title}: {error:#}"
+                    );
+                    let detail = util::truncate_and_trailoff(&format!("{error:#}"), 160);
+                    notification_workspace.update(cx, |workspace, cx| {
+                        struct ExternalSessionWorkspaceOpenError;
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::composite::<ExternalSessionWorkspaceOpenError>(
+                                    session_title.clone(),
+                                ),
+                                format!(
+                                    "Could not open the Workspace for {session_title}: {detail}. The external session was not changed."
+                                ),
+                            )
+                            .autohide(),
+                            cx,
+                        );
+                    });
+                }
+            }
+            anyhow::Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn retry_external_multiplexer_session(

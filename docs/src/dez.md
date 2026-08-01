@@ -156,7 +156,10 @@ edge when tabs overflow. **Browse Running
 Sessions…** clears temporary filters,
 refreshes discovery, and focuses Workspaces. Path-matched Sessions stay beneath
 their Workspace; unmatched or pathless Sessions stay in **Other Running
-Sessions**. **Open Workspace in cmux** performs an explicit external handoff.
+Sessions**. Opening an unmatched tmux or Herdr Session with a known working
+directory first establishes that directory as a native Workspace, then attaches
+the external client. Pathless Sessions use the active Workspace; cmux remains
+an explicit external handoff through **Open Workspace in cmux**.
 Every destination uses the existing native pane system, so it can be focused
 and arranged without creating a nested panel or a second navigation model. The
 tab strip and Add control remain visible on an empty Main Work Area, including
@@ -794,6 +797,13 @@ Running Sessions**. Arbitrary current-user PTYs remain excluded. **Browse
 Running Sessions…** switches to the Workspaces list, clears temporary search,
 scope, and attention filters, expands Workspace groups that own discovered
 sessions, requests a fresh scan, and focuses the navigator.
+
+Selecting an unmatched tmux or Herdr Session never attaches it beneath an
+unrelated active or remote Workspace. If the Session reports a working
+directory, Dez uses the native Workspace-opening path for that directory and
+attaches only after it succeeds. A pathless Session has no stronger ownership
+evidence and therefore attaches in the active Workspace. cmux selection stays
+external and does not create a Dez Workspace.
 
 ### External session prerequisites and troubleshooting
 
