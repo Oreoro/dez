@@ -467,6 +467,22 @@ fn session_row_actions_visible(is_hovered: bool, is_focused: bool, is_renaming: 
     (is_hovered || is_focused) && !is_renaming
 }
 
+fn agent_session_row_shows_resolved_identity(app_name: &str, is_draft: bool) -> bool {
+    app_name == "Dez" || !is_draft
+}
+
+fn session_row_preserves_identity_with_status(app_name: &str, has_stable_identity: bool) -> bool {
+    app_name == "Dez" && has_stable_identity
+}
+
+fn built_in_agent_actor_label(app_name: &str) -> &'static str {
+    match app_name {
+        "Dez" => "Dez Agent",
+        "Zed" => "Zed Agent",
+        _ => "Built-in Agent",
+    }
+}
+
 fn session_row_primary_action_labels_visible(width: Pixels) -> bool {
     width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
 }
@@ -2426,6 +2442,22 @@ mod session_start_state_tests {
 #[cfg(test)]
 mod session_row_action_tests {
     use super::*;
+
+    #[test]
+    fn dez_session_rows_keep_agent_identity_separate_from_runtime_state() {
+        assert!(agent_session_row_shows_resolved_identity("Dez", true));
+        assert!(agent_session_row_shows_resolved_identity("Dez", false));
+        assert!(!agent_session_row_shows_resolved_identity("Zed", true));
+        assert!(agent_session_row_shows_resolved_identity("Zed", false));
+
+        assert!(session_row_preserves_identity_with_status("Dez", true));
+        assert!(!session_row_preserves_identity_with_status("Dez", false));
+        assert!(!session_row_preserves_identity_with_status("Zed", true));
+
+        assert_eq!(built_in_agent_actor_label("Dez"), "Dez Agent");
+        assert_eq!(built_in_agent_actor_label("Zed"), "Zed Agent");
+        assert_eq!(built_in_agent_actor_label("Other"), "Built-in Agent");
+    }
 
     #[test]
     fn known_terminal_agents_use_distinct_provider_icons() {
@@ -13448,14 +13480,15 @@ impl Sidebar {
                 Vec::new()
             };
 
-        let (icon, icon_svg) = if is_draft {
-            (IconName::Circle, None)
-        } else {
+        let shows_resolved_identity = agent_session_row_shows_resolved_identity(APP_NAME, is_draft);
+        let (icon, icon_svg) = if shows_resolved_identity {
             (thread.icon, thread.icon_from_external_svg.clone())
+        } else {
+            (IconName::Circle, None)
         };
         let actor_label: SharedString =
             if thread.metadata.agent_id.as_ref() == ZED_AGENT_ID.as_ref() {
-                "Dez Agent".into()
+                built_in_agent_actor_label(APP_NAME).into()
             } else {
                 thread.metadata.agent_id.as_ref().to_owned().into()
             };
@@ -13478,7 +13511,7 @@ impl Sidebar {
         let thread_item =
             canvas_thread_item_style(ThreadItem::new(id, title.clone()), &design_system)
                 .icon(icon)
-                .when(is_draft, |this| {
+                .when(is_draft && !shows_resolved_identity, |this| {
                     this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
                 })
                 .status(
@@ -13487,7 +13520,9 @@ impl Sidebar {
                         .then_some(thread.status)
                         .unwrap_or_default(),
                 )
-                .preserve_identity_with_status(APP_NAME != "Zed")
+                .preserve_identity_with_status(session_row_preserves_identity_with_status(
+                    APP_NAME, true,
+                ))
                 .when(session_rail_settings.show_agent_state_metadata, |this| {
                     this.actor_label(actor_label).state_label(state_label)
                 })
@@ -14092,7 +14127,11 @@ impl Sidebar {
         };
         let (icon_char, title, highlight_positions) =
             match split_leading_icon_char(&display_title, &terminal.highlight_positions) {
-                Some((icon_char, title, positions)) => (Some(icon_char), title, positions),
+                Some((icon_char, title, positions)) => (
+                    terminal_agent_kind.is_none().then_some(icon_char),
+                    title,
+                    positions,
+                ),
                 None => (None, display_title, terminal.highlight_positions.clone()),
             };
 
@@ -14103,6 +14142,10 @@ impl Sidebar {
                     .map(terminal_agent_icon)
                     .unwrap_or(IconName::Terminal),
             )
+            .preserve_identity_with_status(session_row_preserves_identity_with_status(
+                APP_NAME,
+                terminal_agent_kind.is_some(),
+            ))
             .when_some(icon_char, |this, icon_char| this.icon_char(icon_char))
             .is_remote(is_remote)
             .when(session_rail_settings.show_agent_state_metadata, |this| {
@@ -16300,6 +16343,9 @@ impl Sidebar {
                 )
                 .icon(icon)
                 .when_some(status, |item, status| item.status(status))
+                .preserve_identity_with_status(session_row_preserves_identity_with_status(
+                    APP_NAME, true,
+                ))
                 .actor_label(owner)
                 .actor_label_visible(supplemental_metadata_visible)
                 .state_label(state)

@@ -30,9 +30,11 @@ Workspace instead of separate applications or hidden panel modes.
   when the Workspace is split. Selecting a row activates that exact native tab;
   tab ownership, dirty state, close behavior, dragging, and ordering remain in
   Zed's pane model rather than being copied into the navigator. Agent Session
-  rows show provider identity and Running, Needs Input, Waiting for Permission,
-  Reconnecting, Completed, or Error state on a secondary row, leaving the
-  terminal or Session title as the primary navigation label. A
+  rows keep their Dez or provider identity mark while Running, Needs Input,
+  Waiting for Permission, Reconnecting, Completed, or Error remains a separate
+  state treatment. Drafts keep the selected agent mark instead of becoming an
+  anonymous dot, and the terminal or Session title stays the primary navigation
+  label. A
   multi-root Workspace leads with its first root and a bounded root count; all
   root names remain searchable and available in the header tooltip and
   accessibility label. A Workspace can explicitly attach a discovered tmux or

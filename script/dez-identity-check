@@ -161,7 +161,7 @@ require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'render_subagents_awaiting_permission.*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\).*?render_subagent_titlebar.*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\).*?"subagent_output".*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\).*?let icon = h_flex\(\).*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\)' \
     'Subagent identity can regress to unrelated arrows or generic status circles across native Agent surfaces'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'canvas_thread_item_style\(ThreadItem::new.*?\.icon\(icon\).*?\.status\(.*?\.preserve_identity_with_status\(APP_NAME != "Zed"\)' \
+    'canvas_thread_item_style\(ThreadItem::new.*?\.icon\(icon\).*?\.status\(.*?\.preserve_identity_with_status\(session_row_preserves_identity_with_status\([[:space:]]*APP_NAME, true' \
     'running Agent Sessions can regress to replacing provider or Dez identity with a generic spinner'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_agent_icon.*?TerminalAgentKind::Claude => IconName::AiClaude.*?TerminalAgentKind::Codex => IconName::AiOpenAi.*?TerminalAgentKind::Copilot => IconName::Copilot.*?TerminalAgentKind::Cursor => IconName::EditorCursor.*?TerminalAgentKind::Gemini => IconName::AiGemini.*?TerminalAgentKind::OpenCode => IconName::AiOpenCode.*?TerminalAgentKind::Grok => IconName::AiXAi.*?TerminalAgentKind::Aider.*?=> IconName::Robot.*?fn known_terminal_agents_use_distinct_provider_icons' \
@@ -755,6 +755,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
     'impl Render for AgentThreadItem.*?\.id\(\("agent-thread-item", self\.conversation_view\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?\.aria_label\(if paths::APP_NAME == "Zed".*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
     'the Agent Session item can regress to a focused surface without an accessibility node'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn agent_session_row_shows_resolved_identity.*?app_name == "Dez" \|\| !is_draft.*?fn session_row_preserves_identity_with_status.*?app_name == "Dez" && has_stable_identity.*?fn built_in_agent_actor_label.*?"Dez" => "Dez Agent".*?"Zed" => "Zed Agent".*?fn dez_session_rows_keep_agent_identity_separate_from_runtime_state.*?agent_session_row_shows_resolved_identity\("Dez", true\).*?session_row_preserves_identity_with_status\("Dez", true\).*?built_in_agent_actor_label\("Other"\), "Built-in Agent".*?let shows_resolved_identity =.*?agent_session_row_shows_resolved_identity\(APP_NAME, is_draft\).*?built_in_agent_actor_label\(APP_NAME\).*?preserve_identity_with_status\(session_row_preserves_identity_with_status\([[:space:]]*APP_NAME, true.*?terminal_agent_kind\.is_none\(\)\.then_some\(icon_char\).*?terminal_agent_kind\.is_some\(\).*?when_some\(status, \|item, status\| item\.status\(status\)\).*?preserve_identity_with_status\(session_row_preserves_identity_with_status\([[:space:]]*APP_NAME, true' \
+    'Dez Agent drafts, terminal agents, or external Sessions can regress to anonymous state glyphs that erase provider identity'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_has_agent_evidence.*?detected_agent_kind\.is_some\(\) \|\| has_structured_agent.*?fn terminal_entry_visible_in_session_rail.*?app_name == "Zed".*?\|\| is_managed_terminal.*?\|\| terminal_has_agent_evidence.*?if !terminal_entry_visible_in_session_rail\(' \
     'ordinary shells can regress to cluttering Sessions without managed ownership or agent evidence'

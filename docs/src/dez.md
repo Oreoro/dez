@@ -608,10 +608,13 @@ Session in the Agent work area.
 Agent identity remains stable while state changes. The built-in Dez Agent uses
 the four-node Dez Agent mark; its Subagents use the related parent-and-child
 mark. Codex, Claude Code, OpenCode, Gemini, and other recognized terminal agents
-retain their provider marks. Running, waiting, attention, error, and completion
-are separate state treatments, so a spinner or warning never makes unrelated
-agents look identical. Subagents remain scoped to their parent Agent Session
-instead of becoming duplicate top-level Workspaces rows.
+retain their provider marks, including while hosted in a native terminal or an
+externally owned tmux, Herdr, or cmux Session. A draft keeps its selected Agent
+mark rather than collapsing to an anonymous dot. Running, waiting, attention,
+error, and completion are separate indicator treatments, so a spinner or
+warning never makes unrelated agents look identical. Subagents remain scoped
+to their parent Agent Session instead of becoming duplicate top-level
+Workspaces rows.
 
 ### 5. Resume honestly
 
