@@ -142,6 +142,96 @@ A pane group exists only after the user invokes a split action. Each pane owns
 its native tab strip and adjacent `+`. Closing Workspaces preserves both panes,
 their tabs, and the focused Main Work Area item.
 
+## Secondary-state wireframe
+
+### 5. Install-first Home
+
+```text
+┌ Workspaces ─────────┬ Home ─ + ──────────────────────────────────────┐
+│                    │ Continue your work                              │
+│ No Workspaces yet  │                                                 │
+│ Install Dez to get │ ┌ Install Dez to continue ────────────────────┐ │
+│ started.           │ │ Install in Applications and relaunch before│ │
+│                    │ │ restoring Workspaces or starting durable   │ │
+│                    │ │ terminals.                                 │ │
+│                    │ │                         [Install and Relaunch]│ │
+│                    │ └─────────────────────────────────────────────┘ │
+├────────────────────┴─────────────────────────────────────────────────┤
+│ Installation required · Install Dez in Applications to continue     │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Home keeps its normal identity while installation is gated. No Workspace,
+branch, agent, port, permission, recent-history, or durable-host evidence is
+rendered because none has restored. Home owns the only primary recovery action;
+Workspaces supplies a quiet explanation rather than a duplicate button.
+
+### 6. Workspace access recovery
+
+```text
+┌ Workspaces ─────────────┬ Codex · Working ─ + ───────────────────────┐
+│ dez  main               │ Existing Main Work Area content            │
+│ ┌ Workspace access ───┐ │ remains selected, visible, and unchanged.  │
+│ │ required            │ │                                            │
+│ │ “zed 3.0” needs     │ │                                            │
+│ │ access before Git,  │ │                                            │
+│ │ search, agents, or  │ │                                            │
+│ │ terminals start.    │ │                                            │
+│ │ [Grant Access…]     │ │                                            │
+│ └─────────────────────┘ │                                            │
+│ Open Tabs & Tools       │                                            │
+├─────────────────────────┴────────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Access required                │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Permission recovery belongs to the affected Workspace root. One aggregated
+notice names the exact folder and gates Git, search, LSP, agents, and terminals
+behind the same preflight. Selecting **Grant Access…** never opens or replaces
+a Workspace, and Home does not mirror the notice over the Main Work Area.
+
+### 7. Product-first Settings
+
+```text
+┌ Workspaces ─────┬ Settings ─ + ──────────────────────────────────────┐
+│ dez             │ Workspaces & Terminals │ Workspaces                │
+│ Open Tabs &     │ Agents                 │ Workspaces Position  Left │
+│ Tools           │ Appearance             │ Show on Startup       Off │
+│  Settings       │ Workspace & Privacy    │───────────────────────────│
+│  Terminal       │ Keyboard & Vim         │ Terminal Launch           │
+│  Files          │ Editor                 │ Default Terminal           │
+│                 │ Languages & Tools      │  Native Shell              │
+│                 │ Search & Files         │  Codex · Claude Code       │
+│                 │ Navigation & Layout    │  OpenCode · tmux · Custom  │
+│                 │ Workspace Tools        │ Open Workspace in cmux  ↗  │
+├─────────────────┴────────────────────────┴────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                        │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Settings begins with the choices required to run work: Workspace behavior and
+Terminal Launch, then Agents and Appearance. Privacy remains prominent before
+inherited editor customization. Native shell and TUI profiles launch inside
+Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
+an action or documentation route, never an availability toggle.
+
+### 8. Compact navigation
+
+```text
+┌ app.rs | Terminal | Files | Git Changes | + ─────────────────────────┐
+│ Main Work Area preserves every tab, pane, split, and focused item.   │
+│ Compact toolbar actions retain icons, tooltips, accessible names,    │
+│ keyboard targets, and native pane ownership.                         │
+├──────────────────────────────────────────────────────────────────────┤
+│ Workspaces | dez | main | 3 agents | 2 ports | Permissions: Healthy │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Closing Workspaces gives its width back to the Main Work Area. The labeled
+status-bar control remains the recovery route and uses **Open Workspaces** for
+its tooltip and action. Compact layouts may hide secondary text, never the
+control's meaning or accessible identity.
+
 ## Surface inventory
 
 | Surface | Owner | Primary job | Entry | Empty, failure, or recovery state |
@@ -155,7 +245,7 @@ their tabs, and the focused Main Work Area item.
 | Editor, diff, search, diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions | native Zed empty and error states |
 | Files, Outline, Git, Debug | Main Work Area tabs | inspect Workspace tools | tab `+`, View, terminal handoff | no permanent second drawer or column |
 | Built-in Agent | Main Work Area tab | use Zed's model-backed agent | tab `+`, Workspace menu | configure provider instead of opening a dead surface |
-| Settings | native Settings surface | configure workflow, appearance, terminal, agents | app menu, Command Palette | Workspace-dependent sections bind to the active Workspace |
+| Settings | native Settings surface | configure Workspace and terminal launch first, then agents and appearance | app menu, Command Palette | Workspace-dependent sections bind to the active Workspace |
 | Status bar | window | durable Workspace and editor context | visible by default | explicit preference may hide it; closed Workspaces keeps a labeled restore control |
 | Installation and access | Home plus Workspaces notice | unblock safe startup | startup preflight | install/relaunch or grant one exact folder; never background prompt loops |
 
@@ -172,6 +262,8 @@ their tabs, and the focused Main Work Area item.
   then **Retry Attach** or **Open new shell here**.
 - Keep permission scope explicit: **Workspace access required** and **Grant
   Access…** for one exact root.
+- Keep recovery in its owning surface: installation on Home, root access in
+  Workspaces, terminal lifecycle in the terminal tab.
 - Reserve the status bar for durable context. Transient progress and lengthy
   diagnostics belong to the owning surface.
 - Never introduce a Studio/Projects mode switch, custom browser tabs, a chat
@@ -203,6 +295,10 @@ their tabs, and the focused Main Work Area item.
   readable without color.
 - Empty, loading, permission, attach-failure, disconnected-host, and legacy
   states each have one truthful recovery route.
+- Installation renders no restored Workspace evidence and exposes only one
+  **Install and Relaunch** action.
+- Settings starts with **Workspaces & Terminals**, **Agents**, **Appearance**,
+  and **Workspace & Privacy** before inherited editor customization.
 - The status bar remains visible by default and contains no transient prose.
 - No screen creates an unexplained pane, permanent inspector, custom tab bar,
   floating onboarding, or duplicated Workspace navigation.

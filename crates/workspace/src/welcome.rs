@@ -857,17 +857,12 @@ impl Render for WelcomePage {
             })
             .unwrap_or((false, false));
         let workspace_startup_state = is_dez.then(|| crate::workspace_startup_state(cx));
-        let workspace_access_state = is_dez.then(|| crate::workspace_access_state(cx));
         let installation_required = matches!(
             &workspace_startup_state,
             Some(crate::WorkspaceStartupState::InstallationRequired { .. })
         );
         let installation_action_count = usize::from(installation_required);
-        let workspace_access_action_count = usize::from(matches!(
-            &workspace_access_state,
-            Some(crate::WorkspaceAccessState::AccessRequired { .. })
-        ));
-        let action_tab_offset = installation_action_count + workspace_access_action_count;
+        let action_tab_offset = installation_action_count;
         let (first_section, second_section) = if APP_NAME == "Zed" {
             ZED_CONTENT
         } else if has_workspace {
@@ -1016,51 +1011,6 @@ impl Render for WelcomePage {
             ),
             Some(crate::WorkspaceStartupState::Ready) | None => None,
         };
-        let workspace_access_notice = if installation_required {
-            None
-        } else if let Some(workspace_access_state) = workspace_access_state {
-            match workspace_access_state {
-                crate::WorkspaceAccessState::Available => None,
-                crate::WorkspaceAccessState::AccessRequired { roots } => {
-                    let description = if roots.len() == 1 {
-                        let root = roots[0]
-                            .file_name()
-                            .and_then(|name| name.to_str())
-                            .unwrap_or("This Workspace");
-                        format!(
-                            "Grant access to “{root}” once so Dez can open its files and start Workspace terminals and agents. The current layout will stay unchanged."
-                        )
-                    } else {
-                        format!(
-                            "Grant each of the {} Workspace folders access once so Dez can open their files and start terminals and agents. The current layout will stay unchanged.",
-                            roots.len()
-                        )
-                    };
-                    Some(
-                        Callout::new()
-                            .severity(Severity::Warning)
-                            .icon(IconName::Folder)
-                            .title("Workspace access required")
-                            .description(description)
-                            .actions_slot(
-                                Button::new("home-grant-workspace-access", "Grant Access…")
-                                    .style(ui::ButtonStyle::Filled)
-                                    .tab_index(installation_action_count as isize)
-                                    .aria_label("Grant Access to a Blocked Workspace Folder")
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            zed_actions::dez::GrantWorkspaceAccess.boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                            )
-                            .into_any_element(),
-                    )
-                }
-            }
-        } else {
-            None
-        };
         let section_focus_handle = self.focus_handle.clone();
         let first_entry_meta_override = welcome_terminal_action_meta(
             APP_NAME,
@@ -1079,16 +1029,8 @@ impl Render for WelcomePage {
         );
         let show_onboarding_return = APP_NAME == "Zed" && !self.fallback_to_recent_projects;
         let content_welcome_label = welcome_label.clone();
-        let page_title = if installation_required {
-            "Install Dez"
-        } else {
-            welcome_title(APP_NAME, has_workspace)
-        };
-        let page_summary = if installation_required {
-            "Install in Applications and relaunch before opening a Workspace or starting durable terminals."
-        } else {
-            welcome_summary(APP_NAME, has_workspace)
-        };
+        let page_title = welcome_title(APP_NAME, has_workspace);
+        let page_summary = welcome_summary(APP_NAME, has_workspace);
 
         h_flex()
             .id("welcome-page")
@@ -1223,15 +1165,16 @@ impl Render for WelcomePage {
                                         .font_weight(FontWeight::MEDIUM)
                                         .child(Headline::new(page_title).size(HeadlineSize::Large)),
                                 )
-                                .child(
-                                    Label::new(page_summary)
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
-                                )
+                                .when(!installation_required, |this| {
+                                    this.child(
+                                        Label::new(page_summary)
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                    )
+                                })
                                 .into_any_element()
                         })
                         .when_some(installation_notice, |this, notice| this.child(notice))
-                        .when_some(workspace_access_notice, |this, notice| this.child(notice))
                         .when(!installation_required, |this| this.child(sections))
                         .when(show_onboarding_return, |this| {
                             this.child(

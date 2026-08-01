@@ -104,10 +104,10 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
 
 fn dez_settings_page_priority(title: &str) -> usize {
     match title {
-        "Workspace & Privacy" => 0,
-        "Workspaces & Terminals" => 1,
-        "Agents" => 2,
-        "Appearance" => 3,
+        "Workspaces & Terminals" => 0,
+        "Agents" => 1,
+        "Appearance" => 2,
+        "Workspace & Privacy" => 3,
         "Keyboard & Vim" => 4,
         "Editor" => 5,
         "Languages & Tools" => 6,
@@ -11870,12 +11870,20 @@ mod tests {
 
     #[test]
     fn dez_settings_put_the_product_workflow_before_ide_customization() {
-        let product_pages = ["Workspace & Privacy", "Workspaces & Terminals", "Agents"];
+        let product_pages = [
+            "Workspaces & Terminals",
+            "Agents",
+            "Appearance",
+            "Workspace & Privacy",
+        ];
         for pair in product_pages.windows(2) {
             assert!(dez_settings_page_priority(pair[0]) < dez_settings_page_priority(pair[1]));
         }
 
-        assert!(dez_settings_page_priority("Agents") < dez_settings_page_priority("Appearance"));
+        assert!(
+            dez_settings_page_priority("Workspace & Privacy")
+                < dez_settings_page_priority("Keyboard & Vim")
+        );
         assert!(
             dez_settings_page_priority("Keyboard & Vim") < dez_settings_page_priority("Editor")
         );

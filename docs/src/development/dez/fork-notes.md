@@ -1475,13 +1475,13 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   unavailable** placeholder beside real work. Official Zed retains its
   inherited placeholder behavior.
 - **2026-07-26: Settings starts with the product workflow.** Dez orders
-  **Workspace & Privacy**, **Sessions & Terminal**, **Agents**, **Attention**,
-  and **Evidence** before inherited editor customization. Appearance, editing,
-  language, layout, Git, network, and advanced compatibility remain available
-  after that product path. **Sessions Side** belongs to **Sessions & Terminal**,
-  not Agent provider configuration. The Agents page starts with **Agent Runtime
-  & Providers** and names its compatibility kill switch **Disable Agent
-  Features**. Official Zed retains its upstream page order and labels.
+  **Workspaces & Terminals**, **Agents**, **Appearance**, and **Workspace &
+  Privacy** before inherited editor customization. The first page owns
+  Workspace placement, startup behavior, and Terminal Launch; Agents combines
+  terminal evidence, attention, and optional Built-in Agent configuration.
+  **Workspaces Position** belongs to **Workspaces & Terminals**, not Agent
+  provider configuration. Official Zed retains its upstream page order and
+  labels.
 - **2026-07-26: Compact density removes air, not affordances.** Fresh and
   restored Dez profiles use compact Canvas density while preserving the 14 px
   type baseline, keyboard order, accessible names, and existing target sizes.

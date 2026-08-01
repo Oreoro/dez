@@ -473,8 +473,11 @@ their ownership and truth.
 ### Before you begin: install and relaunch when asked
 
 Dez must run from `/Applications` before it restores a Workspace or starts its
-durable Terminal Host. A temporary or DMG launch shows this requirement inline
-on Home. Choose **Install and Relaunch**; there is no setup overlay or
+durable Terminal Host. A temporary or DMG launch keeps the normal **Continue
+your work** Home identity and shows one inline **Install Dez to continue**
+callout. Workspaces remains empty and explanatory; it does not repeat the
+primary action or display branch, agent, port, or permission state that has not
+restored. Choose **Install and Relaunch**; there is no setup overlay or
 “continue anyway” path.
 
 ### 1. Open a Workspace
@@ -991,7 +994,10 @@ over the editor.
 ### Settings and navigation visibility
 
 Dez keeps native editor customization, but Settings starts with the product
-flow: **Workspace & Privacy**, **Workspaces & Terminals**, and **Agents**.
+flow: **Workspaces & Terminals**, **Agents**, **Appearance**, and **Workspace &
+Privacy**. The first page opens directly on Workspace behavior and Terminal
+Launch; privacy remains above inherited editor customization rather than
+displacing the primary run path.
 Within Agents, the primary terminal workflow comes first: **Terminal Agents &
 Privacy**, then **Attention & Notifications**. Optional conversation features
 follow under **Built-in Agent & Providers** and **Built-in Agent Behavior**.

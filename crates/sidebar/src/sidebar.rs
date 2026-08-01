@@ -17098,7 +17098,7 @@ impl Sidebar {
             return v_flex()
                 .id("sidebar-installation-required")
                 .role(gpui::Role::Group)
-                .aria_label("Install Dez to continue")
+                .aria_label("Installation required. No Workspaces restored")
                 .flex_1()
                 .min_h_0()
                 .overflow_y_scroll()
@@ -17107,31 +17107,12 @@ impl Sidebar {
                 .child(
                     v_flex()
                         .w_full()
-                        .gap_2()
-                        .child(Label::new("Install Dez to continue").size(LabelSize::Small))
+                        .gap_1()
+                        .child(Label::new("No Workspaces yet").size(LabelSize::Small))
                         .child(
-                            Label::new(
-                                "Install Dez in Applications and relaunch before opening a Workspace or starting durable terminals.",
-                            )
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted),
-                        )
-                        .child(
-                            Button::new("install-dez-and-relaunch", "Install and Relaunch")
-                                .full_width()
-                                .style(ButtonStyle::Filled)
-                                .start_icon(Icon::new(IconName::Download).size(IconSize::Small))
-                                .tab_index(0isize)
-                                .aria_label("Install Dez in Applications and Relaunch")
-                                .tooltip(Tooltip::text(
-                                    "Install Dez in Applications, then relaunch it",
-                                ))
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        zed_actions::dez::InstallAndRelaunch.boxed_clone(),
-                                        cx,
-                                    );
-                                }),
+                            Label::new("Install Dez to get started.")
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
                         ),
                 )
                 .into_any_element();
@@ -17331,15 +17312,6 @@ impl Sidebar {
     }
 
     fn render_workspace_access_status(&self, cx: &App) -> Option<AnyElement> {
-        let active_workspace = self.multi_workspace.upgrade()?.read(cx).workspace().clone();
-        if active_workspace
-            .read(cx)
-            .active_item_as::<workspace::welcome::WelcomePage>(cx)
-            .is_some()
-        {
-            return None;
-        }
-
         let workspace::WorkspaceAccessState::AccessRequired { roots } =
             workspace::workspace_access_state(cx)
         else {
@@ -17496,10 +17468,10 @@ impl Sidebar {
             .unwrap_or_default()
     }
 
-    /// Lets an `auto` Sessions region restored from a previous viewport retire
+    /// Lets an `auto` Workspaces region restored from a previous viewport retire
     /// once restoration proves that it has nothing to supervise. This is
     /// deferred out of render and guarded by MultiWorkspace's one-shot restore
-    /// flag, so ordinary user-opened Sessions regions are never auto-hidden.
+    /// flag, so ordinary user-opened Workspaces regions are never auto-hidden.
     fn reconcile_restored_sessions_visibility(&self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
             return;
@@ -17520,6 +17492,10 @@ impl Sidebar {
                 | TerminalHostStartupState::Reconnecting { .. }
                 | TerminalHostStartupState::Failed { .. }
         );
+        let workspace_access_required = matches!(
+            workspace::workspace_access_state(cx),
+            workspace::WorkspaceAccessState::AccessRequired { .. }
+        );
         let restoration_ready = self.contents.snapshot_ready
             && self.update_task.is_none()
             && !self.workspace_restore_is_pending(cx)
@@ -17529,6 +17505,7 @@ impl Sidebar {
             || self.contents.has_attention
             || matches!(self.view, SidebarView::Archive(_))
             || !self.unresolved_workspace_ids(cx).is_empty()
+            || workspace_access_required
             || terminal_host_needs_recovery;
 
         let multi_workspace = self.multi_workspace.clone();
