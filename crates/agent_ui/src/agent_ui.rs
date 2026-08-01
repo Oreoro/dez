@@ -113,18 +113,7 @@ pub use thread_import::{
 use zed_actions;
 pub use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, SwitchWorktree};
 
-/// Returns whether the provider-backed Built-in Agent can create a usable
-/// session immediately.
-///
-/// An authenticated provider alone is not enough: the native Agent creates a
-/// thread from the registry's default model. If that model is unresolved,
-/// opening a draft only produces a dead "No model selected" surface.
-pub fn built_in_agent_is_ready(cx: &App) -> bool {
-    let registry = LanguageModelRegistry::read_global(cx);
-    registry
-        .default_model()
-        .is_some_and(|model| model.provider.is_authenticated(cx))
-}
+pub use agent_settings::built_in_agent_is_ready;
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 pub struct CanvasAgentUiSettings {

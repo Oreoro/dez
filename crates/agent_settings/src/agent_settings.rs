@@ -10,9 +10,9 @@ use anyhow::Context as _;
 use collections::{HashSet, IndexMap};
 use fs::Fs;
 use futures::channel::oneshot;
-use gpui::{App, Pixels, SharedString, px};
+use gpui::{App, Pixels, ReadGlobal as _, SharedString, px};
 use icons::IconName;
-use language_model::LanguageModel;
+use language_model::{LanguageModel, LanguageModelRegistry};
 use project::DisableAiSettings;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -31,6 +31,15 @@ pub const SUMMARIZE_THREAD_PROMPT: &str = include_str!("prompts/summarize_thread
 pub const SUMMARIZE_THREAD_DETAILED_PROMPT: &str =
     include_str!("prompts/summarize_thread_detailed_prompt.txt");
 pub const COMPACTION_PROMPT: &str = include_str!("prompts/compaction_prompt.txt");
+
+/// An authenticated provider alone is not enough: the native Agent creates a
+/// session from the registry's default model and otherwise opens a dead draft.
+pub fn built_in_agent_is_ready(cx: &App) -> bool {
+    let registry = LanguageModelRegistry::read_global(cx);
+    registry
+        .default_model()
+        .is_some_and(|model| model.provider.is_authenticated(cx))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TerminalAgentKind {

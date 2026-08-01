@@ -20,7 +20,7 @@ use crate::{
         WorkspaceSettings,
     },
 };
-use agent_settings::{AgentSettings, configured_terminal_launcher_icon};
+use agent_settings::{AgentSettings, built_in_agent_is_ready, configured_terminal_launcher_icon};
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use futures::{StreamExt, stream::FuturesUnordered};
@@ -5725,6 +5725,9 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                     .terminal_init_command
                     .as_deref(),
             );
+            let built_in_agent_ready = built_in_agent_is_ready(cx);
+            let (built_in_agent_label, built_in_agent_icon) =
+                pane_built_in_agent_action_presentation(built_in_agent_ready);
             Some(ContextMenu::build(window, cx, move |menu, _, _| {
                 if paths::APP_NAME == "Zed" {
                     menu.action(new_file, NewFile.boxed_clone())
@@ -5758,7 +5761,8 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                             zed_actions::OpenRecent::default().boxed_clone(),
                         )
                 } else {
-                    menu.action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
+                    let menu = menu
+                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
                         .action(
                             "Open Recent Workspaces…",
                             zed_actions::OpenRecent::default().boxed_clone(),
@@ -5833,13 +5837,25 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 IconName::AiOpenCode,
                                 zed_actions::terminal::ResumeOpenCodeTerminal.boxed_clone(),
                             )
-                        })
-                        .action_with_icon(
-                            "Open Built-in Agent",
-                            IconName::DezAgent,
+                        });
+                    let menu = if built_in_agent_ready {
+                        menu.action_with_icon(
+                            built_in_agent_label,
+                            built_in_agent_icon,
                             RevealBuiltInAgent.boxed_clone(),
                         )
-                        .separator()
+                    } else {
+                        menu.action_with_icon(
+                            built_in_agent_label,
+                            built_in_agent_icon,
+                            zed_actions::OpenSettingsAt {
+                                path: "llm_providers".to_owned(),
+                                target: None,
+                            }
+                            .boxed_clone(),
+                        )
+                    };
+                    menu.separator()
                         .action_with_icon(
                             "Browse Running Sessions…",
                             IconName::ListTree,
@@ -5912,6 +5928,14 @@ fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str)
             "Add to Main Work Area",
             "Add a terminal, file, review, or Workspace tool",
         )
+    }
+}
+
+fn pane_built_in_agent_action_presentation(built_in_agent_ready: bool) -> (&'static str, IconName) {
+    if built_in_agent_ready {
+        ("Open Built-in Agent", IconName::DezAgent)
+    } else {
+        ("Configure Built-in Agent…", IconName::Settings)
     }
 }
 
@@ -6809,6 +6833,14 @@ mod tests {
             )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
+        assert_eq!(
+            pane_built_in_agent_action_presentation(true),
+            ("Open Built-in Agent", IconName::DezAgent)
+        );
+        assert_eq!(
+            pane_built_in_agent_action_presentation(false),
+            ("Configure Built-in Agent…", IconName::Settings)
+        );
         assert_eq!(
             pane_new_surface_menu_copy("Dez"),
             (
