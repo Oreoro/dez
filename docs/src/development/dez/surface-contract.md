@@ -6,9 +6,10 @@ ownership, state, and responsive behavior. When a rendered sketch and this
 document disagree, this document wins.
 
 The [tmux and Claude Code Navigation Wireframe](./tmux-claude-navigation-wireframe.md)
-is a design-only exploration of a simpler Workspace → Pane → Tab hierarchy.
-It is not authoritative and does not describe current behavior until its open
-interaction decisions are resolved and this contract is deliberately updated.
+tracks the remaining exploration around the Workspace → Pane → Tab hierarchy.
+Its activation-only **Layout** projection is authoritative here; Activity,
+navigation mode, and return recaps remain proposals until this contract is
+deliberately updated again.
 
 ## Product loop
 
@@ -31,7 +32,7 @@ Window
 ├── Workspaces (optional global navigator)
 │   ├── Workspace rows
 │   ├── Sessions (live activity only)
-│   ├── Open Tabs & Tools (projection of the active Workspace)
+│   ├── Layout (activation-only projection of the active Workspace)
 │   └── Workspace notices (bounded recovery states)
 ├── Main Work Area (authoritative native pane and tab model)
 │   ├── Home, files, diffs, search, Settings, browser, diagnostics
@@ -42,9 +43,9 @@ Window
 ```
 
 One Workspace owns every tab, tool, Session, and user-created pane associated
-with its codebase. A Workspace is not a list of terminals. **Open Tabs &
-Tools** reads the native pane model and activates its existing items; it never
-stores duplicate order, focus, close, pin, dirty, or split state.
+with its codebase. A Workspace is not a list of terminals. **Layout** reads the
+native pane model and activates its existing items; it never stores duplicate
+order, focus, close, pin, dirty, or split state.
 
 ## Final wireframe
 
@@ -55,7 +56,7 @@ stores duplicate order, focus, close, pin, dirty, or split state.
 │ dez  main        │ Continue your work                                │
 │ 3 agents · 2 ports│ Run a tool, supervise its work, then review it.   │
 │                  │                                                    │
-│ Open Tabs & Tools│ Start with a tool          Recent Workspaces      │
+│ Layout           │ Start with a tool          Recent Workspaces      │
 │  Home            │  Open Terminal · Default   superzed               │
 │  Codex · Working │  Codex                     website                │
 │  app.rs          │  Claude Code               infra                  │
@@ -83,7 +84,7 @@ provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
 │  Codex · Working │                                                         │
 │  Claude · Attention  Native TerminalView renders the provider TUI here.   │
 │  Terminal · Ready│  Dez does not place a custom chat renderer around it.  │
-│ Open Tabs & Tools│                                                         │
+│ Layout           │                                                         │
 │  Codex · Working │                                                         │
 │  app.rs          │                                                         │
 │  Terminal        │                                                         │
@@ -110,7 +111,7 @@ never the only state signal.
 │  Terminal · Ready       │ Provider · Herdr                             │
 │  tmux · Attach failed   │ Working directory · ~/code/dez               │
 │  Legacy · Access blocked│ Host generation · legacy                     │
-│ Open Tabs & Tools       │ Endpoint · offline                           │
+│ Layout                  │ Endpoint · offline                           │
 │  Terminal · Failed      │ Ownership · external process unchanged       │
 │  Files · Diff · Git     │                                              │
 ├─────────────────────────┴──────────────────────────────────────────────┤
@@ -130,7 +131,7 @@ termination remains behind a native confirmation.
 ```text
 ┌ Workspaces ──────┬ Diff · app.rs | app.rs | + ┬ Terminal | Files | Git | + ┐
 │ dez  main        │                              │                             │
-│ Open Tabs & Tools│ diff                         │ native terminal              │
+│ Layout           │ diff                         │ native terminal              │
 │ Pane 1 · Focused │                              │ or review-adjacent tool      │
 │  Diff · app.rs   │                              │                             │
 │  app.rs          │                              │                             │
@@ -184,7 +185,7 @@ Workspaces supplies a quiet explanation rather than a duplicate button.
 │ │ terminals start.    │ │                                            │
 │ │ [Grant Access…]     │ │                                            │
 │ └─────────────────────┘ │                                            │
-│ Open Tabs & Tools       │                                            │
+│ Layout                  │                                            │
 ├─────────────────────────┴────────────────────────────────────────────┤
 │ Workspace: dez | main | Permissions: Access required                │
 └──────────────────────────────────────────────────────────────────────┘
@@ -441,7 +442,7 @@ session…** remains a context-menu action behind native confirmation.
 │ Sessions            │ Search this Workspace     │                             │
 │  Claude · Working   │ No matches                │                             │
 │  tmux · Attached    │ Broaden the query or      │                             │
-│ Open Tabs & Tools   │ remove path filters.      │                             │
+│ Layout              │ remove path filters.      │                             │
 │  Pane 1             │                           │                             │
 │   Files · Search    │                           │                             │
 │  Pane 2             │                           │                             │
@@ -468,7 +469,7 @@ turning a healthy state into a warning.
 │  tmux · Attached    │                                                         │
 │  Task · test        │ ┌ Run Task ──────────────────────────────────────────┐  │
 │    Running          │ │ Find a task, or run a command                      │  │
-│ Open Tabs & Tools   │ │ test · test:unit · test:watch · fmt · clippy       │  │
+│ Layout              │ │ test · test:unit · test:watch · fmt · clippy       │  │
 │  Pane 1             │ │ [Rerun Last Task]                            [Run] │  │
 │   main.rs           │ └────────────────────────────────────────────────────┘  │
 │   Task · test       │                                                         │
@@ -488,7 +489,7 @@ command path instead of a dead **No matches** message.
 ```text
 ┌ Workspaces ─────────┬ main.rs | Debug | + ───────────────────────────────────┐
 │ paykit              │ Start debugging                                       │
-│ Open Tabs & Tools   │ [Start Debug Session] [Configure debug.json]           │
+│ Layout              │ [Start Debug Session] [Configure debug.json]           │
 │  Pane 1             │ Documentation · Adapter Logs                           │
 │   main.rs           ├───────────────────────────┬────────────────────────────┤
 │   Debug             │ Breakpoints               │ Console                    │
@@ -516,7 +517,7 @@ second Debug navigation system.
 │ Sessions            │ paykit · ~/dev/paykit                                  │
 │  Claude · Working   │ client-app · Access required     [Grant Folder Access] │
 │  tmux · Attached    │ Recent Workspaces unavailable                 [Retry]  │
-│ Open Tabs & Tools   │                                                        │
+│ Layout              │                                                        │
 │  Pane 1 · Home      │ External tools                                         │
 │  Pane 2 ·           │ [Open Workspace in cmux]                               │
 │   Diagnostics       │ cmux owns its tabs, splits, and browser.               │
@@ -545,7 +546,7 @@ native tool, honest ownership, inline recovery**.
 | --- | --- | --- | --- | --- |
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
-| Open Tabs & Tools | Workspaces projection | return to an existing surface | expands with two or more tabs | hidden for one tab; pane labels only for real splits; overflow stays pane-scoped |
+| Layout | activation-only Workspaces projection | return to an existing pane or tab | expands with two or more tabs | hidden for one tab; pane focus is explicit; tab ownership and overflow stay pane-scoped |
 | Sessions | Workspaces activity group | observe agents, tasks, tmux, Herdr, and cmux | Browse Running Sessions | source-specific Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect lifecycle, ownership, cwd, and evidence | terminal context strip | connection uncertainty never claims process death |
@@ -591,15 +592,17 @@ native tool, honest ownership, inline recovery**.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
-- Open Tabs & Tools remains flat for one pane. With a user-created split it
-  groups by pane and names the focused pane.
+- Layout keeps the owning pane explicit, including **Pane 1 · Focused** for a
+  single-pane Workspace. With a user-created split it groups rows under
+  **Pane 1**, **Pane 2**, and so on. Rows activate native tabs but do not close,
+  pin, reorder, drag, or split them.
 - Long detail text wraps inside the owning surface; it does not create a new
   persistent column.
 
 ## Acceptance checklist
 
 - Every open panel, tool, terminal, file, diff, and browser surface is reachable
-  as a native tab and appears in Open Tabs & Tools when that projection is
+  as a native tab and appears in Layout when that projection is
   useful.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
 - Empty Workspaces and search states expose one visually primary recovery;

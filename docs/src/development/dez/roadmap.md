@@ -4400,3 +4400,20 @@ Completed for the v0.0.3 studio-navigation source slice:
   state, while a real PTY remains the interactive source of truth; and
 - retained source-only evidence pending the exact tagged macOS build and
   runtime matrix.
+
+Completed for the Workspace Layout ownership source slice:
+
+- renamed the active Workspace's native pane/tab projection from **Open Tabs &
+  Tools** to **Layout**;
+- nested Layout beneath the active Workspace instead of mounting a second
+  global inventory above the Workspace list;
+- made every projected row activation-only by removing duplicate close and
+  middle-click-close behavior while retaining native dirty and pinned state;
+- named the focused pane in text, including a single-pane Workspace with
+  multiple tabs, so focus does not depend on accent color;
+- kept search focused on its filtered Workspace/session results and hid Layout
+  while a query is active;
+- preserved official Zed behavior through product-gated labels and visibility;
+- updated the native surface contract and static identity guards; and
+- retained source-only verification. No build, test binary, alternate binary,
+  package, or app launch was performed.

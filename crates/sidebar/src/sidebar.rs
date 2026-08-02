@@ -1188,7 +1188,7 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
     } else {
-        "Open Tabs & Tools"
+        "Layout"
     }
 }
 
@@ -1196,12 +1196,17 @@ fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
     app_name != "Zed" && tab_count > 1
 }
 
-fn workspace_tab_layout_label(tab_count: usize, pane_count: usize) -> String {
+fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
     let tab_label = format!(
         "{tab_count} {}",
         if tab_count == 1 { "tab" } else { "tabs" }
     );
-    if pane_count > 1 {
+    if app_name != "Zed" {
+        format!(
+            "{tab_label} · {pane_count} {}",
+            if pane_count == 1 { "pane" } else { "panes" }
+        )
+    } else if pane_count > 1 {
         format!("{tab_label} · {pane_count} panes")
     } else {
         tab_label
@@ -1213,11 +1218,17 @@ fn workspace_pane_navigation_label(pane_index: usize, pane_count: usize) -> Opti
 }
 
 fn workspace_pane_header_label(
+    app_name: &str,
     pane_index: usize,
     pane_count: usize,
     is_focused: bool,
 ) -> Option<String> {
-    workspace_pane_navigation_label(pane_index, pane_count).map(|label| {
+    let label = if app_name != "Zed" {
+        Some(format!("Pane {}", pane_index + 1))
+    } else {
+        workspace_pane_navigation_label(pane_index, pane_count)
+    };
+    label.map(|label| {
         if is_focused {
             format!("{label} · Focused")
         } else {
@@ -2549,28 +2560,34 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Workspaces and Sessions"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Open Tabs & Tools");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Layout");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 2));
         assert!(!workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
-        assert_eq!(workspace_tab_layout_label(1, 1), "1 tab");
-        assert_eq!(workspace_tab_layout_label(3, 1), "3 tabs");
-        assert_eq!(workspace_tab_layout_label(3, 2), "3 tabs · 2 panes");
+        assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 tab · 1 pane");
+        assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 tabs · 1 pane");
+        assert_eq!(workspace_tab_layout_label("Dez", 3, 2), "3 tabs · 2 panes");
+        assert_eq!(workspace_tab_layout_label("Zed", 3, 1), "3 tabs");
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
         assert_eq!(
             workspace_pane_navigation_label(1, 3).as_deref(),
             Some("Pane 2")
         );
         assert_eq!(
-            workspace_pane_header_label(0, 2, true).as_deref(),
+            workspace_pane_header_label("Dez", 0, 2, true).as_deref(),
             Some("Pane 1 · Focused")
         );
         assert_eq!(
-            workspace_pane_header_label(1, 2, false).as_deref(),
+            workspace_pane_header_label("Dez", 1, 2, false).as_deref(),
             Some("Pane 2")
         );
+        assert_eq!(
+            workspace_pane_header_label("Dez", 0, 1, true).as_deref(),
+            Some("Pane 1 · Focused")
+        );
+        assert_eq!(workspace_pane_header_label("Zed", 0, 1, true), None);
         assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
         assert_eq!(workspace_tab_icon_color(true, false), Color::Default);
         assert_eq!(workspace_tab_icon_color(true, true), Color::Accent);
@@ -7697,6 +7714,7 @@ impl Sidebar {
                     *has_threads,
                     external_sessions,
                     // has_active_draft,
+                    window,
                     cx,
                 )
             }
@@ -7775,6 +7793,7 @@ impl Sidebar {
         is_focused: bool,
         has_threads: bool,
         external_sessions: &[ExternalMultiplexerSession],
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let host = key.host();
@@ -8158,6 +8177,11 @@ impl Sidebar {
             )
             .block_mouse_except_scroll();
 
+        let workspace_layout =
+            (APP_NAME != "Zed" && is_active && !is_sticky && !is_collapsed && !has_filter)
+                .then(|| self.render_active_workspace_tabs(window, cx))
+                .flatten();
+
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
             let external_rows = external_sessions
                 .iter()
@@ -8275,6 +8299,7 @@ impl Sidebar {
             v_flex()
                 .w_full()
                 .child(header)
+                .when_some(workspace_layout, |this, layout| this.child(layout))
                 .child(
                     v_flex()
                         .w_full()
@@ -8293,6 +8318,7 @@ impl Sidebar {
             v_flex()
                 .w_full()
                 .child(header)
+                .when_some(workspace_layout, |this, layout| this.child(layout))
                 .child(
                     v_flex()
                         .px_2()
@@ -8388,7 +8414,15 @@ impl Sidebar {
                 )
                 .into_any_element()
         } else {
-            header.into_any_element()
+            if let Some(workspace_layout) = workspace_layout {
+                v_flex()
+                    .w_full()
+                    .child(header)
+                    .child(workspace_layout)
+                    .into_any_element()
+            } else {
+                header.into_any_element()
+            }
         }
     }
 
@@ -9476,6 +9510,7 @@ impl Sidebar {
             is_selected,
             *has_threads,
             external_sessions,
+            window,
             cx,
         );
 
@@ -17681,7 +17716,7 @@ impl Sidebar {
                 let details = workspace::tab_details(&items, window, cx);
 
                 if let Some(pane_label) =
-                    workspace_pane_header_label(pane_index, pane_count, pane_is_active)
+                    workspace_pane_header_label(APP_NAME, pane_index, pane_count, pane_is_active)
                 {
                     rows.push(
                         h_flex()
@@ -17735,10 +17770,6 @@ impl Sidebar {
                         "{label}, {visibility_label}{pinned_label}{dirty_label}, {pane_label}. Open in {workspace_label}"
                     );
                     let item_id = item.item_id();
-                    let close_icon = item.tab_close_icon(cx);
-                    let close_tooltip_text = item.tab_close_tooltip_text(cx);
-                    let close_pane = pane.clone();
-                    let middle_click_pane = pane.clone();
                     let workspace = workspace.clone();
 
                     rows.push(
@@ -17746,24 +17777,6 @@ impl Sidebar {
                             .role(gpui::Role::ListItem)
                             .aria_position_in_set(position_in_set)
                             .aria_size_of_set(tab_count)
-                            .when(!is_pinned, |this| {
-                                this.on_aux_click(move |event: &ClickEvent, window, cx| {
-                                    if !event.is_middle_click() {
-                                        return;
-                                    }
-                                    middle_click_pane.update(cx, |pane, cx| {
-                                        pane.close_item_by_id(
-                                            item_id,
-                                            SaveIntent::Close,
-                                            window,
-                                            cx,
-                                        )
-                                        .detach_and_log_err(cx);
-                                    });
-                                    cx.stop_propagation();
-                                    window.prevent_default();
-                                })
-                            })
                             .child(
                                 ButtonLike::new(ElementId::from(format!(
                                     "workspace-native-tab-{item_id}"
@@ -17801,35 +17814,6 @@ impl Sidebar {
                                                     .size(IconSize::XSmall)
                                                     .color(Color::Muted),
                                             )
-                                        })
-                                        .when(!is_pinned, |this| {
-                                            this.child(
-                                                IconButton::new(
-                                                    ("workspace-native-tab-close", item_id),
-                                                    close_icon,
-                                                )
-                                                .shape(IconButtonShape::Square)
-                                                .icon_color(Color::Muted)
-                                                .size(ButtonSize::None)
-                                                .icon_size(IconSize::Small)
-                                                .aria_label(close_tooltip_text)
-                                                .tooltip(Tooltip::text(close_tooltip_text))
-                                                .when(is_visible, |this| this.tab_index(0isize))
-                                                .when(!is_visible, |this| this.visible_on_hover(""))
-                                                .on_click(move |_, window, cx| {
-                                                    cx.stop_propagation();
-                                                    window.prevent_default();
-                                                    close_pane.update(cx, |pane, cx| {
-                                                        pane.close_item_by_id(
-                                                            item_id,
-                                                            SaveIntent::Close,
-                                                            window,
-                                                            cx,
-                                                        )
-                                                        .detach_and_log_err(cx);
-                                                    });
-                                                }),
-                                            )
                                         }),
                                 )
                                 .on_click(
@@ -17854,16 +17838,16 @@ impl Sidebar {
 
         let expanded = self.workspace_tabs_expanded;
         let disclosure_label = if expanded {
-            "Hide active Workspace tabs"
+            "Hide active Workspace Layout"
         } else {
-            "Show active Workspace tabs"
+            "Show active Workspace Layout"
         };
 
         Some(
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label("Open tabs and tools in the active Workspace")
+                .aria_label("Layout in the active Workspace")
                 .flex_none()
                 .min_h_0()
                 .border_b_1()
@@ -17907,9 +17891,11 @@ impl Sidebar {
                                         ),
                                 )
                                 .child(
-                                    Label::new(workspace_tab_layout_label(tab_count, pane_count))
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
+                                    Label::new(workspace_tab_layout_label(
+                                        APP_NAME, tab_count, pane_count,
+                                    ))
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
                                 ),
                         )
                         .on_click(cx.listener(|this, _, _, cx| {
@@ -17923,7 +17909,7 @@ impl Sidebar {
                         v_flex()
                             .id("active-workspace-tab-list")
                             .role(gpui::Role::List)
-                            .aria_label("Open tabs grouped by pane")
+                            .aria_label("Workspace Layout tabs grouped by pane")
                             .max_h(vh(0.18, window))
                             .overflow_y_scroll()
                             .p_1()
@@ -19153,10 +19139,6 @@ impl Render for Sidebar {
         };
         let has_filtered_external_rows = external_terminal_section.is_some();
         let no_search_results = !has_workspace_rows && !has_filtered_external_rows;
-        let active_workspace_tabs =
-            (!installation_required && matches!(self.view, SidebarView::ThreadList) && !has_query)
-                .then(|| self.render_active_workspace_tabs(window, cx))
-                .flatten();
         let session_notices = (!installation_required
             && matches!(self.view, SidebarView::ThreadList))
         .then(|| self.render_session_notices(window, cx))
@@ -19287,7 +19269,6 @@ impl Render for Sidebar {
             })
             .child(self.render_sidebar_header(window, cx))
             .when_some(session_notices, |this, notices| this.child(notices))
-            .when_some(active_workspace_tabs, |this, tabs| this.child(tabs))
             .map(|this| {
                 if installation_required {
                     return this.child(self.render_empty_state(cx));

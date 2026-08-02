@@ -2048,3 +2048,21 @@ Source-only verification completed for the exact feature commit:
 No local build, test binary, app launch, package, or visual runtime was created.
 Rendered light/dark theme, compact-width, high-contrast, animation, and focus
 proof remains an exact remote-candidate and installed-runtime gate.
+
+## 2026-08-02: activation-only Workspace Layout
+
+The active Workspace now contains a native **Layout** projection of its real
+panes and tabs. Layout is hidden when one tab would make it redundant and while
+Workspace search owns the list. With multiple tabs it names the owning pane and
+marks the focused pane in text, including single-pane Workspaces.
+
+Layout rows only activate their existing native tab. Close, middle-click close,
+pin, reorder, drag, split, preview, and unsaved-work decisions remain owned by
+the native pane and tab strip. Dirty and pinned facts remain visible without
+becoming duplicate controls. Official Zed retains its inherited Sessions and
+tab behavior.
+
+Source-only verification for this slice consists of Rust formatting, the Dez
+identity guard, shell syntax, and diff hygiene. No local compilation, test
+binary, app launch, package, or visual runtime is evidence for this change;
+GitHub Actions remains responsible for the exact-candidate build and tests.
