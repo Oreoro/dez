@@ -613,8 +613,9 @@ native tool, honest ownership, inline recovery**.
 - Long detail text wraps inside the owning surface; it does not create a new
   persistent column.
 - Every curated Settings field has a registered native renderer. A missing
-  renderer is a release blocker; `NO RENDERER` and `NO DEFAULT` diagnostics
-  never ship as controls.
+  renderer or unresolved default is a release blocker; Dez falls back to the
+  native settings file instead of showing `NO RENDERER` or `NO DEFAULT` as a
+  control.
 
 ## Acceptance checklist
 

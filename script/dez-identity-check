@@ -365,8 +365,8 @@ require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'fn init_renderers.*?add_basic_renderer::<settings::DockSide>\(render_dropdown\).*?add_basic_renderer::<settings::CanvasSide>\(render_dropdown\).*?add_basic_renderer::<settings::TerminalDockPosition>\(render_dropdown\)' \
     'Workspaces Position can regress to rendering a NO RENDERER error instead of its native side chooser'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
-    'field_renderer\.ok_or\("NO RENDERER"\).*?Err\("NO RENDERER"\) if paths::APP_NAME != "Zed".*?Button::new\("open-unsupported-setting", "Edit in settings\.json"\).*?open_current_settings_file.*?Err\(warning\).*?Button::new\("error-warning", warning\)' \
-    'a missing Dez Settings renderer can regress to exposing an internal diagnostic without an actionable native fallback'
+    'field_renderer\.ok_or\("NO RENDERER"\).*?if cfg!\(debug_assertions\) && !found.*?Err\("NO DEFAULT"\).*?Err\(_\) if paths::APP_NAME != "Zed".*?Button::new\("open-unsupported-setting", "Edit in settings\.json"\).*?open_current_settings_file.*?Err\(warning\).*?Button::new\("error-warning", warning\)' \
+    'a missing Dez Settings renderer or default can regress to exposing an internal diagnostic without an actionable native fallback'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn init\(app_state: Arc<AppState>, cx: &mut App\).*?paths::APP_NAME != "Zed".*?update_default_settings\(cx.*?preview_tabs\.get_or_insert_default\(\)\.enabled = Some\(false\)' \
     'Dez file navigation can regress to replacing an already-open file through preview tabs by default'

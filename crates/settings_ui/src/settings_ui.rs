@@ -1331,7 +1331,7 @@ impl SettingsPageItem {
                             cx,
                         )
                     }),
-                    Err("NO RENDERER") if paths::APP_NAME != "Zed" => render_settings_item(
+                    Err(_) if paths::APP_NAME != "Zed" => render_settings_item(
                         settings_window,
                         setting_item,
                         file.clone(),
