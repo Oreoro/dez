@@ -271,6 +271,9 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'add_basic_renderer::<settings::TerminalLauncher>\(render_terminal_launcher_dropdown\).*?fn render_terminal_launcher_dropdown.*?Some\(terminal_launcher_icon\).*?fn render_dropdown_with_optional_icons.*?icon_for_value: Option<fn\(T\) -> IconName>.*?when_some\(icon_for_value.*?this\.icon_for_value\(icon_for_value\)' \
     'Default Terminal Settings can regress to the generic text-only enum renderer'
+require_pattern crates/settings_ui/src/components/dropdown.rs \
+    '^use gpui::Styled;$' \
+    'the native Settings dropdown can regress to using GPUI spacing without importing its styling trait'
 require_multiline_pattern crates/settings_ui/src/components/dropdown.rs \
     'icon_for_value: Option<Rc<dyn Fn\(T\) -> IconName.*?pub fn icon_for_value.*?ContextMenuEntry::new.*?toggleable\(IconPosition::End.*?entry\.icon\(icon_for_value\(value\)\).*?DropdownMenu::new_with_element.*?Icon::new\(icon_for_value\(current_value\)\).*?aria_value\(visible_label\)' \
     'the native enum chooser can regress to hiding launcher identity or conflating it with selection state'
