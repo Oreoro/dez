@@ -5794,7 +5794,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         )
                 } else {
                     let menu = menu
-                        .submenu("Open Terminal", |menu, _, _| {
+                        .submenu("Open Terminal", move |menu, _, _| {
                             menu.action_with_icon(
                                 "Default Terminal",
                                 default_terminal_icon,
