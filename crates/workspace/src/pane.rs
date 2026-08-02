@@ -21,8 +21,8 @@ use crate::{
     },
 };
 use agent_settings::{
-    AgentSettings, built_in_agent_is_ready, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label,
+    AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, built_in_agent_is_ready,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label,
 };
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -5806,7 +5806,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 zed_actions::terminal::OpenShellTerminal.boxed_clone(),
                             )
                             .action_with_icon(
-                                terminal_view::WORKSPACE_TMUX_LAUNCHER_LABEL,
+                                WORKSPACE_TMUX_LAUNCHER_LABEL,
                                 IconName::SplitAlt,
                                 zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
                             )

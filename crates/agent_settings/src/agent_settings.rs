@@ -10,7 +10,7 @@ use anyhow::Context as _;
 use collections::{HashSet, IndexMap};
 use fs::Fs;
 use futures::channel::oneshot;
-use gpui::{App, Pixels, ReadGlobal as _, SharedString, px};
+use gpui::{App, Pixels, SharedString, px};
 use icons::IconName;
 use language_model::{LanguageModel, LanguageModelRegistry};
 use project::DisableAiSettings;
