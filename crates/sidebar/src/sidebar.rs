@@ -39,7 +39,6 @@ use editor::Editor;
 use feature_flags::{
     AgentThreadWorktreeLabel, AgentThreadWorktreeLabelFlag, FeatureFlag, FeatureFlagAppExt as _,
 };
-use gpui::Styled;
 use gpui::{
     Action as _, AnyElement, AnyView, App, ClickEvent, ClipboardItem, Context, Decorations,
     DismissEvent, Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Pixels,
@@ -9124,7 +9123,7 @@ impl Sidebar {
                             let cmux_key = project_group_key.clone();
                             let cmux_sidebar = this_for_menu.clone();
                             let cmux_menu = weak_menu.clone();
-                            menu.submenu(
+                            let menu = menu.submenu(
                                 terminal_launch_label(APP_NAME),
                                 move |mut submenu, _window, _cx| {
                                     for (label, icon, startup_command) in [
@@ -9185,6 +9184,9 @@ impl Sidebar {
                                             ),
                                         );
                                     }
+                                    let more_agents_sidebar = terminal_sidebar.clone();
+                                    let more_agents_key = terminal_key.clone();
+                                    let more_agents_menu = terminal_menu.clone();
                                     submenu.submenu(
                                         "More Agent CLIs",
                                         move |mut more_agents, _window, _cx| {
@@ -9193,9 +9195,10 @@ impl Sidebar {
                                                 ("Aider", IconName::AiEdit, "aider"),
                                                 ("Herdr", IconName::Inception, "herdr"),
                                             ] {
-                                                let terminal_sidebar = terminal_sidebar.clone();
-                                                let terminal_key = terminal_key.clone();
-                                                let terminal_menu = terminal_menu.clone();
+                                                let terminal_sidebar =
+                                                    more_agents_sidebar.clone();
+                                                let terminal_key = more_agents_key.clone();
+                                                let terminal_menu = more_agents_menu.clone();
                                                 more_agents = more_agents.item(
                                                     ContextMenuEntry::new(label)
                                                         .icon(icon)
@@ -17290,11 +17293,11 @@ impl Sidebar {
                 APP_NAME != "Zed" && self.external_activity_expanded && !has_rows,
                 |this| {
                     this.child(
-                        Label::new(empty_label)
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .px_2()
-                            .pb_2(),
+                        div().px_2().pb_2().child(
+                            Label::new(empty_label)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        ),
                     )
                 },
             );
