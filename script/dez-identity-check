@@ -2113,6 +2113,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'use terminal_view::\{.*?WORKSPACE_TMUX_LAUNCHER_LABEL.*?let tmux_startup_command =[[:space:]]*terminal_view::tmux_startup_command_for_workspace.*?WORKSPACE_TMUX_LAUNCHER_LABEL\.to_owned\(\).*?IconName::SplitAlt.*?Some\(tmux_startup_command\.clone\(\)\)' \
     'Workspace Options can regress to presenting root-scoped tmux as an unowned generic terminal action'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn open_tmux_terminal\(.*?ordered_paths\(\)[[:space:]]*\.next\(\)[[:space:]]*\.map\(PathBuf::as_path\).*?tmux_startup_command_for_workspace\(workspace_root\)' \
+    'the native tmux launcher can regress to passing a PathBuf reference across its Path API boundary'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = groups.*?let mut visible_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?session\.source_label\(\).*?session\.state_label\(\).*?working_directory\.display\(\).*?workspace-external-session-.*?tab_index\(0isize\).*?aria_label\(accessibility_label\).*?external_multiplexer_icon\(session\).*?open_external_multiplexer_session' \
     'external terminal and cmux activity can regress from the most specific Workspace or become a pointer-only inventory'

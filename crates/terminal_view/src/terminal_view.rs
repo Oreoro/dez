@@ -4,7 +4,7 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
-use agent_settings::{AgentSettings, TerminalAgentKind, detect_terminal_agent_command};
+use agent_settings::{AgentSettings, detect_terminal_agent_command};
 pub use agent_settings::{
     WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
     configured_terminal_launcher_label, terminal_agent_icon,
@@ -1076,7 +1076,11 @@ fn open_tmux_terminal(
     }
 
     let project_group_key = workspace.project_group_key(cx);
-    let workspace_root = project_group_key.path_list().ordered_paths().next();
+    let workspace_root = project_group_key
+        .path_list()
+        .ordered_paths()
+        .next()
+        .map(PathBuf::as_path);
     let startup_command = tmux_startup_command_for_workspace(workspace_root);
     open_terminal_with_startup_command(workspace, &startup_command, window, cx);
 }
