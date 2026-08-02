@@ -1273,6 +1273,9 @@ require_multiline_pattern crates/zed/src/zed/move_to_applications.rs \
 reject_pattern crates/zed/src/zed/move_to_applications.rs \
     'InstallingZedModal|MoveToApplicationsModal|DONT_ASK_AGAIN_KEY|Don.t ask me again' \
     'the removed custom installation overlay or persistent bypass returned'
+reject_pattern crates/zed/src/zed/move_to_applications.rs \
+    'TaskExt as _' \
+    'the native install flow can regress to carrying an unused GPUI task extension import'
 require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?Installs a temporary macOS app bundle in /Applications and relaunches it\..*?InstallAndRelaunch.*?Grants native filesystem access to one currently blocked Workspace folder\..*?GrantWorkspaceAccess.*?Retries the durable terminal service without replacing running processes\..*?RetryTerminalService' \
     'native install-first or non-destructive terminal-service recovery is no longer part of the Dez action model'
@@ -1280,7 +1283,7 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'register_action\([[:space:]]*\|workspace: &mut Workspace,[[:space:]]*_: &zed_actions::dez::InstallAndRelaunch.*?if APP_NAME == "Zed".*?cx\.propagate\(\).*?move_to_applications::install_and_relaunch\(workspace, window, cx\)' \
     'Install and Relaunch can regress to an unregistered or non-product-scoped action'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'GrantWorkspaceAccess.*?if APP_NAME == "Zed".*?cx\.propagate\(\).*?cx\.prompt_for_paths\(PathPromptOptions.*?multiple: false.*?prompt: Some\("Grant Workspace Access"\.into\(\)\).*?native Workspace access picker failed.*?find\(\|root\| root\.as_path\(\) == selected_path\.as_path\(\)\).*?fs\.read_dir\(&matching_root\).*?mark_workspace_roots_accessible.*?Dez kept the current layout.*?Open Recent Workspaces' \
+    'GrantWorkspaceAccess.*?if APP_NAME == "Zed".*?cx\.propagate\(\).*?cx\.prompt_for_paths\(PathPromptOptions.*?multiple: false.*?prompt: Some\("Grant Workspace Access"\.into\(\)\).*?let selection = match selection\.await.*?Ok\(selection\) => selection.*?Err\(error\) => Err\(error\.into\(\)\).*?native Workspace access picker failed.*?find\(\|root\| root\.as_path\(\) == selected_path\.as_path\(\)\).*?fs\.read_dir\(&matching_root\).*?mark_workspace_roots_accessible.*?Dez kept the current layout.*?Open Recent Workspaces' \
     'Workspace access recovery can regress to a multi-folder opener, accept an unrelated path, or mutate the current layout'
 require_multiline_pattern crates/zed/src/zed.rs \
     'register_action\([[:space:]]*\|workspace: &mut Workspace,[[:space:]]*_: &zed_actions::dez::RetryTerminalService.*?if APP_NAME == "Zed" \{[[:space:]]*cx\.propagate\(\);[[:space:]]*return;.*?TerminalHostRuntime::retry\(cx\).*?Retrying the terminal service….*?cannot retry in place\. Relaunch Dez.*?workspace\.show_toast\(.*?\.autohide\(\)' \

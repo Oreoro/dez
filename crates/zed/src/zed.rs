@@ -1370,7 +1370,11 @@ fn register_actions(
                 });
                 let fs = fs.clone();
                 cx.spawn_in(window, async move |workspace, cx| {
-                    let selected_paths = match selection.await {
+                    let selection = match selection.await {
+                        Ok(selection) => selection,
+                        Err(error) => Err(error.into()),
+                    };
+                    let selected_paths = match selection {
                         Ok(Some(selected_paths)) => selected_paths,
                         Ok(None) => return anyhow::Ok(()),
                         Err(error) => {
