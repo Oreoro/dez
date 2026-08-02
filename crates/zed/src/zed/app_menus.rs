@@ -142,7 +142,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             MenuItem::submenu(Menu::new("Navigate Workspaces").items([
                 MenuItem::action("Focus Workspaces", workspace::FocusSidebar),
                 MenuItem::action(
-                    "Search Workspaces and Sessions…",
+                    "Search Workspaces and Activity…",
                     zed_actions::sidebar::FocusSidebarFilter,
                 ),
                 MenuItem::separator(),

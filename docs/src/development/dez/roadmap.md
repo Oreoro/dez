@@ -40,7 +40,7 @@ The source-candidate route under validation is:
 ```text
 Open Workspace
 -> run or attach work in native terminal tabs
--> supervise Sessions and attention in Workspaces
+-> supervise bounded Activity and attention in Workspaces
 -> Open Files or Review Changes in the Main Work Area
 ```
 
@@ -72,6 +72,10 @@ a second navigation model:
   **Ready**, preserving only failed-source rows as **last known**;
 - browsing running Sessions clears transient navigator filters, refreshes
   sources, expands matching groups, and focuses Workspaces;
+- expanded Workspaces now separate **Layout** from **Activity**: Layout returns
+  to native open tabs, while Activity retains only active, running, actionable,
+  recoverable, or review-ready work; completed history remains in Agent
+  History;
 - a guided **Default Terminal** chooser lives in **Workspaces & Terminals →
   Terminal Launch**, with Custom Command as the compatible escape hatch; and
 - Host command cycles and PTY input are bounded, ambiguous commands are not

@@ -417,11 +417,11 @@ mod agent_session_label_tests {
         assert_eq!(
             session_scope_copy("Dez"),
             (
-                "Workspace attention scope",
-                "Show every session in Workspaces",
-                "Show All Sessions",
-                "Show only sessions in Workspaces that need attention",
-                "Show Sessions Needing Attention",
+                "Workspace Activity scope",
+                "Show all current Workspace Activity",
+                "Show All Activity",
+                "Show only Workspace Activity that needs attention",
+                "Show Activity Needing Attention",
             )
         );
         assert_eq!(session_scope_copy("Zed").0, "Session scope");
@@ -775,15 +775,15 @@ fn session_overview_status_label(
                 "need"
             };
             let attention_noun = if attention_count == 1 {
-                "session"
+                "item"
             } else {
-                "sessions"
+                "items"
             };
             format!(
                 "{workspace_label} · {attention_count} {attention_noun} {attention_verb} attention"
             )
         } else {
-            format!("{workspace_label} · {session_count} {session_noun} active")
+            format!("{workspace_label} · {session_count} active")
         }
     } else if attention_count > 0 {
         let attention_verb = if attention_count == 1 {
@@ -902,7 +902,7 @@ fn session_empty_state_copy(
         } else {
             (
                 IconName::ListX,
-                "No matching Workspaces or sessions",
+                "No matching Workspaces or activity",
                 "Try another term or clear the search to show your current Workspace activity.",
             )
         }
@@ -930,8 +930,8 @@ fn session_empty_state_copy(
         } else {
             (
                 IconName::Terminal,
-                "No sessions yet",
-                "Open a terminal and run Codex, Claude Code, OpenCode, or another supported agent. Workspaces adds detected activity here automatically.",
+                "No activity yet",
+                "Open a terminal or run an agent. Running work, attention, recovery, and review-ready changes appear here automatically.",
             )
         }
     }
@@ -1006,11 +1006,11 @@ fn session_scope_copy(
         )
     } else {
         (
-            "Workspaces attention scope",
-            "Show every session in Workspaces",
-            "Show All Sessions",
-            "Show only sessions in Workspaces that need attention",
-            "Show Sessions Needing Attention",
+            "Workspace Activity scope",
+            "Show all current Workspace Activity",
+            "Show All Activity",
+            "Show only Workspace Activity that needs attention",
+            "Show Activity Needing Attention",
         )
     }
 }
@@ -1025,13 +1025,13 @@ fn all_session_items_accessibility_label(
     observed_terminal_count: usize,
 ) -> String {
     if app_name != "Zed" {
-        let session_noun = if session_count == 1 {
-            "session"
+        let activity_noun = if session_count == 1 {
+            "active item"
         } else {
-            "sessions"
+            "active items"
         };
         if observed_terminal_count == 0 {
-            return format!("All Workspaces activity, {session_count} {session_noun}");
+            return format!("All Workspace Activity, {session_count} {activity_noun}");
         }
         let terminal_noun = if observed_terminal_count == 1 {
             "observed terminal"
@@ -1039,7 +1039,7 @@ fn all_session_items_accessibility_label(
             "observed terminals"
         };
         return format!(
-            "All Workspaces activity, {session_count} {session_noun} and {observed_terminal_count} {terminal_noun}"
+            "All Workspace Activity, {session_count} {activity_noun} and {observed_terminal_count} {terminal_noun}"
         );
     }
     if observed_terminal_count == 0 {
@@ -1082,11 +1082,11 @@ fn attention_empty_state_copy(
         )
     } else {
         (
-            "You're caught up. No sessions need attention.",
+            "You're caught up. No Workspace Activity needs attention.",
             "You're caught up",
-            "No sessions need attention. Ongoing work remains under All.",
+            "No Workspace Activity needs attention. Ongoing work remains under All.",
             "Show All",
-            "Show all Workspace sessions",
+            "Show all Workspace Activity",
         )
     }
 }
@@ -1162,9 +1162,9 @@ fn session_header_status_label(
     } else if attention_count == 0 {
         Some("Attention needed".to_owned())
     } else if attention_count == 1 {
-        Some("1 session needs attention".to_owned())
+        Some("1 item needs attention".to_owned())
     } else {
-        Some(format!("{attention_count} sessions need attention"))
+        Some(format!("{attention_count} items need attention"))
     }
 }
 
@@ -1180,8 +1180,65 @@ fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
     } else {
-        "Workspaces and Sessions"
+        "Workspaces and Activity"
     }
+}
+
+fn workspace_activity_thread_visible(
+    app_name: &str,
+    status: AgentThreadStatus,
+    has_draft_content: bool,
+    is_active: bool,
+    has_notification: bool,
+    has_reviewable_changes: bool,
+) -> bool {
+    app_name == "Zed"
+        || has_draft_content
+        || is_active
+        || has_notification
+        || has_reviewable_changes
+        || matches!(
+            status,
+            AgentThreadStatus::Running
+                | AgentThreadStatus::WaitingForConfirmation
+                | AgentThreadStatus::Error
+        )
+}
+
+fn workspace_activity_terminal_visible(
+    app_name: &str,
+    state: RunReviewState,
+    is_active: bool,
+    needs_attention: bool,
+) -> bool {
+    app_name == "Zed"
+        || is_active
+        || needs_attention
+        || matches!(
+            state,
+            RunReviewState::Running
+                | RunReviewState::WaitingForPermission
+                | RunReviewState::WaitingForInput
+                | RunReviewState::Failed
+                | RunReviewState::Detached
+                | RunReviewState::Reconnecting
+                | RunReviewState::Missing
+                | RunReviewState::Incompatible
+                | RunReviewState::Resumable
+        )
+}
+
+fn workspace_activity_multiplexer_visible(app_name: &str, state: MultiplexerSessionState) -> bool {
+    app_name == "Zed" || state != MultiplexerSessionState::Completed
+}
+
+fn workspace_activity_section_visible(
+    app_name: &str,
+    is_sticky: bool,
+    is_collapsed: bool,
+    has_activity: bool,
+) -> bool {
+    app_name != "Zed" && !is_sticky && !is_collapsed && has_activity
 }
 
 fn workspace_tabs_section_title(app_name: &str) -> &'static str {
@@ -1251,7 +1308,7 @@ fn session_rail_search_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search Sessions"
     } else {
-        "Search Workspaces and Sessions"
+        "Search Workspaces and Activity"
     }
 }
 
@@ -1259,7 +1316,7 @@ fn session_rail_search_placeholder(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Search sessions…"
     } else {
-        "Search Workspaces or sessions…"
+        "Search Workspaces or activity…"
     }
 }
 
@@ -2493,11 +2550,11 @@ mod workspace_header_label_tests {
         );
         assert_eq!(
             session_overview_status_label("Dez", 3, 0, 2, false, false),
-            "2 Workspaces · 3 sessions active"
+            "2 Workspaces · 3 active"
         );
         assert_eq!(
             session_overview_status_label("Dez", 3, 1, 2, false, false),
-            "2 Workspaces · 1 session needs attention"
+            "2 Workspaces · 1 item needs attention"
         );
         assert_eq!(
             attention_items_accessibility_label("Dez", 1),
@@ -2529,11 +2586,11 @@ mod workspace_header_label_tests {
         );
         assert_eq!(
             session_header_status_label("Dez", 2, 1, true, false, false),
-            Some("1 session needs attention".to_owned())
+            Some("1 item needs attention".to_owned())
         );
         assert_eq!(
             session_header_status_label("Dez", 2, 3, true, false, false),
-            Some("3 sessions need attention".to_owned())
+            Some("3 items need attention".to_owned())
         );
         assert_eq!(
             session_header_status_label("Dez", 2, 0, false, false, false),
@@ -2558,7 +2615,7 @@ mod session_start_state_tests {
         assert_eq!(session_rail_title("Zed"), "Sessions");
         assert_eq!(
             session_rail_accessibility_label("Dez"),
-            "Workspaces and Sessions"
+            "Workspaces and Activity"
         );
         assert_eq!(workspace_tabs_section_title("Dez"), "Layout");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
@@ -2593,11 +2650,11 @@ mod session_start_state_tests {
         assert_eq!(workspace_tab_icon_color(true, true), Color::Accent);
         assert_eq!(
             session_rail_search_label("Dez"),
-            "Search Workspaces and Sessions"
+            "Search Workspaces and Activity"
         );
         assert_eq!(
             session_rail_search_placeholder("Dez"),
-            "Search Workspaces or sessions…"
+            "Search Workspaces or activity…"
         );
         assert_eq!(
             session_notices_accessibility_label("Dez"),
@@ -2613,7 +2670,7 @@ mod session_start_state_tests {
         );
         assert_eq!(
             all_session_items_accessibility_label("Dez", 2, 1),
-            "All Workspaces activity, 2 sessions and 1 observed terminal"
+            "All Workspace Activity, 2 active items and 1 observed terminal"
         );
         assert!(!session_search_control_visible("Dez", 1));
         assert!(session_search_control_visible("Dez", 2));
@@ -2621,7 +2678,7 @@ mod session_start_state_tests {
             session_empty_state_copy("Dez", true, false),
             (
                 IconName::ListX,
-                "No matching Workspaces or sessions",
+                "No matching Workspaces or activity",
                 "Try another term or clear the search to show your current Workspace activity.",
             )
         );
@@ -2687,11 +2744,11 @@ mod session_start_state_tests {
         assert_eq!(
             attention_empty_state_copy("Dez"),
             (
-                "You're caught up. No sessions need attention.",
+                "You're caught up. No Workspace Activity needs attention.",
                 "You're caught up",
-                "No sessions need attention. Ongoing work remains under All.",
+                "No Workspace Activity needs attention. Ongoing work remains under All.",
                 "Show All",
-                "Show all Workspace sessions",
+                "Show all Workspace Activity",
             )
         );
         assert_eq!(
@@ -2725,6 +2782,85 @@ mod session_start_state_tests {
         assert!(!session_rail_supplemental_metadata_visible_for_product(
             "Zed",
             DEFAULT_WIDTH
+        ));
+    }
+
+    #[test]
+    fn dez_workspace_activity_is_bounded_to_current_actionable_work() {
+        assert!(!workspace_activity_thread_visible(
+            "Dez",
+            AgentThreadStatus::Completed,
+            false,
+            false,
+            false,
+            false,
+        ));
+        assert!(workspace_activity_thread_visible(
+            "Dez",
+            AgentThreadStatus::Running,
+            false,
+            false,
+            false,
+            false,
+        ));
+        assert!(workspace_activity_thread_visible(
+            "Dez",
+            AgentThreadStatus::Completed,
+            false,
+            false,
+            false,
+            true,
+        ));
+        assert!(workspace_activity_thread_visible(
+            "Zed",
+            AgentThreadStatus::Completed,
+            false,
+            false,
+            false,
+            false,
+        ));
+
+        assert!(!workspace_activity_terminal_visible(
+            "Dez",
+            RunReviewState::Idle,
+            false,
+            false,
+        ));
+        assert!(workspace_activity_terminal_visible(
+            "Dez",
+            RunReviewState::Running,
+            false,
+            false,
+        ));
+        assert!(workspace_activity_terminal_visible(
+            "Dez",
+            RunReviewState::Missing,
+            false,
+            false,
+        ));
+        assert!(workspace_activity_terminal_visible(
+            "Dez",
+            RunReviewState::Completed,
+            true,
+            false,
+        ));
+
+        assert!(!workspace_activity_multiplexer_visible(
+            "Dez",
+            MultiplexerSessionState::Completed,
+        ));
+        assert!(workspace_activity_multiplexer_visible(
+            "Dez",
+            MultiplexerSessionState::Unknown,
+        ));
+        assert!(workspace_activity_section_visible(
+            "Dez", false, false, true,
+        ));
+        assert!(!workspace_activity_section_visible(
+            "Dez", true, false, true,
+        ));
+        assert!(!workspace_activity_section_visible(
+            "Zed", false, false, true,
         ));
     }
 }
@@ -3524,7 +3660,7 @@ fn thread_metadata_would_render_sidebar_row(
     cx: &App,
 ) -> bool {
     if !metadata.is_draft() {
-        return true;
+        return APP_NAME == "Zed";
     }
 
     draft_display_label_for_thread_metadata(metadata, workspace, cx).is_some_and(|(_, kind)| {
@@ -4768,9 +4904,9 @@ struct SidebarContents {
 enum EntryShape {
     ProjectHeader {
         key: ProjectGroupKey,
-        // Toggles the "No sessions yet" empty-state row when not collapsed.
+        // Toggles the empty activity row when not collapsed.
         has_threads: bool,
-        // Determines whether the "No sessions yet" row is rendered (only shown when
+        // Determines whether the empty activity row is rendered (only shown when
         // `!is_collapsed && !has_threads`).
         is_collapsed: bool,
         external_session_count: usize,
@@ -6254,7 +6390,7 @@ impl Sidebar {
             // MultiWorkspace intentionally does not persist empty project groups.
             // Workspaces still needs a transient group for scratch terminals,
             // otherwise the visible Main Work Area can contain a live terminal
-            // while the supervisor incorrectly says "No sessions yet".
+            // while the supervisor incorrectly claims there is no activity.
             groups.insert(
                 0,
                 workspace::ProjectGroup {
@@ -6759,6 +6895,16 @@ impl Sidebar {
                     .has_notification
                     .then_some(terminal.metadata.terminal_id)
             }));
+            terminals.retain(|terminal| {
+                workspace_activity_terminal_visible(
+                    APP_NAME,
+                    terminal_run_review_state(terminal.agent.as_ref(), terminal.runtime.as_ref()),
+                    self.active_entry.as_ref().is_some_and(|entry| {
+                        entry.is_active_terminal(terminal.metadata.terminal_id)
+                    }),
+                    terminal.needs_attention || terminal.has_notification,
+                )
+            });
             // Empty workspaces are valid terminal-first canvases. Keep hiding a
             // completely empty group, but do not discard live terminal rows just
             // because the user has not opened a project yet.
@@ -6791,9 +6937,10 @@ impl Sidebar {
             let external_sessions = group_external_sessions
                 .into_iter()
                 .filter(|session| {
-                    query.is_empty()
-                        || workspace_matches_query
-                        || external_multiplexer_session_matches_query(session, &query)
+                    workspace_activity_multiplexer_visible(APP_NAME, session.state)
+                        && (query.is_empty()
+                            || workspace_matches_query
+                            || external_multiplexer_session_matches_query(session, &query))
                 })
                 .collect::<Vec<_>>();
 
@@ -7073,6 +7220,24 @@ impl Sidebar {
                         notified_threads.remove(&thread.metadata.thread_id);
                     }
                 }
+
+                threads.retain(|thread| {
+                    let is_active_thread = self
+                        .active_entry
+                        .as_ref()
+                        .is_some_and(|entry| entry.is_active_thread(&thread.metadata.thread_id));
+                    let has_reviewable_changes = thread.diff_stats.lines_added > 0
+                        || thread.diff_stats.lines_removed > 0
+                        || !thread.changed_files.is_empty();
+                    workspace_activity_thread_visible(
+                        APP_NAME,
+                        thread.status,
+                        thread.draft == Some(DraftKind::WithContent),
+                        is_active_thread,
+                        notified_threads.contains(&thread.metadata.thread_id),
+                        has_reviewable_changes,
+                    )
+                });
 
                 threads.sort_by(|a, b| {
                     let a_time = Self::thread_display_time(&a.metadata);
@@ -8181,6 +8346,15 @@ impl Sidebar {
             (APP_NAME != "Zed" && is_active && !is_sticky && !is_collapsed && !has_filter)
                 .then(|| self.render_active_workspace_tabs(window, cx))
                 .flatten();
+        let workspace_activity_visible =
+            workspace_activity_section_visible(APP_NAME, is_sticky, is_collapsed, has_threads);
+        let workspace_activity_heading = || {
+            h_flex().w_full().px_3().pt_1().pb_0p5().child(
+                Label::new("Activity")
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            )
+        };
 
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
             let external_rows = external_sessions
@@ -8300,6 +8474,9 @@ impl Sidebar {
                 .w_full()
                 .child(header)
                 .when_some(workspace_layout, |this, layout| this.child(layout))
+                .when(workspace_activity_visible, |this| {
+                    this.child(workspace_activity_heading())
+                })
                 .child(
                     v_flex()
                         .w_full()
@@ -8414,11 +8591,14 @@ impl Sidebar {
                 )
                 .into_any_element()
         } else {
-            if let Some(workspace_layout) = workspace_layout {
+            if workspace_layout.is_some() || workspace_activity_visible {
                 v_flex()
                     .w_full()
                     .child(header)
-                    .child(workspace_layout)
+                    .when_some(workspace_layout, |this, layout| this.child(layout))
+                    .when(workspace_activity_visible, |this| {
+                        this.child(workspace_activity_heading())
+                    })
                     .into_any_element()
             } else {
                 header.into_any_element()
@@ -18306,7 +18486,7 @@ impl Sidebar {
                                 )
                                 .when(workspace_search_available, |menu| {
                                     menu.action(
-                                        "Search Workspaces and Sessions…",
+                                        "Search Workspaces and Activity…",
                                         Box::new(FocusSidebarFilter),
                                     )
                                 })
@@ -19306,7 +19486,7 @@ impl Render for Sidebar {
                                                 .aria_label(if APP_NAME == "Zed" {
                                                     "Workspace Sessions"
                                                 } else {
-                                                    "Workspaces and Sessions"
+                                                    "Workspaces and Activity"
                                                 })
                                                 .relative()
                                                 .flex_1()

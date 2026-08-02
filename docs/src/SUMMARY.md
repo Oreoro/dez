@@ -7,6 +7,7 @@
 - [Workspace Navigation and Access Recovery](./development/dez/v0.2-workspace-polish.md)
 - [Native Surface Contract](./development/dez/surface-contract.md)
 - [Navigation Wireframe Proposal](./development/dez/tmux-claude-navigation-wireframe.md)
+- [Annotated Workspace Workflow](./development/dez/annotated-workspace-workflow-wireframe.md)
 - [Settings and Shortcuts](./dez.md#settings-and-navigation-visibility)
 - [Release Status](./development/dez/release-evidence.md)
 
@@ -240,6 +241,7 @@
     - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
     - [Native Surface Contract](./development/dez/surface-contract.md)
     - [Navigation Wireframe Proposal](./development/dez/tmux-claude-navigation-wireframe.md)
+    - [Annotated Workspace Workflow](./development/dez/annotated-workspace-workflow-wireframe.md)
     - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
     - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
     - [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)

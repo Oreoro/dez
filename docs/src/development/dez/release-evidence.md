@@ -2066,3 +2066,31 @@ Source-only verification for this slice consists of Rust formatting, the Dez
 identity guard, shell syntax, and diff hygiene. No local compilation, test
 binary, app launch, package, or visual runtime is evidence for this change;
 GitHub Actions remains responsible for the exact-candidate build and tests.
+
+## 2026-08-02: annotated Workspace workflow and bounded Activity
+
+The repository now owns a Dez Workspace design skill and an authoritative
+annotated workflow wireframe. The reviewed monochrome sheet covers Home,
+focused multi-pane work, navigation without content-covering overlays, return
+recap, and terminal/access recovery. Its ASCII companion records native owner,
+action, invariant, and failure behavior for every numbered callout.
+
+The implemented slice separates native navigation from supervision. **Layout**
+continues to activate the real pane/tab entities. **Activity** now retains only
+active, running, waiting, failed, reconnecting, missing, incompatible,
+resumable, unread, or review-ready work. Inactive completed Agent Sessions stay
+available in Agent History; inactive idle or exited terminals remain reachable
+through Layout or their native tab without cluttering Activity. Completed
+external multiplexer work is likewise absent from the live projection.
+
+Expanded Workspaces with projected rows now visibly nest those rows beneath an
+**Activity** heading. Search, empty states, scope controls, overview copy, and
+accessibility labels use Workspaces-and-Activity language while preserving
+official Zed's inherited Sessions behavior. Source policy assertions and the
+identity guard pin the product split.
+
+Local evidence for this slice is limited to skill validation, Rust formatting,
+shell syntax, source identity, and diff hygiene. No local compilation, test
+binary, app launch, package, or installed-runtime claim is permitted. Exact
+compilation, tests, packaging, and rendered validation remain GitHub Actions
+and installed-candidate gates.

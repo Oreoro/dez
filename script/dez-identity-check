@@ -61,6 +61,24 @@ reject_multiline_pattern() {
 require_pattern crates/paths/src/paths.rs \
     '^pub const APP_NAME: &str = "Dez";' \
     'public application name is not Dez'
+require_file .agents/skills/dez-workspace-design/SKILL.md \
+    'the repository-owned Dez Workspace design skill is missing'
+require_file .agents/skills/dez-workspace-design/agents/openai.yaml \
+    'the Dez Workspace design skill is missing its Codex interface metadata'
+require_file .agents/skills/dez-workspace-design/references/native-surface-rules.md \
+    'the Dez Workspace design skill is missing its native surface rules'
+require_file .agents/skills/dez-workspace-design/references/workflow-state-matrix.md \
+    'the Dez Workspace design skill is missing its workflow state matrix'
+require_file docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
+    'the authoritative annotated Workspace workflow is missing'
+require_file docs/src/development/dez/assets/dez-workspace-workflow-wireframe-v3.png \
+    'the reviewed monochrome Workspace workflow sheet is missing'
+require_multiline_pattern .agents/skills/dez-workspace-design/SKILL.md \
+    '^name: dez-workspace-design.*?Require an annotated monochrome wireframe before structural UI changes.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?Wireframe before structural edits.*?cargo fmt --all -- --check.*?GitHub Actions' \
+    'the Dez Workspace design skill can regress from its wireframe, ownership, or remote-validation contract'
+require_multiline_pattern docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
+    'Layout and bounded Activity are implemented.*?dez-workspace-workflow-wireframe-v3\.png.*?## A\. Begin without an overlay.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?\| 15 \| cmux external owner \|' \
+    'the annotated Workspace workflow can regress to an incomplete or unowned visual proposal'
 require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
@@ -107,10 +125,10 @@ reject_pattern crates/title_bar/src/title_bar.rs \
     'render_sidebar_header_controls' \
     'Workspaces controls can regress to squeezing duplicate navigation into native work-tab chrome'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_scope_copy.*?app_name == "Zed".*?"Session scope".*?"Show every session in the rail".*?"Workspaces attention scope".*?"Show every session in Workspaces".*?"Show Sessions Needing Attention".*?aria_label\(scope_accessibility_label\).*?aria_description\(all_scope_description\).*?all_scope_tooltip.*?aria_description\(attention_scope_description\).*?attention_scope_tooltip' \
+    'fn session_scope_copy.*?app_name == "Zed".*?"Session scope".*?"Show every session in the rail".*?"Workspace Activity scope".*?"Show all current Workspace Activity".*?"Show Activity Needing Attention".*?aria_label\(scope_accessibility_label\).*?aria_description\(all_scope_description\).*?all_scope_tooltip.*?aria_description\(attention_scope_description\).*?attention_scope_tooltip' \
     'Workspaces attention filters can regress to internal rail terminology or inaccessible native controls'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn all_session_items_accessibility_label\(.*?app_name: &str.*?app_name != "Zed".*?"All Workspaces activity, \{session_count\} \{session_noun\}".*?"All Workspaces activity, \{session_count\} \{session_noun\} and \{observed_terminal_count\} \{terminal_noun\}".*?fn session_utilities_accessibility_label\(app_name: &str\).*?"Session utilities".*?"Workspaces utilities".*?all_session_items_accessibility_label\([[:space:]]*APP_NAME.*?aria_label\(session_utilities_accessibility_label\(APP_NAME\)\)' \
+    'fn all_session_items_accessibility_label\(.*?app_name: &str.*?app_name != "Zed".*?"All Workspace Activity, \{session_count\} \{activity_noun\}".*?"All Workspace Activity, \{session_count\} \{activity_noun\} and \{observed_terminal_count\} \{terminal_noun\}".*?fn session_utilities_accessibility_label\(app_name: &str\).*?"Session utilities".*?"Workspaces utilities".*?all_session_items_accessibility_label\([[:space:]]*APP_NAME.*?aria_label\(session_utilities_accessibility_label\(APP_NAME\)\)' \
     'Workspaces scope and utility accessibility can regress to inherited Session Rail vocabulary'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn item_belongs_in_main_work_area.*?app_name != "Zed" && requested_pane_kind != PaneKind::Tabs.*?fn add_item_to_active_pane.*?item_belongs_in_main_work_area.*?fn add_item\(.*?item_belongs_in_main_work_area.*?fn dez_routes_every_surface_into_the_native_main_tab_strip.*?PaneKind::Project.*?PaneKind::Agent.*?PaneKind::Tabs' \
@@ -134,7 +152,7 @@ require_multiline_pattern crates/workspace/src/pane.rs \
     'let Some\(project\) = self\.project\.upgrade\(\) else \{.*?\.id\(\("detached-pane", cx\.entity_id\(\)\)\).*?\.role\(gpui::Role::Pane\).*?\.aria_label\(self\.pane_kind\.accessibility_label\(\)\).*?\.track_focus\(&self\.focus_handle\(cx\)\)' \
     'a detached startup Pane can regress to a focused element without an accessibility node'
 require_multiline_pattern assets/settings/default.json \
-    'Workspaces is the global Workspace and session navigator\..*?Fresh windows.*?keep it closed.*?"starts_open": false.*?Settings for Workspaces, Dez'\''s native Workspace and session navigator\.' \
+    'Workspaces is the global Workspace and Activity navigator\..*?Fresh windows.*?keep it closed.*?"starts_open": false.*?Settings for Workspaces, Dez'\''s native Workspace and Activity navigator\.' \
     'bundled Settings comments can regress from the public Workspaces navigation model'
 require_multiline_pattern crates/settings_content/src/settings_content.rs \
     'Settings for Workspaces, the optional Dez Workspace navigator\.' \
@@ -1079,23 +1097,32 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?\.h\(Tab::container_height\(cx\)\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.tab_bar_background\).*?\.border_b_1\(\).*?\.border_color\(cx\.theme\(\)\.colors\(\)\.border\)' \
     'the Sessions header can lose its native inline divider'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_sidebar_title_in_titlebar\(app_name: &str\).*?app_name != "Zed".*?fn session_rail_title\(app_name: &str\).*?"Sessions".*?"Workspaces".*?fn session_rail_accessibility_label\(app_name: &str\).*?"Workspaces and Sessions".*?fn session_rail_search_label.*?"Search Workspaces and Sessions".*?fn session_rail_search_placeholder.*?"Search Workspaces or sessions…".*?fn session_notices_accessibility_label.*?"Workspace notices".*?fn session_rail_hide_label.*?"Hide Workspaces".*?fn session_rail_menu_label.*?"Workspaces Menu".*?fn session_empty_state_uses_icon_badge\(app_name: &str\).*?app_name == "Zed".*?when\(!session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?fn render_sidebar_header.*?when\(session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\)' \
+    'fn session_sidebar_title_in_titlebar\(app_name: &str\).*?app_name != "Zed".*?fn session_rail_title\(app_name: &str\).*?"Sessions".*?"Workspaces".*?fn session_rail_accessibility_label\(app_name: &str\).*?"Workspaces and Activity".*?fn session_rail_search_label.*?"Search Workspaces and Activity".*?fn session_rail_search_placeholder.*?"Search Workspaces or activity…".*?fn session_notices_accessibility_label.*?"Workspace notices".*?fn session_rail_hide_label.*?"Hide Workspaces".*?fn session_rail_menu_label.*?"Workspaces Menu".*?fn session_empty_state_uses_icon_badge\(app_name: &str\).*?app_name == "Zed".*?when\(!session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?fn render_sidebar_header.*?when\(session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\)' \
     'Dez Workspaces can regress to losing its native title or using inconsistent navigation labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 1.*?fn workspace_pane_navigation_label.*?pane_count > 1.*?workspace_tabs_expanded: bool.*?cx\.observe\(workspace.*?this\.is_active_workspace\(&workspace, cx\).*?cx\.notify\(\).*?fn render_project_header.*?let workspace_layout =.*?is_active.*?!is_sticky.*?!is_collapsed.*?!has_filter.*?render_active_workspace_tabs\(window, cx\).*?when_some\(workspace_layout.*?fn render_active_workspace_tabs.*?window: &mut Window.*?active_pane\(\)\.clone\(\).*?\.panes\(\).*?pinned_count\(\).*?workspace::tab_details.*?item\.tab_content_text.*?item_index < pinned_count.*?\.tab_icon.*?item\.is_dirty.*?workspace\.activate_item.*?workspace_tabs_expanded = !this\.workspace_tabs_expanded.*?this\.serialize\(cx\).*?aria_label\("Workspace Layout tabs grouped by pane"\)' \
     'Workspace Layout can regress to owning duplicate tab state, stop activating native pane items, or escape the active Workspace hierarchy'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_activity_thread_visible.*?app_name == "Zed".*?has_draft_content.*?is_active.*?has_notification.*?has_reviewable_changes.*?AgentThreadStatus::Running.*?AgentThreadStatus::WaitingForConfirmation.*?AgentThreadStatus::Error.*?fn workspace_activity_terminal_visible.*?RunReviewState::Running.*?RunReviewState::WaitingForPermission.*?RunReviewState::WaitingForInput.*?RunReviewState::Failed.*?RunReviewState::Detached.*?RunReviewState::Reconnecting.*?RunReviewState::Missing.*?RunReviewState::Incompatible.*?RunReviewState::Resumable.*?fn workspace_activity_multiplexer_visible.*?state != MultiplexerSessionState::Completed.*?fn workspace_activity_section_visible.*?app_name != "Zed".*?!is_sticky.*?!is_collapsed.*?has_activity' \
+    'Workspace Activity can regress from its bounded, current, actionable lifecycle contract'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn thread_metadata_would_render_sidebar_row.*?APP_NAME == "Zed".*?terminals\.retain\(\|terminal\|.*?workspace_activity_terminal_visible.*?workspace_activity_multiplexer_visible\(APP_NAME, session\.state\).*?threads\.retain\(\|thread\|.*?has_reviewable_changes.*?workspace_activity_thread_visible.*?let workspace_activity_visible =.*?workspace_activity_section_visible.*?Label::new\("Activity"\).*?when\(workspace_activity_visible.*?workspace_activity_heading' \
+    'Workspaces can regress to unbounded history rows or lose the nested Activity hierarchy'
+require_pattern crates/sidebar/src/sidebar.rs \
+    'fn dez_workspace_activity_is_bounded_to_current_actionable_work' \
+    'the bounded Workspace Activity policy is no longer pinned by source assertions'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pane::Event::ItemPinned \| pane::Event::ItemUnpinned => cx\.notify\(\)' \
     'pane pin changes can stop refreshing native Workspace projections'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_header_status_visible.*?app_name == "Zed" \|\| is_searching \|\| is_restoring \|\| has_attention.*?fn session_header_status_label.*?has_attention: bool.*?app_name == "Zed".*?!session_header_status_visible\(app_name, is_searching, is_restoring, has_attention\).*?"result".*?"results".*?"Restoring…".*?"Attention needed".*?"1 session needs attention".*?"\{attention_count\} sessions need attention".*?ListEntry::Thread.*?if APP_NAME == "Zed".*?pl_3\(\).*?ListEntry::Terminal.*?if APP_NAME == "Zed".*?pl_3\(\).*?fn render_sidebar_header.*?\.flex_1\(\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?when_some\(header_status_label' \
+    'fn session_header_status_visible.*?app_name == "Zed" \|\| is_searching \|\| is_restoring \|\| has_attention.*?fn session_header_status_label.*?has_attention: bool.*?app_name == "Zed".*?!session_header_status_visible\(app_name, is_searching, is_restoring, has_attention\).*?"result".*?"results".*?"Restoring…".*?"Attention needed".*?"1 item needs attention".*?"\{attention_count\} items need attention".*?ListEntry::Thread.*?if APP_NAME == "Zed".*?pl_3\(\).*?ListEntry::Terminal.*?if APP_NAME == "Zed".*?pl_3\(\).*?fn render_sidebar_header.*?\.flex_1\(\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?when_some\(header_status_label' \
     'Dez Workspaces can regress to replacing the navigation title with routine inventory or flattening child sessions into the Workspace level'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_navigation_label.*?root_count <= 1.*?format!\("\{primary_name\} · \{root_count\} roots"\).*?let full_label = group_key\.display_name\(&path_detail_map\).*?fuzzy_match_positions\(&query, &full_label\).*?full_label,[[:space:]]*highlight_positions.*?Workspace roots: \{full_label\}.*?workspace_header_details_tooltip.*?id\(format!\("\{id_prefix\}project-labels-\{ix\}"\)\).*?when_some\(workspace_details_tooltip\.clone\(\).*?this\.tooltip\(Tooltip::text\(tooltip\)\)' \
     'multi-root Workspaces can regress to a clipped comma-separated identity or stop matching every root'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_overview_status_label.*?\{attention_count\} \{attention_noun\} \{attention_verb\} attention.*?\{workspace_label\} · \{session_count\} \{session_noun\} active.*?fn canvas_thread_item_style.*?if APP_NAME != "Zed".*?metadata_visible\(true\)' \
-    'Workspace counts can lose their noun or provider state can return to competing with the primary Session title'
+    'fn session_overview_status_label.*?\{attention_count\} \{attention_noun\} \{attention_verb\} attention.*?\{workspace_label\} · \{session_count\} active.*?fn canvas_thread_item_style.*?if APP_NAME != "Zed".*?metadata_visible\(true\)' \
+    'Workspace Activity counts or provider state can regress to competing with the primary row title'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?session_sidebar_title_in_titlebar\("Dez"\).*?!session_empty_state_uses_icon_badge\("Dez"\).*?!session_sidebar_title_in_titlebar\("Zed"\).*?session_empty_state_uses_icon_badge\("Zed"\)' \
     'the native Sessions title and plain empty-state presentation are no longer product-gated'
@@ -1106,7 +1133,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_label.*?is_restoring: bool.*?"Loading sessions".*?"Restoring Workspaces".*?fn session_overview_status_label_with_observed_terminals.*?if is_restoring.*?session_overview_status_label\(.*?if app_name != "Zed".*?let workspace_status = session_overview_status_label.*?\{workspace_status\} · \{observed_terminal_count\} \{terminal_noun\} observed.*?fn session_empty_state_copy.*?"Restoring Workspaces".*?"Reconnecting saved terminals and Workspace activity\.".*?workspace_restore_is_pending.*?WorkspaceRestoreState::Ready' \
     'Session Rail can claim to be empty while Workspace and terminal restoration is unresolved'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_overview_status_label_with_observed_terminals.*?if is_searching.*?matching_count = session_count.*?observed_terminal_count.*?if app_name == "Zed".*?workspace_count.*?format!\("\{matching_count\} matching \{noun\}"\).*?"result".*?"results".*?format!\("\{matching_count\} \{noun\}"\).*?fn session_header_status_label.*?"result".*?"results".*?"Restoring…".*?"Attention needed".*?"1 session needs attention".*?"\{attention_count\} sessions need attention"' \
+    'fn session_overview_status_label_with_observed_terminals.*?if is_searching.*?matching_count = session_count.*?observed_terminal_count.*?if app_name == "Zed".*?workspace_count.*?format!\("\{matching_count\} matching \{noun\}"\).*?"result".*?"results".*?format!\("\{matching_count\} \{noun\}"\).*?fn session_header_status_label.*?"result".*?"results".*?"Restoring…".*?"Attention needed".*?"1 item needs attention".*?"\{attention_count\} items need attention"' \
     'Workspaces search can regress to omitting matching Workspace rows or hiding transient state behind an icon'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_icon.*?is_searching.*?IconName::MagnifyingGlass.*?is_restoring.*?IconName::ArrowCircle.*?has_attention.*?IconName::Warning.*?status_color = if has_attention && !is_searching && !is_restoring.*?session_overview_status_icon\(' \
@@ -1328,7 +1355,7 @@ require_multiline_pattern crates/workspace/src/multi_workspace_tests.rs \
     'test_restored_auto_sidebar_closes_only_after_empty_state_is_ready.*?reconcile_restored_sidebar_visibility\(false, false.*?sidebar_open.*?reconcile_restored_sidebar_visibility\(true, false.*?!multi_workspace.sidebar_open.*?test_explicit_sidebar_open_cancels_restored_auto_close.*?multi_workspace.open_sidebar.*?!multi_workspace.restored_sidebar_visibility_pending.*?multi_workspace.sidebar_open' \
     'the restored-empty and explicit-open Sessions visibility contract is no longer pinned by source assertions'
 require_multiline_pattern assets/settings/default.json \
-    '"project_panel": \{.*?"dock": "right".*?"starts_open": true.*?"sidebar": \{.*?Workspaces is the global Workspace and session navigator.*?"starts_open": false.*?"workspace_bar": \{.*?"show_layout": false.*?"session_rail": \{.*?"visibility": "auto".*?"mode": "compact"' \
+    '"project_panel": \{.*?"dock": "right".*?"starts_open": true.*?"sidebar": \{.*?Workspaces is the global Workspace and Activity navigator.*?"starts_open": false.*?"workspace_bar": \{.*?"show_layout": false.*?"session_rail": \{.*?"visibility": "auto".*?"mode": "compact"' \
     'the fresh Dez studio shell can regress from stable Workspaces, contextual Files, or minimal titlebar defaults'
 require_multiline_pattern assets/settings/default.json \
     '"active_pane_modifiers": \{.*?"border_size": 0\.0.*?"inactive_opacity": 1\.0.*?"pane_grid": \{.*?"focus_indicator": "title"' \
@@ -1829,7 +1856,7 @@ require_pattern crates/sidebar/src/sidebar.rs \
     '\.aria_expanded\(!is_collapsed\)' \
     'Workspace group expansion state is absent from accessibility output'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '\.role\(gpui::Role::List\).*?\.aria_label\(if APP_NAME == "Zed" \{.*?"Workspace Sessions".*?\} else \{.*?"Workspaces and Sessions"' \
+    '\.role\(gpui::Role::List\).*?\.aria_label\(if APP_NAME == "Zed" \{.*?"Workspace Sessions".*?\} else \{.*?"Workspaces and Activity"' \
     'Session rows are not contained by a named accessible list'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '\.when\(self\.focused, \|s\| s\.aria_active_descendant\(\)\)' \
@@ -2153,7 +2180,7 @@ require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'let has_metadata = self\.metadata_visible[[:space:]]*&& labels_visible' \
     'ThreadItem visible metadata is no longer gated independently from accessible labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Workspaces and Sessions".*?fn session_rail_search_placeholder.*?"Search sessions…".*?"Search Workspaces or sessions…".*?set_placeholder_text\(session_rail_search_placeholder\(APP_NAME\)' \
+    'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Workspaces and Activity".*?fn session_rail_search_placeholder.*?"Search sessions…".*?"Search Workspaces or activity…".*?set_placeholder_text\(session_rail_search_placeholder\(APP_NAME\)' \
     'Dez Workspaces search can regress to a permanent row or inherited Sessions vocabulary'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?let search_is_active.*?self\.session_search_open.*?let searchable_item_count =.*?project_header_indices\.len\(\).*?session_search_control_visible\(paths::APP_NAME, searchable_item_count\).*?&& !search_is_active.*?IconButton::new\("open-session-search", IconName::MagnifyingGlass\).*?tab_index\(0isize\).*?aria_label\(session_rail_search_label\(APP_NAME\)\).*?focus_sidebar_filter\(&FocusSidebarFilter' \
@@ -2364,7 +2391,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_agent_options_menu.*?let is_dez = paths::APP_NAME != "Zed".*?let attention_filter_available.*?let sidebar_can_hide.*?ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?aria_label\(session_rail_menu_label\(APP_NAME\)\).*?if is_dez.*?header\(session_rail_title\(APP_NAME\)\).*?Command Palette….*?Open Recent Workspaces….*?workspace_history_label.*?when\(attention_filter_available.*?Workspaces Settings….*?when\(sidebar_can_hide.*?Hide Workspaces.*?if !is_dez.*?Toggle Sidebar' \
     'Dez can regress from one named Workspaces overflow to a persistent footer or duplicate Hide action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_navigation_menu_actions_visible.*?app_name == "Zed".*?\(false, false\).*?searchable_item_count > 1, workspace_count > 1.*?workspace_navigation_menu_actions_visible\("Dez", 1, 1\).*?\(false, false\).*?workspace_navigation_menu_actions_visible\("Dez", 1, 2\).*?\(true, false\).*?workspace_navigation_menu_actions_visible\("Dez", 2, 2\).*?\(true, true\).*?let workspace_count = self\.contents\.project_header_indices\.len\(\).*?let searchable_item_count =.*?workspace_count.*?session_count.*?observed_terminal_count.*?workspace_navigation_menu_actions_visible.*?when\(workspace_search_available.*?Search Workspaces and Sessions….*?FocusSidebarFilter.*?when\(workspace_cycle_available.*?Previous Workspace.*?PreviousProject.*?Next Workspace.*?NextProject' \
+    'fn workspace_navigation_menu_actions_visible.*?app_name == "Zed".*?\(false, false\).*?searchable_item_count > 1, workspace_count > 1.*?workspace_navigation_menu_actions_visible\("Dez", 1, 1\).*?\(false, false\).*?workspace_navigation_menu_actions_visible\("Dez", 1, 2\).*?\(true, false\).*?workspace_navigation_menu_actions_visible\("Dez", 2, 2\).*?\(true, true\).*?let workspace_count = self\.contents\.project_header_indices\.len\(\).*?let searchable_item_count =.*?workspace_count.*?session_count.*?observed_terminal_count.*?workspace_navigation_menu_actions_visible.*?when\(workspace_search_available.*?Search Workspaces and Activity….*?FocusSidebarFilter.*?when\(workspace_cycle_available.*?Previous Workspace.*?PreviousProject.*?Next Workspace.*?NextProject' \
     'the Workspaces overflow can regress to hiding useful navigation or showing permanent one-Workspace noise'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_uses_sessions_menu.*?app_name != "Zed".*?fn session_rail_uses_footer_utilities.*?app_name == "Zed".*?fn render_session_overview.*?session_overview_uses_sessions_menu\(paths::APP_NAME\).*?render_agent_options_menu\("", cx\).*?IconButton::new\("hide-sessions".*?on_action\(cx.listener\(\|this, _: &OpenRecent.*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?cx\.propagate\(\).*?session_rail_uses_footer_utilities\(paths::APP_NAME\).*?render_sidebar_bottom_bar' \
@@ -2796,7 +2823,7 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'developer_surface_menu_label\([[:space:]]*APP_NAME,[[:space:]]*panels_as_pane_tabs,[[:space:]]*"Built-in Agent".*?if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Workspaces", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?MenuItem::action\(project_surface_label.*?MenuItem::action\(outline_surface_label.*?MenuItem::action\(git_surface_label.*?MenuItem::action\(debugger_surface_label.*?MenuItem::action\(agent_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
     'the Dez View menu can regress to splitting contextual Workspace Tools into unrelated top-level panels'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
-    'Menu::new\("Navigate Workspaces"\).*?"Focus Workspaces", workspace::FocusSidebar.*?"Search Workspaces and Sessions…".*?zed_actions::sidebar::FocusSidebarFilter.*?"Previous Workspace", workspace::PreviousProject.*?"Next Workspace", workspace::NextProject' \
+    'Menu::new\("Navigate Workspaces"\).*?"Focus Workspaces", workspace::FocusSidebar.*?"Search Workspaces and Activity…".*?zed_actions::sidebar::FocusSidebarFilter.*?"Previous Workspace", workspace::PreviousProject.*?"Next Workspace", workspace::NextProject' \
     'cross-Workspace focus, search, and cycling can disappear from the native View menu'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     '"sidebar::ToggleSidebar".*?"workspaces::ShowOrHide".*?"sidebar::FocusSidebar".*?"workspaces::Focus".*?"sidebar::FocusSidebarFilter".*?"workspaces::Search".*?"sidebar::PreviousProject".*?"workspaces::PreviousWorkspace".*?"sidebar::NextProject".*?"workspaces::NextWorkspace".*?humanize_action_name_for_product\("sidebar::NextProject", "Dez"\).*?"workspaces: next workspace".*?humanize_action_name_for_product\("sidebar::NextProject", "Zed"\).*?"sidebar: next project"' \

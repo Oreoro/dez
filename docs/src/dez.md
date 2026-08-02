@@ -1075,10 +1075,14 @@ Agent Session.
 
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
-collapses the Workspace's Sessions. **View → Navigate Workspaces** collects
-**Focus Workspaces**, **Search Workspaces and Sessions…**, **Previous
+collapses the Workspace's nested Layout and Activity. Layout returns to real
+open pane tabs. Activity shows only current, actionable, recoverable, or
+review-ready work; inactive completed Agent Sessions remain in Agent History.
+**View → Navigate Workspaces** collects
+**Focus Workspaces**, **Search Workspaces and Activity…**, **Previous
 Workspace**, and **Next Workspace**. Search opens a closed navigator before
-focusing its native filter, and matches Workspace names as well as Sessions.
+focusing its native filter, and matches Workspace names as well as current
+Activity.
 The same actions use Workspace vocabulary in Command Palette and remain
 rebindable through **Keyboard & Vim**. The Workspaces ellipsis menu mirrors
 Search and Previous/Next only when there is enough Workspace activity to make
