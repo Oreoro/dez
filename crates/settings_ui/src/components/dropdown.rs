@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use gpui::ParentElement;
 use gpui::Styled;
 use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString};
 use heck::ToTitleCase as _;
