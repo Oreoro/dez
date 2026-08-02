@@ -34,6 +34,7 @@ use crate::unicode_confusables;
 use db::kvp::KeyValueStore;
 use gpui::List;
 use gpui::Stateful;
+use gpui::StatefulInteractiveElement;
 use gpui::TaskExt;
 use heapless::Vec as ArrayVec;
 use language_model::{

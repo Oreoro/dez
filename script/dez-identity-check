@@ -181,6 +181,9 @@ require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'render_subagents_awaiting_permission.*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\).*?render_subagent_titlebar.*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\).*?"subagent_output".*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\).*?let icon = h_flex\(\).*?Icon::new\(ui::subagent_icon_for_app\(paths::APP_NAME\)\)' \
     'Subagent identity can regress to unrelated arrows or generic status circles across native Agent surfaces'
+require_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
+    '^use gpui::StatefulInteractiveElement;$' \
+    'Subagent accessibility can regress to using stateful GPUI roles without importing their trait'
 require_multiline_pattern crates/agent_ui/src/conversation_view/thread_view.rs \
     'fn subagent_card_fallback_title.*?"Subagent Canceled".*?"Subagent Failed".*?"Starting Subagent…".*?fn subagent_card_status_label.*?"Canceled".*?"Failed".*?"Waiting for permission".*?"Running".*?"Completed".*?fn subagent_preview_available.*?has_expandable_content && !is_pending_tool_call.*?let preview_available =.*?subagent_preview_available.*?role\(gpui::Role::Region\).*?aria_label\(accessibility_label\).*?when\(preview_available.*?Tooltip::with_meta.*?when\(preview_available.*?Disclosure::new' \
     'Subagent cards can regress to ambiguous state or advertise a preview that has no content'
