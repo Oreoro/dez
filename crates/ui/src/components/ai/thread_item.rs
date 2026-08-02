@@ -1,4 +1,4 @@
-use crate::{CommonAnimationExt, DiffStat, HighlightedLabel, Tooltip, prelude::*};
+use crate::{CommonAnimationExt, DiffStat, HighlightedLabel, Indicator, Tooltip, prelude::*};
 
 use gpui::{Animation, AnimationExt, ClickEvent, MouseButton, SharedString, pulsating_between};
 use itertools::Itertools as _;

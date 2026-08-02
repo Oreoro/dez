@@ -1189,6 +1189,9 @@ reject_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'Label::new\(title\).*?\.truncate\(\).*?HighlightedLabel::new\(title, highlight_positions\).*?\.truncate\(\).*?when\(self\.hovered \|\| self\.focused.*?\.flex_none\(\).*?\.pr_1p5\(\).*?\.child\(slot\)' \
     'Sessions rows can regress to painting action overlays over untruncated titles'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    '^use crate::\{.*?Indicator.*?\};.*?Indicator::dot\(\)\.color\(indicator_color\)' \
+    'Agent identity status indicators can regress to an undeclared UI component that fails remote compilation'
 reject_pattern crates/ui/src/components/ai/thread_item.rs \
     'GradientFade' \
     'Sessions rows can regress to gradient layers that paint over titles and actions'
