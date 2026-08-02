@@ -1495,6 +1495,9 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'fn dez_git_history_placeholder_copy.*?"No repository found".*?"Git History unavailable".*?"Loading Commit History…".*?"Loading Git History".*?"No commits yet".*?"Git History couldn'"'"'t load".*?"Check the repository state, then retry\.".*?fn render_tab_bar.*?role\(gpui::Role::Button\).*?aria_selected\(active\).*?on_key_down.*?"enter" \| "space".*?id\("git-panel-tab-bar"\).*?role\(gpui::Role::Toolbar\).*?aria_label\("Git views"\).*?fn render_history_placeholder.*?paths::APP_NAME == "Zed".*?IconName::LoadCircle.*?with_rotate_animation\(3\).*?IconName::Warning.*?id\("dez-git-history-placeholder"\).*?items_start\(\).*?justify_start\(\).*?role\(gpui::Role::Status\).*?Button::new\("retry-git-history", "Retry"\).*?ButtonStyle::Filled.*?tab_index\(0isize\).*?aria_label\("Retry Git History"\).*?fn retry_commit_history.*?reset_failed_graph_data.*?CommitHistory::Loading.*?load_commit_history' \
     'Git History can regress to a generic centered state, pointer-only tabs, frozen loading, or an error without direct recovery'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'use ui::\{.*?CommonAnimationExt.*?prelude::\*.*?\};.*?fn render_commit_history\(.*?\) -> Option<impl IntoElement \+ use<>>' \
+    'Git History can regress to a missing animation trait import or Rust 2024 context-lifetime overcapture'
 require_multiline_pattern crates/project/src/git_store.rs \
     'pub fn reset_failed_graph_data.*?data\.fetch_task\.is_ready\(\) && data\.error\.is_some\(\).*?initial_graph_data\.remove\(&key\).*?can_retry' \
     'Git History retry can regress to discarding in-flight or healthy graph state'
