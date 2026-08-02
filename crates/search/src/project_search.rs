@@ -1,8 +1,8 @@
 use crate::{
     BufferSearchBar, EXCLUDE_PLACEHOLDER, FocusSearch, HighlightKey, INCLUDE_PLACEHOLDER,
-    NextHistoryQuery, PreviousHistoryQuery, REPLACE_PLACEHOLDER, ReplaceAll, ReplaceNext,
-    SearchOption, SearchOptions, SearchSource, SelectNextMatch, SelectPreviousMatch,
-    ToggleCaseSensitive, ToggleIncludeIgnored, ToggleRegex, ToggleReplace, ToggleWholeWord,
+    NextHistoryQuery, PreviousHistoryQuery, ReplaceAll, ReplaceNext, SearchOption, SearchOptions,
+    SearchSource, SelectNextMatch, SelectPreviousMatch, ToggleCaseSensitive, ToggleIncludeIgnored,
+    ToggleRegex, ToggleReplace, ToggleWholeWord,
     buffer_search::Deploy,
     canvas,
     search_bar::{
@@ -10,6 +10,7 @@ use crate::{
         render_action_button, render_text_input, should_navigate_history,
     },
     text_finder::TextFinder,
+    workspace_replace_placeholder,
 };
 use anyhow::Context as _;
 use collections::HashMap;
@@ -157,6 +158,11 @@ mod product_label_tests {
             "No files in this Workspace match the current query. Broaden the query or remove path filters."
         );
         assert_eq!(workspace_search_title("Zed"), "Project Search");
+        assert_eq!(
+            workspace_replace_placeholder("Dez"),
+            "Replace across Workspace…"
+        );
+        assert_eq!(workspace_replace_placeholder("Zed"), "Replace in project…");
     }
 
     #[test]
@@ -356,6 +362,7 @@ pub struct ProjectSearch {
     search_excluded_history_cursor: SearchHistoryCursor,
     pub project_search_turning_into_text_finder: Arc<AtomicBool>,
     _excerpts_subscription: Subscription,
+    _quit_subscription: Subscription,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -434,6 +441,10 @@ impl ProjectSearch {
         let capability = project.read(cx).capability();
         let excerpts = cx.new(|_| MultiBuffer::new(capability));
         let subscription = Self::subscribe_to_excerpts(&excerpts, cx);
+        let quit_subscription = cx.on_app_quit(|this, _cx| {
+            this.pending_search.take();
+            async {}
+        });
 
         Self {
             project,
@@ -449,6 +460,7 @@ impl ProjectSearch {
             search_excluded_history_cursor: Default::default(),
             project_search_turning_into_text_finder: Arc::new(AtomicBool::new(false)),
             _excerpts_subscription: subscription,
+            _quit_subscription: quit_subscription,
         }
     }
 
@@ -458,6 +470,10 @@ impl ProjectSearch {
                 .excerpts
                 .update(cx, |excerpts, cx| cx.new(|cx| excerpts.clone(cx)));
             let subscription = Self::subscribe_to_excerpts(&excerpts, cx);
+            let quit_subscription = cx.on_app_quit(|this, _cx| {
+                this.pending_search.take();
+                async {}
+            });
 
             Self {
                 project: self.project.clone(),
@@ -477,6 +493,7 @@ impl ProjectSearch {
                 search_excluded_history_cursor: self.search_excluded_history_cursor.clone(),
                 project_search_turning_into_text_finder: Arc::new(AtomicBool::new(false)),
                 _excerpts_subscription: subscription,
+                _quit_subscription: quit_subscription,
             }
         })
     }
@@ -1259,7 +1276,7 @@ impl ProjectSearchView {
         );
         let replacement_editor = cx.new(|cx| {
             let mut editor = Editor::auto_height(1, 4, window, cx);
-            editor.set_placeholder_text(REPLACE_PLACEHOLDER, window, cx);
+            editor.set_placeholder_text(workspace_replace_placeholder(paths::APP_NAME), window, cx);
             if let Some(text) = replacement_text {
                 editor.set_text(text, window, cx);
             }

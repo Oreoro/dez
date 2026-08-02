@@ -229,7 +229,7 @@ fn dez_git_history_placeholder_copy(message: &str) -> (&'static str, &'static st
         ),
         "Failed to load commit history" | "Failed to load commits" => (
             "Git History couldn't load",
-            "Check the repository state, then reopen Git History.",
+            "Check the repository state, then retry.",
         ),
         _ => (
             "Git History unavailable",
@@ -6520,26 +6520,32 @@ impl GitPanel {
             let has_repo = self.active_repository.is_some();
             match &self.commit_history {
                 _ if !has_repo => {
-                    this.child(Self::render_history_placeholder("No repository found"))
+                    this.child(self.render_history_placeholder("No repository found", cx))
                 }
-                CommitHistory::Error(_) => this.child(Self::render_history_placeholder(
-                    "Failed to load commit history",
-                )),
+                CommitHistory::Error(_) => {
+                    this.child(self.render_history_placeholder("Failed to load commit history", cx))
+                }
                 CommitHistory::Loading => {
-                    this.child(Self::render_history_placeholder("Loading Commit History…"))
+                    this.child(self.render_history_placeholder("Loading Commit History…", cx))
                 }
                 CommitHistory::Loaded(entries) if entries.is_empty() => {
-                    this.child(Self::render_history_placeholder("No commits yet"))
+                    this.child(self.render_history_placeholder("No commits yet", cx))
                 }
                 CommitHistory::Loaded(_) => match self.render_commit_history(window, cx) {
                     Some(history) => this.child(history),
-                    None => this.child(Self::render_history_placeholder("Failed to load commits")),
+                    None => {
+                        this.child(self.render_history_placeholder("Failed to load commits", cx))
+                    }
                 },
             }
         })
     }
 
-    fn render_history_placeholder(message: &'static str) -> AnyElement {
+    fn render_history_placeholder(
+        &self,
+        message: &'static str,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         if paths::APP_NAME == "Zed" {
             return h_flex()
                 .flex_1()
@@ -6549,11 +6555,33 @@ impl GitPanel {
         }
 
         let (title, description) = dez_git_history_placeholder_copy(message);
+        let is_loading = message == "Loading Commit History…";
+        let can_retry = matches!(
+            message,
+            "Failed to load commit history" | "Failed to load commits"
+        );
+        let state_icon = if is_loading {
+            Icon::new(IconName::LoadCircle)
+                .size(IconSize::Small)
+                .color(Color::Accent)
+                .with_rotate_animation(3)
+                .into_any_element()
+        } else if can_retry {
+            Icon::new(IconName::Warning)
+                .size(IconSize::Small)
+                .color(Color::Warning)
+                .into_any_element()
+        } else {
+            Icon::new(IconName::GitBranch)
+                .size(IconSize::Small)
+                .color(Color::Accent)
+                .into_any_element()
+        };
         v_flex()
             .id("dez-git-history-placeholder")
             .flex_1()
             .w_full()
-            .items_center()
+            .items_start()
             .justify_start()
             .px_4()
             .pt_8()
@@ -6567,20 +6595,47 @@ impl GitPanel {
                     .child(
                         h_flex()
                             .gap_1p5()
-                            .child(
-                                Icon::new(IconName::GitBranch)
-                                    .size(IconSize::Small)
-                                    .color(Color::Accent),
-                            )
+                            .child(state_icon)
                             .child(Label::new(title).size(LabelSize::Large)),
                     )
                     .child(
                         Label::new(description)
                             .size(LabelSize::Small)
                             .color(Color::Muted),
-                    ),
+                    )
+                    .when(can_retry, |this| {
+                        this.child(
+                            Button::new("retry-git-history", "Retry")
+                                .style(ButtonStyle::Filled)
+                                .label_size(LabelSize::Small)
+                                .tab_index(0isize)
+                                .aria_label("Retry Git History")
+                                .tooltip(Tooltip::text("Retry Git History"))
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.retry_commit_history(cx);
+                                })),
+                        )
+                    }),
             )
             .into_any_element()
+    }
+
+    fn retry_commit_history(&mut self, cx: &mut Context<Self>) {
+        let Some(active_repository) = self.active_repository.clone() else {
+            return;
+        };
+        let Some(log_source) = Self::commit_history_log_source(&active_repository, cx) else {
+            self.set_commit_history(CommitHistory::Loaded(Rc::from([])), cx);
+            return;
+        };
+
+        let retry_started = active_repository.update(cx, |repository, _cx| {
+            repository.reset_failed_graph_data(log_source, LogOrder::DateOrder)
+        });
+        if retry_started {
+            self.set_commit_history(CommitHistory::Loading, cx);
+        }
+        self.load_commit_history(cx);
     }
 
     fn commit_history_entries(&self) -> &[CommitHistoryEntry] {
@@ -9653,7 +9708,7 @@ mod tests {
             dez_git_history_placeholder_copy("Failed to load commits"),
             (
                 "Git History couldn't load",
-                "Check the repository state, then reopen Git History."
+                "Check the repository state, then retry."
             )
         );
     }

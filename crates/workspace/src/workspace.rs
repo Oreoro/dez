@@ -33,10 +33,10 @@ mod workspace_settings;
 
 pub use dock::Panel;
 pub use multi_workspace::{
-    CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow, MultiWorkspace,
-    MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread, ProjectGroup,
-    ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent, SidebarHandle,
-    SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
+    BrowseRunningSessions, CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow,
+    MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread,
+    ProjectGroup, ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent,
+    SidebarHandle, SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
     render_sidebar_header_controls_with_auxiliary_visibility,
     render_sidebar_header_controls_with_state, sidebar_side_context_menu,
 };
@@ -177,6 +177,151 @@ pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     workspace_card_gap_for_product(paths::APP_NAME, WorkspaceSettings::get_global(cx).card_gap)
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum WorkspaceAccessState {
+    #[default]
+    Available,
+    AccessRequired {
+        roots: Arc<[PathBuf]>,
+    },
+}
+
+impl Global for WorkspaceAccessState {}
+
+pub fn workspace_access_state(cx: &App) -> WorkspaceAccessState {
+    cx.try_global::<WorkspaceAccessState>()
+        .cloned()
+        .unwrap_or_default()
+}
+
+pub fn set_workspace_access_state(state: WorkspaceAccessState, cx: &mut App) {
+    if cx
+        .try_global::<WorkspaceAccessState>()
+        .is_some_and(|current| current == &state)
+    {
+        return;
+    }
+    cx.set_global(state);
+    cx.refresh_windows();
+}
+
+pub fn mark_workspace_access_required(root: PathBuf, cx: &mut App) {
+    let mut roots = match workspace_access_state(cx) {
+        WorkspaceAccessState::Available => Vec::new(),
+        WorkspaceAccessState::AccessRequired { roots } => roots.to_vec(),
+    };
+    if roots.iter().any(|existing| root.starts_with(existing)) {
+        return;
+    }
+    roots.retain(|existing| !existing.starts_with(&root));
+    roots.push(root);
+    roots.sort();
+    set_workspace_access_state(
+        WorkspaceAccessState::AccessRequired {
+            roots: roots.into(),
+        },
+        cx,
+    );
+}
+
+pub fn mark_workspace_roots_accessible(accessible_roots: &[PathBuf], cx: &mut App) {
+    let WorkspaceAccessState::AccessRequired { roots } = workspace_access_state(cx) else {
+        return;
+    };
+    let remaining_roots = roots
+        .iter()
+        .filter(|root| !accessible_roots.contains(root))
+        .cloned()
+        .collect::<Vec<_>>();
+    if remaining_roots.len() == roots.len() {
+        return;
+    }
+
+    let state = if remaining_roots.is_empty() {
+        WorkspaceAccessState::Available
+    } else {
+        WorkspaceAccessState::AccessRequired {
+            roots: remaining_roots.into(),
+        }
+    };
+    set_workspace_access_state(state, cx);
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub enum WorkspaceStartupState {
+    #[default]
+    Ready,
+    InstallationRequired {
+        message: String,
+    },
+}
+
+impl Global for WorkspaceStartupState {}
+
+pub fn workspace_startup_state(cx: &App) -> WorkspaceStartupState {
+    cx.try_global::<WorkspaceStartupState>()
+        .cloned()
+        .unwrap_or_default()
+}
+
+pub fn set_workspace_startup_state(state: WorkspaceStartupState, cx: &mut App) {
+    if cx
+        .try_global::<WorkspaceStartupState>()
+        .is_some_and(|current| current == &state)
+    {
+        return;
+    }
+    cx.set_global(state);
+    cx.refresh_windows();
+}
+
+pub fn workspace_startup_is_ready(cx: &App) -> bool {
+    matches!(workspace_startup_state(cx), WorkspaceStartupState::Ready)
+}
+
+pub fn ensure_workspace_startup_ready(cx: &App) -> anyhow::Result<()> {
+    match workspace_startup_state(cx) {
+        WorkspaceStartupState::Ready => Ok(()),
+        WorkspaceStartupState::InstallationRequired { .. } => anyhow::bail!(
+            "Install and relaunch Dez before opening a Workspace or starting a terminal"
+        ),
+    }
+}
+
+fn remaining_inaccessible_workspace_roots(
+    roots: &[PathBuf],
+    opened_paths: &[PathBuf],
+) -> Vec<PathBuf> {
+    roots
+        .iter()
+        .filter(|root| {
+            !opened_paths
+                .iter()
+                .any(|opened_path| root.starts_with(opened_path))
+        })
+        .cloned()
+        .collect()
+}
+
+fn mark_workspace_paths_accessible(opened_paths: &[PathBuf], cx: &mut App) {
+    let WorkspaceAccessState::AccessRequired { roots } = workspace_access_state(cx) else {
+        return;
+    };
+    let remaining_roots = remaining_inaccessible_workspace_roots(&roots, opened_paths);
+    if remaining_roots.len() == roots.len() {
+        return;
+    }
+
+    let state = if remaining_roots.is_empty() {
+        WorkspaceAccessState::Available
+    } else {
+        WorkspaceAccessState::AccessRequired {
+            roots: remaining_roots.into(),
+        }
+    };
+    set_workspace_access_state(state, cx);
+}
+
 fn workspace_card_gap_for_product(app_name: &str, configured_gap: f32) -> Pixels {
     if app_name == "Zed" {
         gpui::px(configured_gap.max(0.0))
@@ -273,9 +418,9 @@ fn dez_uses_single_auxiliary_surface(app_name: &str) -> bool {
 fn item_belongs_in_main_work_area(
     app_name: &str,
     requested_pane_kind: PaneKind,
-    is_panel_item: bool,
+    _is_panel_item: bool,
 ) -> bool {
-    app_name != "Zed" && requested_pane_kind != PaneKind::Tabs && !is_panel_item
+    app_name != "Zed" && requested_pane_kind != PaneKind::Tabs
 }
 
 fn workspace_notification_shelf_width(viewport_width: Pixels) -> Pixels {
@@ -405,6 +550,17 @@ fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> C
         .unwrap_or(CanvasLayoutRecipe::Full)
 }
 
+fn dez_layout_uses_single_work_area(recipe: CanvasLayoutRecipe) -> bool {
+    matches!(
+        recipe,
+        CanvasLayoutRecipe::Full
+            | CanvasLayoutRecipe::AgentControl
+            | CanvasLayoutRecipe::EditorFocus
+            | CanvasLayoutRecipe::Review
+            | CanvasLayoutRecipe::Debug
+    )
+}
+
 const FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = &[
     SplitDirection::Right,
     SplitDirection::Down,
@@ -519,11 +675,7 @@ impl CanvasLayoutRecipe {
             return None;
         }
 
-        match self {
-            Self::Full | Self::AgentControl | Self::EditorFocus => Some(1),
-            Self::CodeRunObserve | Self::Review | Self::Debug => Some(2),
-            _ => None,
-        }
+        Some(1)
     }
 
     fn root_axis_for_size(
@@ -2402,6 +2554,15 @@ pub struct NewCenterTerminal {
     /// If true, creates a local terminal even in remote projects.
     #[serde(default)]
     pub local: bool,
+    /// Optional command to run after the configured shell is ready.
+    ///
+    /// Dez uses this for terminal-native agent launchers while preserving the
+    /// user's shell initialization and the native terminal emulator.
+    #[serde(default)]
+    pub startup_command: Option<String>,
+    /// Optional working directory for a replacement terminal.
+    #[serde(default)]
+    pub working_directory: Option<PathBuf>,
 }
 
 /// Opens a new terminal.
@@ -2641,6 +2802,7 @@ pub fn prompt_for_open_path_and_open(
         let Some(paths) = paths.await.log_err().flatten() else {
             return;
         };
+        let opened_paths = paths.clone();
         if !create_new_window {
             if let Some(handle) = multi_workspace_handle {
                 if let Some(task) = handle
@@ -2649,7 +2811,10 @@ pub fn prompt_for_open_path_and_open(
                     })
                     .log_err()
                 {
-                    task.await.log_err();
+                    if task.await.log_err().is_some() {
+                        cx.update(|_, cx| mark_workspace_paths_accessible(&opened_paths, cx))
+                            .log_err();
+                    }
                 }
                 return;
             }
@@ -2660,7 +2825,10 @@ pub fn prompt_for_open_path_and_open(
             })
             .log_err()
         {
-            task.await.log_err();
+            if task.await.log_err().is_some() {
+                cx.update(|_, cx| mark_workspace_paths_accessible(&opened_paths, cx))
+                    .log_err();
+            }
         }
     })
     .detach();
@@ -6188,7 +6356,7 @@ impl Workspace {
                 pane.read(cx).items().filter_map(|item| {
                     if item.is_dirty(cx) {
                         item.tab_content_text(0, cx);
-                        Some((pane.downgrade(), item.boxed_clone()))
+                        Some((pane.clone(), item.boxed_clone()))
                     } else {
                         None
                     }
@@ -6264,7 +6432,7 @@ impl Workspace {
                     )
                 })?;
                 if (singleton || !project_entry_ids.is_empty())
-                    && !Pane::save_item(project.clone(), &pane, &*item, save_intent, cx).await?
+                    && !Pane::save_item(project.clone(), pane, &*item, save_intent, cx).await?
                 {
                     return Ok(false);
                 }
@@ -6663,13 +6831,12 @@ impl Workspace {
         cx: &mut App,
     ) -> Task<Result<()>> {
         let project = self.project.clone();
-        let pane = self.active_pane();
+        let pane = self.active_pane().clone();
         let item = pane.read(cx).active_item();
-        let pane = pane.downgrade();
 
         window.spawn(cx, async move |cx| {
             if let Some(item) = item {
-                Pane::save_item(project, &pane, item.as_ref(), save_intent, cx)
+                Pane::save_item(project, pane, item.as_ref(), save_intent, cx)
                     .await
                     .map(|_| ())
             } else {
@@ -7117,13 +7284,35 @@ impl Workspace {
     }
 
     pub fn close_panel<T: Panel>(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some((pane, _, _)) = self.panel_item_for::<T>(cx) {
+        if let Some((pane, item_index, _)) = self.panel_item_for::<T>(cx) {
             if !pane.read(cx).is_visible() {
                 return;
             }
 
             let should_focus_fallback =
                 self.active_pane == pane || pane.read(cx).has_focus(window, cx);
+            if pane.read(cx).pane_kind() == PaneKind::Tabs {
+                let item_id = pane
+                    .read(cx)
+                    .items()
+                    .nth(item_index)
+                    .map(|item| item.item_id());
+                if let Some(item_id) = item_id {
+                    pane.update(cx, |pane, cx| {
+                        pane.remove_item(item_id, false, false, window, cx);
+                    });
+                }
+                if should_focus_fallback {
+                    self.set_active_pane(&pane, window, cx);
+                    pane.update(cx, |pane, cx| {
+                        window.focus(&pane.focus_handle(cx), cx);
+                    });
+                }
+                self.serialize_workspace(window, cx);
+                cx.notify();
+                return;
+            }
+
             let fallback_pane = if should_focus_fallback {
                 Some(
                     self.last_tabbed_pane(cx)
@@ -7487,6 +7676,39 @@ impl Workspace {
     ) -> bool {
         if paths::APP_NAME == "Zed" {
             return false;
+        }
+
+        if self
+            .active_canvas_layout_recipe
+            .is_some_and(dez_layout_uses_single_work_area)
+        {
+            let visible_panes_before = self
+                .center
+                .panes()
+                .into_iter()
+                .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+                .map(|pane| pane.entity_id())
+                .collect::<Vec<_>>();
+            let destination = if self.active_pane.read(cx).pane_kind() == PaneKind::Tabs
+                && self.pane_is_in_center(&self.active_pane)
+            {
+                self.active_pane.clone()
+            } else {
+                self.last_tabbed_pane(cx)
+                    .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
+            };
+            let destination = self.consolidate_dez_main_work_area(destination, window, cx);
+            if !self.active_pane.read(cx).is_visible() {
+                self.set_active_pane(&destination, window, cx);
+            }
+            let visible_panes_after = self
+                .center
+                .panes()
+                .into_iter()
+                .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs)
+                .map(|pane| pane.entity_id())
+                .collect::<Vec<_>>();
+            return visible_panes_before != visible_panes_after;
         }
 
         let main_work_area_limit = match self.active_canvas_layout_recipe {
@@ -8275,6 +8497,11 @@ impl Workspace {
     }
 
     pub fn apply_canvas_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(CanvasLayoutRecipe::Full, window, cx);
+            return;
+        }
+
         self.push_canvas_layout_snapshot(cx);
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
@@ -8282,21 +8509,8 @@ impl Workspace {
                 for panel_pane_kind in [PanelPaneKind::Agent, PanelPaneKind::Project] {
                     self.set_canvas_panel_pane_visible(panel_pane_kind, true, window, cx);
                 }
-            } else {
-                // A public Dez recipe is a destination, not a loose collection
-                // of toggles. Reveal only the owner named by "Work Area +
-                // Files"; revealing Agent afterwards would immediately hide
-                // Files through the single-auxiliary-surface policy.
-                self.set_dez_essential_canvas_recipe_auxiliary_pane(
-                    CanvasLayoutRecipe::Full,
-                    window,
-                    cx,
-                );
             }
 
-            // The destination panes must exist before dock-backed panel items are
-            // migrated. Otherwise the first recipe invocation closes the docks
-            // and leaves behind empty project and agent panes.
             self.sync_panel_panes_from_docks(window, cx);
             self.select_dez_essential_canvas_recipe_panel(CanvasLayoutRecipe::Full, window, cx);
             self.close_legacy_docks_for_canvas(window, cx);
@@ -8318,6 +8532,15 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(
+                CanvasLayoutRecipe::AgentControl,
+                window,
+                cx,
+            );
+            return;
+        }
+
         self.push_canvas_layout_snapshot(cx);
 
         let center_pane = self
@@ -8330,31 +8553,24 @@ impl Workspace {
             if paths::APP_NAME == "Zed" {
                 self.set_canvas_panel_pane_visible(PanelPaneKind::Project, true, window, cx);
                 self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, true, window, cx);
-            } else {
-                self.set_dez_essential_canvas_recipe_auxiliary_pane(
+                let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
+                self.sync_panel_panes_from_docks(window, cx);
+                self.select_dez_essential_canvas_recipe_panel(
                     CanvasLayoutRecipe::AgentControl,
                     window,
                     cx,
                 );
-            }
-            let agent_pane = self.ensure_panel_pane(PanelPaneKind::Agent, window, cx);
-
-            self.sync_panel_panes_from_docks(window, cx);
-            let agent_panel_selected = self.select_dez_essential_canvas_recipe_panel(
-                CanvasLayoutRecipe::AgentControl,
-                window,
-                cx,
-            );
-            self.close_legacy_docks_for_canvas(window, cx);
-
-            if paths::APP_NAME == "Zed" || agent_panel_selected {
+                self.close_legacy_docks_for_canvas(window, cx);
                 self.set_active_pane(&agent_pane, window, cx);
                 agent_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
             } else {
-                // A layout destination must not strand focus in an empty
-                // auxiliary shell when the corresponding panel has not
-                // registered. The selection helper collapses that shell; keep
-                // the user in their existing Main Work Area.
+                self.sync_panel_panes_from_docks(window, cx);
+                self.select_dez_essential_canvas_recipe_panel(
+                    CanvasLayoutRecipe::AgentControl,
+                    window,
+                    cx,
+                );
+                self.close_legacy_docks_for_canvas(window, cx);
                 self.set_active_pane(&center_pane, window, cx);
                 center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
             }
@@ -8390,6 +8606,11 @@ impl Workspace {
             .into_iter()
             .next()
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        let center_pane = if paths::APP_NAME == "Zed" {
+            center_pane
+        } else {
+            self.consolidate_dez_main_work_area(center_pane, window, cx)
+        };
         self.set_active_pane(&center_pane, window, cx);
         center_pane.update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
 
@@ -8592,6 +8813,11 @@ impl Workspace {
     }
 
     pub fn apply_canvas_review_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(CanvasLayoutRecipe::Review, window, cx);
+            return;
+        }
+
         let (pane_count, split_directions) =
             essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Review, paths::APP_NAME)
                 .expect("Review Changes must define product geometry");
@@ -8610,6 +8836,11 @@ impl Workspace {
     }
 
     pub fn apply_canvas_debug_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if paths::APP_NAME != "Zed" {
+            self.apply_dez_single_work_area_destination(CanvasLayoutRecipe::Debug, window, cx);
+            return;
+        }
+
         let (pane_count, split_directions) =
             essential_canvas_recipe_geometry_for_app(CanvasLayoutRecipe::Debug, paths::APP_NAME)
                 .expect("Debug must define product geometry");
@@ -8842,13 +9073,20 @@ impl Workspace {
 
         if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
             self.sync_panel_panes_from_docks(window, cx);
-            self.set_canvas_panel_pane_visible(
-                PanelPaneKind::Project,
-                show_project_pane,
-                window,
-                cx,
-            );
-            self.set_canvas_panel_pane_visible(PanelPaneKind::Agent, show_agent_pane, window, cx);
+            if paths::APP_NAME == "Zed" {
+                self.set_canvas_panel_pane_visible(
+                    PanelPaneKind::Project,
+                    show_project_pane,
+                    window,
+                    cx,
+                );
+                self.set_canvas_panel_pane_visible(
+                    PanelPaneKind::Agent,
+                    show_agent_pane,
+                    window,
+                    cx,
+                );
+            }
 
             self.close_legacy_docks_for_canvas(window, cx);
         }
@@ -8870,6 +9108,55 @@ impl Workspace {
         let split_directions =
             self.reflow_canvas_split_directions(layout_recipe, split_directions, cx);
         self.ensure_visible_tabbed_panes(tabbed_pane_count, &split_directions, window, cx)
+    }
+
+    fn apply_dez_single_work_area_destination(
+        &mut self,
+        layout_recipe: CanvasLayoutRecipe,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.push_canvas_layout_snapshot(cx);
+
+        if PaneGridSettings::get_global(cx).panels_as_pane_tabs() {
+            self.sync_panel_panes_from_docks(window, cx);
+            self.close_legacy_docks_for_canvas(window, cx);
+        }
+
+        let destination = self
+            .last_tabbed_pane(cx)
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        let destination = self.consolidate_dez_main_work_area(destination, window, cx);
+        self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
+        let destination = self.last_tabbed_pane(cx).unwrap_or(destination);
+        self.focus_canvas_pane(&destination, window, cx);
+        self.finish_canvas_recipe(Some(layout_recipe), window, cx);
+    }
+
+    fn consolidate_dez_main_work_area(
+        &mut self,
+        destination: Entity<Pane>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<Pane> {
+        if paths::APP_NAME == "Zed" {
+            return destination;
+        }
+
+        let source_panes = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs && *pane != &destination)
+            .cloned()
+            .collect::<Vec<_>>();
+        for source_pane in source_panes {
+            join_pane_into_active(&destination, &source_pane, window, cx);
+        }
+
+        destination.update(cx, |pane, cx| pane.set_visible(true, cx));
+        self.center.mark_positions(cx);
+        destination
     }
 
     fn close_legacy_docks_for_canvas(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -9041,25 +9328,6 @@ impl Workspace {
             self.sync_panel_panes_from_docks(window, cx);
         } else if let Some(pane) = self.panel_pane_for_kind(panel_pane_kind.pane_kind(), cx) {
             pane.update(cx, |pane, cx| pane.set_visible(false, cx));
-        }
-    }
-
-    fn set_dez_essential_canvas_recipe_auxiliary_pane(
-        &mut self,
-        recipe: CanvasLayoutRecipe,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        debug_assert_ne!(paths::APP_NAME, "Zed");
-        let desired = essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME);
-
-        for pane_kind in [PanelPaneKind::Project, PanelPaneKind::Agent] {
-            if Some(pane_kind) != desired {
-                self.set_canvas_panel_pane_visible(pane_kind, false, window, cx);
-            }
-        }
-        if let Some(pane_kind) = desired {
-            self.set_canvas_panel_pane_visible(pane_kind, true, window, cx);
         }
     }
 
@@ -9297,7 +9565,7 @@ impl Workspace {
     }
 
     /// Keeps the two contextual right-side surfaces mutually exclusive. The
-    /// global Projects navigator remains visible independently.
+    /// global Workspaces navigator remains visible independently.
     fn prepare_dez_auxiliary_pane_for_reveal(
         &mut self,
         pane_kind: PaneKind,
@@ -9386,9 +9654,10 @@ impl Workspace {
         };
 
         if !starts_open
-            && self
-                .panel_pane_for_kind(panel_pane_kind.pane_kind(), cx)
-                .is_none()
+            && (paths::APP_NAME != "Zed"
+                || self
+                    .panel_pane_for_kind(panel_pane_kind.pane_kind(), cx)
+                    .is_none())
         {
             return;
         }
@@ -9430,9 +9699,14 @@ impl Workspace {
         };
 
         let panel_id = panel_handle.panel_id();
+        let pane = if paths::APP_NAME == "Zed" {
+            self.ensure_panel_pane(panel_pane_kind, window, cx)
+        } else {
+            self.last_tabbed_pane(cx)
+                .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx))
+        };
         let competing_pane_hidden = activate
-            && self.prepare_dez_auxiliary_pane_for_reveal(panel_pane_kind.pane_kind(), window, cx);
-        let pane = self.ensure_panel_pane(panel_pane_kind, window, cx);
+            && self.prepare_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), window, cx);
         pane.update(cx, |pane, cx| {
             let existing_index = pane.items().enumerate().find_map(|(ix, item)| {
                 let item = item.downcast::<PanelItem>()?;
@@ -9478,6 +9752,11 @@ impl Workspace {
             return;
         }
 
+        if paths::APP_NAME != "Zed" {
+            self.migrate_dez_panel_items_to_main_work_area(window, cx);
+            return;
+        }
+
         self.enforce_singleton_panel_panes(window, cx);
 
         let mut panels = Vec::new();
@@ -9503,6 +9782,86 @@ impl Workspace {
         }
 
         self.enforce_singleton_panel_panes(window, cx);
+    }
+
+    fn migrate_dez_panel_items_to_main_work_area(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if paths::APP_NAME == "Zed" {
+            return false;
+        }
+
+        let source_panes = self
+            .center
+            .panes()
+            .into_iter()
+            .filter(|pane| {
+                matches!(
+                    pane.read(cx).pane_kind(),
+                    PaneKind::Project | PaneKind::Agent
+                )
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if source_panes.is_empty() {
+            return false;
+        }
+
+        let destination = self
+            .last_tabbed_pane(cx)
+            .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
+        let mut active_item_id = None;
+        let mut source_owned_active_pane = false;
+
+        for source in source_panes {
+            if self.active_pane == source {
+                source_owned_active_pane = true;
+                active_item_id = source.read(cx).active_item().map(|item| item.item_id());
+            }
+
+            let item_ids = source
+                .read(cx)
+                .items()
+                .map(|item| item.item_id())
+                .collect::<Vec<_>>();
+            for item_id in item_ids {
+                let destination_index = destination.read(cx).items_len();
+                move_item(
+                    &source,
+                    &destination,
+                    item_id,
+                    destination_index,
+                    false,
+                    window,
+                    cx,
+                );
+            }
+
+            if self.pane_is_in_center(&source) {
+                self.remove_pane(source, Some(destination.clone()), window, cx);
+            }
+        }
+
+        let active_item_index = active_item_id.and_then(|active_item_id| {
+            destination
+                .read(cx)
+                .items()
+                .position(|item| item.item_id() == active_item_id)
+        });
+        if let Some(active_item_index) = active_item_index {
+            destination.update(cx, |pane, cx| {
+                pane.activate_item(active_item_index, true, false, window, cx);
+            });
+        }
+        if source_owned_active_pane {
+            self.set_active_pane(&destination, window, cx);
+        }
+
+        self.center.mark_positions(cx);
+        cx.notify();
+        true
     }
 
     fn enforce_singleton_panel_panes(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -10852,7 +11211,7 @@ impl Workspace {
                 }
                 cx.notify();
             }
-            pane::Event::ItemPinned | pane::Event::ItemUnpinned => {}
+            pane::Event::ItemPinned | pane::Event::ItemUnpinned => cx.notify(),
         }
 
         if serialize_workspace {
@@ -13345,12 +13704,20 @@ impl Workspace {
             )
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleAgentPane, window, cx| {
-                    workspace.toggle_panel_pane_visibility(PaneKind::Agent, window, cx);
+                    if paths::APP_NAME == "Zed" {
+                        workspace.toggle_panel_pane_visibility(PaneKind::Agent, window, cx);
+                    } else {
+                        workspace.activate_panel_item_for_key("agent_panel", true, window, cx);
+                    }
                 },
             ))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleProjectPane, window, cx| {
-                    workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
+                    if paths::APP_NAME == "Zed" {
+                        workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
+                    } else {
+                        workspace.activate_panel_item_for_key("ProjectPanel", true, window, cx);
+                    }
                 },
             ))
             .on_action(cx.listener(
@@ -13826,11 +14193,13 @@ impl Workspace {
             &self.right_dock,
             &self.region_focus_handles.right_dock,
         ));
-        // The status bar is an ARIA toolbar, so region navigation lands on its
-        // first control rather than the toolbar container.
-        parts.push(FocusablePart::toolbar(
-            self.status_bar.read(cx).focus_handle(cx),
-        ));
+        if self.status_bar_visible(cx) {
+            // The status bar is an ARIA toolbar, so region navigation lands on its
+            // first control rather than the toolbar container.
+            parts.push(FocusablePart::toolbar(
+                self.status_bar.read(cx).focus_handle(cx),
+            ));
+        }
         parts
     }
 
@@ -15809,6 +16178,9 @@ pub fn open_paths(
     mut open_options: OpenOptions,
     cx: &mut App,
 ) -> Task<anyhow::Result<OpenResult>> {
+    if let Err(error) = ensure_workspace_startup_ready(cx) {
+        return Task::ready(Err(error));
+    }
     let abs_paths = abs_paths.to_vec();
     #[cfg(target_os = "windows")]
     let wsl_path = abs_paths
@@ -17184,6 +17556,11 @@ mod tests {
             CanvasLayoutRecipe::Full,
             "an inherited or custom legacy layout rejoins the public cycle at Work Area + Files"
         );
+        assert!(dez_layout_uses_single_work_area(CanvasLayoutRecipe::Full));
+        assert!(dez_layout_uses_single_work_area(CanvasLayoutRecipe::Review));
+        assert!(!dez_layout_uses_single_work_area(
+            CanvasLayoutRecipe::CodeRunObserve
+        ));
     }
 
     #[test]
@@ -17242,7 +17619,7 @@ mod tests {
         );
         assert_eq!(
             CanvasLayoutRecipe::Review.main_work_area_limit_for_app("Dez"),
-            Some(2)
+            Some(1)
         );
         assert_eq!(
             CanvasLayoutRecipe::Review.main_work_area_limit_for_app("Zed"),
@@ -17270,7 +17647,7 @@ mod tests {
     }
 
     #[test]
-    fn dez_routes_work_tabs_out_of_navigator_surfaces() {
+    fn dez_routes_every_surface_into_the_native_main_tab_strip() {
         assert!(item_belongs_in_main_work_area(
             "Dez",
             PaneKind::Project,
@@ -17286,7 +17663,7 @@ mod tests {
             PaneKind::Tabs,
             false
         ));
-        assert!(!item_belongs_in_main_work_area(
+        assert!(item_belongs_in_main_work_area(
             "Dez",
             PaneKind::Project,
             true
@@ -17294,7 +17671,7 @@ mod tests {
         assert!(!item_belongs_in_main_work_area(
             "Zed",
             PaneKind::Project,
-            false
+            true
         ));
     }
 
@@ -17305,6 +17682,40 @@ mod tests {
         assert_eq!(workspace_card_gap_for_product("Zed", -1.0), Pixels::ZERO);
         assert!(!workspace_pane_uses_rounded_card_frame("Dez"));
         assert!(workspace_pane_uses_rounded_card_frame("Zed"));
+    }
+
+    #[test]
+    fn reopening_a_blocked_workspace_clears_only_accessible_roots() {
+        let roots = vec![
+            PathBuf::from("/Users/test/Documents/one"),
+            PathBuf::from("/Users/test/Documents/two"),
+            PathBuf::from("/Users/test/Desktop/three"),
+        ];
+
+        assert_eq!(
+            remaining_inaccessible_workspace_roots(
+                &roots,
+                &[PathBuf::from("/Users/test/Documents/one")],
+            ),
+            vec![
+                PathBuf::from("/Users/test/Documents/two"),
+                PathBuf::from("/Users/test/Desktop/three"),
+            ]
+        );
+        assert_eq!(
+            remaining_inaccessible_workspace_roots(
+                &roots,
+                &[PathBuf::from("/Users/test/Documents")],
+            ),
+            vec![PathBuf::from("/Users/test/Desktop/three")]
+        );
+        assert_eq!(
+            remaining_inaccessible_workspace_roots(
+                &roots,
+                &[PathBuf::from("/Users/test/Developer")],
+            ),
+            roots
+        );
     }
 
     #[test]
@@ -17374,6 +17785,51 @@ mod tests {
         assert_eq!(pane_kinds.first(), Some(&PaneKind::Tabs));
         assert!(pane_kinds.contains(&PaneKind::Project));
         assert!(pane_kinds.contains(&PaneKind::Agent));
+    }
+
+    #[gpui::test]
+    async fn test_dez_migrates_restored_workspace_tools_into_the_main_tab_strip(
+        cx: &mut TestAppContext,
+    ) {
+        init_test(cx);
+
+        let fs = FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (workspace, cx) =
+            cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let main_pane = workspace.active_pane().clone();
+            let project_pane = workspace.ensure_panel_pane(PanelPaneKind::Project, window, cx);
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
+            workspace.add_panel(panel.clone(), window, cx);
+
+            let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel);
+            let panel_item = cx.new(|_| PanelItem::new(panel_handle));
+            project_pane.update(cx, |pane, cx| {
+                pane.set_visible(true, cx);
+                pane.add_item(Box::new(panel_item), true, true, None, window, cx);
+            });
+            workspace.set_active_pane(&project_pane, window, cx);
+
+            assert!(workspace.migrate_dez_panel_items_to_main_work_area(window, cx));
+            assert_eq!(workspace.active_pane(), &main_pane);
+            assert!(
+                workspace
+                    .center
+                    .panes()
+                    .into_iter()
+                    .all(|pane| pane.read(cx).pane_kind() == PaneKind::Tabs),
+                "restored Workspace Tools must not leave a second full-height column"
+            );
+            assert!(
+                main_pane
+                    .read(cx)
+                    .items()
+                    .any(|item| item.downcast::<PanelItem>().is_some()),
+                "the Workspace Tool must become an ordinary native tab"
+            );
+        });
     }
 
     #[gpui::test]
@@ -17487,9 +17943,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_restore_removes_empty_leftovers_from_curated_dez_layouts(
-        cx: &mut TestAppContext,
-    ) {
+    async fn test_restore_consolidates_single_work_area_dez_layouts(cx: &mut TestAppContext) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -17517,9 +17971,11 @@ mod tests {
                 "a public multi-surface recipe must arrange work, not restore an unexplained blank column"
             );
 
+            let restored_review_pane =
+                workspace.split_pane(primary_pane.clone(), SplitDirection::Right, window, cx);
             let review_item = cx.new(|cx| TestItem::new(cx).with_label("review.diff"));
             workspace.add_item(
-                surplus_empty_pane.clone(),
+                restored_review_pane.clone(),
                 Box::new(review_item),
                 None,
                 false,
@@ -17527,14 +17983,16 @@ mod tests {
                 window,
                 cx,
             );
-            surplus_empty_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            restored_review_pane.update(cx, |pane, cx| pane.set_visible(true, cx));
+            workspace.active_canvas_layout_recipe = Some(CanvasLayoutRecipe::Review);
 
-            assert!(
-                !workspace.normalize_restored_dez_main_work_area(window, cx),
-                "two populated Review Changes work areas should remain stable"
-            );
+            assert!(workspace.normalize_restored_dez_main_work_area(window, cx));
             assert!(primary_pane.read(cx).is_visible());
-            assert!(surplus_empty_pane.read(cx).is_visible());
+            assert_eq!(primary_pane.read(cx).items_len(), 1);
+            assert!(
+                !workspace.pane_is_in_center(&restored_review_pane),
+                "restored Review Changes content should become a native Main Work Area tab"
+            );
         });
     }
 

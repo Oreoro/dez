@@ -107,9 +107,18 @@ use zed_actions::{
     OpenServerSettings, OpenSettingsFile, OpenStatusPage, OpenZedUrl, Quit,
 };
 
-const DOCS_URL: &str = "https://zed.dev/docs/";
+const ZED_DOCS_URL: &str = "https://zed.dev/docs/";
+const DEZ_DOCS_URL: &str = "https://github.com/Oreoro/dez/blob/main/docs/src/dez.md";
 const STATUS_URL: &str = "https://status.zed.dev";
 const MERCH_URL: &str = "https://merch.zed.dev/";
+
+fn product_docs_url(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        ZED_DOCS_URL
+    } else {
+        DEZ_DOCS_URL
+    }
+}
 
 pub struct CrashHandler(pub Arc<crashes::Client>);
 
@@ -119,11 +128,22 @@ pub(crate) fn should_seed_empty_workspace_with_blank_file(app_name: &str) -> boo
     app_name == "Zed"
 }
 
-fn status_bar_shows_workspace_search(app_name: &str) -> bool {
-    // Dez keeps global navigation in the Command Palette and Workspace
-    // surfaces. A permanent Search launcher does not communicate state and
-    // makes the compact status strip look like a second toolbar.
-    app_name == "Zed"
+pub(crate) fn should_seed_empty_workspace_with_home(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+pub(crate) fn seed_empty_workspace_with_home(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !should_seed_empty_workspace_with_home(APP_NAME) {
+        return;
+    }
+
+    let home = cx
+        .new(|cx| workspace::welcome::WelcomePage::new(workspace.weak_handle(), true, window, cx));
+    workspace.add_item_to_active_pane(Box::new(home), None, true, window, cx);
 }
 
 actions!(
@@ -651,9 +671,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let merge_conflict_indicator =
             cx.new(|cx| git_ui::MergeConflictIndicator::new(workspace, cx));
         workspace.status_bar().update(cx, |status_bar, cx| {
-            if status_bar_shows_workspace_search(APP_NAME) {
-                status_bar.add_left_item(search_button, window, cx);
-            }
+            status_bar.add_left_item(search_button, window, cx);
             status_bar.add_left_item(lsp_button, window, cx);
             status_bar.add_left_item(diagnostic_summary, window, cx);
             status_bar.add_left_item(active_file_name, window, cx);
@@ -893,7 +911,12 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     ));
     settings.design_system.get_or_insert_default().density =
         Some(settings::CanvasDensity::Balanced);
-    settings.terminal.get_or_insert_default().font_family = Some(code_font);
+    let terminal = settings.terminal.get_or_insert_default();
+    terminal.font_family = Some(code_font);
+    terminal.line_height = Some(settings::TerminalLineHeight::Standard);
+    terminal.alternate_scroll = Some(settings::AlternateScroll::On);
+    terminal.button = Some(true);
+    terminal.toolbar.get_or_insert_default().breadcrumbs = Some(false);
     let tab_bar = settings.tab_bar.get_or_insert_default();
     tab_bar.show = Some(true);
     tab_bar.show_nav_history_buttons = Some(true);
@@ -904,6 +927,28 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     status_bar.line_endings_button = Some(true);
 }
 
+struct InstallationRequiredForWorkspaceAction;
+struct WorkspaceAccessGrantFeedback;
+
+fn workspace_action_blocked_by_installation(
+    workspace: &mut Workspace,
+    cx: &mut Context<Workspace>,
+) -> bool {
+    if APP_NAME == "Zed" || workspace::workspace_startup_is_ready(cx) {
+        return false;
+    }
+
+    workspace.show_toast(
+        Toast::new(
+            NotificationId::unique::<InstallationRequiredForWorkspaceAction>(),
+            "Install and relaunch Dez before opening a Workspace.",
+        )
+        .autohide(),
+        cx,
+    );
+    true
+}
+
 fn register_actions(
     app_state: Arc<AppState>,
     workspace: &mut Workspace,
@@ -911,7 +956,7 @@ fn register_actions(
     cx: &mut Context<Workspace>,
 ) {
     workspace
-        .register_action(|_, _: &OpenDocs, _, cx| cx.open_url(DOCS_URL))
+        .register_action(|_, _: &OpenDocs, _, cx| cx.open_url(product_docs_url(APP_NAME)))
         .register_action(|_, _: &OpenStatusPage, _, cx| cx.open_url(STATUS_URL))
         .register_action(|_, _: &GetMerch, _, cx| cx.open_url(MERCH_URL))
         .register_action(
@@ -1020,6 +1065,9 @@ fn register_actions(
             }
         })
         .register_action(|workspace, action: &workspace::Open, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             telemetry::event!("Project Opened");
             workspace::prompt_for_open_path_and_open(
                 workspace,
@@ -1041,6 +1089,9 @@ fn register_actions(
             );
         })
         .register_action(|workspace, action: &workspace::OpenFolder, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             telemetry::event!("Workspace Folder Opened");
             workspace::prompt_for_open_path_and_open(
                 workspace,
@@ -1062,6 +1113,9 @@ fn register_actions(
             );
         })
         .register_action(|workspace, _: &workspace::OpenFiles, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             let directories = cx.can_select_mixed_files_and_dirs();
             workspace::prompt_for_open_path_and_open(
                 workspace,
@@ -1078,6 +1132,9 @@ fn register_actions(
             );
         })
         .register_action(|workspace, action: &zed_actions::OpenRemote, window, cx| {
+            if workspace_action_blocked_by_installation(workspace, cx) {
+                return;
+            }
             if !action.from_existing_connection {
                 cx.propagate();
                 return;
@@ -1112,6 +1169,11 @@ fn register_actions(
                 }
             })
             .detach()
+        })
+        .register_action(|workspace, _: &zed_actions::OpenRecent, _, cx| {
+            if !workspace_action_blocked_by_installation(workspace, cx) {
+                cx.propagate();
+            }
         })
         .register_action({
             let fs = app_state.fs.clone();
@@ -1241,7 +1303,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, and the editor status bar.",
+                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar.",
                             ),
                             cx,
                         );
@@ -1256,6 +1318,278 @@ fn register_actions(
                 );
             }
         })
+        .register_action(
+            |workspace: &mut Workspace,
+             _: &zed_actions::dez::InstallAndRelaunch,
+             window,
+             cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+                #[cfg(target_os = "macos")]
+                move_to_applications::install_and_relaunch(workspace, window, cx);
+                #[cfg(not(target_os = "macos"))]
+                {
+                    let _ = (workspace, window);
+                    cx.propagate();
+                }
+            },
+        )
+        .register_action({
+            let fs = app_state.fs.clone();
+            move |workspace: &mut Workspace,
+                  _: &zed_actions::dez::GrantWorkspaceAccess,
+                  window,
+                  cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                if !matches!(
+                    workspace::workspace_access_state(cx),
+                    workspace::WorkspaceAccessState::AccessRequired { .. }
+                ) {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                            "No Workspace folder currently needs access.",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                }
+
+                let selection = cx.prompt_for_paths(PathPromptOptions {
+                    files: false,
+                    directories: true,
+                    multiple: false,
+                    prompt: Some("Grant Workspace Access".into()),
+                });
+                let fs = fs.clone();
+                cx.spawn_in(window, async move |workspace, cx| {
+                    let selected_paths = match selection.await {
+                        Ok(Some(selected_paths)) => selected_paths,
+                        Ok(None) => return anyhow::Ok(()),
+                        Err(error) => {
+                            log::warn!("native Workspace access picker failed: {error:#}");
+                            workspace.update_in(cx, |workspace, _, cx| {
+                                workspace.show_toast(
+                                    Toast::new(
+                                        NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                        "Dez could not open the native folder picker. Nothing changed; retry, or allow Files and Folders access in System Settings.",
+                                    )
+                                    .autohide(),
+                                    cx,
+                                );
+                            })?;
+                            return anyhow::Ok(());
+                        }
+                    };
+                    let Some(selected_path) = selected_paths.into_iter().next() else {
+                        return anyhow::Ok(());
+                    };
+
+                    let matching_root = cx.update(|_, cx| {
+                        let workspace::WorkspaceAccessState::AccessRequired { roots } =
+                            workspace::workspace_access_state(cx)
+                        else {
+                            return None;
+                        };
+                        roots
+                            .iter()
+                            .find(|root| root.as_path() == selected_path.as_path())
+                            .cloned()
+                    })?;
+                    let Some(matching_root) = matching_root else {
+                        workspace.update_in(cx, |workspace, _, cx| {
+                            workspace.show_toast(
+                                Toast::new(
+                                    NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                    "That folder is not a blocked Workspace root. Nothing changed; choose one of the folders named in the access notice.",
+                                )
+                                .autohide(),
+                                cx,
+                            );
+                        })?;
+                        return anyhow::Ok(());
+                    };
+
+                    let validation = match fs.read_dir(&matching_root).await {
+                        Ok(mut entries) => entries.next().await.transpose().map(|_| ()),
+                        Err(error) => Err(error),
+                    };
+                    let root_label = matching_root
+                        .file_name()
+                        .and_then(|name| name.to_str())
+                        .map(ToOwned::to_owned)
+                        .unwrap_or_else(|| matching_root.display().to_string());
+                    if let Err(error) = validation {
+                        log::warn!(
+                            "Workspace access validation failed for {}: {error:#}",
+                            matching_root.display()
+                        );
+                        workspace.update_in(cx, |workspace, _, cx| {
+                            workspace.show_toast(
+                                Toast::new(
+                                    NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                    format!(
+                                        "Dez still cannot read “{root_label}”. Nothing changed; choose that exact folder in the macOS picker or allow Files and Folders access in System Settings."
+                                    ),
+                                )
+                                .autohide(),
+                                cx,
+                            );
+                        })?;
+                        return anyhow::Ok(());
+                    }
+
+                    workspace.update_in(cx, |workspace, _, cx| {
+                        workspace::mark_workspace_roots_accessible(
+                            std::slice::from_ref(&matching_root),
+                            cx,
+                        );
+                        let remaining_count = match workspace::workspace_access_state(cx) {
+                            workspace::WorkspaceAccessState::Available => 0,
+                            workspace::WorkspaceAccessState::AccessRequired { roots } => roots.len(),
+                        };
+                        let message = if remaining_count == 0 {
+                            format!(
+                                "Access granted for “{root_label}”. Dez kept the current layout. Relaunch Dez to retry startup restoration, or use File > Open Recent Workspaces if a Workspace is still missing."
+                            )
+                        } else if remaining_count == 1 {
+                            format!(
+                                "Access granted for “{root_label}”. One Workspace folder still needs access; Dez kept the current layout."
+                            )
+                        } else {
+                            format!(
+                                "Access granted for “{root_label}”. {remaining_count} Workspace folders still need access; Dez kept the current layout."
+                            )
+                        };
+                        workspace.show_toast(
+                            Toast::new(
+                                NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
+                                message,
+                            )
+                            .autohide(),
+                            cx,
+                        );
+                    })?;
+                    anyhow::Ok(())
+                })
+                .detach_and_log_err(cx);
+            }
+        })
+        .register_action(
+            |workspace: &mut Workspace,
+             _: &zed_actions::dez::RetryTerminalService,
+             _,
+             cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                struct RetryTerminalService;
+
+                let message = if crate::terminal_host_runtime::TerminalHostRuntime::retry(cx) {
+                    "Retrying the terminal service…"
+                } else {
+                    "The terminal service cannot retry in place. Relaunch Dez; if the problem returns, open the local diagnostics log."
+                };
+                workspace.show_toast(
+                    Toast::new(NotificationId::unique::<RetryTerminalService>(), message)
+                        .autohide(),
+                    cx,
+                );
+            },
+        )
+        .register_action(
+            |workspace: &mut Workspace,
+             _: &zed_actions::dez::OpenWorkspaceInCmux,
+             window,
+             cx| {
+                if APP_NAME == "Zed" {
+                    cx.propagate();
+                    return;
+                }
+
+                struct OpenWorkspaceInCmux;
+
+                let project_group_key = workspace.project_group_key(cx);
+                if project_group_key.host().is_some() {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<OpenWorkspaceInCmux>(),
+                            "cmux can open only local Workspaces. This remote Workspace stayed in Dez.",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                }
+                let Some(path) = project_group_key
+                    .path_list()
+                    .ordered_paths()
+                    .next()
+                    .cloned()
+                else {
+                    workspace.show_toast(
+                        Toast::new(
+                            NotificationId::unique::<OpenWorkspaceInCmux>(),
+                            "cmux handoff needs a local Workspace. Open a folder first.",
+                        )
+                        .autohide(),
+                        cx,
+                    );
+                    return;
+                };
+
+                let toast_key = path.to_string_lossy().into_owned();
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::composite::<OpenWorkspaceInCmux>(toast_key.clone()),
+                        "Opening this Workspace in cmux…",
+                    )
+                    .autohide(),
+                    cx,
+                );
+
+                let path_label = path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("Workspace")
+                    .to_owned();
+                let handoff_executor = cx.background_executor().clone();
+                let open_task = cx.background_spawn(async move {
+                    sidebar::open_workspace_path_in_cmux(&path, &handoff_executor).await
+                });
+                let multiplexer_store = agent_ui::MultiplexerSessionStore::try_global(cx);
+                cx.spawn_in(window, async move |workspace, cx| {
+                    let outcome = open_task.await;
+                    if let Err(error) = &outcome {
+                        log::error!("cmux Workspace open failed: {error}");
+                    }
+                    workspace.update_in(cx, |workspace, _, cx| {
+                        workspace.show_toast(
+                            sidebar::cmux_workspace_handoff_toast(
+                                NotificationId::composite::<OpenWorkspaceInCmux>(toast_key),
+                                path_label,
+                                outcome,
+                            ),
+                            cx,
+                        );
+                    })?;
+                    if let Some(store) = multiplexer_store {
+                        store.update(cx, |store, cx| store.refresh(cx));
+                    }
+                    anyhow::Ok(())
+                })
+                .detach_and_log_err(cx);
+            },
+        )
         .register_action(|_, _: &install_cli::RegisterDezScheme, window, cx| {
             cx.spawn_in(window, async move |workspace, cx| {
                 install_cli::register_dez_scheme(cx).await?;
@@ -1319,9 +1653,6 @@ fn register_actions(
                     cx,
                     |workspace, window, cx| {
                         cx.activate(true);
-                        // Dez's empty pane is an intentional terminal-first
-                        // launch surface. Do not cover it with an unsolicited
-                        // unsaved editor; New File remains a separate action.
                         if should_seed_empty_workspace_with_blank_file(APP_NAME) {
                             // Preserve upstream Zed's synchronous blank buffer
                             // to avoid changing its New Window behavior.
@@ -1339,6 +1670,8 @@ fn register_actions(
                                 window,
                                 cx,
                             );
+                        } else {
+                            seed_empty_workspace_with_home(workspace, window, cx);
                         }
                     },
                 )
@@ -2927,6 +3260,15 @@ mod tests {
         sync::Arc,
         time::Duration,
     };
+
+    #[test]
+    fn documentation_routes_follow_the_product_identity() {
+        assert_eq!(product_docs_url("Zed"), "https://zed.dev/docs/");
+        assert_eq!(
+            product_docs_url("Dez"),
+            "https://github.com/Oreoro/dez/blob/main/docs/src/dez.md"
+        );
+    }
     use theme::ThemeRegistry;
     use util::{
         path,
@@ -2963,12 +3305,8 @@ mod tests {
     fn dez_empty_workspace_preserves_the_actionable_launch_surface() {
         assert!(!should_seed_empty_workspace_with_blank_file("Dez"));
         assert!(should_seed_empty_workspace_with_blank_file("Zed"));
-    }
-
-    #[test]
-    fn dez_status_bar_does_not_duplicate_workspace_search() {
-        assert!(!status_bar_shows_workspace_search("Dez"));
-        assert!(status_bar_shows_workspace_search("Zed"));
+        assert!(should_seed_empty_workspace_with_home("Dez"));
+        assert!(!should_seed_empty_workspace_with_home("Zed"));
     }
 
     #[test]
@@ -2993,6 +3331,10 @@ mod tests {
         assert_eq!(settings["icon_theme"], "Dez (Default)");
         assert_eq!(settings["design_system"]["density"], "balanced");
         assert_eq!(settings["terminal"]["font_family"], "Lilex");
+        assert_eq!(settings["terminal"]["line_height"], "standard");
+        assert_eq!(settings["terminal"]["alternate_scroll"], "on");
+        assert_eq!(settings["terminal"]["button"], true);
+        assert_eq!(settings["terminal"]["toolbar"]["breadcrumbs"], false);
         assert_eq!(settings["tab_bar"]["show"], true);
         assert_eq!(settings["tab_bar"]["show_nav_history_buttons"], true);
         assert_eq!(settings["tab_bar"]["show_tab_bar_buttons"], true);

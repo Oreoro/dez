@@ -18,7 +18,7 @@ use std::rc::Rc;
 use ui::prelude::*;
 use util::ResultExt;
 use util::path_list::PathList;
-use zed_actions::sidebar::ToggleThreadSwitcher;
+use zed_actions::sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
 
 use crate::workspace_settings::SidebarSettings;
 use settings::{CanvasSide, SidebarDockPosition};
@@ -45,6 +45,8 @@ actions!(
         CloseSidebar,
         /// Moves focus to or from the sidebar without closing it.
         FocusSidebar,
+        /// Opens Workspaces and reveals running tmux, Herdr, and cmux sessions.
+        BrowseRunningSessions,
         /// Activates the next project in the sidebar.
         NextProject,
         /// Activates the previous project in the sidebar.
@@ -189,7 +191,7 @@ fn render_sidebar_header_controls_for_state(
     _agent_pane_visible: Option<bool>,
     cx: &mut App,
 ) -> Option<AnyElement> {
-    if !enabled {
+    if !enabled && paths::APP_NAME == "Zed" {
         return None;
     }
 
@@ -204,12 +206,6 @@ fn render_sidebar_header_controls_for_state(
     let sidebar_label = sidebar_toggle_label(paths::APP_NAME, sidebar_open);
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
-    if paths::APP_NAME != "Zed" {
-        // Dez keeps navigation in the global Projects sidebar and lets each
-        // contextual pane render its own native tabs. A second titlebar
-        // switcher would duplicate navigation and squeeze draggable work tabs.
-        return None;
-    }
 
     let sidebar_toggle_button = sidebar_side_context_menu("sidebar-toggle-menu", cx)
         .anchor(if on_right {
@@ -243,14 +239,9 @@ fn render_sidebar_header_controls_for_state(
         .into_any_element();
 
     let project_pane_toggle_button = if SidebarSettings::get_global(cx).show_project_pane_button {
-        let is_visible = project_pane_visible?;
-        let label = if is_visible {
-            "Hide Project Pane"
-        } else {
-            "Show Project Pane"
-        };
+        project_pane_visible.map(|is_visible| {
+            let label = project_pane_toggle_label(paths::APP_NAME, is_visible);
 
-        Some(
             IconButton::new("project-pane-toggle", IconName::FileTree)
                 .size(ButtonSize::Medium)
                 .icon_size(IconSize::Medium)
@@ -267,8 +258,8 @@ fn render_sidebar_header_controls_for_state(
                 .on_click(|_, window, cx| {
                     window.dispatch_action(Box::new(ToggleProjectPane), cx);
                 })
-                .into_any_element(),
-        )
+                .into_any_element()
+        })
     } else {
         None
     };
@@ -292,8 +283,17 @@ fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
     match (app_name == "Zed", sidebar_open) {
         (true, true) => "Hide Sessions",
         (true, false) => "Open Sessions",
-        (false, true) => "Hide Projects",
-        (false, false) => "Open Projects",
+        (false, true) => "Hide Workspaces",
+        (false, false) => "Open Workspaces",
+    }
+}
+
+fn project_pane_toggle_label(app_name: &str, pane_open: bool) -> &'static str {
+    match (app_name == "Zed", pane_open) {
+        (true, true) => "Hide Project Pane",
+        (true, false) => "Show Project Pane",
+        (false, true) => "Hide Workspace Tools",
+        (false, false) => "Show Workspace Tools",
     }
 }
 
@@ -306,15 +306,15 @@ fn sidebar_resize_copy(app_name: &str) -> (&'static str, &'static str, &'static 
         )
     } else {
         (
-            "Resize Projects",
-            "Use Left and Right Arrow to resize Projects. Press Enter to reset.",
-            "Resize Projects · Arrow keys resize · Enter resets",
+            "Resize Workspaces",
+            "Use Left and Right Arrow to resize Workspaces. Press Enter to reset.",
+            "Resize Workspaces · Arrow keys resize · Enter resets",
         )
     }
 }
 
-fn sidebar_chrome_toggle_visible(app_name: &str, sidebar_open: bool) -> bool {
-    app_name == "Zed" || !sidebar_open
+fn sidebar_chrome_toggle_visible(_app_name: &str, _sidebar_open: bool) -> bool {
+    true
 }
 
 fn sidebar_resize_handle_occludes_main_work_area(app_name: &str) -> bool {
@@ -345,28 +345,37 @@ fn sidebar_keyboard_resize_target(
 #[cfg(test)]
 mod sidebar_chrome_tests {
     use super::{
-        SIDEBAR_KEYBOARD_RESIZE_STEP, sidebar_chrome_toggle_visible,
+        SIDEBAR_KEYBOARD_RESIZE_STEP, project_pane_toggle_label, sidebar_chrome_toggle_visible,
         sidebar_keyboard_resize_target, sidebar_resize_copy,
         sidebar_resize_handle_occludes_main_work_area, sidebar_toggle_label,
     };
     use gpui::px;
 
     #[test]
-    fn dez_uses_chrome_to_open_projects_but_not_to_duplicate_its_hide_action() {
+    fn native_sidebar_chrome_keeps_its_toggle_available_in_both_states() {
         assert!(sidebar_chrome_toggle_visible("Dez", false));
-        assert!(!sidebar_chrome_toggle_visible("Dez", true));
+        assert!(sidebar_chrome_toggle_visible("Dez", true));
         assert!(sidebar_chrome_toggle_visible("Zed", false));
         assert!(sidebar_chrome_toggle_visible("Zed", true));
-        assert_eq!(sidebar_toggle_label("Dez", false), "Open Projects");
-        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Projects");
+        assert_eq!(sidebar_toggle_label("Dez", false), "Open Workspaces");
+        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Workspaces");
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
+        assert_eq!(
+            project_pane_toggle_label("Dez", false),
+            "Show Workspace Tools"
+        );
+        assert_eq!(
+            project_pane_toggle_label("Dez", true),
+            "Hide Workspace Tools"
+        );
+        assert_eq!(project_pane_toggle_label("Zed", false), "Show Project Pane");
     }
 
     #[test]
     fn dez_projects_splitter_names_the_product_navigator() {
-        assert_eq!(sidebar_resize_copy("Dez").0, "Resize Projects");
-        assert!(sidebar_resize_copy("Dez").1.contains("resize Projects"));
+        assert_eq!(sidebar_resize_copy("Dez").0, "Resize Workspaces");
+        assert!(sidebar_resize_copy("Dez").1.contains("resize Workspaces"));
         assert_eq!(sidebar_resize_copy("Zed").0, "Resize Sessions");
     }
 
@@ -431,6 +440,10 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     }
     /// Makes focus reset back to the search editor upon toggling the sidebar from outside
     fn prepare_for_focus(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+
+    /// Opens the sidebar's Workspace and Session filter.
+    fn focus_filter(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+
     /// Opens or cycles the thread switcher popup.
     fn toggle_thread_switcher(
         &mut self,
@@ -439,6 +452,9 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
         _cx: &mut Context<Self>,
     ) {
     }
+
+    /// Reveals externally owned terminal sessions in the sidebar.
+    fn browse_external_sessions(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
 
     /// Activates the next or previous project.
     fn cycle_project(&mut self, _forward: bool, _window: &mut Window, _cx: &mut Context<Self>) {}
@@ -492,10 +508,12 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn focus_handle(&self, cx: &App) -> FocusHandle;
     fn focus(&self, window: &mut Window, cx: &mut App);
     fn prepare_for_focus(&self, window: &mut Window, cx: &mut App);
+    fn focus_filter(&self, window: &mut Window, cx: &mut App);
     fn has_notifications(&self, cx: &App) -> bool;
     fn to_any(&self) -> AnyView;
     fn entity_id(&self) -> EntityId;
     fn toggle_thread_switcher(&self, select_last: bool, window: &mut Window, cx: &mut App);
+    fn browse_external_sessions(&self, window: &mut Window, cx: &mut App);
     fn cycle_project(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn cycle_thread(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn toggle_options_menu(&self, window: &mut Window, cx: &mut App);
@@ -547,6 +565,10 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
         self.update(cx, |this, cx| this.prepare_for_focus(window, cx));
     }
 
+    fn focus_filter(&self, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| this.focus_filter(window, cx));
+    }
+
     fn has_notifications(&self, cx: &App) -> bool {
         self.read(cx).has_notifications(cx)
     }
@@ -564,6 +586,15 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
         window.defer(cx, move |window, cx| {
             entity.update(cx, |this, cx| {
                 this.toggle_thread_switcher(select_last, window, cx);
+            });
+        });
+    }
+
+    fn browse_external_sessions(&self, window: &mut Window, cx: &mut App) {
+        let entity = self.clone();
+        window.defer(cx, move |window, cx| {
+            entity.update(cx, |this, cx| {
+                this.browse_external_sessions(window, cx);
             });
         });
     }
@@ -919,6 +950,21 @@ impl MultiWorkspace {
         }
     }
 
+    pub fn focus_sidebar_filter(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.multi_workspace_enabled(cx) {
+            return;
+        }
+
+        self.sidebar_auto_close_pending = false;
+        if !self.sidebar_open() {
+            self.previous_focus_handle = window.focused(cx);
+            self.open_sidebar(cx);
+        }
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.focus_filter(window, cx);
+        }
+    }
+
     pub fn open_sidebar(&mut self, cx: &mut Context<Self>) {
         self.sidebar_auto_close_pending = false;
         let side = match self.sidebar_side(cx) {
@@ -929,7 +975,7 @@ impl MultiWorkspace {
         self.apply_open_sidebar(true, cx);
     }
 
-    /// Opens the global Projects navigator. Files, Git, and Agent surfaces are
+    /// Opens the global Workspaces navigator. Files, Git, and Agent surfaces are
     /// contextual to the active Workspace and do not compete with this
     /// navigator.
     pub fn open_sidebar_for_sessions_reveal(
@@ -1789,6 +1835,9 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Workspace>>> {
+        if let Err(error) = crate::ensure_workspace_startup_ready(cx) {
+            return Task::ready(Err(error));
+        }
         if let Some(workspace) =
             self.workspace_for_paths_excluding(&paths, host.as_ref(), excluding, cx)
         {
@@ -2589,6 +2638,9 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Workspace>>> {
+        if let Err(error) = crate::ensure_workspace_startup_ready(cx) {
+            return Task::ready(Err(error));
+        }
         if self.multi_workspace_enabled(cx) {
             let empty_workspace = if self
                 .active_workspace
@@ -2834,6 +2886,21 @@ impl Render for MultiWorkspace {
                             this.focus_sidebar(window, cx);
                         }),
                     )
+                    .on_action(cx.listener(
+                        |this: &mut Self, _: &FocusSidebarFilter, window, cx| {
+                            this.focus_sidebar_filter(window, cx);
+                        },
+                    ))
+                    .on_action(cx.listener(
+                        |this: &mut Self, _: &BrowseRunningSessions, window, cx| {
+                            this.open_sidebar_for_sessions_reveal(window, cx);
+                            if let Some(sidebar) = &this.sidebar {
+                                this.previous_focus_handle = window.focused(cx);
+                                sidebar.browse_external_sessions(window, cx);
+                                sidebar.focus(window, cx);
+                            }
+                        },
+                    ))
                     .on_action(cx.listener(
                         |this: &mut Self, action: &ToggleThreadSwitcher, window, cx| {
                             if let Some(sidebar) = &this.sidebar {

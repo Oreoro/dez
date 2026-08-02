@@ -174,25 +174,25 @@ pub struct SettingsContent {
 
     pub sidebar: Option<SidebarSettingsContent>,
 
-    /// Settings for the Zed Canvas design system.
+    /// Settings for the Dez design system.
     pub design_system: Option<DesignSystemSettingsContent>,
 
-    /// Settings for the Canvas workspace bar.
+    /// Settings for native Workspace attention and navigation.
     pub workspace_bar: Option<WorkspaceBarSettingsContent>,
 
-    /// Settings for Sessions, the Dez supervision rail.
+    /// Settings for Workspaces, the optional Dez Workspace navigator.
     pub session_rail: Option<SessionRailSettingsContent>,
 
-    /// Settings for the Canvas pane grid.
+    /// Settings for native Workspace pane layouts.
     pub pane_grid: Option<PaneGridSettingsContent>,
 
-    /// Settings for Canvas-style agent surfaces.
+    /// Settings for Dez agent surfaces.
     pub agent_ui: Option<AgentUiSettingsContent>,
 
     /// Settings for multiplexer-style workspace behavior.
     pub multiplexer: Option<MultiplexerSettingsContent>,
 
-    /// Settings for Canvas accessibility behavior.
+    /// Settings for Dez Workspace accessibility behavior.
     pub accessibility: Option<AccessibilitySettingsContent>,
 
     pub agent: Option<AgentSettingsContent>,

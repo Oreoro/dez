@@ -4,13 +4,18 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
+use agent_settings::{AgentSettings, TerminalAgentKind, detect_terminal_agent_command};
+pub use agent_settings::{
+    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label, terminal_agent_icon,
+};
 use anyhow::{Result, anyhow};
 use collections::HashMap;
 use editor::{
     Editor, EditorSettings, actions::SelectAll, blink_manager::BlinkManager,
     ui_scrollbar_settings_from_raw,
 };
-use futures::{channel::oneshot, future::join_all};
+use futures::{FutureExt as _, channel::oneshot, future::join_all};
 use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
 use gpui::{
     Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, ClipboardItem,
@@ -27,7 +32,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
     CanvasDensity, SeedQuerySetting, Settings, SettingsStore, TerminalBell, TerminalBlink,
-    WorkingDirectory,
+    TerminalLauncher, WorkingDirectory,
 };
 use std::{
     any::Any,
@@ -48,6 +53,7 @@ use terminal::{
         LocalTerminalHost, TerminalSessionState,
         transport::{
             TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+            TerminalHostStartupState, TerminalHostStartupStatus,
         },
     },
     terminal_settings::{CursorShape, TerminalSettings},
@@ -64,15 +70,21 @@ use ui::{
 use util::ResultExt;
 use workspace::{
     CloseActiveItem, DesignSystemSettings, DraggedSelection, DraggedTab, NewCenterTerminal,
-    NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, ToolbarItemLocation,
-    Workspace, WorkspaceId, delete_unloaded_items,
+    NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, Toast,
+    ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
+    notifications::NotificationId,
     register_serializable_item,
     searchable::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
     },
+};
+use zed_actions::terminal::{
+    OpenAgentTerminal, OpenAiderTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal,
+    OpenGeminiTerminal, OpenHerdrTerminal, OpenOpenCodeTerminal, OpenShellTerminal,
+    OpenTmuxTerminal, ResumeClaudeCodeTerminal, ResumeCodexTerminal, ResumeOpenCodeTerminal,
 };
 
 struct ImeState {
@@ -90,12 +102,110 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 }
 
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
+const TERMINAL_STARTUP_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
 const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
 const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
+const TERMINAL_HOST_TERMINATION_TIMEOUT: Duration = Duration::from_secs(8);
 const TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH: Pixels = px(360.);
 const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
 const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
 const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
+
+struct InstallationRequiredForTerminal;
+
+fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
+    if let Some(access_required) =
+        error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
+    {
+        workspace::mark_workspace_access_required(access_required.path().to_path_buf(), cx);
+    }
+}
+
+fn resolve_terminal_startup_command(
+    requested: Option<String>,
+    configured: Option<String>,
+    app_name: &str,
+) -> Option<String> {
+    requested
+        .or_else(|| (app_name != "Zed").then_some(configured).flatten())
+        .filter(|command| !command.trim().is_empty())
+}
+
+fn terminal_startup_command_input(command: String) -> Vec<u8> {
+    let mut input = command.into_bytes();
+    input.push(b'\x0d');
+    input
+}
+
+#[cfg(test)]
+mod startup_command_tests {
+    use super::*;
+
+    #[test]
+    fn dez_uses_the_configured_agent_command_without_overriding_explicit_choices() {
+        assert_eq!(
+            resolve_terminal_startup_command(None, Some("codex".to_owned()), "Dez").as_deref(),
+            Some("codex")
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(
+                Some("claude".to_owned()),
+                Some("codex".to_owned()),
+                "Dez",
+            )
+            .as_deref(),
+            Some("claude")
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(Some(String::new()), Some("codex".to_owned()), "Dez",),
+            None
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(None, Some("codex".to_owned()), "Zed"),
+            None
+        );
+    }
+
+    #[test]
+    fn terminal_agent_commands_submit_once_after_shell_startup() {
+        assert_eq!(
+            terminal_startup_command_input("opencode".to_owned()),
+            b"opencode\r"
+        );
+    }
+
+    #[test]
+    fn tmux_session_names_are_root_scoped_and_shell_safe() {
+        let first_root = Path::new("/Users/example/first/app");
+        let second_root = Path::new("/Users/example/second/app");
+        let first_name = tmux_session_name_from_workspace_root(Some(first_root));
+        let second_name = tmux_session_name_from_workspace_root(Some(second_root));
+
+        assert!(first_name.starts_with("app-"));
+        assert!(
+            first_name
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '-')
+        );
+        assert_ne!(first_name, second_name);
+        assert_eq!(tmux_session_name_from_workspace_root(None), "dez");
+    }
+
+    #[test]
+    fn tmux_startup_preserves_only_a_matching_legacy_workspace_session() {
+        let command = tmux_startup_command_for_workspace(Some(Path::new("/workspace/Dez 3.0")));
+
+        assert!(command.contains("tmux has-session"));
+        assert!(command.contains("#{pane_current_path}"));
+        assert!(command.contains("\"$PWD\"|\"$PWD\"/*"));
+        assert!(command.contains("attach-session -t =Dez-3-0"));
+        assert!(command.contains("new-session -A -s Dez-3-0-"));
+        assert_eq!(
+            tmux_startup_command_for_workspace(None),
+            "exec tmux new-session -A -s dez"
+        );
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 struct TerminalContextActionLabelVisibility {
@@ -105,7 +215,7 @@ struct TerminalContextActionLabelVisibility {
 }
 
 #[derive(Clone, Copy)]
-struct TerminalForegroundAgentPresentation {
+struct TerminalForegroundPresentation {
     display_name: &'static str,
     icon: IconName,
 }
@@ -121,7 +231,22 @@ fn terminal_container_reuses_terminal_material(app_name: &str, transparent_theme
 fn terminal_foreground_agent_presentation(
     app_name: &str,
     command: Option<&str>,
-) -> Option<TerminalForegroundAgentPresentation> {
+) -> Option<TerminalForegroundPresentation> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    let kind = detect_terminal_agent_command(command?)?;
+    let display_name = kind.display_name();
+    let icon = terminal_agent_icon(kind);
+
+    Some(TerminalForegroundPresentation { display_name, icon })
+}
+
+fn terminal_foreground_multiplexer_presentation(
+    app_name: &str,
+    command: Option<&str>,
+) -> Option<TerminalForegroundPresentation> {
     if app_name == "Zed" {
         return None;
     }
@@ -134,41 +259,30 @@ fn terminal_foreground_agent_presentation(
         .to_ascii_lowercase();
     let command = command.strip_suffix(".exe").unwrap_or(command.as_str());
 
-    let (display_name, icon) = match command {
-        "claude" => ("Claude Code", IconName::AiClaude),
-        command if command.starts_with("claude-code") => ("Claude Code", IconName::AiClaude),
-        "codex" => ("Codex", IconName::AiOpenAi),
-        command if command.starts_with("codex-") => ("Codex", IconName::AiOpenAi),
-        "gemini" => ("Gemini CLI", IconName::AiGemini),
-        command if command.starts_with("gemini-") => ("Gemini CLI", IconName::AiGemini),
-        "opencode" | "open-code" => ("OpenCode", IconName::AiOpenCode),
-        "grok" => ("Grok", IconName::AiXAi),
-        command if command.starts_with("grok-") => ("Grok", IconName::AiXAi),
-        "copilot" | "github-copilot" => ("GitHub Copilot", IconName::Copilot),
-        "cursor-agent" => ("Cursor Agent", IconName::EditorCursor),
-        "aider" => ("Aider", IconName::Robot),
-        "agy" => ("Agy", IconName::Robot),
-        "amp" => ("Amp", IconName::Robot),
-        "crush" => ("Crush", IconName::Robot),
-        "devin" => ("Devin", IconName::Robot),
-        "droid" => ("Droid", IconName::Robot),
-        "goose" => ("Goose", IconName::Robot),
-        "openhands" | "open-hands" => ("OpenHands", IconName::Robot),
-        "pi" => ("Pi", IconName::Robot),
-        "qwen" | "qwen-code" => ("Qwen Code", IconName::Robot),
-        _ => return None,
-    };
-
-    Some(TerminalForegroundAgentPresentation { display_name, icon })
+    match command {
+        "tmux" => Some(TerminalForegroundPresentation {
+            display_name: "tmux",
+            icon: IconName::SplitAlt,
+        }),
+        _ => None,
+    }
 }
 
 fn terminal_context_activity_label(
     status: &str,
-    foreground_agent: Option<TerminalForegroundAgentPresentation>,
+    foreground_agent: Option<TerminalForegroundPresentation>,
 ) -> Option<String> {
-    foreground_agent
-        .map(|agent| format!("{} running", agent.display_name))
-        .or_else(|| (status != "Active").then(|| status.to_owned()))
+    if terminal_context_uses_foreground_activity(status)
+        && let Some(agent) = foreground_agent
+    {
+        return Some(format!("{} running", agent.display_name));
+    }
+
+    (status != "Active").then(|| status.to_owned())
+}
+
+fn terminal_context_uses_foreground_activity(status: &str) -> bool {
+    matches!(status, "Active" | "Running")
 }
 
 fn terminal_context_activity_label_visible(width: Pixels) -> bool {
@@ -257,6 +371,23 @@ fn terminal_tab_status_label_visible(status: &str) -> bool {
     matches!(status, "Failed" | "Unavailable" | "Status unknown")
 }
 
+fn terminal_tab_icon_presentation(
+    task_status: Option<&TaskStatus>,
+    foreground_agent: Option<TerminalForegroundPresentation>,
+    foreground_multiplexer: Option<TerminalForegroundPresentation>,
+) -> (IconName, Color) {
+    match task_status {
+        Some(TaskStatus::Running) => (IconName::PlayFilled, Color::Disabled),
+        Some(TaskStatus::Unknown) => (IconName::Warning, Color::Warning),
+        Some(TaskStatus::Completed { success: true }) => (IconName::Check, Color::Success),
+        Some(TaskStatus::Completed { success: false }) => (IconName::XCircle, Color::Error),
+        None => foreground_agent
+            .map(|agent| (agent.icon, Color::Accent))
+            .or_else(|| foreground_multiplexer.map(|multiplexer| (multiplexer.icon, Color::Muted)))
+            .unwrap_or((IconName::Terminal, Color::Muted)),
+    }
+}
+
 fn terminal_surface_accessibility_label(app_name: &str, title: &str, status: &str) -> String {
     if app_name == "Zed" {
         format!("Terminal Session: {title}. Status: {status}")
@@ -278,6 +409,30 @@ fn terminal_context_action_label_visibility(
             && (!has_workspace_files || changed_files == 0 || secondary_visible),
         review: primary_visible && changed_files > 0,
         details: width >= TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH,
+    }
+}
+
+fn terminal_context_strip_is_relevant(
+    activity_label: Option<&str>,
+    has_workspace_files: bool,
+    changed_files: usize,
+) -> bool {
+    activity_label.is_some() || !has_workspace_files || changed_files > 0
+}
+
+fn terminal_details_disclosure_label(expanded: bool, show_text: bool) -> &'static str {
+    match (expanded, show_text) {
+        (true, true) => "Hide Details",
+        (false, true) => "Terminal Details",
+        (_, false) => "",
+    }
+}
+
+fn terminal_details_disclosure_accessibility_label(expanded: bool) -> &'static str {
+    if expanded {
+        "Hide Terminal Details"
+    } else {
+        "Show Terminal Details"
     }
 }
 
@@ -306,7 +461,15 @@ pub(crate) fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str 
     if app_name == "Zed" {
         "No terminal process was started. Review terminal settings, then use New Terminal to try again."
     } else {
-        "No terminal process was started. Review terminal settings, then open a new terminal."
+        "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
+    }
+}
+
+pub(crate) fn terminal_launch_failure_settings_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Edit Settings"
+    } else {
+        "Edit Terminal Settings"
     }
 }
 
@@ -411,23 +574,21 @@ fn terminal_termination_available(session_unavailable: bool, process_exited: boo
     !session_unavailable && !process_exited
 }
 
-fn terminal_has_persistent_owner(terminal: &Terminal, cx: &App) -> bool {
+fn terminal_has_persistent_owner(terminal: &Terminal, _cx: &App) -> bool {
+    terminal.is_hosted()
+}
+
+fn terminal_host_connection_verified(terminal: &Terminal, cx: &App) -> bool {
     if !terminal.is_hosted() {
         return false;
     }
-    let session_id = terminal.session_id();
-    let Some(host_id) =
-        TerminalHostConnection::try_global(cx).map(|connection| connection.host_id())
-    else {
+    let Some(connection) = TerminalHostConnection::try_global(cx) else {
         return false;
     };
-    TerminalHostSnapshotStore::try_global(cx).is_some_and(|store| {
-        store
-            .read(cx)
-            .snapshots()
-            .iter()
-            .any(|snapshot| snapshot.host_id == host_id && snapshot.session_id == session_id)
-    })
+    matches!(
+        TerminalHostStartupStatus::state(cx),
+        TerminalHostStartupState::Connected { host_id } if host_id == connection.host_id()
+    )
 }
 
 fn terminal_ownership_label(
@@ -436,17 +597,17 @@ fn terminal_ownership_label(
     session_unavailable: bool,
 ) -> &'static str {
     if app_name == "Zed" {
-        if has_persistent_owner {
-            "Persistent Terminal Session"
-        } else if session_unavailable {
+        if session_unavailable {
             "Saved Terminal Session"
+        } else if has_persistent_owner {
+            "Persistent Terminal Session"
         } else {
             "Workspace Terminal Session"
         }
-    } else if has_persistent_owner {
-        "Host-owned terminal"
     } else if session_unavailable {
         "Saved terminal"
+    } else if has_persistent_owner {
+        "Host-owned terminal"
     } else {
         "Workspace terminal"
     }
@@ -521,6 +682,18 @@ pub fn init(cx: &mut App) {
         workspace.set_terminal_provider(WorkspaceTerminalProvider(terminal_provider));
         workspace.register_action(TerminalView::deploy);
         workspace.register_action(new_terminal);
+        workspace.register_action(open_agent_terminal);
+        workspace.register_action(open_shell_terminal);
+        workspace.register_action(open_tmux_terminal);
+        workspace.register_action(open_codex_terminal);
+        workspace.register_action(resume_codex_terminal);
+        workspace.register_action(open_claude_code_terminal);
+        workspace.register_action(resume_claude_code_terminal);
+        workspace.register_action(open_opencode_terminal);
+        workspace.register_action(resume_opencode_terminal);
+        workspace.register_action(open_gemini_terminal);
+        workspace.register_action(open_aider_terminal);
+        workspace.register_action(open_herdr_terminal);
         workspace.register_action(open_terminal);
         if let Some(window) = window
             && let Some((database_id, serialization_key)) = workspace
@@ -704,11 +877,20 @@ impl WorkspaceTerminalProviderState {
                 Ok(workspace.project().clone())
             })??;
 
-            let terminal = project
+            let terminal = match project
                 .update(cx, |project, cx| {
                     project.create_terminal_task(spawn_task, cx)
                 })
-                .await?;
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(error) => {
+                    workspace.update(cx, |_workspace, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
+                    })?;
+                    return Err(error);
+                }
+            };
 
             workspace.update_in(cx, |workspace, window, cx| {
                 attach_terminal_to_workspace(
@@ -735,11 +917,20 @@ impl WorkspaceTerminalProviderState {
         let workspace = self.workspace.clone();
         cx.spawn_in(window, async move |_, cx| {
             let project = workspace.read_with(cx, |workspace, _| workspace.project().clone())?;
-            let new_terminal = project
+            let new_terminal = match project
                 .update(cx, |project, cx| {
                     project.create_terminal_task(spawn_task, cx)
                 })
-                .await?;
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(error) => {
+                    workspace.update(cx, |_workspace, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
+                    })?;
+                    return Err(error);
+                }
+            };
 
             terminal_to_replace.update_in(cx, |terminal_to_replace, window, cx| {
                 terminal_to_replace.set_terminal(new_terminal.clone(), window, cx);
@@ -785,6 +976,257 @@ fn new_terminal(
     .detach_and_log_err(cx);
 }
 
+fn open_agent_terminal(
+    workspace: &mut Workspace,
+    _: &OpenAgentTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if paths::APP_NAME == "Zed" {
+        new_terminal(workspace, &NewTerminal::default(), window, cx);
+    } else if AgentSettings::get_global(cx).terminal_launcher == TerminalLauncher::Tmux {
+        open_tmux_terminal(workspace, &OpenTmuxTerminal, window, cx);
+    } else if prepare_agent_terminal_workspace(workspace, window, cx) {
+        TerminalView::deploy(workspace, &NewCenterTerminal::default(), window, cx);
+    }
+}
+
+fn open_shell_terminal(
+    workspace: &mut Workspace,
+    _: &OpenShellTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    TerminalView::deploy(
+        workspace,
+        &NewCenterTerminal {
+            local: false,
+            startup_command: Some(String::new()),
+            working_directory: None,
+        },
+        window,
+        cx,
+    );
+}
+
+fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
+    let session_name = label
+        .unwrap_or("dez")
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || matches!(character, '-' | '_') {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    let session_name = session_name.trim_matches('-');
+    if session_name.is_empty() {
+        "dez".to_owned()
+    } else {
+        session_name.to_owned()
+    }
+}
+
+pub fn tmux_session_name_from_workspace_root(root: Option<&Path>) -> String {
+    let legacy_name = tmux_session_name_from_workspace_label(
+        root.and_then(Path::file_name)
+            .and_then(|name| name.to_str()),
+    );
+    let Some(root) = root else {
+        return legacy_name;
+    };
+
+    // DefaultHasher does not promise a stable identity across Rust releases.
+    let mut hash = 0xcbf29ce484222325_u64;
+    for byte in root.to_string_lossy().as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{legacy_name}-{hash:010x}")
+}
+
+pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
+    let legacy_name = tmux_session_name_from_workspace_label(
+        root.and_then(Path::file_name)
+            .and_then(|name| name.to_str()),
+    );
+    let session_name = tmux_session_name_from_workspace_root(root);
+    if session_name == legacy_name {
+        return format!("exec tmux new-session -A -s {session_name}");
+    }
+
+    format!(
+        "if tmux has-session -t ={session_name} 2>/dev/null; then exec tmux attach-session -t ={session_name}; elif tmux has-session -t ={legacy_name} 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t ={legacy_name} '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t ={legacy_name} ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
+    )
+}
+
+fn open_tmux_terminal(
+    workspace: &mut Workspace,
+    _: &OpenTmuxTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+
+    let project_group_key = workspace.project_group_key(cx);
+    let workspace_root = project_group_key.path_list().ordered_paths().next();
+    let startup_command = tmux_startup_command_for_workspace(workspace_root);
+    open_terminal_with_startup_command(workspace, &startup_command, window, cx);
+}
+
+fn open_codex_terminal(
+    workspace: &mut Workspace,
+    _: &OpenCodexTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "codex", window, cx);
+}
+
+fn resume_codex_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeCodexTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "codex resume --last", window, cx);
+}
+
+fn open_claude_code_terminal(
+    workspace: &mut Workspace,
+    _: &OpenClaudeCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "claude", window, cx);
+}
+
+fn resume_claude_code_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeClaudeCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "claude --continue", window, cx);
+}
+
+fn open_opencode_terminal(
+    workspace: &mut Workspace,
+    _: &OpenOpenCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "opencode", window, cx);
+}
+
+fn resume_opencode_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeOpenCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "opencode --continue", window, cx);
+}
+
+fn open_gemini_terminal(
+    workspace: &mut Workspace,
+    _: &OpenGeminiTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "gemini", window, cx);
+}
+
+fn open_aider_terminal(
+    workspace: &mut Workspace,
+    _: &OpenAiderTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "aider", window, cx);
+}
+
+fn open_herdr_terminal(
+    workspace: &mut Workspace,
+    _: &OpenHerdrTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "herdr", window, cx);
+}
+
+fn prepare_agent_terminal_workspace(
+    workspace: &Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> bool {
+    let has_workspace = workspace.project().read(cx).worktrees(cx).next().is_some();
+    if paths::APP_NAME == "Zed" || has_workspace {
+        return true;
+    }
+
+    window.dispatch_action(
+        OpenWorkspace {
+            create_new_window: Some(false),
+        }
+        .boxed_clone(),
+        cx,
+    );
+    false
+}
+
+fn open_terminal_with_startup_command(
+    workspace: &mut Workspace,
+    startup_command: &str,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    TerminalView::deploy(
+        workspace,
+        &NewCenterTerminal {
+            local: false,
+            startup_command: Some(startup_command.to_owned()),
+            working_directory: None,
+        },
+        window,
+        cx,
+    );
+}
+
 fn open_terminal(
     workspace: &mut Workspace,
     action: &OpenTerminal,
@@ -812,6 +1254,17 @@ fn add_terminal_to_active_pane<F>(
 where
     F: FnOnce(&mut Project, &mut Context<Project>) -> Task<Result<Entity<Terminal>>> + 'static,
 {
+    if let Err(error) = workspace::ensure_workspace_startup_ready(cx) {
+        workspace.show_toast(
+            Toast::new(
+                NotificationId::unique::<InstallationRequiredForTerminal>(),
+                error.to_string(),
+            )
+            .autohide(),
+            cx,
+        );
+        return Task::ready(Err(error));
+    }
     if !is_enabled_in_workspace(workspace, cx) {
         return Task::ready(Err(anyhow!(
             "terminal not yet supported for collaborative projects"
@@ -829,6 +1282,7 @@ where
                 Ok(terminal.downgrade())
             }
             Err(error) => {
+                record_terminal_workspace_access_required(&error, cx);
                 let pane = workspace.active_pane().clone();
                 let failed_to_spawn = Box::new(cx.new(|cx| FailedToSpawnTerminal {
                     error: error.to_string(),
@@ -923,6 +1377,7 @@ impl Focusable for FailedToSpawnTerminal {
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
+        let settings_label = terminal_launch_failure_settings_label(paths::APP_NAME);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
@@ -994,12 +1449,26 @@ impl Render for FailedToSpawnTerminal {
                     )
                     .child(SplitButton::new(
                         ButtonLike::new("open-settings-ui")
-                            .child(Label::new("Edit Settings").size(LabelSize::Small))
+                            .child(Label::new(settings_label).size(LabelSize::Small))
                             .tab_index(0isize)
                             .aria_label("Edit Terminal Settings")
                             .tooltip(Tooltip::text("Edit Terminal Settings"))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(zed_actions::OpenSettings.boxed_clone(), cx);
+                            .on_click(move |_, window, cx| {
+                                if is_dez {
+                                    window.dispatch_action(
+                                        zed_actions::OpenSettingsAt {
+                                            path: "agent.terminal_launcher".to_owned(),
+                                            target: None,
+                                        }
+                                        .boxed_clone(),
+                                        cx,
+                                    );
+                                } else {
+                                    window.dispatch_action(
+                                        zed_actions::OpenSettings.boxed_clone(),
+                                        cx,
+                                    );
+                                }
                             }),
                         popover_menu.into_any_element(),
                     )),
@@ -1048,6 +1517,7 @@ pub struct TerminalView {
     session_ref_needs_serialize: bool,
     session_unavailable: bool,
     session_unavailable_reason: Option<String>,
+    show_terminal_details: bool,
     custom_title: Option<String>,
     hover: Option<HoverTarget>,
     hover_tooltip_update: Task<()>,
@@ -1124,13 +1594,61 @@ impl TerminalView {
         cx: &mut Context<Workspace>,
     ) {
         let local = action.local;
-        let working_directory = default_working_directory(workspace, cx);
-        add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
-            if local {
-                project.create_local_terminal(cx)
-            } else {
-                project.create_terminal_shell(working_directory, cx)
+        let startup_command = resolve_terminal_startup_command(
+            action.startup_command.clone(),
+            AgentSettings::get_global(cx).terminal_init_command.clone(),
+            paths::APP_NAME,
+        );
+        let working_directory = action
+            .working_directory
+            .clone()
+            .or_else(|| default_working_directory(workspace, cx));
+        let terminal_task =
+            add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+                if local {
+                    project.create_local_terminal(cx)
+                } else {
+                    project.create_terminal_shell(working_directory, cx)
+                }
+            });
+
+        let Some(startup_command) = startup_command else {
+            terminal_task.detach_and_log_err(cx);
+            return;
+        };
+
+        cx.spawn(async move |_, cx| {
+            let terminal = terminal_task
+                .await?
+                .upgrade()
+                .ok_or_else(|| anyhow!("terminal closed before its startup command ran"))?;
+            let input = terminal_startup_command_input(startup_command);
+            let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty());
+
+            if !is_pty {
+                terminal.update(cx, |terminal, _cx| terminal.write_init_command(input));
+                return anyhow::Ok(());
             }
+
+            let startup = terminal.update(cx, |terminal, _cx| {
+                terminal.start_init_command_startup_handshake()
+            });
+            let timeout = cx
+                .background_executor()
+                .timer(TERMINAL_STARTUP_COMMAND_TIMEOUT);
+            futures::select_biased! {
+                _ = startup.fuse() => {}
+                _ = timeout.fuse() => {}
+            }
+
+            terminal.update(cx, move |terminal, cx| {
+                if !terminal.write_init_command_after_startup(input, cx) {
+                    log::debug!(
+                        "skipping terminal startup command because the terminal is no longer eligible"
+                    );
+                }
+            });
+            anyhow::Ok(())
         })
         .detach_and_log_err(cx);
     }
@@ -1217,6 +1735,7 @@ impl TerminalView {
             session_ref_needs_serialize: true,
             session_unavailable: false,
             session_unavailable_reason: None,
+            show_terminal_details: false,
             custom_title: None,
             ime_state: None,
             self_handle: cx.entity().downgrade(),
@@ -1333,8 +1852,10 @@ impl TerminalView {
     /// Commits (sends) the given text to the PTY. Called by InputHandler::replace_text_in_range.
     pub(crate) fn commit_text(&mut self, text: &str, cx: &mut Context<Self>) {
         if !text.is_empty() {
-            self.terminal.update(cx, |term, _| {
-                term.input(text.to_string().into_bytes());
+            self.terminal.update(cx, |term, terminal_cx| {
+                if term.input(text.to_string().into_bytes()) {
+                    terminal_cx.notify();
+                }
             });
         }
     }
@@ -1480,11 +2001,8 @@ impl TerminalView {
                             )
                             .separator()
                     } else {
-                        menu.action(
-                            "Open Agent Terminal",
-                            Box::new(NewCenterTerminal::default()),
-                        )
-                        .separator()
+                        menu.action("Open Terminal", Box::new(NewCenterTerminal::default()))
+                            .separator()
                     }
                 })
                 .when(has_selection, |menu| {
@@ -1583,11 +2101,14 @@ impl TerminalView {
             .mode
             .contains(Modes::ALT_SCREEN)
         {
-            self.terminal.update(cx, |term, cx| {
-                term.try_keystroke(
+            self.terminal.update(cx, |term, terminal_cx| {
+                let (_, input_rejected) = term.try_keystroke_with_feedback(
                     &Keystroke::parse("ctrl-cmd-space").unwrap(),
-                    TerminalSettings::get_global(cx).option_as_meta,
-                )
+                    TerminalSettings::get_global(terminal_cx).option_as_meta,
+                );
+                if input_rejected {
+                    terminal_cx.notify();
+                }
             });
         } else {
             window.show_character_palette();
@@ -1648,13 +2169,43 @@ impl TerminalView {
             if confirmation.await.log_err() != Some(0) {
                 return Ok(());
             }
-            this.update(cx, |this, cx| {
-                // The terminal controller is authoritative. A global Host can
-                // coexist with ordinary GUI-owned terminals and must never
-                // choose which process this action terminates.
-                this.terminal
-                    .update(cx, |terminal, cx| terminal.terminate_process(cx));
+            let hosted_termination = this.update(cx, |this, cx| {
+                this.terminal.read(cx).request_hosted_termination()
             })?;
+            if let Some(hosted_termination) = hosted_termination {
+                let timeout = cx
+                    .background_executor()
+                    .timer(TERMINAL_HOST_TERMINATION_TIMEOUT);
+                futures::pin_mut!(timeout);
+                let termination_result =
+                    match futures::future::select(hosted_termination, timeout).await {
+                        futures::future::Either::Left((result, _)) => result,
+                        futures::future::Either::Right(_) => Err(anyhow!(
+                            "the Terminal Host did not respond within {TERMINAL_HOST_TERMINATION_TIMEOUT:?}"
+                        )),
+                    };
+                if let Err(error) = termination_result {
+                    let message = format!(
+                        "\r\n[Dez: could not confirm that this terminal ended: {error}. Its Host remains authoritative; wait for Workspaces to refresh before retrying.]\r\n"
+                    );
+                    this.update(cx, |this, cx| {
+                        this.terminal.update(cx, |terminal, cx| {
+                            terminal.write_output(message.as_bytes(), cx)
+                        });
+                    })?;
+                    log::warn!("could not confirm hosted terminal termination: {error:#}");
+                    return Ok(());
+                }
+                this.update(cx, |this, cx| {
+                    this.terminal
+                        .update(cx, |terminal, cx| terminal.confirm_hosted_termination(cx));
+                })?;
+            } else {
+                this.update(cx, |this, cx| {
+                    this.terminal
+                        .update(cx, |terminal, cx| terminal.terminate_process(cx));
+                })?;
+            }
             Ok(())
         })
         .detach_and_log_err(cx);
@@ -1921,8 +2472,11 @@ impl TerminalView {
             }
             _ => {
                 if let Some(text) = clipboard.text() {
-                    self.terminal
-                        .update(cx, |terminal, _cx| terminal.paste(&text));
+                    self.terminal.update(cx, |terminal, terminal_cx| {
+                        if terminal.paste(&text) {
+                            terminal_cx.notify();
+                        }
+                    });
                 }
             }
         }
@@ -1947,16 +2501,21 @@ impl TerminalView {
         };
 
         if let Some(text) = clipboard.text() {
-            self.terminal
-                .update(cx, |terminal, _cx| terminal.paste(&text));
+            self.terminal.update(cx, |terminal, terminal_cx| {
+                if terminal.paste(&text) {
+                    terminal_cx.notify();
+                }
+            });
         }
     }
 
     /// Emits a raw Ctrl+V so TUI agents can read the OS clipboard directly
     /// and attach images using their native workflows.
     fn forward_ctrl_v(&self, cx: &mut Context<Self>) {
-        self.terminal.update(cx, |term, _| {
-            term.input(vec![0x16]);
+        self.terminal.update(cx, |term, terminal_cx| {
+            if term.input(vec![0x16]) {
+                terminal_cx.notify();
+            }
         });
     }
 
@@ -1967,16 +2526,20 @@ impl TerminalView {
             .collect::<String>();
         text.push(' ');
         window.focus(&self.focus_handle(cx), cx);
-        self.terminal.update(cx, |terminal, _| {
-            terminal.paste(&text);
+        self.terminal.update(cx, |terminal, terminal_cx| {
+            if terminal.paste(&text) {
+                terminal_cx.notify();
+            }
         });
     }
 
     fn send_text(&mut self, text: &SendText, _: &mut Window, cx: &mut Context<Self>) {
         self.clear_bell(cx);
         self.blink_manager.update(cx, BlinkManager::pause_blinking);
-        self.terminal.update(cx, |term, _| {
-            term.input(text.0.to_string().into_bytes());
+        self.terminal.update(cx, |term, terminal_cx| {
+            if term.input(text.0.to_string().into_bytes()) {
+                terminal_cx.notify();
+            }
         });
     }
 
@@ -2415,14 +2978,15 @@ impl TerminalView {
     /// updates the cursor locally without sending data to the shell, so there's no
     /// shell output to automatically trigger a re-render.
     fn process_keystroke(&mut self, keystroke: &Keystroke, cx: &mut Context<Self>) -> bool {
-        let (handled, vi_mode_enabled) = self.terminal.update(cx, |term, cx| {
-            (
-                term.try_keystroke(keystroke, TerminalSettings::get_global(cx).option_as_meta),
-                term.vi_mode_enabled(),
-            )
+        let (handled, vi_mode_enabled, input_rejected) = self.terminal.update(cx, |term, cx| {
+            let (handled, input_rejected) = term.try_keystroke_with_feedback(
+                keystroke,
+                TerminalSettings::get_global(cx).option_as_meta,
+            );
+            (handled, term.vi_mode_enabled(), input_rejected)
         });
 
-        if handled && vi_mode_enabled {
+        if handled && (vi_mode_enabled || input_rejected) {
             cx.notify();
         }
 
@@ -2492,13 +3056,19 @@ impl TerminalView {
         let activity_accessibility_label = activity_label.as_deref().unwrap_or(status).to_owned();
         let activity_label_visible =
             activity_label.is_some() && terminal_context_activity_label_visible(context_width);
-        let activity_color = if foreground_agent.is_some() {
-            Color::Accent
-        } else {
-            status_color
-        };
+        let activity_color =
+            if foreground_agent.is_some() && terminal_context_uses_foreground_activity(status) {
+                Color::Accent
+            } else {
+                status_color
+            };
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
-        let ownership = terminal_ownership_label(paths::APP_NAME, has_persistent_owner, false);
+        let host_connection_verified = terminal_host_connection_verified(&terminal, cx);
+        let ownership = if has_persistent_owner && !host_connection_verified {
+            "Host-owned terminal · connection unavailable"
+        } else {
+            terminal_ownership_label(paths::APP_NAME, has_persistent_owner, false)
+        };
         let working_directory = terminal
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned());
@@ -2518,6 +3088,13 @@ impl TerminalView {
         let changed_files = workspace_context.changed_files;
         let changes_label = changed_files_label(changed_files);
         let has_workspace_files = workspace_context.workspace_label.is_some();
+        if !terminal_context_strip_is_relevant(
+            activity_label.as_deref(),
+            has_workspace_files,
+            changed_files,
+        ) {
+            return None;
+        }
         let action_label_visibility = terminal_context_action_label_visibility(
             context_width,
             has_workspace_files,
@@ -2531,11 +3108,12 @@ impl TerminalView {
         let details_working_directory = working_directory.clone();
         let details_session_id = session_id.clone();
         let details_has_workspace_files = has_workspace_files;
-        let details_visible_label = if action_label_visibility.details {
-            "Terminal Details"
-        } else {
-            ""
-        };
+        let details_visible_label = terminal_details_disclosure_label(
+            self.show_terminal_details,
+            action_label_visibility.details,
+        );
+        let details_accessibility_label =
+            terminal_details_disclosure_accessibility_label(self.show_terminal_details);
         let files_visible_label = if action_label_visibility.workspace {
             "Files"
         } else {
@@ -2555,90 +3133,153 @@ impl TerminalView {
             "Review {changed_files} changed {}",
             if changed_files == 1 { "file" } else { "files" }
         );
-        let ownership_note = if has_persistent_owner {
+        let ownership_note = if has_persistent_owner && !host_connection_verified {
+            "The Dez Terminal Host owns this process, but its connection is unavailable. Detaching does not claim that the process ended."
+        } else if has_persistent_owner {
             "The external Dez Terminal Host owns this process. Detaching the tab does not stop it."
         } else {
             "This Workspace owns the process. Closing Dez also ends it."
         };
-        let details_menu = PopoverMenu::new(("terminal-session-details", terminal_entity_id))
-            .trigger(
-                Button::new(
-                    ("terminal-session-details-trigger", terminal_entity_id),
-                    details_visible_label,
-                )
-                .size(ButtonSize::Compact)
-                .style(ButtonStyle::Subtle)
-                .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
-                .tab_index(0isize)
-                .aria_label("Open Terminal Details and How Dez Works")
-                .tooltip(Tooltip::text("Terminal Details and How Dez Works")),
-            )
-            .menu(move |window, cx| {
-                let details_status = details_status.clone();
-                let details_repository = details_repository.clone();
-                let details_changes = details_changes.clone();
-                let details_working_directory = details_working_directory.clone();
-                let details_session_id = details_session_id.clone();
-                Some(ContextMenu::build(window, cx, move |mut menu, _, _| {
-                    menu = menu
-                        .header("Terminal")
-                        .label(details_status.clone())
-                        .label(details_repository.clone())
-                        .label(details_changes.clone())
-                        .label(ownership_note);
-                    if let Some(foreground_agent) = details_foreground_agent {
-                        menu = menu.label(format!(
-                            "Foreground agent: {foreground_agent} (observed process)."
-                        ));
-                    }
-                    if let Some(working_directory) = details_working_directory.clone() {
-                        menu = menu
-                            .label(format!("Working directory: {working_directory}"))
-                            .entry("Copy Working Directory", None, move |_window, cx| {
-                                cx.write_to_clipboard(ClipboardItem::new_string(
-                                    working_directory.clone(),
-                                ));
-                            });
-                    }
-                    menu.entry("Copy Session ID", None, move |_window, cx| {
-                        cx.write_to_clipboard(ClipboardItem::new_string(
-                            details_session_id.clone(),
-                        ));
-                    })
-                    .separator()
-                    .header("Evidence")
-                    .label("Lifecycle · observed from Terminal and Host.")
-                    .label("Git · changed-file counts belong to the Workspace.")
-                    .label("Attribution · changes are not assigned to this Session.")
-                    .label("Agents · confidence and checks require trusted evidence.")
-                    .label("Terminal text is display content, not proof.")
-                    .separator()
-                    .header("How Dez Works")
-                    .label("Run · work stays in this terminal.")
-                    .when(paths::APP_NAME == "Zed", |menu| {
-                        menu.label("Supervise · Sessions keeps live state and attention visible.")
-                    })
-                    .when(paths::APP_NAME != "Zed", |menu| {
-                        menu.label(
-                            "Supervise · Projects keeps each codebase and its agent sessions together.",
+        let details_toggle = Button::new(
+            ("terminal-session-details-trigger", terminal_entity_id),
+            details_visible_label,
+        )
+        .size(ButtonSize::Compact)
+        .style(ButtonStyle::Subtle)
+        .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
+        .tab_index(0isize)
+        .aria_label(details_accessibility_label)
+        .tooltip(Tooltip::text(details_accessibility_label))
+        .on_click(cx.listener(|this, _, _, cx| {
+            this.show_terminal_details = !this.show_terminal_details;
+            cx.notify();
+        }));
+
+        let details = self.show_terminal_details.then(|| {
+            let details_accessibility_label = format!(
+                "Terminal Details. {details_status}. {details_repository}. {details_changes}."
+            );
+            let copy_working_directory = details_working_directory.clone();
+            let copy_session_id = details_session_id.clone();
+
+            v_flex()
+                .id(("terminal-session-details", terminal_entity_id))
+                .role(gpui::Role::Region)
+                .aria_label(details_accessibility_label)
+                .w_full()
+                .flex_none()
+                .gap_1()
+                .px(terminal_context_strip_padding_x(density))
+                .py_1p5()
+                .border_b_1()
+                .border_color(terminal_context_strip_border(cx))
+                .bg(terminal_context_strip_background(cx))
+                .child(
+                    h_flex()
+                        .w_full()
+                        .min_w_0()
+                        .flex_wrap()
+                        .gap_x_3()
+                        .gap_y_1()
+                        .child(
+                            Label::new("Terminal Details")
+                                .size(LabelSize::Small)
+                                .color(Color::Default),
                         )
+                        .child(
+                            Label::new(details_status)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new(details_repository)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new(details_changes)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .when_some(details_foreground_agent, |this, foreground_agent| {
+                            this.child(
+                                Label::new(format!("Foreground · {foreground_agent}"))
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
+                            )
+                        }),
+                )
+                .when_some(details_working_directory, |this, working_directory| {
+                    this.child(
+                        Label::new(format!("Working directory · {working_directory}"))
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                })
+                .child(
+                    Label::new(ownership_note)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    Label::new(
+                        "Evidence · lifecycle comes from Terminal and Host; Git belongs to the Workspace; terminal text is display content, not proof.",
+                    )
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+                )
+                .child(
+                    Label::new(if details_has_workspace_files {
+                        "Workflow · run here, supervise in Workspaces, review with Files and Git."
+                    } else {
+                        "Workflow · run here, supervise in Workspaces, then open a Workspace for Files and Git."
                     })
-                    .when(details_has_workspace_files, |menu| {
-                        menu.label("Review · Files and Git inspect this same Workspace.")
-                    })
-                    .when(!details_has_workspace_files, |menu| {
-                        menu.label("Connect · open a Workspace to add Files and Git review.")
-                    })
-                }))
-            })
-            .anchor(Anchor::TopRight)
-            .offset(gpui::Point {
-                x: px(0.),
-                y: px(2.),
-            });
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+                )
+                .child(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_1()
+                        .when_some(copy_working_directory, |this, working_directory| {
+                            this.child(
+                                Button::new(
+                                    ("copy-terminal-working-directory", terminal_entity_id),
+                                    "Copy Working Directory",
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .tab_index(0isize)
+                                .on_click(move |_, _, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(
+                                        working_directory.clone(),
+                                    ));
+                                }),
+                            )
+                        })
+                        .child(
+                            Button::new(
+                                ("copy-terminal-session-id", terminal_entity_id),
+                                "Copy Session ID",
+                            )
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0isize)
+                            .on_click(move |_, _, cx| {
+                                cx.write_to_clipboard(ClipboardItem::new_string(
+                                    copy_session_id.clone(),
+                                ));
+                            }),
+                        ),
+                )
+        });
 
         Some(
-            h_flex()
+            v_flex()
+                .w_full()
+                .flex_none()
+                .child(
+                    h_flex()
                 .id(("terminal-session-context", terminal_entity_id))
                 .role(gpui::Role::Toolbar)
                 .aria_label(format!(
@@ -2751,8 +3392,10 @@ impl TerminalView {
                                 }),
                             )
                         })
-                        .child(details_menu),
+                        .child(details_toggle),
                 )
+                )
+                .children(details)
                 .into_any_element(),
         )
     }
@@ -3047,6 +3690,11 @@ impl Item for TerminalView {
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref())
                 .map(|agent| agent.display_name);
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        )
+        .map(|multiplexer| multiplexer.display_name);
         let ownership =
             terminal_ownership_label(paths::APP_NAME, has_persistent_owner, session_unavailable);
         let working_directory = terminal
@@ -3088,6 +3736,18 @@ impl Item for TerminalView {
                             .size(LabelSize::Small),
                         )
                     })
+                    .when_some(
+                        foreground_multiplexer,
+                        |this, foreground_multiplexer| {
+                            this.child(
+                                Label::new(format!(
+                                    "Foreground multiplexer: {foreground_multiplexer} (observed process)"
+                                ))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                            )
+                        },
+                    )
                     .when_some(working_directory.clone(), |this, working_directory| {
                         this.child(
                             Label::new(format!("Working directory: {working_directory}"))
@@ -3137,40 +3797,44 @@ impl Item for TerminalView {
         )
     }
 
+    fn tab_icon(&self, _window: &Window, cx: &App) -> Option<Icon> {
+        let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let (icon, color) = terminal_tab_icon_presentation(
+            terminal.task().map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+
+        Some(Icon::new(icon).size(IconSize::Small).color(color))
+    }
+
     fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
         let terminal_entity_id = self.terminal().entity_id();
         let terminal = self.terminal().read(cx);
         let foreground_command = terminal.foreground_process_command_name();
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
-        let (icon, icon_color, rerun_button) = match terminal.task() {
-            Some(terminal_task) => match &terminal_task.status {
-                TaskStatus::Running => (
-                    IconName::PlayFilled,
-                    Color::Disabled,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Unknown => (
-                    IconName::Warning,
-                    Color::Warning,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Completed { success } => {
-                    let rerun_button = TerminalView::rerun_button(terminal_task);
-
-                    if *success {
-                        (IconName::Check, Color::Success, rerun_button)
-                    } else {
-                        (IconName::XCircle, Color::Error, rerun_button)
-                    }
-                }
-            },
-            None => foreground_agent
-                .map(|agent| (agent.icon, Color::Accent, None))
-                .unwrap_or((IconName::Terminal, Color::Muted, None)),
-        };
-        let foreground_agent_label =
-            foreground_agent.map(|agent| format!("{} running in terminal", agent.display_name));
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let terminal_task = terminal.task();
+        let (icon, icon_color) = terminal_tab_icon_presentation(
+            terminal_task.map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+        let rerun_button = terminal_task.and_then(TerminalView::rerun_button);
+        let foreground_process_label = foreground_agent
+            .or(foreground_multiplexer)
+            .map(|process| format!("{} running in terminal", process.display_name));
 
         Some(
             h_flex()
@@ -3181,7 +3845,7 @@ impl Item for TerminalView {
                 .items_center()
                 .justify_center()
                 .group("term-tab-icon")
-                .when_some(foreground_agent_label, |this, label| {
+                .when_some(foreground_process_label, |this, label| {
                     this.role(gpui::Role::Label).aria_label(label)
                 })
                 .child(
@@ -4031,7 +4695,15 @@ mod tests {
         assert!(!terminal_launch_failure_is_top_anchored("Zed"));
         assert_eq!(
             terminal_failed_to_start_guidance("Dez"),
-            "No terminal process was started. Review terminal settings, then open a new terminal."
+            "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
+        );
+        assert_eq!(
+            terminal_launch_failure_settings_label("Dez"),
+            "Edit Terminal Settings"
+        );
+        assert_eq!(
+            terminal_launch_failure_settings_label("Zed"),
+            "Edit Settings"
         );
     }
 
@@ -4056,12 +4728,60 @@ mod tests {
             terminal_context_activity_label("Failed", None),
             Some("Failed".to_owned())
         );
+        assert_eq!(
+            terminal_context_activity_label("Running", Some(codex)),
+            Some("Codex running".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Running", None),
+            Some("Running".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Failed", Some(codex)),
+            Some("Failed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Exited", Some(codex)),
+            Some("Exited".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Completed", Some(codex)),
+            Some("Completed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Status unknown", Some(codex)),
+            Some("Status unknown".to_owned())
+        );
         assert!(!terminal_context_activity_label_visible(px(359.)));
         assert!(terminal_context_activity_label_visible(px(360.)));
 
         let claude = terminal_foreground_agent_presentation("Dez", Some(r"C:\tools\claude.exe"))
             .expect("Claude Code should receive native terminal presentation");
         assert_eq!(claude.display_name, "Claude Code");
+
+        let aider = terminal_foreground_agent_presentation("Dez", Some("aider"))
+            .expect("Aider should receive native terminal presentation");
+        assert_eq!(aider.display_name, "Aider");
+        assert_eq!(aider.icon, IconName::AiEdit);
+
+        let herdr = terminal_foreground_agent_presentation("Dez", Some("herdr"))
+            .expect("Herdr should receive native terminal presentation");
+        assert_eq!(herdr.display_name, "Herdr");
+        assert_eq!(herdr.icon, IconName::Inception);
+        assert_eq!(
+            terminal_context_activity_label("Active", Some(herdr)),
+            Some("Herdr running".to_owned())
+        );
+
+        let tmux =
+            terminal_foreground_multiplexer_presentation("Dez", Some("/opt/homebrew/bin/tmux"))
+                .expect("tmux should receive native terminal presentation");
+        assert_eq!(tmux.display_name, "tmux");
+        assert_eq!(tmux.icon, IconName::SplitAlt);
+        assert!(
+            terminal_foreground_multiplexer_presentation("Dez", Some("herdr")).is_none(),
+            "Herdr should keep its agent identity when it is the foreground process"
+        );
 
         assert!(
             terminal_foreground_agent_presentation("Dez", Some("zsh")).is_none(),
@@ -4074,6 +4794,37 @@ mod tests {
         assert!(
             terminal_foreground_agent_presentation("Zed", Some("codex")).is_none(),
             "official Zed keeps its upstream terminal presentation"
+        );
+        assert!(
+            terminal_foreground_multiplexer_presentation("Zed", Some("tmux")).is_none(),
+            "official Zed keeps its upstream terminal presentation"
+        );
+
+        assert_eq!(
+            terminal_tab_icon_presentation(None, Some(codex), None).0,
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(None, None, Some(tmux)).0,
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(Some(&TaskStatus::Running), Some(codex), None).0,
+            IconName::PlayFilled,
+            "task state should outrank the process observed inside that task terminal"
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(
+                Some(&TaskStatus::Completed { success: false }),
+                None,
+                None,
+            )
+            .0,
+            IconName::XCircle
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(None, None, None).0,
+            IconName::Terminal
         );
     }
 
@@ -4127,6 +4878,31 @@ mod tests {
         assert_eq!(changed_files_label(0), "0 changes");
         assert_eq!(changed_files_label(1), "1 change");
         assert_eq!(changed_files_label(5), "5 changes");
+        assert!(!terminal_context_strip_is_relevant(None, true, 0));
+        assert!(terminal_context_strip_is_relevant(
+            Some("Codex running"),
+            true,
+            0
+        ));
+        assert!(terminal_context_strip_is_relevant(None, true, 2));
+        assert!(terminal_context_strip_is_relevant(None, false, 0));
+        assert_eq!(
+            terminal_details_disclosure_label(false, true),
+            "Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_disclosure_label(true, true),
+            "Hide Details"
+        );
+        assert_eq!(terminal_details_disclosure_label(false, false), "");
+        assert_eq!(
+            terminal_details_disclosure_accessibility_label(false),
+            "Show Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_disclosure_accessibility_label(true),
+            "Hide Terminal Details"
+        );
         assert_eq!(
             terminal_surface_tab_label("Dez", "Codex"),
             SharedString::from("Terminal · Codex")
@@ -4282,6 +5058,10 @@ mod tests {
         );
         assert_eq!(
             terminal_ownership_label("Dez", false, true),
+            "Saved terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", true, true),
             "Saved terminal"
         );
         assert_eq!(

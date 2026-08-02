@@ -21,7 +21,7 @@ use clap::Parser;
 use cli::FORCE_CLI_MODE_ENV_VAR_NAME;
 use client::{Client, ProxySettings, RefreshLlmTokenListener, UserStore, parse_zed_link};
 use collab_ui::channel_view::ChannelView;
-use collections::HashMap;
+use collections::{HashMap, HashSet};
 use crashes::InitCrashHandler;
 use db::kvp::{GlobalKeyValueStore, KeyValueStore};
 use editor::Editor;
@@ -37,7 +37,7 @@ use gpui_platform;
 
 use gpui_tokio::Tokio;
 use language::LanguageRegistry;
-use onboarding::{FIRST_OPEN, show_onboarding_view};
+use onboarding::{FIRST_OPEN, should_show_onboarding_on_first_open, show_onboarding_view};
 use project_panel::ProjectPanel;
 use prompt_store::PromptBuilder;
 use remote::RemoteConnectionOptions;
@@ -666,12 +666,62 @@ fn main() {
         }
         let app_session = cx.new(|cx| AppSession::new(session, cx));
 
-        if let Some(installation_id) = &installation_id {
-            let terminal_host_id = terminal::session_host::TerminalHostId::from_stable_key(
-                &format!("dez-local-host:{}", installation_id.to_string()),
+        #[cfg(target_os = "macos")]
+        let installation_required = zed::move_to_applications::installation_required(cx);
+        #[cfg(target_os = "macos")]
+        let installation_required_message =
+            zed::move_to_applications::installation_required_message();
+        #[cfg(not(target_os = "macos"))]
+        let installation_required = false;
+        #[cfg(not(target_os = "macos"))]
+        let installation_required_message = String::new();
+
+        if installation_required {
+            if paths::APP_NAME == "Zed" {
+                workspace::set_workspace_startup_state(
+                    workspace::WorkspaceStartupState::Ready,
+                    cx,
+                );
+            } else {
+                workspace::set_workspace_startup_state(
+                    workspace::WorkspaceStartupState::InstallationRequired {
+                        message: installation_required_message.clone(),
+                    },
+                    cx,
+                );
+            }
+            terminal::session_host::transport::TerminalHostStartupStatus::init(cx);
+            terminal::session_host::transport::TerminalHostStartupStatus::set(
+                terminal::session_host::transport::TerminalHostStartupState::InstallationRequired {
+                    message: installation_required_message,
+                },
+                cx,
             );
-            terminal::session_host::LocalTerminalHost::init(terminal_host_id, cx);
-            terminal_host_runtime::TerminalHostRuntime::init(terminal_host_id, cx);
+        } else {
+            workspace::set_workspace_startup_state(workspace::WorkspaceStartupState::Ready, cx);
+            if let Some(installation_id) = &installation_id {
+                let terminal_host_id = terminal::session_host::TerminalHostId::from_stable_key(
+                    &format!(
+                        "dez-local-host:{}:{}",
+                        terminal_host_runtime::DEZ_TERMINAL_HOST_GENERATION,
+                        installation_id.to_string()
+                    ),
+                );
+                terminal::session_host::LocalTerminalHost::init(terminal_host_id, cx);
+                terminal_host_runtime::TerminalHostRuntime::init(terminal_host_id, cx);
+            } else {
+                terminal::session_host::transport::TerminalHostStartupStatus::init(cx);
+                terminal::session_host::transport::TerminalHostStartupStatus::set(
+                    terminal::session_host::transport::TerminalHostStartupState::Failed {
+                        message: format!(
+                            "{} could not load its installation identity. Relaunch {}; if this continues, open the local diagnostics log.",
+                            paths::APP_NAME,
+                            paths::APP_NAME
+                        ),
+                    },
+                    cx,
+                );
+            }
         }
 
         let app_state = Arc::new(AppState {
@@ -850,6 +900,9 @@ fn main() {
                         client.reconnect(&cx.to_async());
                     }
                 }
+
+                let menus = app_menus(cx);
+                cx.set_menus(menus);
             }
         })
         .detach();
@@ -1033,6 +1086,12 @@ fn main() {
 }
 
 fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut App) {
+    #[cfg(target_os = "macos")]
+    if zed::move_to_applications::installation_required(cx) {
+        log::warn!("ignoring open request until Dez is installed in /Applications");
+        return;
+    }
+
     if let Some(kind) = request.kind {
         match kind {
             OpenRequestKind::CliConnection(connection) => {
@@ -1452,11 +1511,67 @@ pub(crate) async fn restore_or_create_workspace(
     app_state: Arc<AppState>,
     cx: &mut AsyncApp,
 ) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    if cx.update(|cx| zed::move_to_applications::installation_required(cx)) {
+        cx.update(|cx| {
+            workspace::open_new(
+                Default::default(),
+                app_state,
+                cx,
+                |workspace, window, cx| {
+                    crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
+                },
+            )
+        })
+        .await?;
+        return Ok(());
+    }
+
+    cx.update(|cx| {
+        workspace::set_workspace_access_state(workspace::WorkspaceAccessState::Available, cx);
+    });
     let kvp = cx.update(|cx| KeyValueStore::global(cx));
     if let Some(multi_workspaces) = restorable_workspaces(cx, &app_state).await {
+        let local_roots = multi_workspaces
+            .iter()
+            .flat_map(serialized_multi_workspace_local_roots)
+            .collect();
+        let inaccessible_roots = preflight_workspace_roots(&app_state.fs, local_roots).await;
+        let inaccessible_root_set = inaccessible_roots.iter().cloned().collect::<HashSet<_>>();
+        if !inaccessible_roots.is_empty() {
+            log::warn!(
+                "Workspace restoration requires access to: {}",
+                inaccessible_roots
+                    .iter()
+                    .map(|path| path.display().to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            cx.update(|cx| {
+                workspace::set_workspace_access_state(
+                    workspace::WorkspaceAccessState::AccessRequired {
+                        roots: inaccessible_roots.into(),
+                    },
+                    cx,
+                );
+            });
+        }
+
         let mut error_count = 0;
         for multi_workspace in multi_workspaces {
             let restoring_workspace_id: i64 = multi_workspace.active_workspace.workspace_id.into();
+            if serialized_multi_workspace_local_roots(&multi_workspace)
+                .iter()
+                .any(|path| inaccessible_root_set.contains(path))
+            {
+                cx.update(|cx| {
+                    app_state.session.update(cx, |session, cx| {
+                        session.mark_durable_workspace_restore_failed(restoring_workspace_id, cx);
+                    });
+                });
+                error_count += 1;
+                continue;
+            }
             let result = match &multi_workspace.active_workspace.location {
                 SerializedWorkspaceLocation::Local => {
                     restore_multiworkspace(multi_workspace, app_state.clone(), cx)
@@ -1546,7 +1661,8 @@ pub(crate) async fn restore_or_create_workspace(
                         Default::default(),
                         app_state.clone(),
                         cx,
-                        |workspace, _window, cx| {
+                        |workspace, window, cx| {
+                            crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
                             workspace.show_toast(failed_workspace_restore_toast(message), cx);
                         },
                     )
@@ -1568,7 +1684,9 @@ pub(crate) async fn restore_or_create_workspace(
                     |workspace, window, cx| {
                         let restore_on_startup =
                             WorkspaceSettings::get_global(cx).restore_on_startup;
-                        if !matches!(
+                        if crate::zed::should_seed_empty_workspace_with_home(paths::APP_NAME) {
+                            crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
+                        } else if !matches!(
                             restore_on_startup,
                             workspace::RestoreOnStartupBehavior::Launchpad
                         ) && crate::zed::should_seed_empty_workspace_with_blank_file(
@@ -1581,7 +1699,9 @@ pub(crate) async fn restore_or_create_workspace(
             })
             .await?;
         }
-    } else if matches!(kvp.read_kvp(FIRST_OPEN), Ok(None)) {
+    } else if should_show_onboarding_on_first_open(paths::APP_NAME)
+        && matches!(kvp.read_kvp(FIRST_OPEN), Ok(None))
+    {
         cx.update(|cx| show_onboarding_view(app_state, cx)).await?;
     } else {
         cx.update(|cx| {
@@ -1591,11 +1711,14 @@ pub(crate) async fn restore_or_create_workspace(
                 cx,
                 |workspace, window, cx| {
                     let restore_on_startup = WorkspaceSettings::get_global(cx).restore_on_startup;
-                    if !matches!(
+                    if crate::zed::should_seed_empty_workspace_with_home(paths::APP_NAME) {
+                        crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
+                    } else if !matches!(
                         restore_on_startup,
                         workspace::RestoreOnStartupBehavior::Launchpad
-                    ) && crate::zed::should_seed_empty_workspace_with_blank_file(paths::APP_NAME)
-                    {
+                    ) && crate::zed::should_seed_empty_workspace_with_blank_file(
+                        paths::APP_NAME,
+                    ) {
                         Editor::new_file(workspace, &Default::default(), window, cx);
                     }
                 },
@@ -1605,6 +1728,65 @@ pub(crate) async fn restore_or_create_workspace(
     }
 
     Ok(())
+}
+
+async fn preflight_workspace_roots(fs: &Arc<dyn Fs>, roots: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut unique_roots = roots.into_iter().collect::<HashSet<_>>();
+    let mut inaccessible_roots = Vec::new();
+    for root in unique_roots.drain() {
+        let result = match fs.read_dir(&root).await {
+            Ok(mut entries) => entries.next().await.transpose().map(|_| ()),
+            Err(error) => Err(error),
+        };
+        if let Err(error) = result {
+            if is_permission_denied(&error) {
+                inaccessible_roots.push(root);
+            } else {
+                log::debug!(
+                    "Workspace access preflight was inconclusive for {}: {error:#}",
+                    root.display()
+                );
+            }
+        }
+    }
+    inaccessible_roots.sort();
+    inaccessible_roots
+}
+
+fn serialized_multi_workspace_local_roots(
+    multi_workspace: &workspace::SerializedMultiWorkspace,
+) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    if matches!(
+        multi_workspace.active_workspace.location,
+        SerializedWorkspaceLocation::Local
+    ) {
+        roots.extend(
+            multi_workspace
+                .active_workspace
+                .paths
+                .paths()
+                .iter()
+                .cloned(),
+        );
+    }
+    for serialized_group in &multi_workspace.state.project_groups {
+        let group: workspace::ProjectGroupKey = serialized_group.clone().into();
+        if group.host().is_none() {
+            roots.extend(group.path_list().paths().iter().cloned());
+        }
+    }
+    roots.sort();
+    roots.dedup();
+    roots
+}
+
+fn is_permission_denied(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|error| error.kind() == std::io::ErrorKind::PermissionDenied)
+    })
 }
 
 struct WorkspaceRestoreErrorToast;

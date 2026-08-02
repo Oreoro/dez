@@ -28,7 +28,9 @@ use postage::{sink::Sink, stream::Stream};
 use settings::Settings;
 use ui::{HighlightedLabel, KeyBinding, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
-use workspace::{DesignSystemSettings, ModalView, NewCenterTerminal, Workspace, WorkspaceSettings};
+use workspace::{
+    DesignSystemSettings, ModalView, NewCenterTerminal, NewTerminal, Workspace, WorkspaceSettings,
+};
 use zed_actions::{
     GetMerch, OpenAccountSettings, OpenDocs, OpenStatusPage, OpenZedUrl, command_palette::Toggle,
 };
@@ -53,7 +55,22 @@ fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
 
 fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
     if app_name == "Zed" {
-        Vec::new()
+        vec![
+            TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::dez::GrantWorkspaceAccess>(),
+            TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenGeminiTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenAiderTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenHerdrTerminal>(),
+        ]
     } else {
         vec![
             TypeId::of::<OpenAccountSettings>(),
@@ -61,6 +78,7 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
+            TypeId::of::<NewTerminal>(),
         ]
     }
 }
@@ -931,7 +949,30 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
     }
 
     match name {
-        "workspace::NewTerminal" => return "terminal::OpenAgentTerminal".to_owned(),
+        "workspace::NewTerminal" | "terminal::OpenAgentTerminal" => {
+            return "terminal::OpenTerminal".to_owned();
+        }
+        "terminal::OpenShellTerminal" => return "terminal::OpenNativeShell".to_owned(),
+        "terminal::OpenTmuxTerminal" => return "terminal::OpenWorkspaceTmux".to_owned(),
+        "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
+        "terminal::ResumeCodexTerminal" => return "terminal::ContinueCodex".to_owned(),
+        "terminal::OpenClaudeCodeTerminal" => {
+            return "terminal::LaunchClaudeCode".to_owned();
+        }
+        "terminal::ResumeClaudeCodeTerminal" => {
+            return "terminal::ContinueClaudeCode".to_owned();
+        }
+        "terminal::OpenOpenCodeTerminal" => {
+            return "terminal::LaunchOpenCode".to_owned();
+        }
+        "terminal::ResumeOpenCodeTerminal" => {
+            return "terminal::ContinueOpenCode".to_owned();
+        }
+        "terminal::OpenGeminiTerminal" => return "terminal::LaunchGeminiCli".to_owned(),
+        "terminal::OpenAiderTerminal" => return "terminal::LaunchAider".to_owned(),
+        "terminal::OpenHerdrTerminal" => return "terminal::LaunchHerdr".to_owned(),
+        "dez::GrantWorkspaceAccess" => return "workspace::GrantAccess".to_owned(),
+        "dez::OpenWorkspaceInCmux" => return "workspace::OpenInCmux".to_owned(),
         "zed::ApplyCanvasFullLayout" => return "layout::WorkAreaAndFiles".to_owned(),
         "zed::ApplyCanvasAgentControlLayout" => {
             return "layout::WorkAreaAndBuiltInAgent".to_owned();
@@ -961,25 +1002,33 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "agent::NewThread" => return "agent::NewAgentSession".to_owned(),
         "agent::NewExternalAgentThread" => return "agent::NewExternalAgentSession".to_owned(),
         "agent::ArchiveSelectedThread" => {
-            return "sessions::RemoveSelectedSession".to_owned();
+            return "agent_sessions::RemoveSelectedSession".to_owned();
         }
-        "agent::RemoveSelectedThread" => return "agent::RemoveSelectedAgentSession".to_owned(),
+        "agent::RemoveSelectedThread" => {
+            return "agent_sessions::RemoveSelectedSession".to_owned();
+        }
         "agent::RenameSelectedThread" => {
-            return "sessions::RenameSelectedSession".to_owned();
+            return "agent_sessions::RenameSelectedSession".to_owned();
         }
         "agent::NewTerminalThread" => {
-            return "terminal::OpenAgentTerminalInWorkspace".to_owned();
+            return "terminal::OpenTerminalInWorkspace".to_owned();
         }
         "sidebar::NewSessionInGroup" => {
-            return "terminal::OpenAgentTerminalInSelectedWorkspace".to_owned();
+            return "terminal::OpenTerminalInSelectedWorkspace".to_owned();
         }
         "sidebar::NewThreadInGroup" => {
             return "built_in_agent::NewSessionInWorkspace".to_owned();
         }
-        "sidebar::ToggleThreadSwitcher" => return "sessions::SwitchSessions".to_owned(),
-        "sidebar::ToggleThreadHistory" => return "sessions::ToggleAgentHistory".to_owned(),
+        "sidebar::ToggleSidebar" => return "workspaces::ShowOrHide".to_owned(),
+        "sidebar::CloseSidebar" => return "workspaces::Hide".to_owned(),
+        "sidebar::FocusSidebar" => return "workspaces::Focus".to_owned(),
+        "sidebar::FocusSidebarFilter" => return "workspaces::Search".to_owned(),
+        "sidebar::PreviousProject" => return "workspaces::PreviousWorkspace".to_owned(),
+        "sidebar::NextProject" => return "workspaces::NextWorkspace".to_owned(),
+        "sidebar::ToggleThreadSwitcher" => return "workspaces::SwitchSessions".to_owned(),
+        "sidebar::ToggleThreadHistory" => return "workspaces::ToggleAgentHistory".to_owned(),
         "sidebar::OpenSelectedReviewBrief" => {
-            return "sessions::OpenSelectedSessionDetails".to_owned();
+            return "workspaces::OpenSelectedSessionDetails".to_owned();
         }
         "workspace::RevealFiles" => return "files::Open".to_owned(),
         "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
@@ -989,7 +1038,7 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
 
     for (source, product) in [
         ("zed_actions::", "dez::"),
-        ("sidebar::", "sessions::"),
+        ("sidebar::", "workspaces::"),
         ("agent_panel::", "built_in_agent::"),
         ("debug_panel::", "debug::"),
         ("git_panel::", "git::"),
@@ -1151,8 +1200,60 @@ mod tests {
             "files: open"
         );
         assert_eq!(
-            humanize_action_name_for_product("workspace::NewTerminal", "Dez"),
-            "terminal: open agent terminal"
+            humanize_action_name_for_product("terminal::OpenAgentTerminal", "Dez"),
+            "terminal: open terminal"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenShellTerminal", "Dez"),
+            "terminal: open native shell"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenTmuxTerminal", "Dez"),
+            "terminal: open workspace tmux"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenCodexTerminal", "Dez"),
+            "terminal: launch codex"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeCodexTerminal", "Dez"),
+            "terminal: continue codex"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenClaudeCodeTerminal", "Dez"),
+            "terminal: launch claude code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeClaudeCodeTerminal", "Dez"),
+            "terminal: continue claude code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenOpenCodeTerminal", "Dez"),
+            "terminal: launch open code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeOpenCodeTerminal", "Dez"),
+            "terminal: continue open code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenGeminiTerminal", "Dez"),
+            "terminal: launch gemini cli"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenAiderTerminal", "Dez"),
+            "terminal: launch aider"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenHerdrTerminal", "Dez"),
+            "terminal: launch herdr"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("dez::GrantWorkspaceAccess", "Dez"),
+            "workspace: grant access"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("dez::OpenWorkspaceInCmux", "Dez"),
+            "workspace: open in cmux"
         );
         assert_eq!(
             humanize_action_name_for_product("zed::ApplyCanvasFullLayout", "Dez"),
@@ -1220,7 +1321,31 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleAttentionFilter", "Dez"),
-            "sessions: toggle attention filter"
+            "workspaces: toggle attention filter"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleSidebar", "Dez"),
+            "workspaces: show or hide"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::FocusSidebar", "Dez"),
+            "workspaces: focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::FocusSidebarFilter", "Dez"),
+            "workspaces: search"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::PreviousProject", "Dez"),
+            "workspaces: previous workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NextProject", "Dez"),
+            "workspaces: next workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NextProject", "Zed"),
+            "sidebar: next project"
         );
         assert_eq!(
             humanize_action_name_for_product("workspace::AddFolderToProject", "Dez"),
@@ -1232,7 +1357,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::RenameSelectedThread", "Dez"),
-            "sessions: rename selected session"
+            "agent sessions: rename selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::NewThreadInGroup", "Dez"),
@@ -1240,35 +1365,35 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::NewTerminalThread", "Dez"),
-            "terminal: open agent terminal in workspace"
+            "terminal: open terminal in workspace"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::NewSessionInGroup", "Dez"),
-            "terminal: open agent terminal in selected workspace"
+            "terminal: open terminal in selected workspace"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
-            "sessions: toggle agent history"
+            "workspaces: toggle agent history"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ToggleThreadSwitcher", "Dez"),
-            "sessions: switch sessions"
+            "workspaces: switch sessions"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ReturnToSelectedSession", "Dez"),
-            "sessions: return to selected session"
+            "workspaces: return to selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedSessionFiles", "Dez"),
-            "sessions: open selected session files"
+            "workspaces: open selected session files"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::ReviewSelectedSessionChanges", "Dez"),
-            "sessions: review selected session changes"
+            "workspaces: review selected session changes"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Dez"),
-            "sessions: open selected session details"
+            "workspaces: open selected session details"
         );
         assert_eq!(
             humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Zed"),
@@ -1276,7 +1401,7 @@ mod tests {
         );
         assert_eq!(
             humanize_action_name_for_product("agent::ArchiveSelectedThread", "Dez"),
-            "sessions: remove selected session"
+            "agent sessions: remove selected session"
         );
         assert_eq!(
             humanize_action_name_for_product("agent::RenameSelectedThread", "Zed"),
@@ -1297,7 +1422,7 @@ mod tests {
     }
 
     #[test]
-    fn dez_hides_inherited_cloud_and_promotion_commands() {
+    fn each_product_hides_commands_that_do_not_belong_to_it() {
         assert_eq!(
             product_hidden_action_namespaces("Dez"),
             &["collab", "feedback", "terminal_panel"]
@@ -1311,10 +1436,30 @@ mod tests {
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
+            TypeId::of::<NewTerminal>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }
-        assert!(product_hidden_action_types("Zed").is_empty());
+
+        let hidden_types = product_hidden_action_types("Zed");
+        for action_type in [
+            TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::dez::GrantWorkspaceAccess>(),
+            TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenGeminiTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenAiderTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenHerdrTerminal>(),
+        ] {
+            assert!(hidden_types.contains(&action_type));
+        }
     }
 
     #[test]
@@ -1373,6 +1518,10 @@ mod tests {
         );
         assert_eq!(
             CommandCategory::for_action_name("workspace::ToggleZoom"),
+            Some(CommandCategory::Workspace)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("workspaces::SwitchSessions"),
             Some(CommandCategory::Workspace)
         );
         assert_eq!(

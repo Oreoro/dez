@@ -8,7 +8,7 @@ use settings::{
 use std::sync::{Arc, OnceLock};
 use strum::{EnumMessage, IntoDiscriminant as _, VariantArray};
 use theme::SystemAppearance;
-use ui::IntoElement;
+use ui::{IconName, IntoElement};
 
 use crate::{
     ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
@@ -80,12 +80,19 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
     if dez_settings_page_visible(paths::APP_NAME, "Collaboration") {
         pages.push(collaboration_page());
     }
-    pages.extend([
-        ai_page(cx),
-        attention_page(),
-        evidence_page(),
-        network_page(),
-    ]);
+    let mut agents_page = ai_page(cx);
+    if paths::APP_NAME != "Zed" {
+        let built_in_agent_items = agents_page.items;
+        let mut agent_items = evidence_page().items.into_vec();
+        agent_items.extend(attention_page().items);
+        agent_items.extend(built_in_agent_items);
+        agents_page.items = agent_items.into_boxed_slice();
+    }
+    pages.push(agents_page);
+    if paths::APP_NAME == "Zed" {
+        pages.extend([attention_page(), evidence_page()]);
+    }
+    pages.push(network_page());
     if developer_settings_page_visible(paths::APP_NAME, cx.feature_flag_overrides_enabled()) {
         pages.push(developer_page(cx));
     }
@@ -97,23 +104,21 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
 
 fn dez_settings_page_priority(title: &str) -> usize {
     match title {
-        "Workspace & Privacy" => 0,
-        "Workspaces & Terminals" => 1,
-        "Agents" => 2,
-        "Attention" => 3,
-        "Evidence" => 4,
-        "Appearance" => 5,
-        "Keymap" => 6,
-        "Editor" => 7,
-        "Languages & Tools" => 8,
-        "Search & Files" => 9,
-        "Navigation & Layout" => 10,
-        "Workspace Tools" => 11,
-        "Debugger" => 12,
-        "Version Control" => 13,
-        "Network" => 14,
-        "Advanced" => 15,
-        _ => 16,
+        "Workspaces & Terminals" => 0,
+        "Agents" => 1,
+        "Appearance" => 2,
+        "Workspace & Privacy" => 3,
+        "Keyboard & Vim" => 4,
+        "Editor" => 5,
+        "Languages & Tools" => 6,
+        "Search & Files" => 7,
+        "Navigation & Layout" => 8,
+        "Workspace Tools" => 9,
+        "Debugger" => 10,
+        "Version Control" => 11,
+        "Network" => 12,
+        "Advanced" => 13,
+        _ => 14,
     }
 }
 
@@ -137,10 +142,6 @@ fn auto_update_setting_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
 
-fn floating_attention_popup_setting_visible(app_name: &str) -> bool {
-    app_name != "Zed"
-}
-
 fn cli_default_open_behavior_description(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "How `zed <path>` opens directories when no flag is specified."
@@ -157,14 +158,146 @@ fn terminal_session_init_setting_copy(app_name: &str) -> (&'static str, &'static
         )
     } else {
         (
-            "Terminal Session Startup Command",
-            "Command to run when Dez starts a new Terminal Session. Runs in your configured shell.",
+            "Custom Terminal Command",
+            "Command to run when Default Terminal is set to Custom Command. Leave blank to open the native shell.",
         )
     }
 }
 
-fn terminal_session_init_setting_visible(app_name: &str) -> bool {
-    app_name == "Zed"
+fn terminal_launcher_for_content(settings_content: &SettingsContent) -> settings::TerminalLauncher {
+    let agent = settings_content.agent.as_ref();
+    agent
+        .and_then(|agent| agent.terminal_launcher)
+        .unwrap_or_else(|| {
+            settings::TerminalLauncher::from_legacy_command(
+                agent.and_then(|agent| agent.terminal_init_command.as_deref()),
+            )
+        })
+}
+
+fn terminal_launcher_variant(
+    settings_content: &SettingsContent,
+) -> Option<&'static settings::TerminalLauncher> {
+    let launcher = terminal_launcher_for_content(settings_content);
+    settings::TerminalLauncher::VARIANTS
+        .iter()
+        .find(|candidate| **candidate == launcher)
+}
+
+fn terminal_launcher_variant_index(settings_content: &SettingsContent) -> Option<usize> {
+    let launcher = terminal_launcher_for_content(settings_content);
+    settings::TerminalLauncher::VARIANTS
+        .iter()
+        .position(|candidate| *candidate == launcher)
+}
+
+fn terminal_session_init_setting_visible(_app_name: &str) -> bool {
+    true
+}
+
+fn terminal_session_init_setting_on_terminal_page(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+fn terminal_customization_in_subpage(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+fn terminal_session_init_setting_placeholder(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "e.g. claude"
+    } else {
+        "e.g. codex"
+    }
+}
+
+fn terminal_session_init_command_setting_item() -> SettingItem {
+    SettingItem {
+        title: terminal_session_init_setting_copy(paths::APP_NAME).0,
+        description: terminal_session_init_setting_copy(paths::APP_NAME).1,
+        field: Box::new(SettingField {
+            organization_override: None,
+            json_path: Some("agent.terminal_init_command"),
+            pick: |settings_content| {
+                settings_content
+                    .agent
+                    .as_ref()?
+                    .terminal_init_command
+                    .as_ref()
+            },
+            write: |settings_content, value, _| {
+                settings_content
+                    .agent
+                    .get_or_insert_default()
+                    .terminal_init_command = value;
+            },
+        }),
+        metadata: Some(Box::new(SettingsFieldMetadata {
+            placeholder: Some(terminal_session_init_setting_placeholder(paths::APP_NAME)),
+            display_confirm_button: true,
+            display_clear_button: true,
+            confirm_on_focus_out: true,
+            treat_missing_text_as_empty: true,
+            ..Default::default()
+        })),
+        files: USER,
+    }
+}
+
+fn terminal_session_init_setting_item() -> SettingsPageItem {
+    if paths::APP_NAME == "Zed" {
+        return SettingsPageItem::SettingItem(terminal_session_init_command_setting_item());
+    }
+
+    SettingsPageItem::DynamicItem(DynamicItem {
+        discriminant: SettingItem {
+            title: "Default Terminal",
+            description: "Choose what Open Terminal and Ctrl+` start in each Workspace. Explicit launchers remain available from the native + and File menus.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("agent.terminal_launcher"),
+                pick: terminal_launcher_variant,
+                write: |settings_content, value, _| {
+                    settings_content
+                        .agent
+                        .get_or_insert_default()
+                        .terminal_launcher = value;
+                },
+            }),
+            metadata: Some(Box::new(SettingsFieldMetadata {
+                should_do_titlecase: Some(false),
+                ..Default::default()
+            })),
+            files: USER,
+        },
+        pick_discriminant: terminal_launcher_variant_index,
+        fields: settings::TerminalLauncher::VARIANTS
+            .iter()
+            .map(|launcher| {
+                if *launcher == settings::TerminalLauncher::CustomCommand {
+                    vec![terminal_session_init_command_setting_item()]
+                } else {
+                    Vec::new()
+                }
+            })
+            .collect(),
+    })
+}
+
+fn cmux_integration_action_link() -> SettingsPageItem {
+    SettingsPageItem::ActionLink(ActionLink {
+        title: "cmux Integration".into(),
+        description: Some(
+            "cmux owns its tabs, splits, browser, agent hooks, and action registry. Open Workspace in cmux works without live sharing. Enable cross-app API access only if you want cmux Workspace, port, and notification rows in Dez; Dez never changes cmux permissions or hooks."
+                .into(),
+        ),
+        button_text: "Open cmux API Guide".into(),
+        icon: IconName::ArrowUpRight,
+        on_click: Arc::new(|_settings_window, _window, cx| {
+            cx.open_url("https://cmux.com/docs/api");
+        }),
+        files: USER,
+    })
 }
 
 fn agent_session_setting_copy(
@@ -233,8 +366,16 @@ fn sessions_side_setting_visible(app_name: &str, page_title: &str) -> bool {
 
 fn projects_startup_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
-        title: "Open Projects on Startup",
-        description: "Open the Projects navigator in fresh windows. Restored and explicitly opened layouts keep their own state.",
+        title: if paths::APP_NAME == "Zed" {
+            "Show Sessions on Startup"
+        } else {
+            "Show Workspaces on Startup"
+        },
+        description: if paths::APP_NAME == "Zed" {
+            "Show Sessions in new windows. Restored windows keep their saved layout."
+        } else {
+            "Open Workspaces in new windows. When off, use the status bar or View menu on demand. Restored windows keep their saved layout."
+        },
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.starts_open"),
@@ -249,17 +390,29 @@ fn projects_startup_setting() -> SettingsPageItem {
 }
 
 fn sessions_side_setting() -> SettingsPageItem {
+    if paths::APP_NAME != "Zed" {
+        return SettingsPageItem::SettingItem(SettingItem {
+            title: "Workspaces Position",
+            description: "Choose which side of the window shows Workspaces.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("session_rail.position"),
+                pick: |settings_content| settings_content.session_rail.as_ref()?.position.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .session_rail
+                        .get_or_insert_default()
+                        .position = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        });
+    }
+
     SettingsPageItem::SettingItem(SettingItem {
-        title: if paths::APP_NAME == "Zed" {
-            "Sessions Side"
-        } else {
-            "Projects Side"
-        },
-        description: if paths::APP_NAME == "Zed" {
-            "Which side of the window the Sessions list appears on."
-        } else {
-            "Which side of the window the Projects navigator appears on."
-        },
+        title: "Sessions Side",
+        description: "Which side of the window the Sessions list appears on.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("sidebar.side"),
@@ -555,7 +708,11 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Restore On Startup",
-                description: "What to restore from the previous App Session when opening Dez.",
+                description: if paths::APP_NAME == "Zed" {
+                    "What to restore from the previous App Session when opening Zed."
+                } else {
+                    "Choose whether Dez opens the permission-safe launchpad, one previous Workspace, or a previous App Session. Launchpad is the default and does not touch Workspace folders until you open one."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("restore_on_startup"),
@@ -726,6 +883,44 @@ fn general_page(cx: &App) -> SettingsPage {
 }
 
 fn appearance_page() -> SettingsPage {
+    fn dez_visual_profile_section() -> Vec<SettingsPageItem> {
+        if paths::APP_NAME == "Zed" {
+            return Vec::new();
+        }
+
+        vec![
+            SettingsPageItem::SectionHeader("Dez Visual Profile"),
+            SettingsPageItem::ActionLink(ActionLink {
+                title: "Restore Native Dez Appearance".into(),
+                description: Some(
+                    "Restore Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar. Font sizes and unrelated preferences stay unchanged."
+                        .into(),
+                ),
+                button_text: "Restore Profile".into(),
+                icon: IconName::RotateCcw,
+                on_click: Arc::new(|settings_window, window, cx| {
+                    let Some(original_window) = settings_window.original_window else {
+                        return;
+                    };
+                    if let Err(error) =
+                        original_window.update(cx, |_multi_workspace, original_window, cx| {
+                            original_window.dispatch_action(
+                                zed_actions::dez::RestoreVisualProfile.boxed_clone(),
+                                cx,
+                            );
+                            original_window.activate_window();
+                        })
+                    {
+                        log::error!("failed to restore the Dez visual profile: {error}");
+                        return;
+                    }
+                    window.remove_window();
+                }),
+                files: USER,
+            }),
+        ]
+    }
+
     fn theme_section() -> [SettingsPageItem; 3] {
         [
             SettingsPageItem::SectionHeader("Theme"),
@@ -1708,6 +1903,7 @@ fn appearance_page() -> SettingsPage {
     }
 
     let items: Box<[SettingsPageItem]> = concat_sections!(
+        dez_visual_profile_section(),
         theme_section(),
         buffer_font_section(),
         ui_font_section(),
@@ -1726,24 +1922,57 @@ fn appearance_page() -> SettingsPage {
 }
 
 fn keymap_page() -> SettingsPage {
-    fn keybindings_section() -> [SettingsPageItem; 2] {
+    fn keybindings_section() -> [SettingsPageItem; 3] {
         [
-            SettingsPageItem::SectionHeader("Keybindings"),
+            SettingsPageItem::SectionHeader("Keyboard Shortcuts"),
             SettingsPageItem::ActionLink(ActionLink {
                 title: "Edit Keybindings".into(),
-                description: Some("Customize keybindings in the keymap editor.".into()),
+                description: Some(
+                    "Search actions, inspect conflicts, and record a shortcut in the native keymap editor."
+                        .into(),
+                ),
                 button_text: "Open Keymap".into(),
+                icon: IconName::Keyboard,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
                     };
-                    original_window
-                        .update(cx, |_workspace, original_window, cx| {
+                    if let Err(error) =
+                        original_window.update(cx, |_workspace, original_window, cx| {
                             original_window
                                 .dispatch_action(zed_actions::OpenKeymap.boxed_clone(), cx);
                             original_window.activate_window();
                         })
-                        .ok();
+                    {
+                        log::error!("failed to open the native keymap editor: {error}");
+                        return;
+                    }
+                    window.remove_window();
+                }),
+                files: USER,
+            }),
+            SettingsPageItem::ActionLink(ActionLink {
+                title: "Default Keyboard Shortcuts".into(),
+                description: Some(
+                    "Browse the complete native shortcut map for files, terminals, tabs, panes, Git, Debug, and agents."
+                        .into(),
+                ),
+                button_text: "View Defaults".into(),
+                icon: IconName::Book,
+                on_click: Arc::new(|settings_window, window, cx| {
+                    let Some(original_window) = settings_window.original_window else {
+                        return;
+                    };
+                    if let Err(error) =
+                        original_window.update(cx, |_workspace, original_window, cx| {
+                            original_window
+                                .dispatch_action(zed_actions::OpenDefaultKeymap.boxed_clone(), cx);
+                            original_window.activate_window();
+                        })
+                    {
+                        log::error!("failed to open the default keymap: {error}");
+                        return;
+                    }
                     window.remove_window();
                 }),
                 files: USER,
@@ -1779,7 +2008,11 @@ fn keymap_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("Modal Editing"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Vim Mode",
-                description: "Enable Vim mode and key bindings.",
+                description: if paths::APP_NAME == "Zed" {
+                    "Enable native Vim motions, text objects, registers, macros, marks, command mode, and key bindings."
+                } else {
+                    "Enable native Vim motions, text objects, registers, macros, marks, and command mode. Dez leader actions use Space b for recent tabs, Space f for files, Space t for the agent terminal, Space T for a shell, and Space / for Workspace search."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("vim_mode"),
@@ -1791,7 +2024,11 @@ fn keymap_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Helix Mode",
-                description: "Enable Helix mode and key bindings.",
+                description: if paths::APP_NAME == "Zed" {
+                    "Enable Helix mode and key bindings."
+                } else {
+                    "Enable Helix selection and key bindings with the same Dez Workspace leaders as Vim: Space b, Space f, Space t, Space T, and Space /."
+                },
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("helix_mode"),
@@ -1811,7 +2048,7 @@ fn keymap_page() -> SettingsPage {
     );
 
     SettingsPage {
-        title: "Keymap",
+        title: workspace_surface_copy(paths::APP_NAME, "Keymap", "Keyboard & Vim"),
         items,
     }
 }
@@ -4114,10 +4351,30 @@ fn dez_terminal_panel_setting_visible(app_name: &str, json_path: Option<&str>) -
         )
 }
 
+fn status_bar_visibility_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name != "Zed" || json_path != Some("status_bar.experimental.show")
+}
+
 fn window_and_layout_page() -> SettingsPage {
     fn status_bar_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Show Status Bar",
+                description: "Keep the native Workspace status bar visible for active file, diagnostics, language, line endings, and cursor position.",
+                field: Box::new(SettingField {
+                    organization_override: None,
+                    json_path: Some("status_bar.experimental.show"),
+                    pick: |settings_content| {
+                        settings_content.status_bar.as_ref()?.show.as_ref()
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content.status_bar.get_or_insert_default().show = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Active Language Button",
                 description: "Show the active language button in the status bar.",
@@ -4312,6 +4569,10 @@ fn window_and_layout_page() -> SettingsPage {
         .filter(|item| match item {
             SettingsPageItem::SettingItem(item) => {
                 dez_terminal_panel_setting_visible(paths::APP_NAME, item.field.json_path())
+                    && status_bar_visibility_setting_visible(
+                        paths::APP_NAME,
+                        item.field.json_path(),
+                    )
             }
             SettingsPageItem::SectionHeader(_)
             | SettingsPageItem::SubPageLink(_)
@@ -4322,51 +4583,15 @@ fn window_and_layout_page() -> SettingsPage {
     }
 
     fn sidebar_chrome_section() -> Vec<SettingsPageItem> {
-        let project_pane_title = if paths::APP_NAME == "Zed" {
-            "Project Pane Button"
-        } else {
-            "Workspace Tools Button"
-        };
-        let project_pane_description = if paths::APP_NAME == "Zed" {
-            "Show the project pane toggle button in the Session Rail header."
-        } else {
-            "Show the Workspace tools toggle button in the Sessions header."
-        };
-        let sessions_chrome_header = if paths::APP_NAME == "Zed" {
-            "Session Rail Chrome"
-        } else {
-            "Sessions Appearance"
-        };
-        let branch_status_description = if paths::APP_NAME == "Zed" {
-            "Show Git status indicators on the branch icon in the Session Rail."
-        } else {
-            "Show Git status indicators on the branch icon in Sessions."
-        };
-        let branch_name_description = if paths::APP_NAME == "Zed" {
-            "Show the branch name button in the Session Rail."
-        } else {
-            "Show the branch name button in Sessions."
-        };
-        let onboarding_description = if paths::APP_NAME == "Zed" {
-            "Show relevant feature guidance in the Session Rail."
-        } else {
-            "Show relevant feature guidance in Sessions."
-        };
-        let menus_description = if paths::APP_NAME == "Zed" {
-            "Show application menus in the Session Rail header."
-        } else {
-            "Show application menus in the Sessions header."
-        };
-        let button_layout_description = if paths::APP_NAME == "Zed" {
-            "(Linux only) choose how window control buttons are laid out in the Session Rail."
-        } else {
-            "(Linux only) choose how window control buttons are laid out in Sessions."
-        };
+        if !dez_sidebar_chrome_setting_visible(paths::APP_NAME, None) {
+            return Vec::new();
+        }
+
         [
-            SettingsPageItem::SectionHeader(sessions_chrome_header),
+            SettingsPageItem::SectionHeader("Session Rail Chrome"),
             SettingsPageItem::SettingItem(SettingItem {
-                title: project_pane_title,
-                description: project_pane_description,
+                title: "Project Pane Button",
+                description: "Show the project pane toggle button in the Session Rail header.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_pane_button"),
@@ -4389,7 +4614,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Status Icon",
-                description: branch_status_description,
+                description: "Show Git status indicators on the branch icon in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_status_icon"),
@@ -4412,7 +4637,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Branch Name",
-                description: branch_name_description,
+                description: "Show the branch name button in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_branch_name"),
@@ -4457,16 +4682,8 @@ fn window_and_layout_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: if paths::APP_NAME == "Zed" {
-                    "Show Project Items"
-                } else {
-                    "Show Workspace Identity"
-                },
-                description: if paths::APP_NAME == "Zed" {
-                    "Show the Workspace host and project name in the Session Rail."
-                } else {
-                    "Show Workspace identity in Sessions."
-                },
+                title: "Show Project Items",
+                description: "Show the Workspace host and project name in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_project_items"),
@@ -4489,7 +4706,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Onboarding Banner",
-                description: onboarding_description,
+                description: "Show relevant feature guidance in the Session Rail.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_onboarding_banner"),
@@ -4512,7 +4729,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Menus",
-                description: menus_description,
+                description: "Show application menus in the Session Rail header.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("sidebar.show_menus"),
@@ -4533,7 +4750,8 @@ fn window_and_layout_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Button Layout",
-                    description: button_layout_description,
+                    description:
+                        "(Linux only) choose how window control buttons are laid out in the Session Rail.",
                     field: Box::new(SettingField {
                         organization_override: None,
                         json_path: Some("sidebar.button_layout$"),
@@ -5575,10 +5793,10 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Starts Open",
+                title: files_copy("Starts Open", "Open Files with Workspaces"),
                 description: files_copy(
                     "Whether the project panel should open on startup.",
-                    "Whether Files opens on startup when legacy docks are enabled.",
+                    "Whether Files opens automatically when a Workspace opens.",
                 ),
                 field: Box::new(SettingField {
                     organization_override: None,
@@ -7057,10 +7275,22 @@ fn terminal_page() -> SettingsPage {
                 SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
                     "Sessions"
                 } else {
-                    "Projects Navigator"
+                    "Workspaces"
                 }),
                 sessions_side_setting(),
                 projects_startup_setting(),
+            ]
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn launch_section() -> Vec<SettingsPageItem> {
+        if terminal_session_init_setting_on_terminal_page(paths::APP_NAME) {
+            vec![
+                SettingsPageItem::SectionHeader("Terminal Launch"),
+                terminal_session_init_setting_item(),
+                cmux_integration_action_link(),
             ]
         } else {
             Vec::new()
@@ -7869,10 +8099,22 @@ fn terminal_page() -> SettingsPage {
 
     fn toolbar_section() -> [SettingsPageItem; 2] {
         [
-            SettingsPageItem::SectionHeader("Toolbar"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Toolbar",
+                "Terminal Title",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Breadcrumbs",
-                description: "Display the terminal title in breadcrumbs inside the terminal pane.",
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Breadcrumbs",
+                    "Show Terminal Title Row",
+                ),
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Display the terminal title in breadcrumbs inside the terminal pane.",
+                    "Show the shell-emitted title in the native pane toolbar. This is off by default because the tab already identifies the terminal.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("terminal.toolbar.breadcrumbs"),
@@ -7935,23 +8177,73 @@ fn terminal_page() -> SettingsPage {
         ]
     }
 
+    fn terminal_customization_section() -> [SettingsPageItem; 2] {
+        [
+            SettingsPageItem::SectionHeader("Terminal Experience"),
+            SettingsPageItem::SubPageLink(SubPageLink {
+                title: "Appearance & Behavior".into(),
+                r#type: Default::default(),
+                description: Some(
+                    "Tune terminal text, cursor, copy, scrolling, title, and other advanced native terminal behavior."
+                        .into(),
+                ),
+                search_aliases: &[
+                    "terminal font",
+                    "terminal cursor",
+                    "terminal copy",
+                    "terminal scrolling",
+                    "terminal title",
+                ],
+                json_path: Some("terminal"),
+                in_json: true,
+                files: USER,
+                render: |settings_window, scroll_handle, window, cx| {
+                    let items = concat_sections!(
+                        font_section(),
+                        display_settings_section(),
+                        behavior_settings_section(),
+                        layout_settings_section(),
+                        advanced_settings_section(),
+                        toolbar_section(),
+                        scrollbar_section(),
+                    );
+                    settings_window
+                        .render_sub_page_items(
+                            items.iter().enumerate(),
+                            scroll_handle,
+                            window,
+                            cx,
+                        )
+                        .into_any_element()
+                },
+            }),
+        ]
+    }
+
+    let mut items = concat_sections!(@vec,
+        sessions_section(),
+        launch_section(),
+        environment_section(),
+    );
+    if terminal_customization_in_subpage(paths::APP_NAME) {
+        items.extend(terminal_customization_section());
+    } else {
+        items.extend(font_section());
+        items.extend(display_settings_section());
+        items.extend(behavior_settings_section());
+        items.extend(layout_settings_section());
+        items.extend(advanced_settings_section());
+        items.extend(toolbar_section());
+        items.extend(scrollbar_section());
+    }
+
     SettingsPage {
         title: workspace_surface_copy(
             paths::APP_NAME,
             "Sessions & Terminal",
             "Workspaces & Terminals",
         ),
-        items: concat_sections![
-            sessions_section(),
-            environment_section(),
-            font_section(),
-            display_settings_section(),
-            behavior_settings_section(),
-            layout_settings_section(),
-            advanced_settings_section(),
-            toolbar_section(),
-            scrollbar_section(),
-        ],
+        items: items.into_boxed_slice(),
     }
 }
 
@@ -8494,6 +8786,7 @@ fn collaboration_page() -> SettingsPage {
                 title: "Test Audio".into(),
                 description: Some("Test your microphone and speaker setup".into()),
                 button_text: "Test Audio".into(),
+                icon: IconName::PlayFilled,
                 on_click: Arc::new(|_settings_window, window, cx| {
                     open_audio_test_window(window, cx);
                 }),
@@ -8562,7 +8855,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader(agent_session_setting_copy(
                 paths::APP_NAME,
                 "General",
-                "Agent Runtime & Providers",
+                "Built-in Agent & Providers",
             )),
             SettingsPageItem::SettingItem(SettingItem {
                 title: agent_session_setting_copy(
@@ -8573,7 +8866,7 @@ fn ai_page(cx: &App) -> SettingsPage {
                 description: agent_session_setting_copy(
                     paths::APP_NAME,
                     "Whether to disable all AI features in Zed.",
-                    "Disable Agent Sessions, model providers, and edit predictions in this Workspace.",
+                    "Disable the optional Built-in Agent, ACP agents, model providers, and edit predictions in this Workspace. Terminal launchers remain available.",
                 ),
                 field: Box::new(SettingField {
                     organization_override: None,
@@ -8592,10 +8885,22 @@ fn ai_page(cx: &App) -> SettingsPage {
         }
         items.extend([
             SettingsPageItem::SubPageLink(SubPageLink {
-                title: "LLM Providers".into(),
+                title: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "LLM Providers",
+                    "Built-in Agent Providers",
+                )
+                .into(),
                 r#type: Default::default(),
                 json_path: Some("llm_providers"),
-                description: Some("Configure natively-included model providers.".into()),
+                description: Some(
+                    agent_session_setting_copy(
+                        paths::APP_NAME,
+                        "Configure natively-included model providers.",
+                        "Configure models for the optional Built-in Agent.",
+                    )
+                    .into(),
+                ),
                 search_aliases: &[
                     "ai",
                     "amazon",
@@ -8627,12 +8932,17 @@ fn ai_page(cx: &App) -> SettingsPage {
                 render: render_llm_providers_page,
             }),
             SettingsPageItem::SubPageLink(SubPageLink {
-                title: "External Agents".into(),
+                title: agent_session_setting_copy(paths::APP_NAME, "External Agents", "ACP Agents")
+                    .into(),
                 r#type: Default::default(),
                 json_path: Some("agent_servers"),
                 description: Some(
-                    "View, add, and remove agents connected through the Agent Client Protocol."
-                        .into(),
+                    agent_session_setting_copy(
+                        paths::APP_NAME,
+                        "View, add, and remove agents connected through the Agent Client Protocol.",
+                        "Connect Agent Client Protocol providers to the Built-in Agent surface.",
+                    )
+                    .into(),
                 ),
                 search_aliases: &[
                     "acp",
@@ -8655,11 +8965,21 @@ fn ai_page(cx: &App) -> SettingsPage {
                 render: render_external_agents_page,
             }),
             SettingsPageItem::SubPageLink(SubPageLink {
-                title: "MCP Servers".into(),
+                title: agent_session_setting_copy(
+                    paths::APP_NAME,
+                    "MCP Servers",
+                    "Built-in Agent Tools (MCP)",
+                )
+                .into(),
                 r#type: Default::default(),
                 json_path: Some("context_servers"),
                 description: Some(
-                    "View, add, configure, and remove Model Context Protocol servers.".into(),
+                    agent_session_setting_copy(
+                        paths::APP_NAME,
+                        "View, add, configure, and remove Model Context Protocol servers.",
+                        "Configure Model Context Protocol tools for the Built-in Agent.",
+                    )
+                    .into(),
                 ),
                 search_aliases: &["context server", "mcp", "model context protocol"],
                 in_json: false,
@@ -8672,7 +8992,11 @@ fn ai_page(cx: &App) -> SettingsPage {
 
     fn agent_configuration_section(_cx: &App) -> Box<[SettingsPageItem]> {
         let mut items = vec![
-            SettingsPageItem::SectionHeader("Agent Configuration"),
+            SettingsPageItem::SectionHeader(agent_session_setting_copy(
+                paths::APP_NAME,
+                "Agent Configuration",
+                "Built-in Agent Behavior",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Default Subagent Model",
                 description: agent_session_setting_copy(
@@ -8901,37 +9225,10 @@ fn ai_page(cx: &App) -> SettingsPage {
             }),
         ]);
 
-        if terminal_session_init_setting_visible(paths::APP_NAME) {
-            items.push(SettingsPageItem::SettingItem(SettingItem {
-                title: terminal_session_init_setting_copy(paths::APP_NAME).0,
-                description: terminal_session_init_setting_copy(paths::APP_NAME).1,
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("agent.terminal_init_command"),
-                    pick: |settings_content| {
-                        settings_content
-                            .agent
-                            .as_ref()?
-                            .terminal_init_command
-                            .as_ref()
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .agent
-                            .get_or_insert_default()
-                            .terminal_init_command = value;
-                    },
-                }),
-                metadata: Some(Box::new(SettingsFieldMetadata {
-                    placeholder: Some("e.g. claude"),
-                    display_confirm_button: true,
-                    display_clear_button: true,
-                    confirm_on_focus_out: true,
-                    treat_missing_text_as_empty: true,
-                    ..Default::default()
-                })),
-                files: USER,
-            }));
+        if terminal_session_init_setting_visible(paths::APP_NAME)
+            && !terminal_session_init_setting_on_terminal_page(paths::APP_NAME)
+        {
+            items.push(terminal_session_init_setting_item());
         }
 
         items.extend([
@@ -9181,10 +9478,14 @@ fn attention_page() -> SettingsPage {
     let attention_status_description = if paths::APP_NAME == "Zed" {
         "Show the action-needed summary in the workspace bar and Session Rail."
     } else {
-        "Show the action-needed summary in Projects and native Workspace chrome."
+        "Show the action-needed summary in Workspaces."
     };
-    let mut items = vec![
-        SettingsPageItem::SectionHeader("Attention"),
+    let items = vec![
+        SettingsPageItem::SectionHeader(agent_session_setting_copy(
+            paths::APP_NAME,
+            "Attention",
+            "Attention & Notifications",
+        )),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Attention Status",
             description: attention_status_description,
@@ -9209,7 +9510,11 @@ fn attention_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Notify on Attention",
-            description: "Notify when a background terminal or agent raises a new unread attention condition.",
+            description: if paths::APP_NAME == "Zed" {
+                "Notify when a background terminal or agent raises a new unread attention condition."
+            } else {
+                "Notify when a background terminal or Agent Session first needs attention."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.notify_on_attention"),
@@ -9231,7 +9536,11 @@ fn attention_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Announce Attention",
-            description: "Request an accessible window announcement when agent attention changes.",
+            description: if paths::APP_NAME == "Zed" {
+                "Request an accessible window announcement when agent attention changes."
+            } else {
+                "Announce Agent Session attention changes to assistive technologies."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("accessibility.announce_agent_attention"),
@@ -9253,7 +9562,11 @@ fn attention_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Pane Attention Ring",
-            description: "Use a visible pane outline in addition to labels and icons when a surface needs action.",
+            description: if paths::APP_NAME == "Zed" {
+                "Use a visible pane outline in addition to labels and icons when a surface needs action."
+            } else {
+                "Outline a pane when its terminal or Agent Session needs attention."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("pane_grid.attention_ring"),
@@ -9275,34 +9588,6 @@ fn attention_page() -> SettingsPage {
         }),
     ];
 
-    if floating_attention_popup_setting_visible(paths::APP_NAME) {
-        items.insert(
-            3,
-            SettingsPageItem::SettingItem(SettingItem {
-                title: "Floating Attention Popups",
-                description: "Allow Agent attention to open a floating window over other work. Off by default because Projects already keeps unread and action-needed state visible.",
-                field: Box::new(SettingField {
-                    organization_override: None,
-                    json_path: Some("agent_ui.floating_attention_popups"),
-                    pick: |settings_content| {
-                        settings_content
-                            .agent_ui
-                            .as_ref()
-                            .and_then(|settings| settings.floating_attention_popups.as_ref())
-                    },
-                    write: |settings_content, value, _| {
-                        settings_content
-                            .agent_ui
-                            .get_or_insert_default()
-                            .floating_attention_popups = value;
-                    },
-                }),
-                metadata: None,
-                files: USER,
-            }),
-        );
-    }
-
     SettingsPage {
         title: "Attention",
         items: items.into_boxed_slice(),
@@ -9311,10 +9596,18 @@ fn attention_page() -> SettingsPage {
 
 fn evidence_page() -> SettingsPage {
     let items = vec![
-        SettingsPageItem::SectionHeader("Evidence & Trust"),
+        SettingsPageItem::SectionHeader(if paths::APP_NAME == "Zed" {
+            "Evidence & Trust"
+        } else {
+            "Terminal Agents & Privacy"
+        }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Show Detection Confidence",
-            description: "Label process-name detection as lower-confidence until structured adapter evidence is available.",
+            description: if paths::APP_NAME == "Zed" {
+                "Label process-name detection as lower-confidence until structured adapter evidence is available."
+            } else {
+                "Mark process-name detection as lower confidence until a structured adapter reports evidence."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.show_detection_confidence"),
@@ -9336,7 +9629,11 @@ fn evidence_page() -> SettingsPage {
         }),
         SettingsPageItem::SettingItem(SettingItem {
             title: "Detect Terminal Agents",
-            description: "Observe known agent process names as a local, lower-confidence fallback. This does not read terminal transcripts.",
+            description: if paths::APP_NAME == "Zed" {
+                "Observe known agent process names as a local, lower-confidence fallback. This does not read terminal transcripts."
+            } else {
+                "Detect known agent process names locally as a lower-confidence fallback. Dez does not read terminal transcripts."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.detect_terminal_agents"),
@@ -9357,8 +9654,12 @@ fn evidence_page() -> SettingsPage {
             files: USER,
         }),
         SettingsPageItem::SettingItem(SettingItem {
-            title: "Observe Terminal Evidence",
-            description: "Observe local terminal lifecycle signals and accept authenticated structured adapter events. Commands and file targets remain bounded between the owning Host and Dez; transcripts are not retained. Obvious secret environment assignments, CLI flags, and URL credentials are redacted from commands. File paths remain verbatim for review navigation. Dez never installs hooks or edits provider configuration automatically.",
+            title: "Observe Terminal Activity",
+            description: if paths::APP_NAME == "Zed" {
+                "Use local lifecycle signals and authenticated adapter events to show agent state, commands, and file targets in Workspaces. Transcripts are not retained, and Dez never changes provider configuration."
+            } else {
+                "Show lifecycle, command, and file-target events reported by local terminals and authenticated adapters in Workspaces. Dez does not retain terminal transcripts."
+            },
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent_ui.connect_hooks"),
@@ -9383,7 +9684,7 @@ fn evidence_page() -> SettingsPage {
             description: if paths::APP_NAME == "Zed" {
                 "Reopen the last active terminal surface when its locally stored identity still resolves. Session Rail identity and attention metadata load independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
             } else {
-                "Reopen the last active terminal surface when its locally stored identity still resolves. Projects loads Session identity and attention metadata independently; structured activity returns only from the same live Host Session. Terminal transcripts are not stored in the metadata database."
+                "Reopen the last active terminal when its Terminal Host is available. Workspaces restores Session identity and attention metadata, not terminal transcripts."
             },
             field: Box::new(SettingField {
                 organization_override: None,
@@ -11534,6 +11835,18 @@ mod tests {
             "Dez",
             Some("terminal.shell$")
         ));
+        assert!(status_bar_visibility_setting_visible(
+            "Dez",
+            Some("status_bar.experimental.show")
+        ));
+        assert!(!status_bar_visibility_setting_visible(
+            "Zed",
+            Some("status_bar.experimental.show")
+        ));
+        assert!(status_bar_visibility_setting_visible(
+            "Zed",
+            Some("status_bar.active_language_button")
+        ));
 
         assert!(!dez_privacy_setting_visible(
             "Dez",
@@ -11553,28 +11866,31 @@ mod tests {
         ));
         assert!(!auto_update_setting_visible("Dez"));
         assert!(auto_update_setting_visible("Zed"));
-        assert!(floating_attention_popup_setting_visible("Dez"));
-        assert!(!floating_attention_popup_setting_visible("Zed"));
     }
 
     #[test]
     fn dez_settings_put_the_product_workflow_before_ide_customization() {
         let product_pages = [
-            "Workspace & Privacy",
             "Workspaces & Terminals",
             "Agents",
-            "Attention",
-            "Evidence",
+            "Appearance",
+            "Workspace & Privacy",
         ];
         for pair in product_pages.windows(2) {
             assert!(dez_settings_page_priority(pair[0]) < dez_settings_page_priority(pair[1]));
         }
 
-        assert!(dez_settings_page_priority("Evidence") < dez_settings_page_priority("Appearance"));
+        assert!(
+            dez_settings_page_priority("Workspace & Privacy")
+                < dez_settings_page_priority("Keyboard & Vim")
+        );
+        assert!(
+            dez_settings_page_priority("Keyboard & Vim") < dez_settings_page_priority("Editor")
+        );
         assert!(
             dez_settings_page_priority("Workspace Tools") < dez_settings_page_priority("Advanced")
         );
-        assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 16);
+        assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 14);
     }
 
     #[test]
@@ -11608,19 +11924,79 @@ mod tests {
     }
 
     #[test]
-    fn legacy_terminal_startup_setting_is_hidden_in_dez() {
-        assert!(!terminal_session_init_setting_visible("Dez"));
+    fn terminal_startup_setting_exposes_the_native_dez_launcher() {
+        assert!(terminal_session_init_setting_visible("Dez"));
         assert!(terminal_session_init_setting_visible("Zed"));
+        assert!(terminal_session_init_setting_on_terminal_page("Dez"));
+        assert!(!terminal_session_init_setting_on_terminal_page("Zed"));
+        assert!(terminal_customization_in_subpage("Dez"));
+        assert!(!terminal_customization_in_subpage("Zed"));
+        assert_eq!(
+            terminal_session_init_setting_placeholder("Dez"),
+            "e.g. codex"
+        );
+        assert_eq!(
+            terminal_session_init_setting_placeholder("Zed"),
+            "e.g. claude"
+        );
         assert_eq!(
             terminal_session_init_setting_copy("Dez"),
             (
-                "Terminal Session Startup Command",
-                "Command to run when Dez starts a new Terminal Session. Runs in your configured shell.",
+                "Custom Terminal Command",
+                "Command to run when Default Terminal is set to Custom Command. Leave blank to open the native shell.",
             )
         );
         assert_eq!(
             terminal_session_init_setting_copy("Zed").0,
             "Terminal Thread Init Command"
+        );
+
+        let mut settings_content = SettingsContent::default();
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::NativeShell
+        );
+
+        settings_content
+            .agent
+            .get_or_insert_default()
+            .terminal_init_command = Some("codex".to_owned());
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::Codex
+        );
+
+        settings_content
+            .agent
+            .get_or_insert_default()
+            .terminal_init_command = Some("my-agent --resume".to_owned());
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::CustomCommand
+        );
+
+        settings_content
+            .agent
+            .get_or_insert_default()
+            .terminal_launcher = Some(settings::TerminalLauncher::Tmux);
+        assert_eq!(
+            terminal_launcher_for_content(&settings_content),
+            settings::TerminalLauncher::Tmux
+        );
+
+        let cmux_action = match cmux_integration_action_link() {
+            SettingsPageItem::ActionLink(action_link) => {
+                Some((action_link.title, action_link.button_text, action_link.icon))
+            }
+            _ => None,
+        };
+        assert_eq!(
+            cmux_action,
+            Some((
+                "cmux Integration".into(),
+                "Open cmux API Guide".into(),
+                IconName::ArrowUpRight,
+            ))
         );
     }
 
@@ -11688,6 +12064,18 @@ mod tests {
                 "Reset to use the parent Agent Session's model.",
             ),
             "Reset to use the parent thread's model."
+        );
+        assert_eq!(
+            agent_session_setting_copy("Dez", "General", "Built-in Agent & Providers"),
+            "Built-in Agent & Providers"
+        );
+        assert_eq!(
+            agent_session_setting_copy("Dez", "External Agents", "ACP Agents"),
+            "ACP Agents"
+        );
+        assert_eq!(
+            agent_session_setting_copy("Zed", "External Agents", "ACP Agents"),
+            "External Agents"
         );
     }
 

@@ -402,7 +402,7 @@ pub struct TerminalToolbarContent {
     /// The shell running in the terminal needs to be configured to emit the title.
     /// Example: `echo -e "\e]2;New Title\007";`
     ///
-    /// Default: true
+    /// Default: false
     pub breadcrumbs: Option<bool>,
 }
 

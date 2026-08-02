@@ -12,9 +12,11 @@ conversations. Developers must reconstruct the relationship between a request,
 agent, terminal, host, repository, worktree, changed files, commands, checks,
 and pending review.
 
-Dez makes that relationship durable. It is a local-first control plane for
-active software work, combining Zed-quality editing, tmux-like continuity, and
-a vendor-neutral agent operations layer.
+Dez makes that relationship durable. It is a terminal-native development
+environment for builders who alternate between editing directly and delegating
+to CLI agents. Zed-quality editing, native terminals, Workspace continuity,
+attention, and evidence-backed review are one product loop rather than separate
+IDE, terminal, chat, and dashboard products.
 
 ## Complete product, sharp wedge {#complete-product-sharp-wedge}
 
@@ -52,8 +54,8 @@ The working promise is:
 
 ## Ideal customer {#ideal-customer}
 
-The first customer is a terminal-native senior developer, technical founder,
-staff engineer, or open-source maintainer who:
+The first customer is a terminal-native developer, technical founder, product
+engineer, open-source maintainer, or AI-native independent builder who:
 
 - uses coding agents daily and runs at least two tasks concurrently;
 - works across repositories, worktrees, or SSH hosts;
@@ -61,8 +63,10 @@ staff engineer, or open-source maintainer who:
 - values native speed, local control, and process continuity;
 - finds disposable project windows and disconnected agent panels restrictive.
 
-Dez does not initially target autocomplete-only workflows, beginner-first IDE
-onboarding, enterprise administration, or fully autonomous software delivery.
+The user need not be a traditional IDE expert, but must care about the code,
+runtime, and diff that will ship. Dez does not initially target
+autocomplete-only workflows, prompt-only site generation, enterprise
+administration, or fully autonomous software delivery.
 
 ## Job to be done {#job-to-be-done}
 
@@ -77,6 +81,13 @@ code and Git state, detecting likely actor conflicts, and resuming without
 reconstructing history.
 
 ## Core product loop {#core-product-loop}
+
+The current product presents this as one short native journey: **Open Workspace
+→ Start or Continue Agent → supervise in Workspaces → inspect with Files,
+tasks, diagnostics, and Debug → Review Changes**. **Browse Running Sessions…**
+reopens externally owned work; **Open Workspace in cmux** is an explicit
+handoff. The stages below describe the evidence and decision model behind that
+visible flow; they are not additional navigation screens.
 
 1. **Capture:** Start a Run from an ordinary terminal, agent surface, or explicit
    objective.
@@ -98,24 +109,24 @@ The first vertical slice is:
 ```text
 current upstream baseline
 -> isolated Dez identity
--> one durable workspace
+-> one durable Workspace
 -> one persistent local terminal
 -> Codex detection
--> attention item
--> deterministic review brief
+-> Workspaces attention state
+-> deterministic Review Brief
 -> restart and recover
 ```
 
 The minimum product surfaces are:
 
-- an attention inbox that links to existing owning surfaces;
-- session cards with actor, host, repository, branch, state, time, changes,
-  checks, and last meaningful event;
-- a review brief that never invents successful checks;
+- Workspaces attention that links to existing owning Surfaces;
+- Agent Session rows with provider, Host, repository, branch, state, time,
+  changes, checks, and last meaningful event;
+- a Review Brief that never invents successful checks;
 - a bounded structured activity timeline;
-- safe session recovery states;
-- a keyboard-first switcher across workspaces, surfaces, actors, hosts, and
-  attention items.
+- safe Agent Session recovery states;
+- a keyboard-first switcher across Workspaces, Surfaces, Agent Sessions, Hosts,
+  and attention items.
 
 Conflict radar, SSH continuity, task recipes, worktree brokering, workspace
 briefs, mobile attention, and shared team projections follow after this loop is
@@ -123,16 +134,22 @@ reliable.
 
 ## Hero workflow {#hero-workflow}
 
+This is the target workflow for validation, not a claim about the current
+source candidate or an installed artifact. It remains unvalidated until the
+exact remote-built application completes the sequence on real repositories.
+
 1. Start Codex in a frontend terminal.
 2. Start another supported agent in a backend terminal.
 3. Run a watcher on a remote host.
 4. Edit a related file manually.
 5. Close and reopen Dez without killing the work.
-6. See one actor waiting for permission and another ready for review.
-7. Open the ready task's brief and diff beside its owning terminal.
-8. Receive an advisory warning if two actors touch overlapping files.
+6. See one Agent Session waiting for permission in Workspaces and another ready
+   for review.
+7. Open the ready Agent Session's Review Brief and diff beside its owning
+   terminal.
+8. Receive an advisory warning if two Agent Sessions touch overlapping files.
 9. Approve, redirect, pause, or discard work explicitly.
-10. Return later with workspace and session context intact.
+10. Return later with Workspace and Agent Session context intact.
 
 If this workflow is unreliable or confusing, broad feature count does not make
 the release successful.

@@ -94,9 +94,9 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace,
-    NewCenterTerminal, PaneKind, PathList, SerializedPathList, ToggleAgentPane, ToggleSidebar,
-    ToggleZoom, ToolbarItemView, Workspace, WorkspaceId,
+    CollaboratorId, DesignSystemSettings, DraggedSelection, DraggedTab, MultiWorkspace, PaneKind,
+    PathList, SerializedPathList, ToggleAgentPane, ToggleSidebar, ToggleZoom, ToolbarItemView,
+    Workspace, WorkspaceId,
     dock::{DockPosition, Panel, PanelEvent},
     item::{ItemEvent, ItemHandle},
 };
@@ -198,7 +198,7 @@ fn agent_panel_create_icon(app_name: &str) -> IconName {
     if app_name == "Zed" {
         IconName::Plus
     } else {
-        IconName::Robot
+        ui::agent_icon_for_app(app_name)
     }
 }
 
@@ -566,7 +566,11 @@ pub fn init(cx: &mut App) {
                         }
                     } else {
                         let workspace_focus = workspace.focus_handle(cx);
-                        workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
+                        workspace_focus.dispatch_action(
+                            &zed_actions::terminal::OpenAgentTerminal,
+                            window,
+                            cx,
+                        );
                     }
                 })
                 .register_action(
@@ -912,8 +916,10 @@ pub fn init(cx: &mut App) {
                                     if !text.is_empty() {
                                         let view = agent_terminal.view.clone();
                                         view.update(cx, |view, cx| {
-                                            view.terminal().update(cx, |terminal, _| {
-                                                terminal.paste(&text);
+                                            view.terminal().update(cx, |terminal, terminal_cx| {
+                                                if terminal.paste(&text) {
+                                                    terminal_cx.notify();
+                                                }
                                             });
                                             window.focus(&view.focus_handle(cx), cx);
                                         });
@@ -2405,7 +2411,7 @@ impl AgentPanel {
                     }
                 }
                 TerminalEvent::CloseTerminal => {
-                    this.close_terminal_from_terminal_event(terminal_id, window, cx);
+                    this.request_close_terminal_from_terminal_event(terminal_id, cx);
                 }
                 TerminalEvent::ProcessExited { .. } => {
                     this.refresh_terminal_metadata(terminal_id, cx);
@@ -2483,7 +2489,7 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.close_terminal_internal(terminal_id, true, None, window, cx);
+        self.close_terminal_internal(terminal_id, true, window, cx);
     }
 
     pub fn close_terminal_without_activating_draft(
@@ -2492,14 +2498,13 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.close_terminal_internal(terminal_id, false, None, window, cx);
+        self.close_terminal_internal(terminal_id, false, window, cx);
     }
 
     fn close_terminal_internal(
         &mut self,
         terminal_id: TerminalId,
         activate_draft_after_close: bool,
-        terminal_closed_metadata: Option<TerminalThreadMetadata>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -2525,21 +2530,18 @@ impl AgentPanel {
             }
         }
 
-        if let Some(metadata) = terminal_closed_metadata {
-            cx.emit(AgentPanelEvent::TerminalClosed { metadata });
-        }
         cx.emit(AgentPanelEvent::EntryChanged);
         cx.notify();
     }
 
-    fn close_terminal_from_terminal_event(
+    fn request_close_terminal_from_terminal_event(
         &mut self,
         terminal_id: TerminalId,
-        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let metadata = self.terminal_metadata(terminal_id, cx);
-        self.close_terminal_internal(terminal_id, false, metadata, window, cx);
+        if let Some(metadata) = self.terminal_metadata(terminal_id, cx) {
+            cx.emit(AgentPanelEvent::TerminalCloseRequested { metadata });
+        }
     }
 
     fn emit_terminal_thread_started(
@@ -3189,7 +3191,7 @@ impl AgentPanel {
                     this.dismiss_terminal_pop_up_if_visible(terminal_id, &pop_up_weak, window, cx);
                 }
                 AgentPanelEvent::EntryChanged
-                | AgentPanelEvent::TerminalClosed { .. }
+                | AgentPanelEvent::TerminalCloseRequested { .. }
                 | AgentPanelEvent::ThreadInteracted { .. } => {}
             }
         });
@@ -4116,7 +4118,7 @@ impl AgentPanel {
     pub(crate) fn open_configuration(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         window.dispatch_action(
             Box::new(zed_actions::OpenSettingsPage {
-                page: "AI".to_string(),
+                page: "Agents".to_string(),
                 target: None,
             }),
             cx,
@@ -5451,7 +5453,7 @@ pub enum AgentPanelEvent {
     ActiveViewChanged,
     ActiveViewFocused,
     EntryChanged,
-    TerminalClosed { metadata: TerminalThreadMetadata },
+    TerminalCloseRequested { metadata: TerminalThreadMetadata },
     ThreadInteracted { thread_id: ThreadId },
 }
 
@@ -7090,7 +7092,11 @@ impl Render for AgentPanel {
                     this.new_terminal(None, AgentThreadSource::AgentPanel, window, cx);
                 } else if let Some(workspace) = this.workspace.upgrade() {
                     let workspace_focus = workspace.read(cx).focus_handle(cx);
-                    workspace_focus.dispatch_action(&NewCenterTerminal::default(), window, cx);
+                    workspace_focus.dispatch_action(
+                        &zed_actions::terminal::OpenAgentTerminal,
+                        window,
+                        cx,
+                    );
                 }
             }))
             .on_action(cx.listener(|this, _: &OpenSettings, window, cx| {
@@ -7553,7 +7559,7 @@ mod tests {
     #[test]
     fn agent_panel_icons_preserve_product_identity() {
         assert_eq!(agent_panel_create_icon("Zed"), IconName::Plus);
-        assert_eq!(agent_panel_create_icon("Dez"), IconName::Robot);
+        assert_eq!(agent_panel_create_icon("Dez"), IconName::DezAgent);
         assert_eq!(agent_panel_registry_icon("Zed"), IconName::Plus);
         assert_eq!(agent_panel_registry_icon("Dez"), IconName::Blocks);
     }
@@ -10254,39 +10260,6 @@ mod tests {
             cx.debug_bounds("KEY_BINDING-l").is_some(),
             "Skills menu item should show the ManageSkills shortcut"
         );
-    }
-
-    #[gpui::test]
-    async fn test_terminal_close_event_closes_without_sidebar(cx: &mut TestAppContext) {
-        let (panel, mut cx) = setup_panel(cx).await;
-        cx.update(|_, cx| {
-            TerminalThreadMetadataStore::init_global(cx);
-        });
-
-        let terminal_id = panel
-            .update_in(&mut cx, |panel, window, cx| {
-                panel.insert_test_terminal("Dev Server", true, window, cx)
-            })
-            .expect("test terminal should be inserted");
-        cx.run_until_parked();
-
-        panel.update(&mut cx, |panel, cx| {
-            panel.emit_test_terminal_close(terminal_id, cx);
-        });
-        cx.run_until_parked();
-
-        panel.read_with(&cx, |panel, _cx| {
-            assert!(!panel.has_terminal(terminal_id));
-        });
-        cx.update(|_, cx| {
-            assert!(
-                TerminalThreadMetadataStore::global(cx)
-                    .read(cx)
-                    .entry(terminal_id)
-                    .is_none(),
-                "terminal metadata should be deleted by the fallback close"
-            );
-        });
     }
 
     #[gpui::test]

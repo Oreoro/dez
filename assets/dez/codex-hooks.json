@@ -1,11 +1,71 @@
 {
-  "description": "Project structured Codex lifecycle into Dez terminals.",
+  "description": "Report structured Codex lifecycle events to the owning Dez terminal.",
   "hooks": {
-    "SessionStart": [{ "hooks": [{ "type": "command", "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi", "timeout": 5 }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi", "timeout": 5 }] }],
-    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi", "timeout": 5 }] }],
-    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi", "timeout": 5 }] }],
-    "PostToolUse": [{ "hooks": [{ "type": "command", "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi", "timeout": 5 }] }],
-    "Stop": [{ "hooks": [{ "type": "command", "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi", "timeout": 5 }] }]
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${DEZ_TERMINAL_HOST_BIN:-}\" ]; then \"$DEZ_TERMINAL_HOST_BIN\" agent-event; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

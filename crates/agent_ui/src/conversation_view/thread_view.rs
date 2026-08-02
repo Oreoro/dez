@@ -77,12 +77,12 @@ fn unset_model_recovery_copy(
     } else if has_authenticated_provider {
         (
             "Built-in Agent needs a model",
-            "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Agent Terminal and do not use this picker.",
+            "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Terminal and do not use this picker.",
         )
     } else {
         (
             "Built-in Agent needs a provider",
-            "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Agent Terminal instead.",
+            "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Terminal instead.",
         )
     }
 }
@@ -97,6 +97,57 @@ fn model_recovery_severity(app_name: &str, is_initial_setup: bool) -> Severity {
 
 fn model_recovery_is_dismissible(app_name: &str, is_initial_setup: bool) -> bool {
     app_name == "Zed" || !is_initial_setup
+}
+
+fn subagent_card_fallback_title(is_cancelled: bool, is_failed: bool) -> &'static str {
+    if is_cancelled {
+        "Subagent Canceled"
+    } else if is_failed {
+        "Subagent Failed"
+    } else {
+        "Starting Subagent…"
+    }
+}
+
+fn subagent_card_status_label(
+    is_running: bool,
+    is_pending_tool_call: bool,
+    is_cancelled: bool,
+    is_failed: bool,
+) -> &'static str {
+    if is_cancelled {
+        "Canceled"
+    } else if is_failed {
+        "Failed"
+    } else if is_pending_tool_call {
+        "Waiting for permission"
+    } else if is_running {
+        "Running"
+    } else {
+        "Completed"
+    }
+}
+
+fn subagent_preview_available(has_expandable_content: bool, is_pending_tool_call: bool) -> bool {
+    has_expandable_content && !is_pending_tool_call
+}
+
+fn edits_disclosure_accessibility_label(expanded: bool, file_count: usize) -> String {
+    let action = if expanded { "Collapse" } else { "Expand" };
+    let noun = if file_count == 1 { "file" } else { "files" };
+    format!("{action} {file_count} changed {noun}")
+}
+
+fn edit_summary_action_label(
+    app_name: &str,
+    zed_label: &'static str,
+    dez_label: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        zed_label
+    } else {
+        dez_label
+    }
 }
 
 #[derive(Default)]
@@ -3560,7 +3611,7 @@ impl ThreadView {
                                     h_flex()
                                         .gap_1p5()
                                         .child(
-                                            Icon::new(IconName::Circle)
+                                            Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
                                                 .size(IconSize::XSmall)
                                                 .color(Color::Warning),
                                         )
@@ -4147,6 +4198,46 @@ impl ThreadView {
         cx: &Context<Self>,
     ) -> Div {
         let focus_handle = self.focus_handle(cx);
+        let is_dez = paths::APP_NAME != "Zed";
+        let disclosure_accessibility_label =
+            edits_disclosure_accessibility_label(expanded, changed_buffers.len());
+        let reject_all_label =
+            edit_summary_action_label(paths::APP_NAME, "Reject All", "Reject All Changes");
+        let keep_all_label =
+            edit_summary_action_label(paths::APP_NAME, "Keep All", "Keep All Changes");
+        let review_action = if is_dez {
+            Button::new("review-changes", "Review Changes")
+                .style(ButtonStyle::Filled)
+                .label_size(LabelSize::Small)
+                .start_icon(Icon::new(IconName::ListTodo).size(IconSize::Small))
+                .tab_index(0isize)
+                .aria_label("Review Changes")
+                .tooltip({
+                    let focus_handle = focus_handle.clone();
+                    move |_window, cx| {
+                        Tooltip::for_action_in("Review Changes", &OpenAgentDiff, &focus_handle, cx)
+                    }
+                })
+                .on_click(cx.listener(|_, _, window, cx| {
+                    window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
+                }))
+                .into_any_element()
+        } else {
+            IconButton::new("review-changes", IconName::ListTodo)
+                .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label("Review Changes")
+                .tooltip({
+                    let focus_handle = focus_handle.clone();
+                    move |_window, cx| {
+                        Tooltip::for_action_in("Review Changes", &OpenAgentDiff, &focus_handle, cx)
+                    }
+                })
+                .on_click(cx.listener(|_, _, window, cx| {
+                    window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
+                }))
+                .into_any_element()
+        };
 
         h_flex()
             .p_1()
@@ -4158,6 +4249,10 @@ impl ThreadView {
             .child(
                 h_flex()
                     .id("edits-container")
+                    .role(gpui::Role::Button)
+                    .tab_index(0isize)
+                    .aria_label(disclosure_accessibility_label.clone())
+                    .tooltip(Tooltip::text(disclosure_accessibility_label))
                     .cursor_pointer()
                     .gap_1()
                     .child(Disclosure::new("edits-disclosure", expanded))
@@ -4221,36 +4316,30 @@ impl ThreadView {
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.edits_expanded = !this.edits_expanded;
                         cx.notify();
+                    }))
+                    .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, _, cx| {
+                        if event.keystroke.modifiers.modified() {
+                            return;
+                        }
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                            this.edits_expanded = !this.edits_expanded;
+                            cx.stop_propagation();
+                            cx.notify();
+                        }
                     })),
             )
             .child(
                 h_flex()
                     .gap_1()
-                    .child(
-                        IconButton::new("review-changes", IconName::ListTodo)
-                            .icon_size(IconSize::Small)
-                            .tab_index(0isize)
-                            .aria_label("Review Changes")
-                            .tooltip({
-                                let focus_handle = focus_handle.clone();
-                                move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Review Changes",
-                                        &OpenAgentDiff,
-                                        &focus_handle,
-                                        cx,
-                                    )
-                                }
-                            })
-                            .on_click(cx.listener(|_, _, window, cx| {
-                                window.dispatch_action(OpenAgentDiff.boxed_clone(), cx);
-                            })),
-                    )
+                    .flex_wrap()
+                    .child(review_action)
                     .child(Divider::vertical().color(DividerColor::Border))
                     .child(
-                        Button::new("reject-all-changes", "Reject All")
+                        Button::new("reject-all-changes", reject_all_label)
                             .label_size(LabelSize::Small)
+                            .when(is_dez, |this| this.style(ButtonStyle::Outlined))
                             .tab_index(0isize)
+                            .aria_label(reject_all_label)
                             .disabled(pending_edits)
                             .when(pending_edits, |this| {
                                 this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
@@ -4264,9 +4353,11 @@ impl ThreadView {
                             })),
                     )
                     .child(
-                        Button::new("keep-all-changes", "Keep All")
+                        Button::new("keep-all-changes", keep_all_label)
                             .label_size(LabelSize::Small)
+                            .when(is_dez, |this| this.style(ButtonStyle::Outlined))
                             .tab_index(0isize)
+                            .aria_label(keep_all_label)
                             .disabled(pending_edits)
                             .when(pending_edits, |this| {
                                 this.tooltip(Tooltip::text(EDIT_NOT_READY_TOOLTIP_LABEL))
@@ -4346,7 +4437,7 @@ impl ThreadView {
                                 .flex_1()
                                 .gap_2()
                                 .child(
-                                    Icon::new(IconName::ForwardArrowUp)
+                                    Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                 )
@@ -6544,13 +6635,13 @@ impl ThreadView {
                                         .tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
                                             "Restores all files in the project to the content they had at this point in the conversation."
                                         } else {
-                                            "Restores all files in the workspace to the content they had at this point in the conversation."
+                                            "Restores every Workspace file to its content at this point in the Agent Session."
                                         }))
                                         .on_click(cx.listener(move |_this, _, window, cx| {
                                             let detail = if paths::APP_NAME == "Zed" {
                                                 "This replaces all project files with their content at this point in the conversation."
                                             } else {
-                                                "This replaces all Workspace files with their content at this point in the Agent Session."
+                                                "This replaces every Workspace file with its content at this point in the Agent Session."
                                             };
                                             let prompt = window.prompt(
                                                 gpui::PromptLevel::Warning,
@@ -6856,7 +6947,7 @@ impl ThreadView {
                             h_flex()
                                 .gap_1()
                                 .child(
-                                    Icon::new(IconName::ForwardArrowUp)
+                                    Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
                                         .color(Color::Muted)
                                         .size(IconSize::Small),
                                 )
@@ -11142,19 +11233,15 @@ impl ThreadView {
             thread_title
         } else if !tool_call_label.is_empty() {
             tool_call_label.into()
-        } else if is_cancelled {
-            "Subagent Canceled".into()
-        } else if is_failed {
-            "Subagent Failed".into()
         } else {
-            "Spawning Agent…".into()
+            subagent_card_fallback_title(is_cancelled, is_failed).into()
         };
 
         let card_header_id = format!("subagent-header-{}", entry_ix);
         let status_icon = format!("status-icon-{}", entry_ix);
         let diff_stat_id = format!("subagent-diff-{}", entry_ix);
 
-        let icon = h_flex().w_4().justify_center().child(if is_running {
+        let status_icon = if is_running {
             SpinnerLabel::new()
                 .size(LabelSize::Small)
                 .into_any_element()
@@ -11168,7 +11255,7 @@ impl ThreadView {
                             cx.theme().colors().icon_disabled.opacity(0.5),
                         )),
                 )
-                .tooltip(Tooltip::text("Subagent Cancelled"))
+                .tooltip(Tooltip::text("Subagent Canceled"))
                 .into_any_element()
         } else if is_failed {
             div()
@@ -11185,11 +11272,25 @@ impl ThreadView {
                 .size(IconSize::Small)
                 .color(Color::Success)
                 .into_any_element()
-        });
+        };
+        let icon = h_flex()
+            .gap_1()
+            .justify_center()
+            .child(
+                Icon::new(ui::subagent_icon_for_app(paths::APP_NAME))
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(status_icon);
 
         let has_expandable_content = thread
             .as_ref()
             .map_or(false, |thread| !thread.read(cx).entries().is_empty());
+        let preview_available =
+            subagent_preview_available(has_expandable_content, is_pending_tool_call);
+        let status_label =
+            subagent_card_status_label(is_running, is_pending_tool_call, is_cancelled, is_failed);
+        let accessibility_label = format!("Subagent: {title}. {status_label}.");
 
         let tooltip_meta_description = if is_expanded {
             "Click to Collapse"
@@ -11201,6 +11302,8 @@ impl ThreadView {
 
         v_flex()
             .w_full()
+            .role(gpui::Role::Region)
+            .aria_label(accessibility_label)
             .rounded_md()
             .border_1()
             .when(has_no_title_or_canceled, |this| this.border_dashed())
@@ -11273,7 +11376,7 @@ impl ThreadView {
                                         )
                                     }),
                             )
-                            .when(!has_no_title_or_canceled && !is_pending_tool_call, |this| {
+                            .when(preview_available, |this| {
                                 this.tooltip(move |_, cx| {
                                     Tooltip::with_meta(
                                         title.to_string(),
@@ -11283,7 +11386,7 @@ impl ThreadView {
                                     )
                                 })
                             })
-                            .when(has_expandable_content && !is_pending_tool_call, |this| {
+                            .when(preview_available, |this| {
                                 this.cursor_pointer()
                                     .hover(|s| s.bg(cx.theme().colors().element_hover))
                                     .child(
@@ -11391,7 +11494,11 @@ impl ThreadView {
                             "Open Subagent Session",
                         )
                         .full_width()
-                        .style(ButtonStyle::Subtle)
+                        .style(if paths::APP_NAME == "Zed" {
+                            ButtonStyle::Subtle
+                        } else {
+                            ButtonStyle::Outlined
+                        })
                         .label_size(LabelSize::Small)
                         .start_icon(
                             Icon::new(IconName::Maximize)
@@ -11399,6 +11506,7 @@ impl ThreadView {
                                 .size(IconSize::Small),
                         )
                         .tab_index(0isize)
+                        .aria_label("Open this Subagent Session")
                         .tooltip(Tooltip::text(
                             "Open this exact Subagent Session in the Agent work area",
                         ))
@@ -13345,6 +13453,60 @@ mod tests {
     use util::path;
     use workspace::MultiWorkspace;
 
+    #[test]
+    fn subagent_cards_name_identity_state_and_only_offer_real_previews() {
+        assert_eq!(
+            subagent_card_fallback_title(false, false),
+            "Starting Subagent…"
+        );
+        assert_eq!(
+            subagent_card_fallback_title(true, false),
+            "Subagent Canceled"
+        );
+        assert_eq!(subagent_card_fallback_title(false, true), "Subagent Failed");
+
+        assert_eq!(
+            subagent_card_status_label(true, false, false, false),
+            "Running"
+        );
+        assert_eq!(
+            subagent_card_status_label(true, true, false, false),
+            "Waiting for permission"
+        );
+        assert_eq!(
+            subagent_card_status_label(false, false, true, false),
+            "Canceled"
+        );
+        assert_eq!(
+            subagent_card_status_label(false, false, false, true),
+            "Failed"
+        );
+        assert_eq!(
+            subagent_card_status_label(false, false, false, false),
+            "Completed"
+        );
+
+        assert!(subagent_preview_available(true, false));
+        assert!(!subagent_preview_available(false, false));
+        assert!(!subagent_preview_available(true, true));
+        assert_eq!(
+            edits_disclosure_accessibility_label(false, 3),
+            "Expand 3 changed files"
+        );
+        assert_eq!(
+            edits_disclosure_accessibility_label(true, 1),
+            "Collapse 1 changed file"
+        );
+        assert_eq!(
+            edit_summary_action_label("Dez", "Reject All", "Reject All Changes"),
+            "Reject All Changes"
+        );
+        assert_eq!(
+            edit_summary_action_label("Zed", "Reject All", "Reject All Changes"),
+            "Reject All"
+        );
+    }
+
     fn native_command(name: &str) -> acp::AvailableCommand {
         acp::AvailableCommand::new(name, "").meta(acp_thread::meta_with_command_category(
             acp_thread::CommandCategory::Native,
@@ -13363,14 +13525,14 @@ mod tests {
             unset_model_recovery_copy("Dez", true),
             (
                 "Built-in Agent needs a model",
-                "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Agent Terminal and do not use this picker.",
+                "Select a model for the built-in Agent. Terminal agents such as Codex or Claude Code run from Open Terminal and do not use this picker.",
             )
         );
         assert_eq!(
             unset_model_recovery_copy("Dez", false),
             (
                 "Built-in Agent needs a provider",
-                "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Agent Terminal instead.",
+                "Configure a provider for the built-in Agent. To run Codex, Claude Code, or another terminal agent, use Open Terminal instead.",
             )
         );
         assert_eq!(

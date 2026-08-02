@@ -1,9 +1,9 @@
 use crate::{
-    AddActiveFileToEvidence, CloseWindow, MultiWorkspace, NewCenterTerminal, NewFile, NewTerminal,
-    OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible, RemoveActiveFileFromEvidence,
-    RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges, SidebarSide, SplitDirection,
-    ToggleAgentPane, ToggleFileFinder, ToggleProjectPane, ToggleProjectSymbols, ToggleZoom,
-    Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    AddActiveFileToEvidence, BrowseRunningSessions, CloseWindow, MultiWorkspace, NewCenterTerminal,
+    NewFile, NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
+    RemoveActiveFileFromEvidence, RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges,
+    SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
+    ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -19,6 +19,10 @@ use crate::{
         AutosaveSetting, DesignSystemSettings, FocusFollowsMouse, PaneGridSettings, TabBarSettings,
         WorkspaceSettings,
     },
+};
+use agent_settings::{
+    AgentSettings, built_in_agent_is_ready, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label,
 };
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -109,8 +113,31 @@ fn pane_navigation_history_buttons_visible(_app_name: &str, setting: bool) -> bo
     setting
 }
 
+fn pane_new_surface_control_belongs_in_tab_strip(app_name: &str, pane_kind: PaneKind) -> bool {
+    app_name != "Zed" && pane_kind == PaneKind::Tabs
+}
+
+fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
+    app_name != "Zed" && pane_kind == PaneKind::Tabs
+}
+
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
     app_name == "Zed" || is_active_pane
+}
+
+fn empty_main_work_area_terminal_action_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> SharedString {
+    if app_name == "Zed" {
+        return "Start Terminal Session".into();
+    }
+
+    let configured_label = configured_terminal_launcher_label(configured_command);
+    let destination = configured_label
+        .strip_prefix("Default · ")
+        .unwrap_or(&configured_label);
+    format!("Open Terminal · {destination}").into()
 }
 
 fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind) -> bool {
@@ -978,6 +1005,8 @@ impl Pane {
     fn render_empty_project_state(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let open_file_focus = self.focus_handle.clone();
         let new_file_focus = self.focus_handle.clone();
+        let browse_sessions_focus = self.focus_handle.clone();
+        let review_changes_focus = self.focus_handle.clone();
         let terminal_focus = self.focus_handle.clone();
         let is_active_pane = match self.workspace.upgrade() {
             Some(workspace) => workspace.read(cx).active_pane().entity_id() == cx.entity_id(),
@@ -986,13 +1015,20 @@ impl Pane {
         let show_orientation =
             empty_main_work_area_shows_orientation(paths::APP_NAME, is_active_pane);
         let is_dez = paths::APP_NAME != "Zed";
+        let configured_terminal_command =
+            AgentSettings::get_global(cx).terminal_init_command.clone();
+        let terminal_action_icon = if is_dez {
+            configured_terminal_launcher_icon(configured_terminal_command.as_deref())
+        } else {
+            IconName::Terminal
+        };
         let (title, description) = if is_dez && show_orientation {
             (
                 "Main Work Area",
-                "Open a file or Agent Terminal in this Workspace.",
+                "Start a terminal or resume running work. Files and Git review open as tabs here.",
             )
         } else if is_dez {
-            ("Empty pane", "Open a file or move a tab here.")
+            ("Empty pane", "Open or move a tab here.")
         } else if show_orientation {
             (
                 "Start work in this project",
@@ -1004,16 +1040,21 @@ impl Pane {
                 "Open a terminal, find a file, or create one in this work area.",
             )
         };
-        let terminal_action_label = if paths::APP_NAME == "Zed" {
-            "Start Terminal Session"
-        } else {
-            "Open Agent Terminal"
-        };
+        let terminal_action_label = empty_main_work_area_terminal_action_label(
+            paths::APP_NAME,
+            configured_terminal_command.as_deref(),
+        );
         let terminal_action_aria_label = if paths::APP_NAME == "Zed" {
             "Start Terminal Session in Main Work Area"
         } else {
-            "Open Agent Terminal in Main Work Area"
+            "Open Terminal in Main Work Area"
         };
+        let terminal_action = if is_dez {
+            zed_actions::terminal::OpenAgentTerminal.boxed_clone()
+        } else {
+            NewCenterTerminal::default().boxed_clone()
+        };
+        let terminal_tooltip_action = terminal_action.boxed_clone();
 
         v_flex()
             .id("empty-project-state")
@@ -1049,7 +1090,7 @@ impl Pane {
                                     h_flex()
                                         .gap_2()
                                         .child(
-                                            Icon::new(IconName::File)
+                                            Icon::new(IconName::Tab)
                                                 .size(IconSize::Small)
                                                 .color(Color::Muted),
                                         )
@@ -1074,31 +1115,50 @@ impl Pane {
                             .child(
                                 Button::new("empty-project-terminal", terminal_action_label)
                                     .tab_index(0isize)
-                                    .style(if is_dez {
-                                        ButtonStyle::Outlined
-                                    } else {
-                                        ButtonStyle::Filled
-                                    })
-                                    .start_icon(Icon::new(IconName::Terminal))
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(terminal_action_icon))
                                     .aria_label(terminal_action_aria_label)
                                     .tooltip(move |_, cx| {
                                         Tooltip::for_action(
                                             terminal_action_aria_label,
-                                            &NewCenterTerminal::default(),
+                                            &*terminal_tooltip_action,
                                             cx,
                                         )
                                     })
                                     .on_click(move |_, window, cx| {
                                         terminal_focus.dispatch_action(
-                                            &NewCenterTerminal::default(),
+                                            &*terminal_action,
                                             window,
                                             cx,
                                         );
                                     }),
                             )
+                            .when(is_dez, |this| {
+                                this.child(
+                                    Button::new("empty-project-browse-sessions", "Browse Sessions")
+                                        .tab_index(1isize)
+                                        .style(ButtonStyle::Outlined)
+                                        .start_icon(Icon::new(IconName::ListTree))
+                                        .aria_label("Browse Running Sessions")
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action(
+                                                "Browse Running Sessions",
+                                                &BrowseRunningSessions,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(move |_, window, cx| {
+                                            browse_sessions_focus.dispatch_action(
+                                                &BrowseRunningSessions,
+                                                window,
+                                                cx,
+                                            );
+                                        }),
+                                )
+                            })
                             .child(
                                 Button::new("empty-project-open-file", "Find File")
-                                    .tab_index(1isize)
+                                    .tab_index(if is_dez { 2isize } else { 1isize })
                                     .style(ButtonStyle::Outlined)
                                     .start_icon(Icon::new(IconName::FolderSearch))
                                     .aria_label("Find File in Workspace")
@@ -1117,17 +1177,44 @@ impl Pane {
                                         );
                                     }),
                             )
-                            .child(
-                                Button::new("empty-project-new-file", "New File")
-                                    .tab_index(2isize)
-                                    .style(ButtonStyle::Subtle)
-                                    .start_icon(Icon::new(IconName::File))
-                                    .aria_label("New File")
-                                    .tooltip(|_, cx| Tooltip::for_action("New File", &NewFile, cx))
-                                    .on_click(move |_, window, cx| {
-                                        new_file_focus.dispatch_action(&NewFile, window, cx);
-                                    }),
-                            ),
+                            .when(is_dez, |this| {
+                                this.child(
+                                    Button::new("empty-project-review-changes", "Review Changes")
+                                        .tab_index(3isize)
+                                        .style(ButtonStyle::Outlined)
+                                        .start_icon(Icon::new(IconName::Diff))
+                                        .aria_label("Review Workspace Changes")
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action(
+                                                "Review Workspace Changes",
+                                                &RevealGitChanges,
+                                                cx,
+                                            )
+                                        })
+                                        .on_click(move |_, window, cx| {
+                                            review_changes_focus.dispatch_action(
+                                                &RevealGitChanges,
+                                                window,
+                                                cx,
+                                            );
+                                        }),
+                                )
+                            })
+                            .when(!is_dez, |this| {
+                                this.child(
+                                    Button::new("empty-project-new-file", "New File")
+                                        .tab_index(2isize)
+                                        .style(ButtonStyle::Subtle)
+                                        .start_icon(Icon::new(IconName::File))
+                                        .aria_label("New File")
+                                        .tooltip(|_, cx| {
+                                            Tooltip::for_action("New File", &NewFile, cx)
+                                        })
+                                        .on_click(move |_, window, cx| {
+                                            new_file_focus.dispatch_action(&NewFile, window, cx);
+                                        }),
+                                )
+                            }),
                     ),
             )
     }
@@ -2514,8 +2601,17 @@ impl Pane {
                 }
 
                 if should_save {
-                    match Self::save_item(project.clone(), &pane, &*item_to_close, save_intent, cx)
-                        .await
+                    let Some(pane_handle) = pane.upgrade() else {
+                        return Ok(());
+                    };
+                    match Self::save_item(
+                        project.clone(),
+                        pane_handle,
+                        &*item_to_close,
+                        save_intent,
+                        cx,
+                    )
+                    .await
                     {
                         Ok(success) => {
                             if !success {
@@ -2736,7 +2832,7 @@ impl Pane {
 
     pub async fn save_item(
         project: Entity<Project>,
-        pane: &WeakEntity<Pane>,
+        pane: Entity<Pane>,
         item: &dyn ItemHandle,
         save_intent: SaveIntent,
         cx: &mut AsyncWindowContext,
@@ -2757,11 +2853,7 @@ impl Pane {
             }
             return Ok(true);
         };
-        let Some(item_ix) = pane
-            .read_with(cx, |pane, _| pane.index_for_item(item))
-            .ok()
-            .flatten()
-        else {
+        let Some(item_ix) = pane.read_with(cx, |pane, _| pane.index_for_item(item)) else {
             return Ok(true);
         };
 
@@ -2905,7 +2997,7 @@ impl Pane {
                                     "save modal was not present in spawned modals after awaiting for its answer"
                                 )
                             }
-                        })?;
+                        });
                         match answer {
                             Ok(0) => {}
                             Ok(1) => {
@@ -2970,16 +3062,13 @@ impl Pane {
                     return Ok(false);
                 };
 
-                let project_path = pane
-                    .update(cx, |pane, cx| {
-                        pane.project
-                            .update(cx, |project, cx| {
-                                project.find_or_create_worktree(new_path, true, cx)
-                            })
-                            .ok()
-                    })
-                    .ok()
-                    .flatten();
+                let project_path = pane.update(cx, |pane, cx| {
+                    pane.project
+                        .update(cx, |project, cx| {
+                            project.find_or_create_worktree(new_path, true, cx)
+                        })
+                        .ok()
+                });
                 let save_task = if let Some(project_path) = project_path {
                     let (worktree, path) = project_path.await?;
                     let worktree_id = worktree.read_with(cx, |worktree, _| worktree.id());
@@ -3017,13 +3106,13 @@ impl Pane {
             }
         }
 
-        pane.update(cx, |_, cx| {
+        Ok(pane.update(cx, |_, cx| {
             cx.emit(Event::UserSavedItem {
                 item: item.downgrade_item(),
                 save_intent,
             });
             true
-        })
+        }))
     }
 
     pub fn autosave_item(
@@ -3284,6 +3373,10 @@ impl Pane {
         window: &Window,
         cx: &App,
     ) -> Option<AnyElement> {
+        if let Some(icon) = item.tab_icon_element(window, cx) {
+            return Some(icon);
+        }
+
         let icon = item
             .tab_icon(window, cx)?
             .size(IconSize::Small)
@@ -3370,7 +3463,7 @@ impl Pane {
         let tab_accessibility_label = item.tab_content_text(detail, cx);
 
         let read_only_toggle = |toggleable: bool| {
-            IconButton::new("toggle_read_only", IconName::FileLock)
+            IconButton::new(("toggle-read-only", item_id), IconName::FileLock)
                 .size(ButtonSize::None)
                 .shape(IconButtonShape::Square)
                 .icon_color(Color::Muted)
@@ -3387,13 +3480,13 @@ impl Pane {
                 .tooltip(move |_, cx| {
                     if toggleable {
                         Tooltip::with_meta(
-                            "Unlock File",
+                            "Unlock Tab",
                             None,
-                            "This will make this file editable",
+                            "This will make this tab editable",
                             cx,
                         )
                     } else {
-                        Tooltip::with_meta("Locked File", None, "This file is read-only", cx)
+                        Tooltip::with_meta("Locked Tab", None, "This tab is read-only", cx)
                     }
                 })
                 .on_click(cx.listener(move |pane, _, window, cx| {
@@ -3543,7 +3636,7 @@ impl Pane {
                     end_slot_action = &TogglePinTab;
                     end_slot_tooltip_text = "Unpin Tab";
                     Some(
-                        IconButton::new("unpin tab", IconName::Pin)
+                        IconButton::new(("unpin-tab", item_id), IconName::Pin)
                             .shape(IconButtonShape::Square)
                             .icon_color(Color::Muted)
                             .size(ButtonSize::None)
@@ -3560,8 +3653,12 @@ impl Pane {
                     end_slot_tooltip_text = item.tab_close_tooltip_text(cx);
                     let close_icon = item.tab_close_icon(cx);
                     match show_close_button {
-                        ShowCloseButton::Always => Some(IconButton::new("close tab", close_icon)),
-                        ShowCloseButton::Hover => Some(IconButton::new("close tab", close_icon)),
+                        ShowCloseButton::Always => {
+                            Some(IconButton::new(("close-tab", item_id), close_icon))
+                        }
+                        ShowCloseButton::Hover => {
+                            Some(IconButton::new(("close-tab", item_id), close_icon))
+                        }
                         ShowCloseButton::Hidden => None,
                     }
                     .map(|button| {
@@ -3662,7 +3759,7 @@ impl Pane {
                             } else {
                                 this.tooltip(move |_, cx| {
                                     let text = text.clone();
-                                    Tooltip::with_meta(text, None, "Read-Only File", cx)
+                                    Tooltip::with_meta(text, None, "Read-Only Tab", cx)
                                 })
                             }
                         }
@@ -3848,9 +3945,9 @@ impl Pane {
 
                         if capability != Capability::ReadOnly {
                             let read_only_label = if capability.editable() {
-                                "Make File Read-Only"
+                                "Make Tab Read-Only"
                             } else {
-                                "Make File Editable"
+                                "Make Tab Editable"
                             };
                             menu = menu.separator().entry(
                                 read_only_label,
@@ -4348,8 +4445,34 @@ impl Pane {
         tab_count: usize,
         cx: &mut Context<Pane>,
     ) -> impl IntoElement {
-        h_flex()
+        let add_control_belongs_in_tab_strip =
+            pane_new_surface_control_belongs_in_tab_strip(paths::APP_NAME, self.pane_kind);
+        let tabs_overflow = self.tab_bar_scroll_handle.max_offset().x > px(2.0);
+        let inline_new_surface_control =
+            (add_control_belongs_in_tab_strip && !tabs_overflow).then(|| {
+                h_flex()
+                    .id("pane-tab-bar-add-slot")
+                    .flex_none()
+                    .h_full()
+                    .px(DynamicSpacing::Base04.rems(cx))
+                    .child(render_new_surface_control(self))
+                    .into_any_element()
+            });
+        let fixed_new_surface_control =
+            (add_control_belongs_in_tab_strip && tabs_overflow).then(|| {
+                h_flex()
+                    .id("pane-tab-bar-add-slot")
+                    .flex_none()
+                    .h_full()
+                    .px(DynamicSpacing::Base04.rems(cx))
+                    .child(render_new_surface_control(self))
+                    .into_any_element()
+            });
+
+        let scrollable_tabs = h_flex()
             .id("unpinned tabs")
+            .min_w_0()
+            .flex_1()
             .overflow_x_scroll()
             .w_full()
             .track_scroll(&self.tab_bar_scroll_handle)
@@ -4357,7 +4480,14 @@ impl Pane {
                 this.suppress_scroll = true;
             }))
             .children(unpinned_tabs)
-            .child(self.render_tab_bar_drop_target(tab_count, cx))
+            .child(self.render_tab_bar_drop_target(tab_count, inline_new_surface_control, cx));
+
+        h_flex()
+            .id("unpinned-tabs-container")
+            .min_w_0()
+            .w_full()
+            .child(scrollable_tabs)
+            .children(fixed_new_surface_control)
     }
 
     fn render_tab_overflow_menu_button(
@@ -4373,6 +4503,15 @@ impl Pane {
             .map(|((ix, item), detail)| {
                 let label = item.tab_content_text(detail, cx);
                 let is_active = ix == self.active_item_index;
+                let label = if paths::APP_NAME == "Zed" {
+                    label
+                } else {
+                    pane_tab_overflow_entry_label(
+                        &label,
+                        item.is_dirty(cx),
+                        ix < self.pinned_tab_count,
+                    )
+                };
                 (ix, label, is_active)
             })
             .collect::<Vec<_>>();
@@ -4422,6 +4561,7 @@ impl Pane {
     fn render_tab_bar_drop_target(
         &self,
         tab_count: usize,
+        leading_child: Option<AnyElement>,
         cx: &mut Context<Pane>,
     ) -> impl IntoElement {
         div()
@@ -4430,6 +4570,7 @@ impl Pane {
             .min_w_6()
             .h(canvas_tab_bar_height(cx))
             .flex_grow_1()
+            .children(leading_child)
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
             .child("")
@@ -5522,13 +5663,8 @@ fn default_render_tab_bar_buttons(
     }
 
     let has_focus = pane.has_focus(window, cx) || pane.context_menu_focused(window, cx);
-    let add_control = render_new_surface_control(pane);
     if !has_focus {
-        return if paths::APP_NAME == "Zed" {
-            (None, None)
-        } else {
-            (None, Some(add_control))
-        };
+        return (None, None);
     }
 
     let (can_clone, can_split_move) = match pane.active_item() {
@@ -5543,7 +5679,9 @@ fn default_render_tab_bar_buttons(
     let right_children = h_flex()
         // Instead we need to replicate the spacing from the [TabBar]'s `end_slot` here.
         .gap(DynamicSpacing::Base04.rems(cx))
-        .child(add_control)
+        .when(paths::APP_NAME == "Zed", |this| {
+            this.child(render_new_surface_control(pane))
+        })
         .child(
             PopoverMenu::new("pane-tab-bar-split")
                 .trigger_with_tooltip(
@@ -5583,6 +5721,7 @@ fn default_render_tab_bar_buttons(
 
 fn render_new_surface_control(pane: &Pane) -> AnyElement {
     let (aria_label, tooltip) = pane_new_surface_control_copy(paths::APP_NAME);
+    let workspace = pane.workspace();
     let (new_file, open_file, search_workspace, search_symbols) =
         pane_new_surface_menu_copy(paths::APP_NAME);
 
@@ -5598,7 +5737,30 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
         .anchor(Anchor::TopRight)
         .with_handle(pane.new_item_context_menu_handle.clone())
         .menu(move |window, cx| {
-            Some(ContextMenu::build(window, cx, |menu, _, _| {
+            let startup_ready = crate::workspace_startup_is_ready(cx);
+            let workspace_location = workspace.upgrade().map(|workspace| {
+                let project_group_key = workspace.read(cx).project_group_key(cx);
+                (
+                    project_group_key.host().is_none(),
+                    project_group_key
+                        .path_list()
+                        .ordered_paths()
+                        .next()
+                        .is_some(),
+                )
+            });
+            let has_workspace_root = workspace_location.is_some_and(|(_, has_root)| has_root);
+            let cmux_handoff_applicable =
+                workspace_location.is_some_and(|(is_local, has_root)| is_local && has_root);
+            let default_terminal_icon = configured_terminal_launcher_icon(
+                AgentSettings::get_global(cx)
+                    .terminal_init_command
+                    .as_deref(),
+            );
+            let built_in_agent_ready = built_in_agent_is_ready(cx);
+            let (built_in_agent_label, built_in_agent_icon) =
+                pane_built_in_agent_action_presentation(built_in_agent_ready);
+            Some(ContextMenu::build(window, cx, move |menu, _, _| {
                 if paths::APP_NAME == "Zed" {
                     menu.action(new_file, NewFile.boxed_clone())
                         .action(open_file, ToggleFileFinder::default().boxed_clone())
@@ -5611,22 +5773,150 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                             "New Center Terminal",
                             NewCenterTerminal::default().boxed_clone(),
                         )
-                } else {
-                    menu.action(
-                        "Open Agent Terminal",
-                        NewCenterTerminal::default().boxed_clone(),
+                } else if !startup_ready {
+                    menu.header("Finish Setup").action(
+                        "Install and Relaunch",
+                        zed_actions::dez::InstallAndRelaunch.boxed_clone(),
                     )
-                    .action("Open Built-in Agent", RevealBuiltInAgent.boxed_clone())
-                    .separator()
-                    .action(new_file, NewFile.boxed_clone())
-                    .action(open_file, ToggleFileFinder::default().boxed_clone())
-                    .separator()
-                    .action("Open Files", RevealFiles.boxed_clone())
-                    .action("Review Git Changes", RevealGitChanges.boxed_clone())
-                    .action("Open Debug", RevealDebug.boxed_clone())
-                    .separator()
-                    .action(search_workspace, DeploySearch::default().boxed_clone())
-                    .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                } else if !has_workspace_root {
+                    menu.header("Start with a Workspace")
+                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
+                        .action(
+                            "Open Workspace…",
+                            crate::OpenFolder {
+                                create_new_window: Some(false),
+                            }
+                            .boxed_clone(),
+                        )
+                        .action(
+                            "Open Recent Workspaces…",
+                            zed_actions::OpenRecent::default().boxed_clone(),
+                        )
+                } else {
+                    let menu = menu
+                        .submenu("Open Terminal", |menu, _, _| {
+                            menu.action_with_icon(
+                                "Default Terminal",
+                                default_terminal_icon,
+                                zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
+                            )
+                            .action_with_icon(
+                                "Native Shell",
+                                IconName::Terminal,
+                                zed_actions::terminal::OpenShellTerminal.boxed_clone(),
+                            )
+                            .action_with_icon(
+                                terminal_view::WORKSPACE_TMUX_LAUNCHER_LABEL,
+                                IconName::SplitAlt,
+                                zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
+                            )
+                            .separator()
+                            .action_with_icon(
+                                "Codex",
+                                IconName::AiOpenAi,
+                                zed_actions::terminal::OpenCodexTerminal.boxed_clone(),
+                            )
+                            .action_with_icon(
+                                "Claude Code",
+                                IconName::AiClaude,
+                                zed_actions::terminal::OpenClaudeCodeTerminal.boxed_clone(),
+                            )
+                            .action_with_icon(
+                                "OpenCode",
+                                IconName::AiOpenCode,
+                                zed_actions::terminal::OpenOpenCodeTerminal.boxed_clone(),
+                            )
+                            .submenu(
+                                "More Agent CLIs",
+                                |menu, _, _| {
+                                    menu.action_with_icon(
+                                        "Gemini CLI",
+                                        IconName::AiGemini,
+                                        zed_actions::terminal::OpenGeminiTerminal.boxed_clone(),
+                                    )
+                                    .action_with_icon(
+                                        "Aider",
+                                        IconName::AiEdit,
+                                        zed_actions::terminal::OpenAiderTerminal.boxed_clone(),
+                                    )
+                                    .action_with_icon(
+                                        "Herdr",
+                                        IconName::Inception,
+                                        zed_actions::terminal::OpenHerdrTerminal.boxed_clone(),
+                                    )
+                                },
+                            )
+                        })
+                        .submenu("Continue Agent", |menu, _, _| {
+                            menu.action_with_icon(
+                                "Codex · Last Session",
+                                IconName::AiOpenAi,
+                                zed_actions::terminal::ResumeCodexTerminal.boxed_clone(),
+                            )
+                            .action_with_icon(
+                                "Claude Code · Last Session",
+                                IconName::AiClaude,
+                                zed_actions::terminal::ResumeClaudeCodeTerminal.boxed_clone(),
+                            )
+                            .action_with_icon(
+                                "OpenCode · Last Session",
+                                IconName::AiOpenCode,
+                                zed_actions::terminal::ResumeOpenCodeTerminal.boxed_clone(),
+                            )
+                        });
+                    let menu = if built_in_agent_ready {
+                        menu.action_with_icon(
+                            built_in_agent_label,
+                            built_in_agent_icon,
+                            RevealBuiltInAgent.boxed_clone(),
+                        )
+                    } else {
+                        menu.action_with_icon(
+                            built_in_agent_label,
+                            built_in_agent_icon,
+                            zed_actions::OpenSettingsAt {
+                                path: "llm_providers".to_owned(),
+                                target: None,
+                            }
+                            .boxed_clone(),
+                        )
+                    };
+                    menu.separator()
+                        .action_with_icon(
+                            "Browse Running Sessions…",
+                            IconName::ListTree,
+                            BrowseRunningSessions.boxed_clone(),
+                        )
+                        .when(cmux_handoff_applicable, |menu| {
+                            menu.action_with_icon(
+                                "Open Workspace in cmux",
+                                IconName::ArrowUpRight,
+                                zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
+                            )
+                        })
+                        .separator()
+                        .action(new_file, NewFile.boxed_clone())
+                        .action(open_file, ToggleFileFinder::default().boxed_clone())
+                        .separator()
+                        .action("Open Files", RevealFiles.boxed_clone())
+                        .action("Review Changes", RevealGitChanges.boxed_clone())
+                        .action(
+                            "Run Task…",
+                            zed_actions::Spawn::ViaModal {
+                                reveal_target: None,
+                            }
+                            .boxed_clone(),
+                        )
+                        .action("Open Debug", RevealDebug.boxed_clone())
+                        .separator()
+                        .action(search_workspace, DeploySearch::default().boxed_clone())
+                        .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                        .separator()
+                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
+                        .action(
+                            "Open Recent Workspaces…",
+                            zed_actions::OpenRecent::default().boxed_clone(),
+                        )
                 }
             }))
         })
@@ -5668,8 +5958,16 @@ fn pane_new_surface_control_copy(app_name: &str) -> (&'static str, &'static str)
     } else {
         (
             "Add to Main Work Area",
-            "Open a terminal, file, or workspace tool",
+            "Add a terminal, Agent, file, review, or Workspace tool",
         )
+    }
+}
+
+fn pane_built_in_agent_action_presentation(built_in_agent_ready: bool) -> (&'static str, IconName) {
+    if built_in_agent_ready {
+        ("Open Built-in Agent", IconName::DezAgent)
+    } else {
+        ("Configure Built-in Agent…", IconName::Settings)
     }
 }
 
@@ -5681,7 +5979,7 @@ fn pane_new_surface_menu_copy(
     } else {
         (
             "New File",
-            "Open File…",
+            "Find File…",
             "Search Workspace…",
             "Go to Symbol…",
         )
@@ -5711,7 +6009,20 @@ fn pane_tab_overflow_copy(app_name: &str) -> (&'static str, &'static str) {
     if app_name == "Zed" {
         ("Open Tab", "Tabs")
     } else {
-        ("Switch Tab", "Tabs")
+        ("Switch Tab", "Tabs in This Pane")
+    }
+}
+
+fn pane_tab_overflow_entry_label(
+    label: &SharedString,
+    is_dirty: bool,
+    is_pinned: bool,
+) -> SharedString {
+    match (is_dirty, is_pinned) {
+        (true, true) => format!("{label} · Modified, pinned").into(),
+        (true, false) => format!("{label} · Modified").into(),
+        (false, true) => format!("{label} · Pinned").into(),
+        (false, false) => label.clone(),
     }
 }
 
@@ -5772,8 +6083,13 @@ impl Render for Pane {
         let active_item_forces_tab_bar = self
             .active_item()
             .is_some_and(|item| item.force_show_tab_bar(cx));
+        let keeps_empty_tab_bar = pane_keeps_tab_bar_when_empty(paths::APP_NAME, self.pane_kind)
+            && self.active_item().is_none();
         let display_tab_bar = should_display_tab_bar(window, cx)
-            && !(auto_hide_single_tab_bar && self.items_len() <= 1 && !active_item_forces_tab_bar);
+            && (keeps_empty_tab_bar
+                || !(auto_hide_single_tab_bar
+                    && self.items_len() <= 1
+                    && !active_item_forces_tab_bar));
         let Some(project) = self.project.upgrade() else {
             return div()
                 .id(("detached-pane", cx.entity_id()))
@@ -5948,10 +6264,13 @@ impl Render for Pane {
                     cx.propagate();
                 }
             }))
-            .when(self.active_item().is_some() && display_tab_bar, |element| {
-                let header = (self.render_tab_bar.clone())(self, window, cx);
-                element.child(self.render_header_with_traffic_light_spacer(header, window, cx))
-            })
+            .when(
+                (self.active_item().is_some() || keeps_empty_tab_bar) && display_tab_bar,
+                |element| {
+                    let header = (self.render_tab_bar.clone())(self, window, cx);
+                    element.child(self.render_header_with_traffic_light_spacer(header, window, cx))
+                },
+            )
             .child({
                 let has_worktrees = project.read(cx).visible_worktrees(cx).next().is_some();
                 let body_accepts_dragged_selection = self.pane_kind != PaneKind::Project;
@@ -6541,6 +6860,9 @@ mod tests {
             "Dez should keep pane movement in explicit layout controls instead of overlaying every header"
         );
         assert!(pane_drag_handle_visible("Zed"));
+        assert!(pane_keeps_tab_bar_when_empty("Dez", PaneKind::Tabs));
+        assert!(!pane_keeps_tab_bar_when_empty("Dez", PaneKind::Project));
+        assert!(!pane_keeps_tab_bar_when_empty("Zed", PaneKind::Tabs));
         assert!(
             !pane_navigation_history_buttons_visible("Dez", false),
             "Dez should not repeat Back and Forward controls in every pane when the setting is off"
@@ -6549,18 +6871,42 @@ mod tests {
         assert!(pane_navigation_history_buttons_visible("Zed", true));
         assert!(!pane_navigation_history_buttons_visible("Zed", false));
         assert_eq!(
+            empty_main_work_area_terminal_action_label("Dez", None),
+            "Open Terminal · Native Shell"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Dez", Some("my-tui")),
+            "Open Terminal · Custom Command"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_action_label("Zed", Some("codex")),
+            "Start Terminal Session"
+        );
+        assert_eq!(
             pane_new_surface_control_copy("Dez"),
             (
                 "Add to Main Work Area",
-                "Open a terminal, file, or workspace tool"
+                "Add a terminal, Agent, file, review, or Workspace tool"
             )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
         assert_eq!(
+            pane_built_in_agent_action_presentation(true),
+            ("Open Built-in Agent", IconName::DezAgent)
+        );
+        assert_eq!(
+            pane_built_in_agent_action_presentation(false),
+            ("Configure Built-in Agent…", IconName::Settings)
+        );
+        assert_eq!(
             pane_new_surface_menu_copy("Dez"),
             (
                 "New File",
-                "Open File…",
+                "Find File…",
                 "Search Workspace…",
                 "Go to Symbol…"
             )
@@ -6589,8 +6935,28 @@ mod tests {
             pane_split_control_copy("Dez", true),
             ("Split Pane", "Split Pane")
         );
-        assert_eq!(pane_tab_overflow_copy("Dez"), ("Switch Tab", "Tabs"));
+        assert_eq!(
+            pane_tab_overflow_copy("Dez"),
+            ("Switch Tab", "Tabs in This Pane")
+        );
         assert_eq!(pane_tab_overflow_copy("Zed"), ("Open Tab", "Tabs"));
+        let overflow_label = SharedString::from("Terminal · Codex");
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, false, false),
+            "Terminal · Codex"
+        );
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, true, false),
+            "Terminal · Codex · Modified"
+        );
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, false, true),
+            "Terminal · Codex · Pinned"
+        );
+        assert_eq!(
+            pane_tab_overflow_entry_label(&overflow_label, true, true),
+            "Terminal · Codex · Modified, pinned"
+        );
         assert!(
             !pane_tab_end_control_requires_hover("Dez", true, true, false),
             "the active Dez tab close control should not require pointer hover"
@@ -6629,6 +6995,26 @@ mod tests {
         assert!(!pane_tab_is_persistent_workspace_tool(
             "Zed",
             PaneKind::Project
+        ));
+    }
+
+    #[test]
+    fn dez_new_surface_control_belongs_in_the_main_tab_strip() {
+        assert!(pane_new_surface_control_belongs_in_tab_strip(
+            "Dez",
+            PaneKind::Tabs
+        ));
+        assert!(!pane_new_surface_control_belongs_in_tab_strip(
+            "Dez",
+            PaneKind::Project
+        ));
+        assert!(!pane_new_surface_control_belongs_in_tab_strip(
+            "Dez",
+            PaneKind::Agent
+        ));
+        assert!(!pane_new_surface_control_belongs_in_tab_strip(
+            "Zed",
+            PaneKind::Tabs
         ));
     }
 
@@ -10083,7 +10469,7 @@ mod tests {
         // Assert
         let tab_bar_scroll_handle =
             pane.update_in(cx, |pane, _window, _cx| pane.tab_bar_scroll_handle.clone());
-        assert_eq!(tab_bar_scroll_handle.children_count(), 6);
+        assert_eq!(tab_bar_scroll_handle.children_count(), 5);
         let tab_bounds = cx.debug_bounds("TAB-4").unwrap();
         let new_tab_button_bounds = cx.debug_bounds("ICON-Plus").unwrap();
         let scroll_bounds = tab_bar_scroll_handle.bounds();
@@ -10092,6 +10478,7 @@ mod tests {
         assert!(scroll_offset.x >= -tab_bar_scroll_handle.max_offset().x);
         assert!(tab_bounds.left() >= scroll_bounds.left());
         assert!(tab_bounds.right() <= scroll_bounds.right());
+        assert!(new_tab_button_bounds.left() >= scroll_bounds.right());
         assert!(
             !tab_bounds.intersects(&new_tab_button_bounds),
             "Tab should not overlap with the new tab button, if this is failing check if there's been a redesign!"

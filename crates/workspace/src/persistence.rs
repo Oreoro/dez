@@ -2065,12 +2065,7 @@ impl WorkspaceDb {
         any_dir
     }
 
-    // Returns the raw recent workspace history. Scratch workspaces (no paths) are filtered
-    // out because they are restored separately by `last_session_workspace_locations`.
-    pub async fn recent_project_workspaces_ungrouped(
-        &self,
-        fs: &dyn Fs,
-    ) -> Result<Vec<RecentWorkspace>> {
+    fn persisted_recent_project_workspaces_ungrouped(&self) -> Result<Vec<RecentWorkspace>> {
         let remote_connections = self.remote_connections()?;
         let mut result = Vec::new();
         for (id, paths, identity_paths_hint, remote_connection_id, _session_id, timestamp) in
@@ -2093,21 +2088,43 @@ impl WorkspaceDb {
                 continue;
             }
 
-            if Self::all_paths_exist_with_a_directory(paths.paths(), fs).await {
-                let identity_paths = resolve_local_workspace_identity(fs, &paths)
-                    .await
-                    .or(identity_paths_hint)
-                    .unwrap_or_else(|| paths.clone());
-                result.push(RecentWorkspace {
-                    workspace_id: id,
-                    location: SerializedWorkspaceLocation::Local,
-                    paths,
-                    identity_paths,
-                    timestamp,
-                });
-            }
+            result.push(RecentWorkspace {
+                workspace_id: id,
+                location: SerializedWorkspaceLocation::Local,
+                identity_paths: identity_paths_hint.unwrap_or_else(|| paths.clone()),
+                paths,
+                timestamp,
+            });
         }
 
+        Ok(result)
+    }
+
+    pub fn persisted_recent_project_workspaces(&self) -> Result<Vec<RecentWorkspace>> {
+        Ok(dedupe_recent_workspaces(
+            self.persisted_recent_project_workspaces_ungrouped()?,
+        ))
+    }
+
+    // Scratch workspaces are restored separately by `last_session_workspace_locations`.
+    pub async fn recent_project_workspaces_ungrouped(
+        &self,
+        fs: &dyn Fs,
+    ) -> Result<Vec<RecentWorkspace>> {
+        let mut result = Vec::new();
+        for mut workspace in self.persisted_recent_project_workspaces_ungrouped()? {
+            if matches!(&workspace.location, SerializedWorkspaceLocation::Remote(_)) {
+                result.push(workspace);
+                continue;
+            }
+
+            if Self::all_paths_exist_with_a_directory(workspace.paths.paths(), fs).await {
+                workspace.identity_paths = resolve_local_workspace_identity(fs, &workspace.paths)
+                    .await
+                    .unwrap_or(workspace.identity_paths);
+                result.push(workspace);
+            }
+        }
         Ok(result)
     }
 

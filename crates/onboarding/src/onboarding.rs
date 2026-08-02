@@ -53,8 +53,28 @@ pub struct ImportCursorSettings {
 pub const FIRST_OPEN: &str = "first_open";
 const DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px(760.);
 
+pub fn should_show_onboarding_on_first_open(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn onboarding_page_enabled_for_app(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
 fn dez_onboarding_uses_compact_layout(app_name: &str, viewport_width: Pixels) -> bool {
     app_name != "Zed" && viewport_width < DEZ_ONBOARDING_COMPACT_BREAKPOINT
+}
+
+fn onboarding_toggles_left_dock(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn onboarding_surface_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Onboarding"
+    } else {
+        "Set Up Dez"
+    }
 }
 
 actions!(
@@ -75,6 +95,11 @@ pub fn init(cx: &mut App) {
     .detach();
 
     cx.on_action(|_: &OpenOnboarding, cx| {
+        if !onboarding_page_enabled_for_app(APP_NAME) {
+            cx.dispatch_action(&zed_actions::OpenSettings);
+            return;
+        }
+
         with_active_or_new_workspace(cx, |workspace, window, cx| {
             workspace
                 .with_local_workspace(window, cx, |workspace, window, cx| {
@@ -186,7 +211,9 @@ pub fn show_onboarding_view(app_state: Arc<AppState>, cx: &mut App) -> Task<anyh
         cx,
         |workspace, window, cx| {
             {
-                workspace.toggle_dock(DockPosition::Left, window, cx);
+                if onboarding_toggles_left_dock(APP_NAME) {
+                    workspace.toggle_dock(DockPosition::Left, window, cx);
+                }
                 let onboarding_page = Onboarding::new(workspace, cx);
                 workspace.add_item_to_center(Box::new(onboarding_page.clone()), window, cx);
 
@@ -258,6 +285,8 @@ impl Render for Onboarding {
 
         div()
             .image_cache(gpui::retain_all("onboarding-page"))
+            .id("onboarding-page")
+            .role(gpui::Role::Main)
             .key_context({
                 let mut ctx = KeyContext::new_with_defaults();
                 ctx.add("Onboarding");
@@ -356,12 +385,6 @@ impl Render for Onboarding {
                                                     .flex()
                                                     .items_center()
                                                     .justify_center()
-                                                    .rounded_md()
-                                                    .border_1()
-                                                    .border_color(
-                                                        cx.theme().colors().border_variant,
-                                                    )
-                                                    .bg(cx.theme().colors().element_background)
                                                     .child(
                                                         Icon::new(IconName::Settings)
                                                             .size(IconSize::Small)
@@ -424,7 +447,7 @@ impl Item for Onboarding {
     type Event = ItemEvent;
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        "Onboarding".into()
+        onboarding_surface_label(APP_NAME).into()
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
@@ -436,7 +459,7 @@ impl Item for Onboarding {
     }
 
     fn can_split(&self) -> bool {
-        true
+        onboarding_page_enabled_for_app(APP_NAME)
     }
 
     fn clone_on_split(
@@ -445,6 +468,10 @@ impl Item for Onboarding {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Option<Entity<Self>>> {
+        if !onboarding_page_enabled_for_app(APP_NAME) {
+            return Task::ready(None);
+        }
+
         Task::ready(Some(cx.new(|cx| Onboarding {
             workspace: self.workspace.clone(),
             scroll_handle: ScrollHandle::new(),
@@ -467,6 +494,18 @@ mod tests {
         assert!(dez_onboarding_uses_compact_layout("Dez", px(759.)));
         assert!(!dez_onboarding_uses_compact_layout("Dez", px(760.)));
         assert!(!dez_onboarding_uses_compact_layout("Zed", px(320.)));
+    }
+
+    #[test]
+    fn dez_setup_stays_in_the_main_work_area() {
+        assert!(!should_show_onboarding_on_first_open("Dez"));
+        assert!(should_show_onboarding_on_first_open("Zed"));
+        assert!(!onboarding_page_enabled_for_app("Dez"));
+        assert!(onboarding_page_enabled_for_app("Zed"));
+        assert!(!onboarding_toggles_left_dock("Dez"));
+        assert!(onboarding_toggles_left_dock("Zed"));
+        assert_eq!(onboarding_surface_label("Dez"), "Set Up Dez");
+        assert_eq!(onboarding_surface_label("Zed"), "Onboarding");
     }
 }
 
@@ -653,6 +692,12 @@ impl workspace::SerializableItem for Onboarding {
         window: &mut Window,
         cx: &mut App,
     ) -> gpui::Task<gpui::Result<Entity<Self>>> {
+        if !onboarding_page_enabled_for_app(APP_NAME) {
+            return Task::ready(Err(anyhow::anyhow!(
+                "Dez uses Home and native Settings instead of restoring onboarding"
+            )));
+        }
+
         let db = persistence::OnboardingPagesDb::global(cx);
         window.spawn(cx, async move |cx| {
             if let Some(_) = db.get_onboarding_page(item_id, workspace_id)? {
@@ -682,7 +727,7 @@ impl workspace::SerializableItem for Onboarding {
     }
 
     fn should_serialize(&self, event: &Self::Event) -> bool {
-        event == &ItemEvent::UpdateTab
+        onboarding_page_enabled_for_app(APP_NAME) && event == &ItemEvent::UpdateTab
     }
 }
 

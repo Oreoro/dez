@@ -424,6 +424,7 @@ dependencies = [
  "fs",
  "futures 0.3.32",
  "gpui",
+ "icons",
  "language_model",
  "log",
  "paths",
@@ -6644,6 +6645,7 @@ dependencies = [
  "language",
  "menu",
  "open_path_prompt",
+ "paths",
  "picker",
  "picker_preview",
  "pretty_assertions",
@@ -18601,6 +18603,7 @@ dependencies = [
 name = "terminal_view"
 version = "0.1.0"
 dependencies = [
+ "agent_settings",
  "anyhow",
  "async-recursion",
  "breadcrumbs",
@@ -23209,7 +23212,7 @@ dependencies = [
 
 [[package]]
 name = "zed"
-version = "0.0.4"
+version = "0.2.2"
 dependencies = [
  "acp_thread",
  "acp_tools",

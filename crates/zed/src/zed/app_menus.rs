@@ -1,8 +1,11 @@
+use agent_settings::AgentSettings;
 use gpui::{App, Menu, MenuItem, OsAction};
 use paths::APP_NAME;
 use release_channel::ReleaseChannel;
 use settings::Settings as _;
-use terminal_view::terminal_panel;
+use terminal_view::{
+    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_label, terminal_panel,
+};
 use zed_actions::{Quit, assistant, debug_panel, dev, git_panel, project_panel};
 
 fn terminal_panel_surface_visible(app_name: &str) -> bool {
@@ -18,6 +21,16 @@ fn product_menu_label(
         zed_label
     } else {
         dez_label
+    }
+}
+
+fn open_workspace_menu_label(app_name: &str, is_macos: bool) -> &'static str {
+    if app_name != "Zed" {
+        "Open Workspace…"
+    } else if is_macos {
+        "Open…"
+    } else {
+        "Open Folder..."
     }
 }
 
@@ -84,6 +97,11 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     );
     let git_surface_label =
         developer_surface_menu_label(APP_NAME, panels_as_pane_tabs, "Git", "Git Tab", "Git Panel");
+    let configured_terminal_label = configured_terminal_launcher_label(
+        AgentSettings::get_global(cx)
+            .terminal_init_command
+            .as_deref(),
+    );
 
     let mut view_items = vec![
         MenuItem::action(
@@ -120,10 +138,18 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 
     if workspace_tools_are_grouped(APP_NAME) {
         view_items.extend([
-            MenuItem::action("Projects", workspace::ToggleSidebar),
-            MenuItem::submenu(Menu::new("Workspace Tools").items([
-                MenuItem::action(project_pane_label, workspace::ToggleProjectPane),
+            MenuItem::action("Workspaces", workspace::ToggleSidebar),
+            MenuItem::submenu(Menu::new("Navigate Workspaces").items([
+                MenuItem::action("Focus Workspaces", workspace::FocusSidebar),
+                MenuItem::action(
+                    "Search Workspaces and Sessions…",
+                    zed_actions::sidebar::FocusSidebarFilter,
+                ),
                 MenuItem::separator(),
+                MenuItem::action("Previous Workspace", workspace::PreviousProject),
+                MenuItem::action("Next Workspace", workspace::NextProject),
+            ])),
+            MenuItem::submenu(Menu::new("Workspace Tools").items([
                 MenuItem::action(project_surface_label, project_panel::ToggleFocus),
                 MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
                 MenuItem::action(git_surface_label, git_panel::ToggleFocus),
@@ -195,9 +221,22 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         ),
         MenuItem::action("Open Default Settings", super::OpenDefaultSettings),
         MenuItem::separator(),
-        MenuItem::action("Open Keymap", zed_actions::OpenKeymap),
-        MenuItem::action("Open Keymap File", zed_actions::OpenKeymapFile),
-        MenuItem::action("Open Default Key Bindings", zed_actions::OpenDefaultKeymap),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Keyboard Shortcuts", "Open Keymap"),
+            zed_actions::OpenKeymap,
+        ),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Edit Shortcut File", "Open Keymap File"),
+            zed_actions::OpenKeymapFile,
+        ),
+        MenuItem::action(
+            product_menu_label(
+                APP_NAME,
+                "Default Keyboard Shortcuts",
+                "Open Default Key Bindings",
+            ),
+            zed_actions::OpenDefaultKeymap,
+        ),
         MenuItem::separator(),
         MenuItem::action(
             "Select Theme...",
@@ -260,7 +299,10 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
     app_items.push(MenuItem::action(format!("Quit {APP_NAME}"), Quit));
 
     let mut help_items = vec![
-        MenuItem::action("Getting Started", onboarding::ShowWelcome),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Open Home", "Getting Started"),
+            onboarding::ShowWelcome,
+        ),
         MenuItem::action(
             product_menu_label(APP_NAME, "Release Notes", "View Release Notes Locally"),
             auto_update_ui::ViewReleaseNotesLocally,
@@ -287,6 +329,8 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             MenuItem::action("Upstream Zed Repository", feedback::OpenZedRepo),
         ]);
     } else {
+        help_items.push(MenuItem::action("Dez Documentation", zed_actions::OpenDocs));
+        help_items.push(MenuItem::separator());
         help_items.push(MenuItem::submenu(Menu::new("Upstream Zed").items([
             MenuItem::action(
                 "Documentation",
@@ -298,6 +342,120 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         ])));
     }
 
+    let mut file_items = Vec::new();
+    if APP_NAME == "Zed" {
+        file_items.extend([
+            MenuItem::action("New Terminal", workspace::NewTerminal::default()),
+            MenuItem::action("New File", workspace::NewFile),
+            MenuItem::action("New Window", workspace::NewWindow),
+            MenuItem::separator(),
+        ]);
+        #[cfg(not(target_os = "macos"))]
+        file_items.push(MenuItem::action("Open File...", workspace::OpenFiles));
+        file_items.extend([
+            MenuItem::action(
+                open_workspace_menu_label(APP_NAME, cfg!(target_os = "macos")),
+                workspace::Open::default(),
+            ),
+            MenuItem::action(
+                product_menu_label(APP_NAME, "Open Recent Workspaces…", "Open Recent…"),
+                zed_actions::OpenRecent::default(),
+            ),
+            MenuItem::action(
+                product_menu_label(APP_NAME, "Open Remote Workspace…", "Open Remote…"),
+                zed_actions::OpenRemote::default(),
+            ),
+        ]);
+    } else {
+        file_items.extend([
+            MenuItem::action(
+                open_workspace_menu_label(APP_NAME, cfg!(target_os = "macos")),
+                workspace::OpenFolder::default(),
+            ),
+            MenuItem::action(
+                product_menu_label(APP_NAME, "Open Recent Workspaces…", "Open Recent…"),
+                zed_actions::OpenRecent::default(),
+            ),
+            MenuItem::action(
+                product_menu_label(APP_NAME, "Open Remote Workspace…", "Open Remote…"),
+                zed_actions::OpenRemote::default(),
+            ),
+            MenuItem::separator(),
+            MenuItem::submenu(Menu::new("Open Terminal").items([
+                MenuItem::action(
+                    configured_terminal_label,
+                    zed_actions::terminal::OpenAgentTerminal,
+                ),
+                MenuItem::action("Native Shell", zed_actions::terminal::OpenShellTerminal),
+                MenuItem::action(
+                    WORKSPACE_TMUX_LAUNCHER_LABEL,
+                    zed_actions::terminal::OpenTmuxTerminal,
+                ),
+                MenuItem::separator(),
+                MenuItem::action("Codex", zed_actions::terminal::OpenCodexTerminal),
+                MenuItem::action("Claude Code", zed_actions::terminal::OpenClaudeCodeTerminal),
+                MenuItem::action("OpenCode", zed_actions::terminal::OpenOpenCodeTerminal),
+                MenuItem::submenu(Menu::new("More Agent CLIs").items([
+                    MenuItem::action("Gemini CLI", zed_actions::terminal::OpenGeminiTerminal),
+                    MenuItem::action("Aider", zed_actions::terminal::OpenAiderTerminal),
+                    MenuItem::action("Herdr", zed_actions::terminal::OpenHerdrTerminal),
+                ])),
+            ])),
+            MenuItem::submenu(Menu::new("Continue Agent").items([
+                MenuItem::action(
+                    "Codex · Last Session",
+                    zed_actions::terminal::ResumeCodexTerminal,
+                ),
+                MenuItem::action(
+                    "Claude Code · Last Session",
+                    zed_actions::terminal::ResumeClaudeCodeTerminal,
+                ),
+                MenuItem::action(
+                    "OpenCode · Last Session",
+                    zed_actions::terminal::ResumeOpenCodeTerminal,
+                ),
+            ])),
+            MenuItem::action("Browse Running Sessions…", workspace::BrowseRunningSessions),
+            MenuItem::action(
+                "Open Workspace in cmux",
+                zed_actions::dez::OpenWorkspaceInCmux,
+            ),
+            MenuItem::separator(),
+            MenuItem::action("New File", workspace::NewFile),
+        ]);
+        #[cfg(not(target_os = "macos"))]
+        file_items.push(MenuItem::action("Open File...", workspace::OpenFiles));
+        file_items.push(MenuItem::action("New Window", workspace::NewWindow));
+    }
+    file_items.extend([
+        MenuItem::separator(),
+        MenuItem::action(
+            product_menu_label(
+                APP_NAME,
+                "Add Folder to Workspace…",
+                "Add Folder to Project…",
+            ),
+            workspace::AddFolderToProject,
+        ),
+        MenuItem::separator(),
+        MenuItem::action("Save", workspace::Save { save_intent: None }),
+        MenuItem::action("Save As…", workspace::SaveAs),
+        MenuItem::action("Save All", workspace::SaveAll { save_intent: None }),
+        MenuItem::separator(),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Close Tab", "Close Editor"),
+            workspace::CloseActiveItem {
+                save_intent: None,
+                close_pinned: true,
+            },
+        ),
+        MenuItem::action(
+            product_menu_label(APP_NAME, "Close Workspace", "Close Project"),
+            workspace::CloseProject,
+        ),
+        MenuItem::action("Close Window", workspace::CloseWindow),
+    ]);
+
     vec![
         Menu {
             name: APP_NAME.into(),
@@ -307,53 +465,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
         Menu {
             name: "File".into(),
             disabled: false,
-            items: vec![
-                MenuItem::action(
-                    product_menu_label(APP_NAME, "Open Agent Terminal", "New Terminal"),
-                    workspace::NewTerminal::default(),
-                ),
-                MenuItem::action("New File", workspace::NewFile),
-                MenuItem::action("New Window", workspace::NewWindow),
-                MenuItem::separator(),
-                #[cfg(not(target_os = "macos"))]
-                MenuItem::action("Open File...", workspace::OpenFiles),
-                MenuItem::action(
-                    if cfg!(not(target_os = "macos")) {
-                        "Open Folder..."
-                    } else {
-                        "Open…"
-                    },
-                    workspace::Open::default(),
-                ),
-                MenuItem::action("Open Recent…", zed_actions::OpenRecent::default()),
-                MenuItem::action("Open Remote…", zed_actions::OpenRemote::default()),
-                MenuItem::separator(),
-                MenuItem::action(
-                    product_menu_label(
-                        APP_NAME,
-                        "Add Folder to Workspace…",
-                        "Add Folder to Project…",
-                    ),
-                    workspace::AddFolderToProject,
-                ),
-                MenuItem::separator(),
-                MenuItem::action("Save", workspace::Save { save_intent: None }),
-                MenuItem::action("Save As…", workspace::SaveAs),
-                MenuItem::action("Save All", workspace::SaveAll { save_intent: None }),
-                MenuItem::separator(),
-                MenuItem::action(
-                    "Close Editor",
-                    workspace::CloseActiveItem {
-                        save_intent: None,
-                        close_pinned: true,
-                    },
-                ),
-                MenuItem::action(
-                    product_menu_label(APP_NAME, "Close Workspace", "Close Project"),
-                    workspace::CloseProject,
-                ),
-                MenuItem::action("Close Window", workspace::CloseWindow),
-            ],
+            items: file_items,
         },
         Menu {
             name: "Edit".into(),
@@ -511,7 +623,8 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
 #[cfg(test)]
 mod tests {
     use super::{
-        developer_surface_menu_label, product_menu_label, terminal_panel_surface_visible,
+        configured_terminal_launcher_label, developer_surface_menu_label,
+        open_workspace_menu_label, product_menu_label, terminal_panel_surface_visible,
         workspace_tools_are_grouped, workspace_tools_menu_label,
     };
 
@@ -552,6 +665,62 @@ mod tests {
     }
 
     #[test]
+    fn dez_file_menu_uses_workspace_and_tab_language_without_changing_zed() {
+        assert_eq!(open_workspace_menu_label("Dez", true), "Open Workspace…");
+        assert_eq!(open_workspace_menu_label("Dez", false), "Open Workspace…");
+        assert_eq!(open_workspace_menu_label("Zed", true), "Open…");
+        assert_eq!(open_workspace_menu_label("Zed", false), "Open Folder...");
+        assert_eq!(
+            product_menu_label("Dez", "Open Recent Workspaces…", "Open Recent…"),
+            "Open Recent Workspaces…"
+        );
+        assert_eq!(
+            product_menu_label("Dez", "Open Remote Workspace…", "Open Remote…"),
+            "Open Remote Workspace…"
+        );
+        assert_eq!(
+            product_menu_label("Dez", "Close Tab", "Close Editor"),
+            "Close Tab"
+        );
+        assert_eq!(
+            product_menu_label("Zed", "Open Recent Workspaces…", "Open Recent…"),
+            "Open Recent…"
+        );
+        assert_eq!(
+            product_menu_label("Zed", "Open Remote Workspace…", "Open Remote…"),
+            "Open Remote…"
+        );
+        assert_eq!(
+            product_menu_label("Zed", "Close Tab", "Close Editor"),
+            "Close Editor"
+        );
+    }
+
+    #[test]
+    fn dez_file_menu_names_the_configured_default_terminal() {
+        assert_eq!(
+            configured_terminal_launcher_label(None),
+            "Default · Native Shell"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some(" codex --yolo ")),
+            "Default · Codex"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("/opt/homebrew/bin/claude --resume")),
+            "Default · Claude Code"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("opencode --continue")),
+            "Default · OpenCode"
+        );
+        assert_eq!(
+            configured_terminal_launcher_label(Some("my-agent --resume")),
+            "Default · Custom Command"
+        );
+    }
+
+    #[test]
     fn dez_top_level_menus_use_workspace_and_local_diagnostics_language() {
         assert_eq!(
             product_menu_label("Dez", "Close Workspace", "Close Project"),
@@ -564,6 +733,10 @@ mod tests {
         assert_eq!(
             product_menu_label("Dez", "Open Local Diagnostics Log", "View Telemetry"),
             "Open Local Diagnostics Log"
+        );
+        assert_eq!(
+            product_menu_label("Dez", "Open Home", "Getting Started"),
+            "Open Home"
         );
         assert_eq!(
             product_menu_label("Zed", "Close Workspace", "Close Project"),

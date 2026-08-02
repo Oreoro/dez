@@ -245,12 +245,12 @@ fn render_dez_workflow_section() -> impl IntoElement {
         (
             IconName::Terminal,
             "Run",
-            "Run a supported agent in the current Workspace terminal.",
+            "Start the configured terminal, pick another agent CLI, or hand this Workspace to cmux.",
         ),
         (
             IconName::ListTree,
             "Supervise",
-            "Use Projects to scan Workspace activity and attention without changing context.",
+            "Use Workspaces to scan Workspace activity and attention without changing context.",
         ),
         (
             IconName::Diff,
@@ -271,7 +271,7 @@ fn render_dez_workflow_section() -> impl IntoElement {
                 .child(Label::new("How Dez works"))
                 .child(
                     Label::new(
-                        "Run an agent in a Workspace terminal, supervise it in Projects, then review its work in Files and Git.",
+                        "Run an agent in a Workspace terminal, supervise it in Workspaces, then review its work in Files and Git.",
                     )
                     .size(LabelSize::Small)
                     .color(Color::Muted),
@@ -722,7 +722,7 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
         .child(Label::new("Optional ACP Agents"))
         .child(
             Label::new(
-                "Connect pane-native agents here. Supported terminal agents such as Codex run in a Workspace terminal and appear under that Workspace in Projects after detection.",
+                "Connect pane-native agents here. Supported terminal agents such as Codex run in a Workspace terminal and appear under that Workspace in Workspaces after detection.",
             )
             .color(Color::Muted),
         )

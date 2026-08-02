@@ -81,6 +81,10 @@ use crate::ignore::IgnoreKind;
 
 pub const FS_WATCH_LATENCY: Duration = Duration::from_millis(100);
 
+fn worktree_root_open_failure_is_fatal(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 /// A set of local or remote files that are being opened as part of a project.
 /// Responsible for tracking related FS (for local)/collab (for remote) events and corresponding updates.
 /// Stores git repositories data and the diagnostics for the file(s).
@@ -460,15 +464,21 @@ impl Worktree {
         let fs_case_sensitive = fs.is_case_sensitive().await;
 
         let root_file_handle = if metadata.as_ref().is_some() {
-            fs.open_handle(&abs_path)
-                .await
-                .with_context(|| {
-                    format!(
-                        "failed to open local worktree root at {}",
-                        abs_path.display()
-                    )
-                })
-                .log_err()
+            match fs.open_handle(&abs_path).await.with_context(|| {
+                format!(
+                    "failed to open local worktree root at {}",
+                    abs_path.display()
+                )
+            }) {
+                Ok(root_file_handle) => Some(root_file_handle),
+                Err(error) if worktree_root_open_failure_is_fatal(paths::APP_NAME) => {
+                    return Err(error);
+                }
+                Err(error) => {
+                    log::error!("{error:#}");
+                    None
+                }
+            }
         } else {
             None
         };
@@ -7120,6 +7130,12 @@ fn decode_byte_full(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dez_does_not_open_a_half_working_workspace_without_root_access() {
+        assert!(worktree_root_open_failure_is_fatal("Dez"));
+        assert!(!worktree_root_open_failure_is_fatal("Zed"));
+    }
 
     /// reproduction of issue #50785
     fn build_pcm16_wav_bytes() -> Vec<u8> {

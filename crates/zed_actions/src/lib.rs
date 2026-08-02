@@ -93,7 +93,49 @@ pub mod dez {
         dez,
         [
             /// Restores the bundled Lumin, Lilex, IBM Plex Sans, and Dez icon visual profile.
-            RestoreVisualProfile
+            RestoreVisualProfile,
+            /// Installs a temporary macOS app bundle in /Applications and relaunches it.
+            InstallAndRelaunch,
+            /// Grants native filesystem access to one currently blocked Workspace folder.
+            GrantWorkspaceAccess,
+            /// Retries the durable terminal service without replacing running processes.
+            RetryTerminalService,
+            /// Opens the active local Workspace in cmux while keeping Dez open.
+            OpenWorkspaceInCmux
+        ]
+    );
+}
+
+pub mod terminal {
+    use gpui::actions;
+
+    actions!(
+        terminal,
+        [
+            /// Opens the configured agent command in a native Main Work Area terminal.
+            OpenAgentTerminal,
+            /// Opens the configured shell in a native Main Work Area terminal.
+            OpenShellTerminal,
+            /// Opens a Workspace-named tmux session in a native Main Work Area terminal.
+            OpenTmuxTerminal,
+            /// Opens Codex in a native Main Work Area terminal.
+            OpenCodexTerminal,
+            /// Continues the most recent Codex session in a native Main Work Area terminal.
+            ResumeCodexTerminal,
+            /// Opens Claude Code in a native Main Work Area terminal.
+            OpenClaudeCodeTerminal,
+            /// Continues the most recent Claude Code session in a native Main Work Area terminal.
+            ResumeClaudeCodeTerminal,
+            /// Opens OpenCode in a native Main Work Area terminal.
+            OpenOpenCodeTerminal,
+            /// Continues the most recent OpenCode session in a native Main Work Area terminal.
+            ResumeOpenCodeTerminal,
+            /// Opens Gemini CLI in a native Main Work Area terminal.
+            OpenGeminiTerminal,
+            /// Opens Aider in a native Main Work Area terminal.
+            OpenAiderTerminal,
+            /// Opens Herdr in a native Main Work Area terminal.
+            OpenHerdrTerminal
         ]
     );
 }

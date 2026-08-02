@@ -40,11 +40,12 @@ impl HistoryManager {
         }
     }
 
-    fn init(this: Entity<HistoryManager>, fs: Arc<dyn Fs>, cx: &App) {
+    fn init(this: Entity<HistoryManager>, _fs: Arc<dyn Fs>, cx: &App) {
         let db = WorkspaceDb::global(cx);
+        let recent_folders =
+            cx.background_spawn(async move { db.persisted_recent_project_workspaces() });
         cx.spawn(async move |cx| {
-            let recent_folders = db
-                .recent_project_workspaces(fs.as_ref())
+            let recent_folders = recent_folders
                 .await
                 .unwrap_or_default()
                 .into_iter()

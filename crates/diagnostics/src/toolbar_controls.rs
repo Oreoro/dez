@@ -61,6 +61,8 @@ impl Render for ToolbarControls {
             .child({
                 IconButton::new("toggle_search", IconName::MagnifyingGlass)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
+                    .aria_label("Search Diagnostics")
                     .tooltip(Tooltip::for_action_title(
                         "Buffer Search",
                         &buffer_search::Deploy::find(),
@@ -73,6 +75,7 @@ impl Render for ToolbarControls {
                 this.child(
                     IconButton::new("inline_assist", ui::assistant_icon_for_app(paths::APP_NAME))
                         .icon_size(IconSize::Small)
+                        .tab_index(0isize)
                         .aria_label("Inline Assist")
                         .tooltip(Tooltip::for_action_title(
                             "Inline Assist",
@@ -89,6 +92,8 @@ impl Render for ToolbarControls {
                         IconButton::new("stop-updating", IconName::Stop)
                             .icon_color(Color::Error)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label("Stop Diagnostics Update")
                             .tooltip(Tooltip::for_action_title(
                                 "Stop Diagnostics Update",
                                 &ToggleDiagnosticsRefresh,
@@ -104,6 +109,8 @@ impl Render for ToolbarControls {
                     div.child(
                         IconButton::new("refresh-diagnostics", IconName::ArrowCircle)
                             .icon_size(IconSize::Small)
+                            .tab_index(0isize)
+                            .aria_label("Refresh Diagnostics")
                             .tooltip(Tooltip::for_action_title(
                                 "Refresh Diagnostics",
                                 &ToggleDiagnosticsRefresh,
@@ -122,6 +129,8 @@ impl Render for ToolbarControls {
                 IconButton::new("toggle-warnings", IconName::Warning)
                     .icon_color(warning_color)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
+                    .aria_label(warning_tooltip)
                     .tooltip(Tooltip::text(warning_tooltip))
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(editor) = &this.editor {

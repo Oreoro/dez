@@ -77,7 +77,7 @@ fn dez_projects_rail_has_a_deliberate_navigation_width_cap() {
     assert_eq!(session_rail_max_width("Zed"), MAX_WIDTH);
     assert!(
         session_rail_max_width("Dez") < MAX_WIDTH,
-        "Projects should never expand into a competing work surface"
+        "Workspaces should never expand into a competing work surface"
     );
 }
 
@@ -100,7 +100,7 @@ fn dez_consolidates_session_utilities_into_one_overview_menu() {
     assert!(session_overview_uses_sessions_menu("Dez"));
     assert!(
         session_sidebar_title_in_titlebar("Dez"),
-        "the persistent global navigator must identify itself as Projects"
+        "the persistent global navigator must identify itself as Workspaces"
     );
     assert!(
         !session_empty_state_uses_icon_badge("Dez"),
@@ -244,8 +244,8 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(!session_search_visible("Dez", 0, false, false, false));
     assert!(!session_search_control_visible("Dez", 0));
     assert!(
-        session_overview_visible(true),
-        "the rail keeps its identity and zero-session status visible above onboarding"
+        !session_overview_visible("Dez", 0, 0, false),
+        "the native Workspaces titlebar owns identity without an empty second header"
     );
     assert!(
         !session_overview_create_action_visible("Dez", 0),
@@ -258,7 +258,7 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     );
     assert!(
         !session_scope_controls_visible("Dez", 2, 0, false),
-        "caught-up Projects should not spend a row on inert scope controls"
+        "caught-up Workspaces should not spend a row on inert scope controls"
     );
     assert!(session_scope_controls_visible("Dez", 2, 1, false));
     assert!(
@@ -277,7 +277,7 @@ fn zero_session_rail_keeps_identity_but_hides_inert_controls() {
     assert!(session_search_control_visible("Dez", 2));
     assert!(session_search_visible("Dez", 1, false, true, false));
     assert!(session_search_visible("Dez", 1, false, false, true));
-    assert!(session_overview_visible(false));
+    assert!(!session_overview_visible("Dez", 1, 0, false));
     assert!(
         !session_overview_create_action_visible("Dez", 1),
         "populated Dez keeps creation scoped to Workspace groups"
@@ -306,22 +306,38 @@ fn active_or_focused_workspace_keeps_its_new_terminal_action_discoverable() {
 }
 
 #[test]
-fn dez_empty_workspace_keeps_one_compact_native_terminal_action() {
+fn dez_empty_workspace_keeps_one_workspace_scoped_terminal_launcher() {
     assert!(
-        workspace_header_terminal_action_visible("Dez", false, false),
-        "Dez keeps terminal creation in the Workspace header instead of an onboarding block"
+        workspace_header_terminal_action_visible("Dez", false, false, true),
+        "the active Workspace keeps a compact terminal menu even before it has sessions"
     );
     assert!(
-        workspace_header_terminal_action_visible("Dez", false, true),
+        !workspace_header_terminal_action_visible("Dez", false, false, false),
+        "an inactive expanded Workspace gives terminal creation to its labeled row"
+    );
+    assert!(
+        workspace_header_terminal_action_visible("Dez", false, true, false),
         "a collapsed empty Workspace still needs a compact terminal action in its header"
     );
     assert!(
-        workspace_header_terminal_action_visible("Dez", true, false),
-        "a populated Workspace keeps terminal creation available in its compact header"
+        workspace_header_terminal_action_visible("Dez", true, false, false),
+        "a Workspace with activity keeps terminal creation available in its compact header"
     );
     assert!(
-        !workspace_header_terminal_action_visible("Zed", false, false),
+        !workspace_header_terminal_action_visible("Zed", false, false, true),
         "upstream Zed retains its labeled empty-session action"
+    );
+    assert!(
+        !workspace_empty_terminal_row_visible_for_active_state("Dez", true),
+        "the active Workspace uses its compact header menu instead of a second labeled row"
+    );
+    assert!(
+        workspace_empty_terminal_row_visible_for_active_state("Dez", false),
+        "an inactive empty Workspace keeps one explicit, Workspace-scoped launcher"
+    );
+    assert!(
+        workspace_empty_terminal_row_visible_for_active_state("Zed", true),
+        "official Zed keeps its inherited empty-project launcher"
     );
 }
 
@@ -527,15 +543,15 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_overview_status_label("Dez", 3, 1, 2, false, false),
-        "1 needs attention · 3 total"
+        "2 Workspaces · 1 needs attention"
     );
     assert_eq!(
         session_overview_status_label("Dez", 3, 2, 2, false, false),
-        "2 need attention · 3 total"
+        "2 Workspaces · 2 need attention"
     );
     assert_eq!(
         session_overview_status_label("Dez", 3, 0, 2, false, false),
-        "3 sessions · caught up"
+        "2 Workspaces · 3 active"
     );
     assert_eq!(
         session_overview_status_label("Zed", 0, 0, 2, false, false),
@@ -551,7 +567,7 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_empty_state_copy("Dez", false, true).1,
-        "Loading sessions"
+        "Restoring Workspaces"
     );
     assert_eq!(
         session_empty_state_copy("Dez", false, false).1,
@@ -563,19 +579,23 @@ fn session_overview_copy_distinguishes_empty_search_attention_and_caught_up_stat
     );
     assert_eq!(
         session_overview_status_label("Dez", 0, 0, 2, false, false),
-        "2 projects ready"
+        "2 Workspaces · ready"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 0, 2, 0, 0, false, false),
-        "2 terminals observed · read-only"
+        "No Workspaces open · 2 terminals observed"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, false, false),
-        "1 session · 2 observed"
+        "1 Workspace · 1 active · 2 terminals observed"
     );
     assert_eq!(
         session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, true, false),
-        "3 matching items"
+        "4 results"
+    );
+    assert_eq!(
+        session_overview_status_label_with_observed_terminals("Dez", 1, 2, 0, 1, false, true),
+        "Restoring Workspaces"
     );
     assert_eq!(
         session_overview_status_icon(false, true, true, 3),
@@ -607,16 +627,20 @@ fn workspace_restore_status_releases_the_rail_after_the_first_ready_snapshot() {
 fn session_scope_accessibility_copy_keeps_control_names_stable() {
     assert_eq!(all_sessions_accessibility_label(3), "All sessions, 3 total");
     assert_eq!(
-        attention_sessions_accessibility_label(1),
+        attention_items_accessibility_label("Zed", 1),
         "Attention sessions, 1 needs attention"
     );
     assert_eq!(
-        attention_sessions_accessibility_label(2),
+        attention_items_accessibility_label("Zed", 2),
         "Attention sessions, 2 need attention"
     );
     assert_eq!(
-        all_session_items_accessibility_label(1, 2),
+        all_session_items_accessibility_label("Zed", 1, 2),
         "All session items, 1 managed and 2 observed on this Mac"
+    );
+    assert_eq!(
+        all_session_items_accessibility_label("Dez", 1, 2),
+        "All Workspaces activity, 1 agent session and 2 observed terminals"
     );
 }
 
@@ -652,7 +676,7 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert_eq!(session_start_state_copy("Dez").0, "No Workspace open");
     assert_eq!(
         session_start_state_copy("Dez").1,
-        "Open a codebase, then launch an agent in its Main Work Area. Sessions only shows detected or managed agent work."
+        "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
     );
     assert_eq!(
         session_start_state_copy("Dez").2,
@@ -1730,6 +1754,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
             ListEntry::ProjectHeader {
                 key: ProjectGroupKey::new(None, expanded_path.clone()),
                 label: "expanded-project".into(),
+                full_label: "expanded-project".into(),
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
@@ -1738,6 +1763,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: true,
                 has_threads: true,
+                external_sessions: Vec::new(),
             },
             ListEntry::Thread(Arc::new(ThreadEntry {
                 metadata: ThreadMetadata {
@@ -1884,6 +1910,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
             ListEntry::ProjectHeader {
                 key: ProjectGroupKey::new(None, collapsed_path.clone()),
                 label: "collapsed-project".into(),
+                full_label: "collapsed-project".into(),
                 highlight_positions: Vec::new(),
                 layout_label: None,
                 has_running_threads: false,
@@ -1892,6 +1919,7 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: false,
                 has_threads: false,
+                external_sessions: Vec::new(),
             },
         ];
 
@@ -2280,11 +2308,11 @@ fn session_rail_default_creation_is_terminal_first() {
 fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", false, false, 0),
-        "Project dez, ready for a session"
+        "Workspace dez, ready for a session"
     );
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", true, true, 2),
-        "Project dez, running work, 2 sessions need attention"
+        "Workspace dez, running work, 2 sessions need attention"
     );
 }
 
@@ -3791,6 +3819,46 @@ async fn test_terminal_close_event_closes_sidebar_terminal(cx: &mut TestAppConte
             "terminal metadata should be deleted when the terminal requests close"
         );
     });
+}
+
+#[gpui::test]
+async fn test_terminal_close_event_activates_neighbor(cx: &mut TestAppContext) {
+    let project = init_test_project_with_agent_panel("/my-project", cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let (sidebar, panel) = setup_sidebar_with_agent_panel(&multi_workspace, cx);
+    let build_terminal_id = panel
+        .update_in(cx, |panel, window, cx| {
+            panel.insert_test_terminal("Build", true, window, cx)
+        })
+        .expect("build test terminal should be inserted");
+    let server_terminal_id = panel
+        .update_in(cx, |panel, window, cx| {
+            panel.insert_test_terminal("Server", true, window, cx)
+        })
+        .expect("server test terminal should be inserted");
+    cx.run_until_parked();
+
+    panel.update(cx, |panel, cx| {
+        panel.emit_test_terminal_close(server_terminal_id, cx);
+    });
+    cx.run_until_parked();
+
+    panel.read_with(cx, |panel, _cx| {
+        assert!(!panel.has_terminal(server_terminal_id));
+        assert_eq!(panel.active_terminal_id(), Some(build_terminal_id));
+    });
+    sidebar.read_with(cx, |sidebar, _cx| {
+        assert!(
+            matches!(&sidebar.active_entry, Some(ActiveEntry::Terminal { terminal_id, .. }) if *terminal_id == build_terminal_id),
+            "expected remaining terminal to become active, got {:?}",
+            sidebar.active_entry,
+        );
+    });
+    assert_eq!(
+        visible_entries_as_strings(&sidebar, cx),
+        vec!["v [my-project]", "  Build"]
+    );
 }
 
 #[gpui::test]
@@ -13719,7 +13787,7 @@ mod property_test {
             }
 
             for workspace in group_workspaces {
-                for snapshot in root_repository_snapshots(workspace, cx) {
+                for snapshot in workspace_repository_snapshots(workspace, cx) {
                     let Some(main_worktree_abs_path) = snapshot.main_worktree_abs_path() else {
                         continue;
                     };

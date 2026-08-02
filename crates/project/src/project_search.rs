@@ -341,6 +341,7 @@ impl Search {
 
                 let should_find_all_matches = !tx.is_closed();
 
+                let permission_denied_roots = Arc::new(Mutex::new(HashSet::default()));
                 let _executor = executor.clone();
                 let worker_pool = executor.spawn(async move {
                     let num_cpus = _executor.num_cpus();
@@ -355,6 +356,7 @@ impl Search {
                                     open_buffers: open_buffers.clone(),
                                     candidates: candidate_searcher.clone(),
                                     find_all_matches_rx: find_all_matches_rx.clone(),
+                                    permission_denied_roots: permission_denied_roots.clone(),
                                 };
                                 scope.spawn(worker.run());
                             }
@@ -663,6 +665,7 @@ struct Worker {
     /// Ok, we're back in background: run full scan & find all matches in a given buffer snapshot.
     /// Then, when you're done, share them via the channel you were given.
     find_all_matches_rx: Receiver<FindAllMatchesRequest>,
+    permission_denied_roots: Arc<Mutex<HashSet<PathBuf>>>,
 }
 
 impl Worker {
@@ -700,6 +703,7 @@ impl Worker {
                 open_entries: &self.open_buffers,
                 fs: fs.as_deref(),
                 confirm_contents_will_match_tx: &confirm_contents_will_match_tx,
+                permission_denied_roots: &self.permission_denied_roots,
             };
             // Whenever we notice that some step of a pipeline is closed, we don't want to close subsequent
             // steps straight away. Another worker might be about to produce a value that will
@@ -740,6 +744,7 @@ struct RequestHandler<'worker> {
     fs: Option<&'worker dyn Fs>,
     open_entries: &'worker HashSet<ProjectEntryId>,
     confirm_contents_will_match_tx: &'worker Sender<MatchingEntry>,
+    permission_denied_roots: &'worker Mutex<HashSet<PathBuf>>,
 }
 
 impl RequestHandler<'_> {
@@ -773,14 +778,33 @@ impl RequestHandler<'_> {
     async fn handle_find_first_match(&self, mut entry: MatchingEntry) {
         async move {
             let abs_path = entry.worktree_root.join(entry.path.path.as_std_path());
-            let Some(file) = self
+            let file = match self
                 .fs
                 .context("Trying to query filesystem in remote project search")?
                 .open_sync(&abs_path)
                 .await
-                .log_err()
-            else {
-                return anyhow::Ok(());
+            {
+                Ok(file) => file,
+                Err(error) => {
+                    if is_permission_denied(&error) {
+                        if self
+                            .permission_denied_roots
+                            .lock()
+                            .insert(entry.worktree_root.to_path_buf())
+                        {
+                            log::warn!(
+                                "Workspace search skipped inaccessible root {}",
+                                entry.worktree_root.display()
+                            );
+                        }
+                    } else {
+                        log::debug!(
+                            "Workspace search could not open {}: {error:#}",
+                            abs_path.display()
+                        );
+                    }
+                    return anyhow::Ok(());
+                }
             };
 
             let mut file = BufReader::new(file);
@@ -862,6 +886,14 @@ impl RequestHandler<'_> {
         })
         .await;
     }
+}
+
+fn is_permission_denied(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|error| error.kind() == std::io::ErrorKind::PermissionDenied)
+    })
 }
 
 struct InputPath {

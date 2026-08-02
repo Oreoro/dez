@@ -88,9 +88,16 @@ pub enum SearchOption {
     Backwards,
 }
 
-const REPLACE_PLACEHOLDER: &str = "Replace in project…";
 const INCLUDE_PLACEHOLDER: &str = "Include: e.g. src/**/*.rs";
 const EXCLUDE_PLACEHOLDER: &str = "Exclude: e.g. vendor/*, *.lock";
+
+pub(crate) fn workspace_replace_placeholder(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Replace in project…"
+    } else {
+        "Replace across Workspace…"
+    }
+}
 
 pub enum SearchSource<'a, 'b> {
     Buffer,

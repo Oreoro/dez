@@ -56,6 +56,15 @@ pub struct ApplicationMenu {
     _settings_subscription: Subscription,
 }
 
+#[cfg(any(not(target_os = "macos"), test))]
+fn application_menu_name_for_product<'a>(menu_name: &'a str, app_name: &'a str) -> &'a str {
+    if app_name != "Zed" && menu_name == "Zed" {
+        app_name
+    } else {
+        menu_name
+    }
+}
+
 impl ApplicationMenu {
     pub fn new(_: &mut Window, cx: &mut Context<Self>) -> Self {
         let menus = cx.get_menus().unwrap_or_default();
@@ -243,7 +252,8 @@ impl ApplicationMenu {
 
     #[cfg(not(target_os = "macos"))]
     pub fn open_menu_name(&mut self, menu_name: String) {
-        self.pending_menu_open = Some(menu_name);
+        self.pending_menu_open =
+            Some(application_menu_name_for_product(&menu_name, paths::APP_NAME).to_owned());
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -353,5 +363,18 @@ impl Render for ApplicationMenu {
                         .map(|entry| self.render_standard_menu(entry)),
                 )
             })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::application_menu_name_for_product;
+
+    #[test]
+    fn inherited_application_menu_shortcuts_follow_the_product_name() {
+        assert_eq!(application_menu_name_for_product("Zed", "Dez"), "Dez");
+        assert_eq!(application_menu_name_for_product("Dez", "Dez"), "Dez");
+        assert_eq!(application_menu_name_for_product("Zed", "Zed"), "Zed");
+        assert_eq!(application_menu_name_for_product("File", "Dez"), "File");
     }
 }

@@ -40,6 +40,91 @@ pub enum ThinkingBlockDisplay {
     AlwaysCollapsed,
 }
 
+/// What Dez starts when the default native terminal action is used.
+///
+/// Official Zed continues to use `terminal_init_command` directly. Dez uses
+/// this guided choice while retaining `terminal_init_command` for custom and
+/// legacy configurations.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+pub enum TerminalLauncher {
+    #[default]
+    #[serde(rename = "native_shell")]
+    #[strum(serialize = "Native Shell")]
+    NativeShell,
+    #[serde(rename = "codex")]
+    #[strum(serialize = "Codex")]
+    Codex,
+    #[serde(rename = "claude")]
+    #[strum(serialize = "Claude Code")]
+    ClaudeCode,
+    #[serde(rename = "opencode")]
+    #[strum(serialize = "OpenCode")]
+    OpenCode,
+    #[serde(rename = "gemini")]
+    #[strum(serialize = "Gemini CLI")]
+    GeminiCli,
+    #[serde(rename = "aider")]
+    #[strum(serialize = "Aider")]
+    Aider,
+    #[serde(rename = "herdr")]
+    #[strum(serialize = "Herdr")]
+    Herdr,
+    #[serde(rename = "tmux")]
+    #[strum(serialize = "tmux Session")]
+    Tmux,
+    #[serde(rename = "custom")]
+    #[strum(serialize = "Custom Command")]
+    CustomCommand,
+}
+
+impl TerminalLauncher {
+    pub fn from_legacy_command(command: Option<&str>) -> Self {
+        match command.map(str::trim).filter(|command| !command.is_empty()) {
+            None => Self::NativeShell,
+            Some(command) if command.eq_ignore_ascii_case("codex") => Self::Codex,
+            Some(command) if command.eq_ignore_ascii_case("claude") => Self::ClaudeCode,
+            Some(command) if command.eq_ignore_ascii_case("opencode") => Self::OpenCode,
+            Some(command) if command.eq_ignore_ascii_case("gemini") => Self::GeminiCli,
+            Some(command) if command.eq_ignore_ascii_case("aider") => Self::Aider,
+            Some(command) if command.eq_ignore_ascii_case("herdr") => Self::Herdr,
+            Some(command) if command.eq_ignore_ascii_case("tmux") => Self::Tmux,
+            Some(_) => Self::CustomCommand,
+        }
+    }
+
+    pub fn startup_command(self, custom_command: Option<&str>) -> Option<String> {
+        let preset = match self {
+            Self::NativeShell => return None,
+            Self::Codex => "codex",
+            Self::ClaudeCode => "claude",
+            Self::OpenCode => "opencode",
+            Self::GeminiCli => "gemini",
+            Self::Aider => "aider",
+            Self::Herdr => "herdr",
+            Self::Tmux => "tmux",
+            Self::CustomCommand => {
+                return custom_command
+                    .filter(|command| !command.trim().is_empty())
+                    .map(ToOwned::to_owned);
+            }
+        };
+        Some(preset.to_owned())
+    }
+}
+
 /// Threshold at which agent auto-compaction runs. See
 /// [`AutoCompactSettingsContent::threshold`] for the accepted formats.
 ///
@@ -269,10 +354,13 @@ pub struct AgentSettingsContent {
     ///
     /// Default: true
     pub expand_terminal_card: Option<bool>,
-    /// Compatibility setting for automatically running a command in an
-    /// official-Zed Terminal Thread shell in the Agent Panel. Dez retains the
-    /// stored key for migration and upstream synchronization but does not
-    /// expose it because terminals open in the Main Work Area.
+    /// Guided default for Dez's native **Open Terminal** action. When omitted,
+    /// Dez infers the matching preset from `terminal_init_command`; unknown
+    /// commands remain custom. Official Zed ignores this field.
+    pub terminal_launcher: Option<TerminalLauncher>,
+    /// Command automatically run in a new terminal-agent shell. Official Zed
+    /// uses it for Terminal Threads in the Agent Panel; Dez uses it for native
+    /// agent terminals in the Main Work Area.
     ///
     /// Default: ""
     pub terminal_init_command: Option<String>,
@@ -876,6 +964,60 @@ impl std::fmt::Display for ToolPermissionMode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn terminal_launcher_presets_preserve_legacy_custom_commands() {
+        assert_eq!(
+            TerminalLauncher::from_legacy_command(None),
+            TerminalLauncher::NativeShell
+        );
+        assert_eq!(
+            TerminalLauncher::from_legacy_command(Some(" codex ")),
+            TerminalLauncher::Codex
+        );
+        assert_eq!(
+            TerminalLauncher::from_legacy_command(Some("tmux")),
+            TerminalLauncher::Tmux
+        );
+        assert_eq!(
+            TerminalLauncher::from_legacy_command(Some("my-agent --resume")),
+            TerminalLauncher::CustomCommand
+        );
+        assert_eq!(
+            TerminalLauncher::ClaudeCode.startup_command(Some("ignored")),
+            Some("claude".to_owned())
+        );
+        assert_eq!(
+            TerminalLauncher::CustomCommand
+                .startup_command(Some(" my-agent --resume "))
+                .as_deref(),
+            Some(" my-agent --resume ")
+        );
+        assert_eq!(
+            TerminalLauncher::CustomCommand.startup_command(Some("   ")),
+            None
+        );
+    }
+
+    #[test]
+    fn terminal_launcher_uses_stable_public_setting_values() {
+        for (launcher, expected) in [
+            (TerminalLauncher::NativeShell, "native_shell"),
+            (TerminalLauncher::Codex, "codex"),
+            (TerminalLauncher::ClaudeCode, "claude"),
+            (TerminalLauncher::OpenCode, "opencode"),
+            (TerminalLauncher::GeminiCli, "gemini"),
+            (TerminalLauncher::Aider, "aider"),
+            (TerminalLauncher::Herdr, "herdr"),
+            (TerminalLauncher::Tmux, "tmux"),
+            (TerminalLauncher::CustomCommand, "custom"),
+        ] {
+            assert_eq!(
+                serde_json::to_value(launcher).expect("serialize terminal launcher"),
+                serde_json::json!(expected)
+            );
+        }
+    }
 
     #[test]
     fn agent_config_option_value_serializes_value_id_as_string() {

@@ -1,8 +1,16 @@
 # Summary
 
-# Welcome
+# Dez
 
 - [What is Dez?](./dez.md)
+- [Terminal Sessions](./terminal.md)
+- [Workspace Navigation and Access Recovery](./development/dez/v0.2-workspace-polish.md)
+- [Native Surface Contract](./development/dez/surface-contract.md)
+- [Settings and Shortcuts](./dez.md#settings-and-navigation-visibility)
+- [Release Status](./development/dez/release-evidence.md)
+
+# Upstream Zed reference
+
 - [Getting Started](./getting-started.md)
 - [Installation](./installation.md)
   - [Update](./update.md)
@@ -23,7 +31,6 @@
   - [Project Panel](./project-panel.md)
   - [Tab Switcher](./tab-switcher.md)
 - [Running & Testing](./running-testing.md)
-  - [Terminal](./terminal.md)
   - [Tasks](./tasks.md)
   - [Debugger](./debugger.md)
   - [REPL](./repl.md)
@@ -224,11 +231,13 @@
   - [FreeBSD](./development/freebsd.md)
   - [Using Debuggers](./development/debuggers.md)
   - [Performance](./performance.md)
-  - [Zed Canvas](./development/zed-canvas.md)
-  - [Zed Canvas Design System](./development/zed-canvas-design-system.md)
-  - [Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
+  - [Historical: inherited Zed Canvas](./development/zed-canvas.md)
+  - [Historical: inherited Zed Canvas Design System](./development/zed-canvas-design-system.md)
+  - [Historical: Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
   - [Dez Development](./development/dez/index.md)
     - [Fork Notes](./development/dez/fork-notes.md)
+    - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
+    - [Native Surface Contract](./development/dez/surface-contract.md)
     - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
     - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
     - [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)

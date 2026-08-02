@@ -36,7 +36,7 @@ See the [v0.0.1 Release Runbook](./dez/v0.0.1-release-runbook.md) for exact
 candidate identity, checksums, recovery semantics, known limitations, and
 rollback guidance. The chronological implementation notes below are retained as
 history; this section and [Release Evidence](./dez/release-evidence.md) describe
-the current candidate.
+the v0.0.1 candidate recorded at that time.
 
 ## Product promise
 

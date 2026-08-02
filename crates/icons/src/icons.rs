@@ -100,6 +100,8 @@ pub enum IconName {
     DebugStepInto,
     DebugStepOut,
     DebugStepOver,
+    DezAgent,
+    DezSubagent,
     Diff,
     DiffBoxed,
     DiffSplit,
@@ -326,7 +328,15 @@ pub fn agent_icon_for_app(app_name: &str) -> IconName {
     if app_name == "Zed" {
         IconName::ZedAgent
     } else {
-        IconName::Robot
+        IconName::DezAgent
+    }
+}
+
+pub fn subagent_icon_for_app(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::ForwardArrowUp
+    } else {
+        IconName::DezSubagent
     }
 }
 
@@ -376,6 +386,11 @@ mod tests {
         assert_eq!(crate::assistant_icon_for_app("Zed"), IconName::ZedAssistant);
         assert_eq!(crate::assistant_icon_for_app("Dez"), IconName::Sparkle);
         assert_eq!(crate::agent_icon_for_app("Zed"), IconName::ZedAgent);
-        assert_eq!(crate::agent_icon_for_app("Dez"), IconName::Robot);
+        assert_eq!(crate::agent_icon_for_app("Dez"), IconName::DezAgent);
+        assert_eq!(
+            crate::subagent_icon_for_app("Zed"),
+            IconName::ForwardArrowUp
+        );
+        assert_eq!(crate::subagent_icon_for_app("Dez"), IconName::DezSubagent);
     }
 }

@@ -155,14 +155,16 @@
   // Whether to confirm before quitting Dez.
   "confirm_quit": false,
   // Whether to restore the last closed project when a fresh Dez instance opens.
-  // May take 3 values:
+  // May take 4 values:
   //  1. All workspaces open during last session
   //         "restore_on_startup": "last_session"
   //  2. The workspace opened
   //         "restore_on_startup": "last_workspace",
   //  3. Do not restore previous workspaces
   //         "restore_on_startup": "none",
-  "restore_on_startup": "last_session",
+  //  4. Open the native launchpad without touching previous Workspace folders
+  //         "restore_on_startup": "launchpad",
+  "restore_on_startup": "launchpad",
   // The default behavior when opening paths from the CLI without
   // an explicit `-e` (existing window) or `-n` (new window) flag.
   //
@@ -1046,9 +1048,9 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Projects is an on-demand supervisor. Fresh windows keep it closed so
-    // the native Main Work Area remains primary; restored and explicitly
-    // opened Projects layouts are still preserved.
+    // Workspaces is the global Workspace and session navigator. Fresh windows
+    // keep it closed so the native Main Work Area remains primary; restored
+    // and explicitly opened Workspaces layouts are still preserved.
     "starts_open": false,
     // Whether to show the project pane toggle button in the sidebar header.
     "show_project_pane_button": true,
@@ -1084,7 +1086,7 @@
     "icon_style": "outline",
     "show_labels": "contextual"
   },
-  // Settings for the Canvas workspace bar.
+  // Settings for native Workspace attention and navigation.
   "workspace_bar": {
     "visibility": "always",
     "height": "comfortable",
@@ -1092,16 +1094,16 @@
     "show_layout": false,
     "show_agent_attention": true
   },
-  // Settings for Sessions, the Dez supervision rail.
+  // Settings for Workspaces, Dez's native Workspace and session navigator.
   "session_rail": {
     "visibility": "auto",
     "mode": "compact",
     "position": "left",
     "group_by": "project",
     "sort_by": "manual",
-    "metadata": ["agent_state", "latest_attention"]
+    "metadata": ["branch", "agent_state", "latest_attention"]
   },
-  // Settings for the Canvas pane grid.
+  // Settings for native Workspace pane layouts.
   "pane_grid": {
     "auto_reflow": true,
     "layout_history": true,
@@ -1118,7 +1120,7 @@
     "responsive_ultrawide_ratio": 1.6,
     "responsive_recipe_overrides": {}
   },
-  // Settings for Canvas-style agent surfaces.
+  // Settings for Dez agent surfaces.
   "agent_ui": {
     "presentation": "document",
     "event_verbosity": "normal",
@@ -1353,10 +1355,16 @@
     //
     // Default: true
     "expand_terminal_card": true,
-    // Command to run when Dez creates a terminal-agent shell.
-    // The command is sent to the shell as if typed, so it is interpreted by your
-    // configured shell (including on Windows and remote/WSL projects).
-    // Set to "" to disable.
+    // Dez Settings writes "terminal_launcher" when a guided Default Terminal
+    // preset is selected. Supported values are "native_shell", "codex",
+    // "claude", "opencode", "gemini", "aider", "herdr", "tmux", and
+    // "custom". Omitting it preserves older terminal_init_command behavior.
+    //
+    // Example: "terminal_launcher": "codex"
+    //
+    // Custom or legacy command to run after the configured shell is ready,
+    // including on remote/WSL projects. Set terminal_launcher to "custom" to
+    // edit this command in Settings. A blank command opens the native shell.
     //
     // Example: "terminal_init_command": "claude"
     "terminal_init_command": "",
@@ -1442,7 +1450,7 @@
     // Whether or not to show the tab bar in the editor
     "show": true,
     // Whether or not to show the navigation history buttons.
-    "show_nav_history_buttons": false,
+    "show_nav_history_buttons": true,
     // Whether or not to show the tab bar buttons.
     "show_tab_bar_buttons": true,
     // Whether or not to show pinned tabs in a separate row.
@@ -1930,13 +1938,13 @@
     // Whether to show the status bar.
     "experimental.show": true,
     // Whether to show the name of the active file in the status bar.
-    "show_active_file": false,
+    "show_active_file": true,
     // Whether to show the active language button in the status bar.
     "active_language_button": true,
     // Whether to show the cursor position button in the status bar.
     "cursor_position_button": true,
     // Whether to show active line endings button in the status bar.
-    "line_endings_button": false,
+    "line_endings_button": true,
     // Control when to show the active encoding in the status bar.
     "active_encoding_button": "non_utf8"
   },

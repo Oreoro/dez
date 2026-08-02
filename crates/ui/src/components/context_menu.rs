@@ -746,6 +746,39 @@ impl ContextMenu {
         self.action_checked(label, action, false)
     }
 
+    pub fn action_with_icon(
+        mut self,
+        label: impl Into<SharedString>,
+        icon: IconName,
+        action: Box<dyn Action>,
+    ) -> Self {
+        self.items.push(ContextMenuItem::Entry(ContextMenuEntry {
+            toggle: None,
+            label: label.into(),
+            action: Some(action.boxed_clone()),
+            handler: Rc::new(move |context, window, cx| {
+                if let Some(context) = &context {
+                    window.focus(context, cx);
+                }
+                window.dispatch_action(action.boxed_clone(), cx);
+            }),
+            secondary_handler: None,
+            icon: Some(icon),
+            custom_icon_path: None,
+            custom_icon_svg: None,
+            icon_position: IconPosition::Start,
+            icon_size: IconSize::Small,
+            icon_color: None,
+            disabled: false,
+            documentation_aside: None,
+            end_slot_icon: None,
+            end_slot_title: None,
+            end_slot_handler: None,
+            show_end_slot_on_hover: false,
+        }));
+        self
+    }
+
     pub fn action_checked(
         self,
         label: impl Into<SharedString>,
@@ -1857,10 +1890,13 @@ impl ContextMenu {
 
         let icon_color = if *disabled {
             Color::Muted
-        } else if toggle.is_some() {
-            icon_color.unwrap_or(Color::Accent)
         } else {
             icon_color.unwrap_or(Color::Default)
+        };
+        let toggle_icon_color = if *disabled {
+            Color::Muted
+        } else {
+            Color::Accent
         };
 
         let label_color = if *disabled {
@@ -1873,7 +1909,8 @@ impl ContextMenu {
             h_flex()
                 .gap_1p5()
                 .when(
-                    *icon_position == IconPosition::Start && toggle.is_none(),
+                    *icon_position == IconPosition::Start
+                        && !matches!(*toggle, Some((IconPosition::Start, _))),
                     |flex| {
                         flex.child(
                             Icon::from_path(custom_path.clone())
@@ -1895,7 +1932,8 @@ impl ContextMenu {
             h_flex()
                 .gap_1p5()
                 .when(
-                    *icon_position == IconPosition::Start && toggle.is_none(),
+                    *icon_position == IconPosition::Start
+                        && !matches!(*toggle, Some((IconPosition::Start, _))),
                     |flex| {
                         flex.child(
                             Icon::from_external_svg(custom_icon_svg.clone())
@@ -1917,7 +1955,8 @@ impl ContextMenu {
             h_flex()
                 .gap_1p5()
                 .when(
-                    *icon_position == IconPosition::Start && toggle.is_none(),
+                    *icon_position == IconPosition::Start
+                        && !matches!(*toggle, Some((IconPosition::Start, _))),
                     |flex| flex.child(Icon::new(*icon_name).size(*icon_size).color(icon_color)),
                 )
                 .child(Label::new(label.clone()).color(label_color).truncate())
@@ -2058,11 +2097,16 @@ impl ContextMenu {
                         ))
                     })
                     .when_some(*toggle, |list_item, (position, toggled)| {
+                        let toggle_icon = if *icon_position == position {
+                            icon.unwrap_or(IconName::Check)
+                        } else {
+                            IconName::Check
+                        };
                         let contents = div()
                             .flex_none()
                             .child(
-                                Icon::new(icon.unwrap_or(IconName::Check))
-                                    .color(icon_color)
+                                Icon::new(toggle_icon)
+                                    .color(toggle_icon_color)
                                     .size(*icon_size),
                             )
                             .when(!toggled, |contents| contents.invisible());

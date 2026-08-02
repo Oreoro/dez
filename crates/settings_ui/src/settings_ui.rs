@@ -2,7 +2,7 @@ mod components;
 mod page_data;
 pub mod pages;
 
-use agent_settings::{AgentSettings, language_model_to_selection};
+use agent_settings::{AgentSettings, language_model_to_selection, terminal_launcher_icon};
 use agent_skills::SkillIndex;
 use agent_ui::{LanguageModelSelector, language_model_selector};
 use anyhow::{Context as _, Result};
@@ -781,6 +781,7 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::NotifyWhenAgentWaiting>(render_dropdown)
         .add_basic_renderer::<settings::PlaySoundWhenAgentDone>(render_dropdown)
         .add_basic_renderer::<settings::ThinkingBlockDisplay>(render_dropdown)
+        .add_basic_renderer::<settings::TerminalLauncher>(render_terminal_launcher_dropdown)
         .add_basic_renderer::<Option<settings::LanguageModelSelection>>(
             render_subagent_model_picker,
         )
@@ -1582,7 +1583,7 @@ impl SettingsPageItem {
                             )
                             .tab_index(0_isize)
                             .end_icon(
-                                Icon::new(IconName::ArrowUpRight)
+                                Icon::new(action_link.icon)
                                     .size(IconSize::Small)
                                     .color(Color::Muted),
                             )
@@ -1904,6 +1905,7 @@ struct ActionLink {
     title: SharedString,
     description: Option<SharedString>,
     button_text: SharedString,
+    icon: IconName,
     on_click: Arc<dyn Fn(&mut SettingsWindow, &mut Window, &mut App) + Send + Sync>,
     files: FileMask,
 }
@@ -4701,6 +4703,12 @@ impl SettingsWindow {
         cx.notify();
     }
 
+    pub(crate) fn active_project(&self, cx: &App) -> Option<Entity<Project>> {
+        let original_window = self.original_window.as_ref()?;
+        let multi_workspace = original_window.read(cx).ok()?;
+        Some(multi_workspace.workspace().read(cx).project().clone())
+    }
+
     fn focus_file_at_index(&mut self, index: usize, window: &mut Window, cx: &mut App) {
         if let Some((_, handle)) = self.files.get(index) {
             handle.focus(window, cx);
@@ -5295,6 +5303,41 @@ fn render_dropdown<T>(
 where
     T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
 {
+    render_dropdown_with_optional_icons(field, file, metadata, title, description, None, cx)
+}
+
+fn render_terminal_launcher_dropdown(
+    field: SettingField<settings::TerminalLauncher>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    render_dropdown_with_optional_icons(
+        field,
+        file,
+        metadata,
+        title,
+        description,
+        Some(terminal_launcher_icon),
+        cx,
+    )
+}
+
+fn render_dropdown_with_optional_icons<T>(
+    field: SettingField<T>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    icon_for_value: Option<fn(T) -> IconName>,
+    cx: &mut App,
+) -> AnyElement
+where
+    T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
+{
     let variants = || -> &'static [T] { <T as strum::VariantArray>::VARIANTS };
     let labels = || -> &'static [&'static str] { <T as strum::VariantNames>::VARIANTS };
     let should_do_titlecase = metadata
@@ -5324,6 +5367,9 @@ where
         }
     })
     .aria_label(title)
+    .when_some(icon_for_value, |this, icon_for_value| {
+        this.icon_for_value(icon_for_value)
+    })
     .when(!description.is_empty(), |this| {
         this.aria_description(description)
     })

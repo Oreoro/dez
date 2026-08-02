@@ -5641,7 +5641,7 @@ Float values between `0.0` and `0.9`, where:
 
 - Description: The name of the font to use for text in the UI.
 - Setting: `ui_font_family`
-- Dez default: `JetBrains Mono`.
+- Dez default: bundled `IBM Plex Sans`.
 
 **Options**
 

@@ -77,6 +77,7 @@ pub struct ThreadItem {
     timestamp: SharedString,
     notified: bool,
     status: AgentThreadStatus,
+    preserve_identity_with_status: bool,
     selected: bool,
     focused: bool,
     position_in_set: Option<usize>,
@@ -125,6 +126,7 @@ impl ThreadItem {
             timestamp: "".into(),
             notified: false,
             status: AgentThreadStatus::default(),
+            preserve_identity_with_status: false,
             selected: false,
             focused: false,
             position_in_set: None,
@@ -211,6 +213,11 @@ impl ThreadItem {
 
     pub fn status(mut self, status: AgentThreadStatus) -> Self {
         self.status = status;
+        self
+    }
+
+    pub fn preserve_identity_with_status(mut self, preserve: bool) -> Self {
+        self.preserve_identity_with_status = preserve;
         self
     }
 
@@ -490,7 +497,31 @@ impl RenderOnce for ThreadItem {
             None
         };
 
-        let icon = if self.status == AgentThreadStatus::Running {
+        let identity_indicator_color = if self.status == AgentThreadStatus::Error {
+            Some(Color::Error)
+        } else if self.status == AgentThreadStatus::WaitingForConfirmation {
+            Some(Color::Warning)
+        } else if self.status == AgentThreadStatus::Running || self.notified {
+            Some(Color::Accent)
+        } else {
+            None
+        };
+
+        let icon = if self.preserve_identity_with_status {
+            icon_container()
+                .relative()
+                .child(agent_icon)
+                .when_some(identity_indicator_color, |this, indicator_color| {
+                    this.child(
+                        div()
+                            .absolute()
+                            .bottom_neg_0p5()
+                            .right_neg_0p5()
+                            .child(Indicator::dot().color(indicator_color)),
+                    )
+                })
+                .into_any_element()
+        } else if self.status == AgentThreadStatus::Running {
             icon_container()
                 .child(
                     Icon::new(IconName::LoadCircle)

@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn native_agent_icon_preserves_upstream_identity_without_leaking_into_dez() {
         assert_eq!(native_agent_icon_for_app("Zed"), ui::IconName::ZedAgent);
-        assert_eq!(native_agent_icon_for_app("Dez"), ui::IconName::Robot);
+        assert_eq!(native_agent_icon_for_app("Dez"), ui::IconName::DezAgent);
     }
 
     agent_servers::e2e_tests::common_e2e_tests!(

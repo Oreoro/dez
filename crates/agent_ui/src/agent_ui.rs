@@ -88,7 +88,8 @@ pub use crate::machine_terminal_store::{MachineTerminalStore, ObservedMachineTer
 pub use crate::message_editor::MessageEditorEvent;
 pub use crate::multiplexer_session_store::{
     ExternalMultiplexerSession, ExternalSessionCommand, ExternalSessionOpenMode, MultiplexerKind,
-    MultiplexerSessionState, MultiplexerSessionStore,
+    MultiplexerSessionState, MultiplexerSessionStore, MultiplexerSourceAvailability,
+    MultiplexerSourceIssue, MultiplexerSourceStatus,
 };
 pub use crate::run_review::{
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
@@ -112,18 +113,7 @@ pub use thread_import::{
 use zed_actions;
 pub use zed_actions::{CreateWorktree, NewWorktreeBranchTarget, SwitchWorktree};
 
-/// Returns whether the provider-backed Built-in Agent can create a usable
-/// session immediately.
-///
-/// An authenticated provider alone is not enough: the native Agent creates a
-/// thread from the registry's default model. If that model is unresolved,
-/// opening a draft only produces a dead "No model selected" surface.
-pub fn built_in_agent_is_ready(cx: &App) -> bool {
-    let registry = LanguageModelRegistry::read_global(cx);
-    registry
-        .default_model()
-        .is_some_and(|model| model.provider.is_authenticated(cx))
-}
+pub use agent_settings::built_in_agent_is_ready;
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 pub struct CanvasAgentUiSettings {
@@ -177,7 +167,7 @@ pub(crate) fn floating_agent_attention_popup_enabled(
     app_name: &str,
     floating_attention_popups: bool,
 ) -> bool {
-    app_name == "Zed" || floating_attention_popups
+    app_name == "Zed" || (cfg!(test) && floating_attention_popups)
 }
 
 pub(crate) fn request_agent_window_attention(window: &mut Window, cx: &App) {
@@ -1155,7 +1145,7 @@ mod tests {
     }
 
     #[test]
-    fn dez_keeps_attention_in_sessions_unless_floating_popups_are_enabled() {
+    fn dez_keeps_popup_mechanics_available_to_internal_tests() {
         assert!(!floating_agent_attention_popup_enabled("Dez", false));
         assert!(floating_agent_attention_popup_enabled("Dez", true));
         assert!(floating_agent_attention_popup_enabled("Zed", false));
@@ -1204,6 +1194,7 @@ mod tests {
             enable_feedback: false,
             expand_edit_card: true,
             expand_terminal_card: true,
+            terminal_launcher: Default::default(),
             terminal_init_command: None,
             cancel_generation_on_terminal_stop: true,
             use_modifier_to_send: true,

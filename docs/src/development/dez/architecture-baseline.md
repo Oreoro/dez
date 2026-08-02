@@ -6,34 +6,43 @@ truth. Update it when a source change moves an ownership boundary.
 
 ## Current ownership
 
-| Concern                                                    | Current owner                                                                      | Persistence and lifetime                                                                                                                                             | Gap from the Dez target                                                                                                             |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| Launch identity, restore lifecycle, and durable membership | `session::AppSession`                                                              | Stores launch identity, window stack, ordered Workspace membership, ordered viewport composition, resolution, and active selection in KVP; owns restore lifecycle    | SQLite remains Workspace-content authority and windows still own live entities                                                      |
-| Live workspace registry                                    | `workspace::WorkspaceStore`                                                        | Holds weak workspace entities paired with window handles for the process lifetime                                                                                    | Registration is window-bound and primarily supports collaboration routing                                                           |
-| Window composition                                         | `workspace::MultiWorkspace`                                                        | Owns retained workspaces, active workspace, Session Rail state, and per-window serialization                                                                         | An operating-system window is still the concrete collection owner rather than a viewport over one durable app session               |
-| Workspace                                                  | `workspace::Workspace`                                                             | Owns pane graph, items, local UI state, database ID, and one `Entity<Project>`                                                                                       | This is close to the target, but unresolved and empty workspace identity still needs end-to-end verification                        |
-| Durable workspace rows                                     | `workspace::WorkspaceDb`                                                           | SQLite stores workspace, pane, item, session, and window bindings; KVP stores `MultiWorkspace` state                                                                 | The data can restore a prior launch, but the owner is distributed across DB, `AppSession`, `WorkspaceStore`, and windows            |
-| Project scope                                              | `project::Project`                                                                 | Each workspace constructs local or remote worktree, buffer, Git, LSP, task, debugger, environment, and agent-server stores                                           | Stores are project-owned rather than shared backend stores viewed through workspace scope                                           |
-| Pane tool Surfaces                                         | `workspace::PanelItem` in Workspace-tools and Agent pane kinds                     | With legacy docks hidden, Files, Git, Outline, Debug, Terminal, and Agent remain Workspace-owned pane tabs; internal Project keys and legacy docks remain compatible | Cross-Workspace Surface movement and rendered serialization/focus proof remain open                                                 |
-| Local terminal and process                                 | `dez-terminal-host`, hosted `Terminal`, and `LocalTerminalHost` compatibility path | The opt-in helper owns PTYs across GUI lifetimes; the GUI emulator owns display state; the default path remains in-process pending verification                      | Helper routing is still experimental and task terminals have not moved; consolidated build and restart evidence remain open         |
-| Agent-terminal history                                     | `agent_ui::TerminalThreadMetadataStore` and Host/Session snapshots                 | SQLite stores terminal identity, workspace metadata, restart-safe attention, and nullable Host/Session references; the helper retains structured adapter state       | Structured state currently requires explicit Codex hook setup and the opt-in helper                                                 |
-| Native agent conversations                                 | `agent_ui::ThreadMetadataStore` and agent thread stores                            | Structured conversation metadata and provider state use their existing stores                                                                                        | Native evidence remains separate from the terminal Codex hook adapter                                                               |
-| Remote execution                                           | `remote::RemoteClient` and `remote_server::HeadlessProject`                        | Reconnectable SSH, WSL, Docker, and mock transports can preserve a remote project server                                                                             | The remote project transport is not yet a vendor-neutral Host and terminal-session service                                          |
-| Session Rail                                               | `sidebar::Sidebar`                                                                 | Derived projection over agent threads, terminal metadata, live terminal entities, helper snapshots, notifications, and transient review briefs                       | Structured Codex activity is functional in source; file/Git provenance, a second adapter, and live restart verification remain open |
+| Concern                                                    | Current owner                                                                      | Persistence and lifetime                                                                                                                                                             | Gap from the Dez target                                                                                                             |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Launch identity, restore lifecycle, and durable membership | `session::AppSession`                                                              | Stores launch identity, window stack, ordered Workspace membership, ordered viewport composition, resolution, and active selection in KVP; owns restore lifecycle                    | SQLite remains Workspace-content authority and windows still own live entities                                                      |
+| Live workspace registry                                    | `workspace::WorkspaceStore`                                                        | Holds weak workspace entities paired with window handles for the process lifetime                                                                                                    | Registration is window-bound and primarily supports collaboration routing                                                           |
+| Window composition                                         | `workspace::MultiWorkspace`                                                        | Owns retained workspaces, active workspace, Workspaces navigator state, and per-window serialization                                                                                 | An operating-system window is still the concrete collection owner rather than a viewport over one durable app session               |
+| Workspace                                                  | `workspace::Workspace`                                                             | Owns pane graph, items, local UI state, database ID, and one `Entity<Project>`                                                                                                       | This is close to the target, but unresolved and empty workspace identity still needs end-to-end verification                        |
+| Durable workspace rows                                     | `workspace::WorkspaceDb`                                                           | SQLite stores workspace, pane, item, session, and window bindings; KVP stores `MultiWorkspace` state                                                                                 | The data can restore a prior launch, but the owner is distributed across DB, `AppSession`, `WorkspaceStore`, and windows            |
+| Project scope                                              | `project::Project`                                                                 | Each workspace constructs local or remote worktree, buffer, Git, LSP, task, debugger, environment, and agent-server stores                                                           | Stores are project-owned rather than shared backend stores viewed through workspace scope                                           |
+| Pane tool Surfaces                                         | `workspace::PanelItem` compatibility types routed into the native pane grid        | Files, Git, Outline, Debug, Terminal, and Built-in Agent are Workspace-owned Main Work Area tabs; internal Project keys and legacy docks remain compatible                           | Cross-Workspace Surface movement and rendered serialization/focus proof remain open                                                 |
+| Local terminal and process                                 | `dez-terminal-host`, hosted `Terminal`, and `LocalTerminalHost` compatibility path | Packaged Dez uses the sibling helper for ordinary local interactive PTYs by default; the GUI owns display state, while source or partial installs without it use the in-process path | Exact packaged restart, crash, and reattachment evidence remains open; task terminals intentionally remain GUI-owned                |
+| Agent-terminal history                                     | `agent_ui::TerminalThreadMetadataStore` and Host/Session snapshots                 | SQLite stores terminal identity, Workspace metadata, restart-safe attention, and nullable Host/Session references; the packaged helper retains structured adapter state              | Structured state currently requires explicit Codex hook setup and exact packaged runtime evidence                                   |
+| Native agent conversations                                 | `agent_ui::ThreadMetadataStore` and agent thread stores                            | Structured conversation metadata and provider state use their existing stores                                                                                                        | Native evidence remains separate from the terminal Codex hook adapter                                                               |
+| Remote execution                                           | `remote::RemoteClient` and `remote_server::HeadlessProject`                        | Reconnectable SSH, WSL, Docker, and mock transports can preserve a remote project server                                                                                             | The remote project transport is not yet a vendor-neutral Host and terminal-session service                                          |
+| Workspaces navigation                                      | `sidebar::Sidebar`                                                                 | Derived projection over open codebases, Agent Sessions, terminal metadata, live terminal entities, helper snapshots, notifications, and transient review briefs                      | Structured Codex activity is functional in source; file/Git provenance, a second adapter, and live restart verification remain open |
 
-The Session Rail now also constructs a transient `RunReviewBrief` from those
+`agent_ui::MultiplexerSessionStore` owns per-source tmux, Herdr, and cmux
+discovery truth as `MissingExecutable`, `AvailableEmpty`, `Failed`, or `Ready`.
+`sidebar::Sidebar` projects current rows beneath the most specific matching
+Workspace and places pathless or unmatched rows in **Other Running Sessions**.
+It does not treat arbitrary machine PTYs as external integration records.
+**Browse Running Sessions…** resets transient navigator filtering, expands
+matching Workspace groups, requests a store refresh, and focuses Workspaces;
+it does not create or attach a session by itself.
+
+Workspaces now also constructs a transient `RunReviewBrief` from those
 authoritative owners. It does not persist another Run record. The brief opens
 as a normal Markdown pane and identifies observed actor, state, host/session,
 typed workspace-root and terminal-working-directory evidence, and action-log
 diff counts. Missing commands, checks, and terminal file-change evidence are
 written as missing; zero tracked lines are not presented as a clean worktree.
-The Session Rail can copy the observed terminal working directory or stable
+Workspaces can copy the observed terminal working directory or stable
 Host/Session reference without claiming either one is a global project root.
 
 The first structured Codex adapter now accepts official lifecycle-hook JSON
 through an authenticated `dez-terminal-host agent-event` client. Stable Codex
 session identity, lifecycle, attention, resumability, and bounded command/exit
-evidence live with the terminal Host/Session snapshot. The Session Rail uses
+evidence live with the terminal Host/Session snapshot. Workspaces uses
 that state ahead of process-name detection, and a review brief consumes its
 observed command events. Known validation commands count as checks only with an
 observed exit status; other commands and missing outcomes remain unclassified.
@@ -82,8 +91,8 @@ requirements that are not yet current-state claims:
   source. Run review derives a presentation from them. This is intentional and
   should not be replaced by the consolidated plan's mixed Run-state list.
   Missing and protocol-incompatible transport states remain distinct through
-  the Session Rail and Review Brief rather than degrading to Saved history.
-  The compact rail composes work and non-live transport labels; Review Brief
+  Workspaces and Review Brief rather than degrading to Saved history. The
+  compact navigator composes work and non-live transport labels; Review Brief
   gives exceptional transport ownership priority and records the associated
   evidence risk, so a cached Running snapshot cannot conceal a missing Host
   session.
@@ -92,7 +101,7 @@ requirements that are not yet current-state claims:
   resolution time, update time, and optional stale expiry. The legacy bit is a
   migration input and compatibility projection, not the new source of truth.
   Opening an owner acknowledges its presentation without claiming resolution;
-  the Session Rail offers explicit acknowledge, one-hour snooze, resume, and
+  Workspaces offers explicit acknowledge, one-hour snooze, resume, and
   resolve actions. Structured permission and failure states derive urgent
   priority from their owning adapter instead of being copied into SQLite.
 
@@ -122,7 +131,8 @@ session::AppSession previous launch ID and window stack
 The path restores ordering, active workspace selection, window grouping,
 scratch workspaces, pane data, and workspace-local UI state. Tests in
 `workspace::persistence` cover several of these pieces. A consolidated build
-and live restart scenario have not run for the current dirty product slice.
+and live restart scenario have not run for the exact v0.2.2 implementation
+candidate.
 
 Startup now treats restoration as a barrier rather than an alternative to an
 initial CLI or URL request. `AppSession` is the source of truth for the ordered
@@ -151,93 +161,110 @@ Two terminal identities now have different intended meanings:
 - `terminal::session_host::TerminalSessionId` identifies host-owned
   computation independently of panes, entities, workspaces, and windows.
 
-The second identity now drives an in-process local host. `terminal::session_host`
-defines versioned snapshots, bounded replay positions, lifecycle states, and
-explicit list, create, attach, detach, input, resize, and terminate commands.
-`LocalTerminalHost` is initialized from the persisted installation identity,
-retains local terminal entities after a view closes, and distinguishes observed
-process exit from view closure.
+The second identity drives both the in-process compatibility owner and the
+packaged terminal Host. `terminal::session_host` defines versioned snapshots,
+bounded replay positions, lifecycle states, and explicit list, create, attach,
+detach, input, resize, and terminate commands. `LocalTerminalHost` retains
+entities only for the current GUI lifetime. The sibling `dez-terminal-host`
+owns raw local PTYs independently of GPUI and survives a normal GUI close.
 
-Terminal items and `TerminalThreadMetadataStore` now persist nullable
-Host/Session pairs alongside their existing compatibility metadata. A valid
-pair reattaches the same retained entity when the in-process host still owns
-it. A stale, foreign, partial, or malformed reference does not create a shell;
-it opens a display-only recovery surface explaining that Dez started no
+Terminal items and `TerminalThreadMetadataStore` persist nullable Host/Session
+pairs alongside their existing compatibility metadata. A valid current-Host
+pair reattaches the same computation through the authenticated connection. A
+partial, malformed, or unavailable current reference does not create a shell;
+it opens a display-only recovery Surface explaining that Dez started no
 replacement computation. Agent recovery also skips the initialization command
-in that state. Rows with both new columns null remain legacy rows and preserve
-their previous behavior.
+in that state. Eligible saved records owned by an older Host generation remain
+visible as **Legacy · Access blocked**. The label does not assert that the old
+process is reachable or alive. The user can leave the record untouched, open a
+separate new shell in the recorded directory, or ask a matching legacy owner to
+terminate the Session behind confirmation. Dez never claims to transfer a
+running process between Hosts.
 
 Terminal attention is also stored as an additive SQLite field. Bell-derived
 attention is persisted immediately when raised and when acknowledged, so a GUI
 restart cannot silently erase it. Structured Codex attention remains owned by
 the helper snapshot and is acknowledged when the owning terminal is opened.
 
-The Session Rail projects detached local sessions, uses the same stable session
-identity before and after reattachment, and reattaches the existing terminal
-entity into a normal pane. Closing a live row detaches it; removing a detached
-row terminates it explicitly. The terminal context menu also exposes Terminate
-Terminal Session… as a separate destructive command. Selecting a saved hosted
-row no longer fails invisibly when reconciliation fails: Dez preserves its
-title and opens one display-only **Terminal Session unavailable** warning with
-the exact reason. The PTY grid stays free of synthetic output and an inert
-cursor. **Start Fresh Terminal** is an explicit separate-computation action;
-recovery itself starts no replacement process.
+Workspaces projects detached local Sessions only when they carry supported-agent
+or managed-terminal evidence; ordinary shells remain Main Work Area Surfaces.
+For a projected Session, Workspaces preserves stable identity through
+reattachment and returns an attachment to a normal Main Work Area tab. Closing a
+live tab detaches it; termination remains a separate, confirmed destructive
+action. A hosted termination stays attached until the Host acknowledges an
+exited snapshot; a rejected or dropped response leaves the terminal visible
+with retry guidance. After an event-stream failure the GUI clears its Host
+cursor and requires a fresh authoritative list before accepting incremental
+events from a restarted helper. Failed reconciliation preserves the title and
+opens one display-only unavailable warning with the exact reason. The PTY grid
+stays free of synthetic output and an inert cursor. **Start Fresh Terminal** is
+explicit separate computation; recovery itself starts no replacement process.
 
-The in-process compatibility path is not cross-process durable. Exiting Dez
-drops that host and terminates its PTYs. It remains the default until the
-helper path passes the consolidated verification gate.
+Packaged Dez enables `dez-terminal-host` by default when the sibling executable
+is present. A source or partial installation without that helper uses
+`LocalTerminalHost`; that path ends with the GUI and must not be described as
+durable. `DEZ_EXPERIMENTAL_TERMINAL_HOST` remains a diagnostic override, not the
+normal release switch. When helper ownership is selected, local shell creation
+waits for an authenticated Host and reports failure rather than silently
+falling back to a GUI-owned PTY.
 
-The additive `dez-terminal-host` binary now establishes the next ownership
-boundary in source. It authenticates a client using a private token file,
-checks stable host and protocol identity, rejects oversized frames before
-payload allocation, and owns raw local PTYs independently of GPUI. Each PTY has
-a poll-driven command/output loop; output enters the same byte-bounded,
-sequence-addressed replay model used by the in-process contract. A sequential
-transport client can handshake, negotiate supported operations, and issue
-lifecycle commands.
+On macOS, Dez requires the app bundle to be installed in `/Applications` before
+Workspace restoration or terminal-Host startup. A DMG, translocated, temporary,
+or user-local launch enters `InstallationRequired`, renders the install and
+relaunch decision as an inline native Home callout, and ignores deferred open
+requests. It does not open a startup dialog, prompt, modal, or overlay. No
+helper is started under the temporary code identity.
 
-When `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, ordinary local shells now use that
-helper. The runtime connects before launching the packaged sibling, keeps its
-token and socket inside a private state directory, and refuses unsafe
-stale-path deletion. `TerminalBuilder::new_hosted` creates the display-side
-grid with stable session identity; its controller delegates input, resize,
-detach, and terminate without giving GPUI process ownership. The GUI establishes
-one authoritative snapshot baseline, then opens a separate authenticated
-subscription socket. The helper pushes at most eight retained envelopes per
-batch, coalesces wakeups, and sleeps until Host truth changes. Reconnect opens a
-new subscription after the last delivered cursor; retention loss triggers a
-full list resync. Peers without event-stream capability retain the 250 ms to one
-second polling fallback. Attach polling applies only unseen sequence-addressed
-replay, and a bounded startup wait
-prevents persisted items from racing the helper handshake. Display-derived
-title and working-directory changes return to the host, while snapshots carry
-the owning PID and publish revision notifications so detached and reconnecting
-rows cannot become silently invisible.
+The Host runtime creates one `TerminalHostEndpoint` containing generation,
+socket path, and token-file path. The generation also participates in
+`TerminalHostId`. `TerminalHostConnection` exposes that exact endpoint to every
+terminal-agent hook, eliminating independent path reconstruction and the legacy
+socket/token mismatch. The runtime refuses unsafe stale-path deletion.
 
-The experimental flag is a truth boundary: while it is enabled, local shell
-creation waits for the authenticated host and reports failure rather than
-silently falling back to a GUI-owned PTY. The Session Rail projects Connecting,
-Failed, and Reconnecting host health and allows full reconnect/failure details
-to be copied without permanently expanding the rail. After transport loss, later ordered
-commands wait for a fresh handshake; the command whose response was lost is
-never replayed because its outcome is uncertain. Large input is split into
-frame-safe chunks, and the raw replay budget is deliberately below the JSON
-frame ceiling.
+The helper authenticates with its private token, checks Host and protocol
+identity, rejects oversized frames before allocation, and publishes
+sequence-addressed bounded replay. The GUI establishes one authoritative list
+baseline and a separately authenticated event subscription. Reconnect resumes
+after the last delivered cursor; retention loss triggers a full list resync,
+and peers without event-stream capability retain bounded polling. Display-side
+input, resize, detach, and terminate route through the Host connection without
+giving GPUI process ownership. Connection, reconnection, and command cycles are
+bounded. An uncertain command is never replayed, and work queued behind a
+transport failure is rejected as stale instead of running after a later
+handshake. The GUI command path groups every frame-safe chunk for one input batch
+into one queue item, so queue admission accepts or rejects the batch as a unit.
+It rejects a batch above the helper's four-mebibyte PTY budget and enforces an
+aggregate byte cap across queued input. This is admission atomicity only: after
+transport begins sending a batch, a later helper rejection or transport failure
+can leave a prefix delivered. Dez treats that outcome as uncertain and never
+replays the batch. The helper PTY queue independently enforces 256 queued
+messages and four mebibytes, supports partial writes, and waits for writable
+readiness before continuing. Input saturation returns explicit backpressure;
+inside the helper, resize and termination use a separate PTY control channel.
+Connecting, Failed, and Reconnecting states remain visible in Workspaces with
+copyable diagnostics.
 
-Task terminals intentionally remain GUI-owned and non-durable in v0.0.1. Their
-rerun, completion, cancellation, and task-status contracts do not define what
+Workspace access is a separate startup boundary. Restore preflights each local
+root once. A denied root enters `WorkspaceAccessState::AccessRequired`, is not
+opened as a half-working Workspace, and appears in one native access notice with
+**Grant Access…**. Its single-folder picker accepts only an exact blocked root,
+validates readability, and never opens or replaces the current Workspace.
+Granting one root removes only that root from the notice. Relaunch or **Open
+Recent Workspaces…** retries restoration when a Workspace is still missing.
+Git, search, LSP, Agent, and terminal work for a denied root do not begin behind
+the warning. Workspace Search deduplicates permission errors per root and
+cancels pending work during quit.
+
+Task terminals intentionally remain GUI-owned and non-durable. Their rerun,
+completion, cancellation, and task-status contracts do not define what
 cross-GUI survival should mean; silently retaining them could leave a build or
 test alive after the UI reports cancellation. Users who need long-lived
-supervision can choose an ordinary durable shell. The default-off ordinary
-shell path still uses `LocalTerminalHost` and dies with the GUI process.
-Transport loss becomes a Reconnecting snapshot and never
-starts replacement computation. Ordered commands now make a bounded series of
-reconnection attempts and return an honest error instead of blocking the whole
-queue forever; authentication, host, and protocol failures stop immediately.
-The helper also releases exited PTY handles on the next command while retaining
-the bounded exited snapshot for review. Helper relaunch policy remains later
-hardening work; pushed observations deliberately use a second connection
-instead of multiplexing mutating commands.
+supervision can choose an ordinary durable shell. Transport loss becomes a
+Reconnecting snapshot and never starts replacement computation. Ordered
+commands make a bounded series of reconnection attempts and return an honest
+error instead of blocking the queue forever; authentication, Host, and protocol
+failures stop immediately. The helper releases exited PTY handles on the next
+command while retaining the bounded exited snapshot for review.
 
 The UI must therefore keep using honest labels:
 
@@ -285,10 +312,12 @@ process supervisor, storage migration, and terminal renderer rewrite.
 
 ## Next acceptance slice
 
-The next acceptance slice is complete when the opt-in source path is compiled
-and exercised through create, input, resize, close/detach, GUI exit, relaunch,
-replay, reattach, explicit terminate, and observed exit. It must verify the
-state-specific recovery copy and prove the helper remains alive after GUI exit.
-Only after that evidence should the helper become the default local-shell
-backend. Legacy rows retain Saved behavior, task terminals remain explicit,
-and remote transport is a later adapter.
+The next acceptance slice is complete when an exact packaged candidate exercises
+the default terminal-Host path through create, input, resize, close/detach, GUI
+exit, relaunch, replay, reattach, explicit terminate, and observed exit. It must
+verify the state-specific recovery copy and prove the helper remains alive after
+GUI exit. This evidence validates the default already selected in source; it
+does not change process ownership retroactively. Source or partial installations
+without the helper remain non-durable, legacy rows retain their explicit
+recovery behavior, task terminals remain GUI-owned, and remote transport is a
+later adapter.

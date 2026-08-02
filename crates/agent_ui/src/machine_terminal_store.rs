@@ -15,11 +15,14 @@ use crate::terminal_thread_metadata_store::{
 
 const MACHINE_TERMINAL_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 
-/// A terminal that belongs to another application on the same machine.
+fn machine_terminal_observation_enabled(_app_name: &str) -> bool {
+    false
+}
+
+/// A dormant compatibility model for a terminal owned by another application.
 ///
-/// This is deliberately observation-only. Dez does not own the PTY, cannot
-/// send input to it, and does not persist this record. The process table is
-/// rescanned periodically and rows disappear when their TTY disappears.
+/// If the observer is explicitly enabled in a future product, it must remain
+/// read-only: Dez cannot send input, persist the record, or claim PTY ownership.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ObservedMachineTerminal {
     pub id: String,
@@ -88,7 +91,9 @@ pub struct MachineTerminalStore {
 
 impl MachineTerminalStore {
     pub fn init_global(cx: &mut App) {
-        if APP_NAME == "Zed" || cx.has_global::<GlobalMachineTerminalStore>() {
+        if !machine_terminal_observation_enabled(APP_NAME)
+            || cx.has_global::<GlobalMachineTerminalStore>()
+        {
             return;
         }
 
@@ -144,6 +149,17 @@ impl MachineTerminalStore {
 
 pub fn init(cx: &mut App) {
     MachineTerminalStore::init_global(cx);
+}
+
+#[cfg(test)]
+mod product_tests {
+    use super::machine_terminal_observation_enabled;
+
+    #[test]
+    fn unrelated_machine_terminal_observation_is_not_a_product_surface() {
+        assert!(!machine_terminal_observation_enabled("Dez"));
+        assert!(!machine_terminal_observation_enabled("Zed"));
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
