@@ -1245,28 +1245,25 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
     } else {
-        "Layout"
+        "Tabs & Panels"
     }
 }
 
 fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
-    app_name != "Zed" && tab_count > 1
+    app_name != "Zed" && tab_count > 0
 }
 
 fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
-    let tab_label = format!(
-        "{tab_count} {}",
-        if tab_count == 1 { "tab" } else { "tabs" }
-    );
     if app_name != "Zed" {
         format!(
-            "{tab_label} · {pane_count} {}",
+            "{tab_count} open · {pane_count} {}",
             if pane_count == 1 { "pane" } else { "panes" }
         )
-    } else if pane_count > 1 {
-        format!("{tab_label} · {pane_count} panes")
     } else {
-        tab_label
+        format!(
+            "{tab_count} {}",
+            if tab_count == 1 { "tab" } else { "tabs" }
+        )
     }
 }
 
@@ -1275,16 +1272,11 @@ fn workspace_pane_navigation_label(pane_index: usize, pane_count: usize) -> Opti
 }
 
 fn workspace_pane_header_label(
-    app_name: &str,
     pane_index: usize,
     pane_count: usize,
     is_focused: bool,
 ) -> Option<String> {
-    let label = if app_name != "Zed" {
-        Some(format!("Pane {}", pane_index + 1))
-    } else {
-        workspace_pane_navigation_label(pane_index, pane_count)
-    };
+    let label = workspace_pane_navigation_label(pane_index, pane_count);
     label.map(|label| {
         if is_focused {
             format!("{label} · Focused")
@@ -1751,12 +1743,6 @@ struct SerializedSidebar {
     active_view: SerializedSidebarView,
     #[serde(default)]
     manual_entry_order: Vec<ManualEntryOrderKey>,
-    #[serde(default = "workspace_tabs_expanded_default")]
-    workspace_tabs_expanded: bool,
-}
-
-fn workspace_tabs_expanded_default() -> bool {
-    false
 }
 
 #[derive(Debug, Default)]
@@ -2617,15 +2603,15 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Workspaces and Activity"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Layout");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Tabs & Panels");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 2));
-        assert!(!workspace_tabs_section_visible("Dez", 1));
+        assert!(workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
-        assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 tab · 1 pane");
-        assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 tabs · 1 pane");
-        assert_eq!(workspace_tab_layout_label("Dez", 3, 2), "3 tabs · 2 panes");
+        assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 open · 1 pane");
+        assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 open · 1 pane");
+        assert_eq!(workspace_tab_layout_label("Dez", 3, 2), "3 open · 2 panes");
         assert_eq!(workspace_tab_layout_label("Zed", 3, 1), "3 tabs");
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
         assert_eq!(
@@ -2633,18 +2619,14 @@ mod session_start_state_tests {
             Some("Pane 2")
         );
         assert_eq!(
-            workspace_pane_header_label("Dez", 0, 2, true).as_deref(),
+            workspace_pane_header_label(0, 2, true).as_deref(),
             Some("Pane 1 · Focused")
         );
         assert_eq!(
-            workspace_pane_header_label("Dez", 1, 2, false).as_deref(),
+            workspace_pane_header_label(1, 2, false).as_deref(),
             Some("Pane 2")
         );
-        assert_eq!(
-            workspace_pane_header_label("Dez", 0, 1, true).as_deref(),
-            Some("Pane 1 · Focused")
-        );
-        assert_eq!(workspace_pane_header_label("Zed", 0, 1, true), None);
+        assert_eq!(workspace_pane_header_label(0, 1, true), None);
         assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
         assert_eq!(workspace_tab_icon_color(true, false), Color::Default);
         assert_eq!(workspace_tab_icon_color(true, true), Color::Accent);
@@ -5417,9 +5399,6 @@ pub struct Sidebar {
     /// focused on codebases and actionable agent sessions.
     external_activity_expanded: bool,
     reveal_running_sessions_after_refresh: bool,
-    /// The active Workspace's center-pane tabs are a native projection rather
-    /// than a second source of tab state. This only persists the disclosure.
-    workspace_tabs_expanded: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
     /// Note: This is NOT the same as the active item.
@@ -5697,7 +5676,6 @@ impl Sidebar {
             session_search_open: false,
             external_activity_expanded: false,
             reveal_running_sessions_after_refresh: false,
-            workspace_tabs_expanded: false,
             selection: None,
             active_entry: None,
             hovered_thread_index: None,
@@ -17895,207 +17873,172 @@ impl Sidebar {
         let mut rows = Vec::with_capacity(tab_count + pane_count);
         let mut tab_position = 0;
 
-        if self.workspace_tabs_expanded {
-            for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
-                let pane_is_active = pane == active_pane;
-                let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
-                let pinned_count = pane.read(cx).pinned_count();
-                let details = workspace::tab_details(&items, window, cx);
+        for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
+            let pane_is_active = pane == active_pane;
+            let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
+            let pinned_count = pane.read(cx).pinned_count();
+            let details = workspace::tab_details(&items, window, cx);
 
-                if let Some(pane_label) =
-                    workspace_pane_header_label(APP_NAME, pane_index, pane_count, pane_is_active)
-                {
-                    rows.push(
-                        h_flex()
-                            .px_2()
-                            .pt_1()
-                            .pb_0p5()
-                            .child(Label::new(pane_label).size(LabelSize::XSmall).color(
-                                if pane_is_active {
-                                    Color::Accent
-                                } else {
-                                    Color::Muted
-                                },
-                            ))
-                            .into_any_element(),
-                    );
-                }
+            if let Some(pane_label) =
+                workspace_pane_header_label(pane_index, pane_count, pane_is_active)
+            {
+                rows.push(
+                    h_flex()
+                        .px_2()
+                        .pt_1()
+                        .pb_0p5()
+                        .child(Label::new(pane_label).size(LabelSize::XSmall).color(
+                            if pane_is_active {
+                                Color::Accent
+                            } else {
+                                Color::Muted
+                            },
+                        ))
+                        .into_any_element(),
+                );
+            }
 
-                for (item_index, item) in items.into_iter().enumerate() {
-                    tab_position += 1;
-                    let position_in_set = tab_position;
-                    let detail = details.get(item_index).copied().unwrap_or_default();
-                    let label = item.tab_content_text(detail, cx);
-                    let is_visible = active_item_id == Some(item.item_id());
-                    let is_focused = pane_is_active && is_visible;
-                    let is_pinned = item_index < pinned_count;
-                    let icon_color = workspace_tab_icon_color(is_visible, is_focused);
-                    let icon = if let Some(agent_thread) = item.downcast::<AgentThreadItem>() {
-                        agent_thread
-                            .read(cx)
-                            .workspace_navigation_icon(icon_color, cx)
-                    } else {
-                        item.tab_icon(window, cx)
-                            .unwrap_or_else(|| Icon::new(IconName::File))
-                            .size(IconSize::XSmall)
-                            .color(icon_color)
-                            .into_any_element()
-                    };
-                    let is_dirty = item.is_dirty(cx);
-                    let pane_label = workspace_pane_navigation_label(pane_index, pane_count)
-                        .unwrap_or_else(|| "Main Work Area".to_owned());
-                    let visibility_label = if is_focused {
-                        "focused"
-                    } else if is_visible {
-                        "visible"
-                    } else {
-                        "open"
-                    };
-                    let pinned_label = if is_pinned { ", pinned" } else { "" };
-                    let dirty_label = if is_dirty { ", modified" } else { "" };
-                    let accessibility_label = format!(
-                        "{label}, {visibility_label}{pinned_label}{dirty_label}, {pane_label}. Open in {workspace_label}"
-                    );
-                    let item_id = item.item_id();
-                    let workspace = workspace.clone();
+            for (item_index, item) in items.into_iter().enumerate() {
+                tab_position += 1;
+                let position_in_set = tab_position;
+                let detail = details.get(item_index).copied().unwrap_or_default();
+                let label = item.tab_content_text(detail, cx);
+                let is_visible = active_item_id == Some(item.item_id());
+                let is_focused = pane_is_active && is_visible;
+                let is_pinned = item_index < pinned_count;
+                let icon_color = workspace_tab_icon_color(is_visible, is_focused);
+                let icon = if let Some(agent_thread) = item.downcast::<AgentThreadItem>() {
+                    agent_thread
+                        .read(cx)
+                        .workspace_navigation_icon(icon_color, cx)
+                } else {
+                    item.tab_icon(window, cx)
+                        .unwrap_or_else(|| Icon::new(IconName::File))
+                        .size(IconSize::XSmall)
+                        .color(icon_color)
+                        .into_any_element()
+                };
+                let is_dirty = item.is_dirty(cx);
+                let pane_label = workspace_pane_navigation_label(pane_index, pane_count)
+                    .unwrap_or_else(|| "Main Work Area".to_owned());
+                let visibility_label = if is_focused {
+                    "focused"
+                } else if is_visible {
+                    "visible"
+                } else {
+                    "open"
+                };
+                let pinned_label = if is_pinned { ", pinned" } else { "" };
+                let dirty_label = if is_dirty { ", modified" } else { "" };
+                let accessibility_label = format!(
+                    "{label}, {visibility_label}{pinned_label}{dirty_label}, {pane_label}. Open in {workspace_label}"
+                );
+                let item_id = item.item_id();
+                let workspace = workspace.clone();
 
-                    rows.push(
-                        div()
-                            .id(ElementId::from(format!(
-                                "workspace-native-tab-row-{item_id}"
+                rows.push(
+                    div()
+                        .id(ElementId::from(format!(
+                            "workspace-native-tab-row-{item_id}"
+                        )))
+                        .role(gpui::Role::ListItem)
+                        .aria_position_in_set(position_in_set)
+                        .aria_size_of_set(tab_count)
+                        .child(
+                            ButtonLike::new(ElementId::from(format!(
+                                "workspace-native-tab-{item_id}"
                             )))
-                            .role(gpui::Role::ListItem)
-                            .aria_position_in_set(position_in_set)
-                            .aria_size_of_set(tab_count)
+                            .size(ButtonSize::Medium)
+                            .style(ButtonStyle::Subtle)
+                            .full_width()
+                            .toggle_state(is_visible)
+                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                            .tab_index(0isize)
+                            .aria_label(accessibility_label.clone())
+                            .tooltip(Tooltip::text(accessibility_label))
                             .child(
-                                ButtonLike::new(ElementId::from(format!(
-                                    "workspace-native-tab-{item_id}"
-                                )))
-                                .size(ButtonSize::Medium)
-                                .style(ButtonStyle::Subtle)
-                                .full_width()
-                                .toggle_state(is_visible)
-                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                                .tab_index(0isize)
-                                .aria_label(accessibility_label.clone())
-                                .tooltip(Tooltip::text(accessibility_label))
-                                .child(
-                                    h_flex()
-                                        .w_full()
-                                        .min_w_0()
-                                        .gap_2()
-                                        .child(icon)
-                                        .child(
-                                            Label::new(label)
-                                                .size(LabelSize::Small)
-                                                .truncate()
-                                                .flex_1(),
+                                h_flex()
+                                    .w_full()
+                                    .min_w_0()
+                                    .text_left()
+                                    .gap_2()
+                                    .child(icon)
+                                    .child(
+                                        Label::new(label)
+                                            .size(LabelSize::Small)
+                                            .truncate()
+                                            .flex_1(),
+                                    )
+                                    .when(is_focused, |this| {
+                                        this.child(
+                                            Label::new("Active")
+                                                .size(LabelSize::XSmall)
+                                                .color(Color::Accent),
                                         )
-                                        .when(is_dirty, |this| {
-                                            this.child(
-                                                Icon::new(IconName::Circle)
-                                                    .size(IconSize::XSmall)
-                                                    .color(Color::Accent),
-                                            )
-                                        })
-                                        .when(is_pinned, |this| {
-                                            this.child(
-                                                Icon::new(IconName::Pin)
-                                                    .size(IconSize::XSmall)
-                                                    .color(Color::Muted),
-                                            )
-                                        }),
-                                )
-                                .on_click(
-                                    move |_, window, cx| {
-                                        workspace.update(cx, |workspace, cx| {
-                                            workspace.activate_item(
-                                                item.as_ref(),
-                                                true,
-                                                true,
-                                                window,
-                                                cx,
-                                            );
-                                        });
-                                    },
-                                ),
+                                    })
+                                    .when(is_dirty, |this| {
+                                        this.child(
+                                            Icon::new(IconName::Circle)
+                                                .size(IconSize::XSmall)
+                                                .color(Color::Accent),
+                                        )
+                                    })
+                                    .when(is_pinned, |this| {
+                                        this.child(
+                                            Icon::new(IconName::Pin)
+                                                .size(IconSize::XSmall)
+                                                .color(Color::Muted),
+                                        )
+                                    }),
                             )
-                            .into_any_element(),
-                    );
-                }
+                            .on_click(move |_, window, cx| {
+                                workspace.update(cx, |workspace, cx| {
+                                    workspace.activate_item(item.as_ref(), true, true, window, cx);
+                                });
+                            }),
+                        )
+                        .into_any_element(),
+                );
             }
         }
-
-        let expanded = self.workspace_tabs_expanded;
-        let disclosure_label = if expanded {
-            "Hide active Workspace Layout"
-        } else {
-            "Show active Workspace Layout"
-        };
+        let section_header = h_flex()
+            .w_full()
+            .min_w_0()
+            .px_3()
+            .pt_1p5()
+            .pb_1()
+            .child(
+                Label::new(workspace_tabs_section_title(APP_NAME))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .flex_1(),
+            )
+            .child(
+                Label::new(workspace_tab_layout_label(APP_NAME, tab_count, pane_count))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            );
 
         Some(
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label("Layout in the active Workspace")
+                .aria_label("Tabs and panels in the active Workspace")
                 .flex_none()
                 .min_h_0()
                 .border_b_1()
                 .border_color(cx.theme().colors().border)
+                .child(section_header)
                 .child(
-                    ButtonLike::new("active-workspace-tabs-disclosure")
-                        .size(ButtonSize::Medium)
-                        .style(ButtonStyle::Subtle)
-                        .full_width()
-                        .tab_index(0isize)
-                        .aria_label(disclosure_label)
-                        .aria_expanded(expanded)
-                        .tooltip(Tooltip::text(disclosure_label))
-                        .child(
-                            h_flex()
-                                .w_full()
-                                .min_w_0()
-                                .gap_1()
-                                .child(
-                                    Icon::new(if expanded {
-                                        IconName::ChevronDown
-                                    } else {
-                                        IconName::ChevronRight
-                                    })
-                                    .size(IconSize::XSmall)
-                                    .color(Color::Muted),
-                                )
-                                .child(
-                                    Label::new(workspace_tabs_section_title(APP_NAME))
-                                        .size(LabelSize::Small)
-                                        .flex_1(),
-                                )
-                                .child(
-                                    Label::new(workspace_tab_layout_label(
-                                        APP_NAME, tab_count, pane_count,
-                                    ))
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted),
-                                ),
-                        )
-                        .on_click(cx.listener(|this, _, _, cx| {
-                            this.workspace_tabs_expanded = !this.workspace_tabs_expanded;
-                            this.serialize(cx);
-                            cx.notify();
-                        })),
+                    v_flex()
+                        .id("active-workspace-tab-list")
+                        .role(gpui::Role::List)
+                        .aria_label("Tabs and panels in the active Workspace")
+                        .max_h(vh(0.28, window))
+                        .overflow_y_scroll()
+                        .p_1()
+                        .children(rows),
                 )
-                .when(expanded, |this| {
-                    this.child(
-                        v_flex()
-                            .id("active-workspace-tab-list")
-                            .role(gpui::Role::List)
-                            .aria_label("Workspace Layout tabs grouped by pane")
-                            .max_h(vh(0.18, window))
-                            .overflow_y_scroll()
-                            .p_1()
-                            .children(rows),
-                    )
-                })
                 .into_any_element(),
         )
     }
@@ -19219,7 +19162,6 @@ impl WorkspaceSidebar for Sidebar {
                 SidebarView::Archive(_) => SerializedSidebarView::History,
             },
             manual_entry_order: self.manual_entry_order.clone(),
-            workspace_tabs_expanded: self.workspace_tabs_expanded,
         };
         serde_json::to_string(&serialized).ok()
     }
@@ -19235,7 +19177,6 @@ impl WorkspaceSidebar for Sidebar {
                 self.width = px(width).clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
             }
             self.manual_entry_order = serialized.manual_entry_order;
-            self.workspace_tabs_expanded = serialized.workspace_tabs_expanded;
             if serialized.active_view == SerializedSidebarView::History {
                 cx.defer_in(window, |this, window, cx| {
                     this.show_archive(window, cx);

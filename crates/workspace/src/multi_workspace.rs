@@ -247,7 +247,11 @@ fn render_sidebar_header_controls_for_state(
         })
         .into_any_element();
 
-    let project_pane_toggle_button = if SidebarSettings::get_global(cx).show_project_pane_button {
+    let project_pane_toggle_button = if project_pane_toggle_visible_in_header(
+        paths::APP_NAME,
+        sidebar_open,
+        SidebarSettings::get_global(cx).show_project_pane_button,
+    ) {
         project_pane_visible.map(|is_visible| {
             let label = project_pane_toggle_label(paths::APP_NAME, is_visible);
 
@@ -306,6 +310,14 @@ fn project_pane_toggle_label(app_name: &str, pane_open: bool) -> &'static str {
     }
 }
 
+fn project_pane_toggle_visible_in_header(
+    app_name: &str,
+    sidebar_open: bool,
+    setting_enabled: bool,
+) -> bool {
+    setting_enabled && (app_name == "Zed" || !sidebar_open)
+}
+
 fn sidebar_resize_copy(app_name: &str) -> (&'static str, &'static str, &'static str) {
     if app_name == "Zed" {
         (
@@ -354,7 +366,8 @@ fn sidebar_keyboard_resize_target(
 #[cfg(test)]
 mod sidebar_chrome_tests {
     use super::{
-        SIDEBAR_KEYBOARD_RESIZE_STEP, project_pane_toggle_label, sidebar_chrome_toggle_visible,
+        SIDEBAR_KEYBOARD_RESIZE_STEP, project_pane_toggle_label,
+        project_pane_toggle_visible_in_header, sidebar_chrome_toggle_visible,
         sidebar_keyboard_resize_target, sidebar_resize_copy,
         sidebar_resize_handle_occludes_main_work_area, sidebar_toggle_label,
     };
@@ -370,15 +383,13 @@ mod sidebar_chrome_tests {
         assert_eq!(sidebar_toggle_label("Dez", true), "Hide Workspaces");
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
-        assert_eq!(
-            project_pane_toggle_label("Dez", false),
-            "Show Workspace Tools"
-        );
-        assert_eq!(
-            project_pane_toggle_label("Dez", true),
-            "Hide Workspace Tools"
-        );
+        assert_eq!(project_pane_toggle_label("Dez", false), "Open Files");
+        assert_eq!(project_pane_toggle_label("Dez", true), "Return from Files");
         assert_eq!(project_pane_toggle_label("Zed", false), "Show Project Pane");
+        assert!(project_pane_toggle_visible_in_header("Dez", false, true));
+        assert!(!project_pane_toggle_visible_in_header("Dez", true, true));
+        assert!(project_pane_toggle_visible_in_header("Zed", true, true));
+        assert!(!project_pane_toggle_visible_in_header("Dez", false, false));
     }
 
     #[test]

@@ -179,7 +179,7 @@ terminal, diff, search result, settings page, or review can be tabbed, split,
 moved, and focused through the same rules. Its tab strip provides native
 reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Workspaces can
-project all open files and tools under **Open Tabs & Tools**, grouped only when
+project all open files and tools under **Tabs & Panels**, grouped only when
 real pane splits exist; selecting one focuses its existing pane-owned tab.
 Terminals can be split below or beside code while keeping their Workspace
 ownership.
@@ -190,9 +190,11 @@ not flatten pane ownership or conceal unsaved work.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
-a **Workspace tmux** session, Codex, Claude Code, or OpenCode. **More Agent
-CLIs** keeps Gemini CLI, Aider, and Herdr one level deeper. The Add menu also
-opens the optional Built-in Agent, a file, Files, Review Changes, Run Task,
+Codex, Claude Code, or OpenCode. **More Agent CLIs** keeps Gemini CLI, Aider,
+and Herdr one level deeper. **Sessions and Multiplexers** keeps **Workspace
+tmux**, **Browse Running Sessions…**, and the applicable cmux handoff visible
+at the first menu level. The Add menu also opens the optional Built-in Agent,
+a file, Files, Git Changes, Run Task,
 Debug, Workspace search, or symbol search. Terminal and Agent routes lead;
 running-session and cmux handoffs follow; Home and Recent Workspaces remain at
 the end as secondary navigation. **Resume Existing Agent** resumes the last native
@@ -267,30 +269,21 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
-When Workspaces is open, its collapsible **Open Tabs & Tools** section projects
-the active Workspace's native Main Work Area surfaces above the Workspace and
-Session list when at least two tabs are open. Home, code, terminals, diffs,
-Files, Git, and other Workspace tools all appear through the same projection;
-only running terminal and agent activity appears under **Sessions**. A one-pane
-layout remains a flat list. Real splits add quiet **Pane 1**,
-**Pane 2**, and later group labels, so the hierarchy describes the layout that
-already exists instead of manufacturing one. Each row uses the Surface's
-native icon, disambiguated tab title, active state, dirty state, and pinned
-state. Terminal rows preserve their task, Agent provider, or tmux mark.
-Built-in and external Agent tabs preserve the same Dez or provider mark used
-by their native tab, and the projection announces each row's position in the
-native tab set. In split layouts, each pane's visible tab has a quiet selected
-row and the focused pane keeps the accent icon, so pane visibility does not
-disappear when focus moves. The collapsed summary reports tabs and panes; when
-expanded, the focused pane's group label names that state directly. Activating
-a row calls the owning Workspace's native item activation path. An unpinned row
-exposes the Surface's native close icon on hover, keeps it
-visible while that Surface is active in its pane, and accepts middle-click.
-Both routes call the owning pane's normal close path, including unsaved-work
-confirmation. Pinned rows remain protected. Ordering, dragging, preview
-replacement, pinning, and split ownership remain in the native tab strip. The
-disclosure state persists, while Workspace search temporarily hides the section
-to keep filtering focused.
+When Workspaces is open, the active Workspace contains a compact **Tabs &
+Panels** projection of its native Main Work Area. It appears for one or more
+open items, so Files, Git, terminals, code, diffs, Settings, and Agent tabs do
+not vanish from navigation simply because no agent is running. A single-pane
+Workspace stays flat; real user-created splits add quiet **Pane 1**, **Pane
+2**, and later group labels. The focused split is named in text. Every row is
+left-aligned, keeps its native icon and disambiguated title together, and names
+the active item instead of relying on color alone. Dirty and pinned state stay
+visible as supporting marks. Terminal rows retain their task, provider, tmux,
+or shell identity.
+
+Activating a row calls the owning Workspace's native item activation path.
+Tabs & Panels never owns close, middle-click, ordering, dragging, preview,
+pinning, overflow, or split behavior; those remain in the native tab strip.
+Workspace search temporarily hides the projection to keep filtering focused.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Workspace
@@ -1075,8 +1068,8 @@ Agent Session.
 
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
-collapses the Workspace's nested Layout and Activity. Layout returns to real
-open pane tabs. Activity shows only current, actionable, recoverable, or
+collapses the Workspace's nested Tabs & Panels and Activity. Tabs & Panels
+returns to real open pane tabs. Activity shows only current, actionable, recoverable, or
 review-ready work; inactive completed Agent Sessions remain in Agent History.
 **View → Navigate Workspaces** collects
 **Focus Workspaces**, **Search Workspaces and Activity…**, **Previous
