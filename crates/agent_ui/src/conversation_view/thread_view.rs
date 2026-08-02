@@ -11303,6 +11303,7 @@ impl ThreadView {
 
         v_flex()
             .w_full()
+            .id(("subagent-card", entry_ix))
             .role(gpui::Role::Region)
             .aria_label(accessibility_label)
             .rounded_md()
