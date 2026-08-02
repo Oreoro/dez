@@ -277,6 +277,12 @@ require_pattern crates/settings_ui/src/components/dropdown.rs \
 require_pattern crates/settings_ui/src/components/dropdown.rs \
     '^use gpui::ParentElement;$' \
     'the native Settings dropdown can regress to composing GPUI children without importing their parent trait'
+require_pattern crates/sidebar/Cargo.toml \
+    '^futures\.workspace = true$' \
+    'bounded cmux handoff can regress to using futures without declaring its dependency'
+require_pattern crates/sidebar/src/sidebar.rs \
+    '^use gpui::Styled;$' \
+    'the Workspace sidebar can regress to using GPUI spacing without importing its styling trait'
 require_multiline_pattern crates/settings_ui/src/components/dropdown.rs \
     'icon_for_value: Option<Rc<dyn Fn\(T\) -> IconName.*?pub fn icon_for_value.*?ContextMenuEntry::new.*?toggleable\(IconPosition::End.*?entry\.icon\(icon_for_value\(value\)\).*?DropdownMenu::new_with_element.*?Icon::new\(icon_for_value\(current_value\)\).*?aria_value\(visible_label\)' \
     'the native enum chooser can regress to hiding launcher identity or conflating it with selection state'
@@ -2120,7 +2126,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = multi_workspace.*?project_group_keys\(\)\.to_vec\(\).*?let attachable_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(&project_group_key\).*?submenu\([[:space:]]*"Open Running Session…".*?open_external_multiplexer_session' \
     'a Project can regress to hiding or mis-scoping its external Workspaces and sessions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'use terminal_view::\{.*?WORKSPACE_TMUX_LAUNCHER_LABEL.*?let tmux_startup_command =[[:space:]]*terminal_view::tmux_startup_command_for_workspace.*?WORKSPACE_TMUX_LAUNCHER_LABEL\.to_owned\(\).*?IconName::SplitAlt.*?Some\(tmux_startup_command\.clone\(\)\)' \
+    'use terminal_view::\{.*?WORKSPACE_TMUX_LAUNCHER_LABEL.*?let workspace_root = project_group_key.*?ordered_paths\(\).*?next\(\).*?map\(PathBuf::as_path\).*?tmux_startup_command_for_workspace\(workspace_root\).*?WORKSPACE_TMUX_LAUNCHER_LABEL\.to_owned\(\).*?IconName::SplitAlt.*?Some\(tmux_startup_command\.clone\(\)\)' \
     'Workspace Options can regress to presenting root-scoped tmux as an unowned generic terminal action'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn open_tmux_terminal\(.*?ordered_paths\(\)[[:space:]]*\.next\(\)[[:space:]]*\.map\(PathBuf::as_path\).*?tmux_startup_command_for_workspace\(workspace_root\)' \
@@ -2147,7 +2153,7 @@ reject_pattern crates/sidebar/src/sidebar.rs \
     'workspace-native-tab-close|middle_click_pane' \
     'Workspace Layout can regress to duplicating native pane close ownership'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn render_active_workspace_tabs.*?let mut tab_position = 0.*?tab_position \+= 1.*?role\(gpui::Role::ListItem\).*?aria_position_in_set\(position_in_set\).*?aria_size_of_set\(tab_count\).*?id\("active-workspace-tab-list"\).*?role\(gpui::Role::List\)' \
+    'fn render_active_workspace_tabs.*?let mut tab_position = 0.*?tab_position \+= 1.*?workspace-native-tab-row-.*?role\(gpui::Role::ListItem\).*?aria_position_in_set\(position_in_set\).*?aria_size_of_set\(tab_count\).*?id\("active-workspace-tab-list"\).*?role\(gpui::Role::List\)' \
     'Workspace Layout can regress to an undifferentiated accessibility group without positional navigation'
 require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
     'pub fn workspace_navigation_icon.*?color: Color.*?agent_icon_from_external_svg.*?Icon::from_external_svg.*?IconSize::XSmall.*?ui::agent_icon_for_app\(paths::APP_NAME\).*?self\.agent_icon\(cx\)' \

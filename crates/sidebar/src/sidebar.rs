@@ -39,6 +39,7 @@ use editor::Editor;
 use feature_flags::{
     AgentThreadWorktreeLabel, AgentThreadWorktreeLabelFlag, FeatureFlag, FeatureFlagAppExt as _,
 };
+use gpui::Styled;
 use gpui::{
     Action as _, AnyElement, AnyView, App, ClickEvent, ClipboardItem, Context, Decorations,
     DismissEvent, Entity, EntityId, FocusHandle, Focusable, KeyContext, ListState, Pixels,
@@ -9113,10 +9114,13 @@ impl Sidebar {
                                 APP_NAME,
                                 configured_command.as_deref(),
                             );
+                            let workspace_root = project_group_key
+                                .path_list()
+                                .ordered_paths()
+                                .next()
+                                .map(PathBuf::as_path);
                             let tmux_startup_command =
-                                terminal_view::tmux_startup_command_for_workspace(
-                                    project_group_key.path_list().ordered_paths().next(),
-                                );
+                                terminal_view::tmux_startup_command_for_workspace(workspace_root);
                             let cmux_key = project_group_key.clone();
                             let cmux_sidebar = this_for_menu.clone();
                             let cmux_menu = weak_menu.clone();
@@ -17954,6 +17958,9 @@ impl Sidebar {
 
                     rows.push(
                         div()
+                            .id(ElementId::from(format!(
+                                "workspace-native-tab-row-{item_id}"
+                            )))
                             .role(gpui::Role::ListItem)
                             .aria_position_in_set(position_in_set)
                             .aria_size_of_set(tab_count)
