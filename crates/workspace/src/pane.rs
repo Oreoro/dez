@@ -13,6 +13,7 @@ use crate::{
     },
     move_item,
     notifications::NotifyResultExt,
+    panel_pane::PanelItem,
     render_sidebar_header_controls_with_auxiliary_visibility,
     toolbar::Toolbar,
     workspace_settings::{
@@ -5606,10 +5607,18 @@ impl Pane {
             return None;
         }
         let current_pane = cx.entity();
+        let active_panel_key = if paths::APP_NAME != "Zed" {
+            let active_pane = workspace.read(cx).active_pane().clone();
+            if active_pane == current_pane {
+                self.active_panel_item_key(cx)
+            } else {
+                active_pane.read(cx).active_panel_item_key(cx)
+            }
+        } else {
+            None
+        };
         let project_pane_visible = if paths::APP_NAME != "Zed" {
-            workspace
-                .read(cx)
-                .panel_item_is_active_for_key("ProjectPanel", cx)
+            active_panel_key == Some("ProjectPanel")
         } else if self.pane_kind == PaneKind::Project {
             self.is_visible()
         } else {
@@ -5618,9 +5627,7 @@ impl Pane {
                 .panel_pane_visible_except(PaneKind::Project, &current_pane, cx)
         };
         let agent_pane_visible = if paths::APP_NAME != "Zed" {
-            workspace
-                .read(cx)
-                .panel_item_is_active_for_key("agent_panel", cx)
+            active_panel_key == Some("agent_panel")
         } else if self.pane_kind == PaneKind::Agent {
             self.is_visible()
         } else {
@@ -5636,6 +5643,16 @@ impl Pane {
             agent_pane_visible,
             cx,
         )
+    }
+
+    fn active_panel_item_key(&self, cx: &App) -> Option<&'static str> {
+        if !self.is_visible() {
+            return None;
+        }
+
+        self.active_item()?
+            .downcast::<PanelItem>()
+            .map(|item| item.read(cx).panel_key())
     }
 
     pub fn set_zoom_out_on_close(&mut self, zoom_out_on_close: bool) {

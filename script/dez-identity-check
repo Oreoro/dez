@@ -364,6 +364,12 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn init\(app_state: Arc<AppState>, cx: &mut App\).*?paths::APP_NAME != "Zed".*?update_default_settings\(cx.*?preview_tabs\.get_or_insert_default\(\)\.enabled = Some\(false\)' \
     'Dez file navigation can regress to replacing an already-open file through preview tabs by default'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_hidden_sidebar_header_controls.*?let active_pane = workspace\.read\(cx\)\.active_pane\(\)\.clone\(\).*?if active_pane == current_pane.*?self\.active_panel_item_key\(cx\).*?active_pane\.read\(cx\)\.active_panel_item_key\(cx\).*?fn active_panel_item_key.*?self\.active_item\(\)\?.*?downcast::<PanelItem>\(\).*?panel_key\(\)' \
+    'hidden Workspaces controls can regress to re-reading the Pane currently rendering and crashing GPUI'
+reject_pattern crates/workspace/src/pane.rs \
+    'panel_item_is_active_for_key' \
+    'Pane rendering can regress to querying Workspace through a double-lease-prone active Panel lookup'
 require_multiline_pattern crates/settings_content/src/agent.rs \
     'fn from_legacy_command.*?legacy_claude_resume_command\(command\).*?Self::ClaudeCode.*?fn legacy_claude_resume_command.*?executable\.eq_ignore_ascii_case\("claude"\).*?Some\("--continue" \| "--resume"\).*?from_legacy_command\(Some\("claude --continue"\)\).*?TerminalLauncher::ClaudeCode.*?/opt/homebrew/bin/claude --resume.*?TerminalLauncher::ClaudeCode' \
     'legacy Claude resume defaults can regress to making every new Claude terminal resume an old session'
