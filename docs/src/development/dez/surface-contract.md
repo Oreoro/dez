@@ -5,6 +5,11 @@ Dez's native shell. It complements the visual review sheet with exact labels,
 ownership, state, and responsive behavior. When a rendered sketch and this
 document disagree, this document wins.
 
+The [tmux and Claude Code Navigation Wireframe](./tmux-claude-navigation-wireframe.md)
+is a design-only exploration of a simpler Workspace → Pane → Tab hierarchy.
+It is not authoritative and does not describe current behavior until its open
+interaction decisions are resolved and this contract is deliberately updated.
+
 ## Product loop
 
 ```text
