@@ -8,7 +8,7 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Reach Dez v0.2 as a public-quality native IDE for developers who move between
+Reach Dez v0.4 as a public-quality native IDE for developers who move between
 code, durable terminals, and terminal-native agents. Preserve Zed-quality
 editing and tools, make Workspaces optional supervision rather than mandatory
 navigation, and prove lifecycle, integration, visual, accessibility, and
@@ -28,12 +28,47 @@ source checks
 Visual polish continues in small slices, but it must support truthful state and
 the product loop rather than outrun ownership foundations.
 
-## v0.2 active source track {#v0-2-active-source-track}
+## v0.4 active readiness track {#v0-4-active-readiness-track}
 
-The active source contract lives in
-[v0.2 Workspace Polish](./v0.2-workspace-polish.md). The unresolved runtime and
-release gates remain in [v0.1 Product Hardening](./v0.1-product-hardening.md);
-that preserved ladder is a baseline, not a competing release train.
+The active source and exact-artifact contract lives in
+[v0.4 Readiness](./v0.4-readiness.md). The [Native Surface
+Contract](./surface-contract.md) defines the current interface, while
+[v0.2 Workspace Polish](./v0.2-workspace-polish.md) and [v0.1 Product
+Hardening](./v0.1-product-hardening.md) preserve the ownership and reliability
+baseline rather than competing version targets.
+
+The 0.4.0 source-candidate route under validation is:
+
+```text
+Open Workspace
+-> run or attach work in native terminal tabs
+-> supervise bounded Activity and open native tabs in Workspaces
+-> Open Files or Review Changes in the Main Work Area
+-> recover access or Host state without losing running work
+```
+
+The v0.4 dependency order is:
+
+```text
+pass source checks for the exact 0.4.0 candidate
+-> remotely compile and package that exact candidate
+-> validate installed Home, Workspace, Files-return, Settings, and terminal flows
+-> validate access, durable ownership, legacy recovery, and quit behavior
+-> validate Codex, Claude Code, OpenCode, tmux, Herdr, and cmux integrations
+-> pass visual, input, responsive, and accessibility matrices
+-> pass Developer ID signing, notarization, and stable-release gates
+```
+
+Do not advance or promote the candidate because source looks plausible. Each
+checkpoint must preserve the primary workflow and carry exact evidence for the
+claims it adds.
+
+## v0.2 historical source track {#v0-2-historical-source-track}
+
+The previous source contract lives in
+[v0.2 Workspace Polish](./v0.2-workspace-polish.md). Its unresolved runtime and
+release gates remain useful inputs from [v0.1 Product
+Hardening](./v0.1-product-hardening.md), not the active version target.
 
 The source-candidate route under validation is:
 

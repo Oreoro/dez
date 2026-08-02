@@ -302,6 +302,10 @@ fn welcome_surface_label(app_name: &str) -> &'static str {
     if app_name == "Zed" { "Welcome" } else { "Home" }
 }
 
+fn welcome_identity_label(app_name: &str) -> Option<&'static str> {
+    (app_name != "Zed").then_some("Dez")
+}
+
 fn welcome_forces_tab_bar(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -1160,6 +1164,23 @@ impl Render for WelcomePage {
                                 .w_full()
                                 .min_w_0()
                                 .gap_1()
+                                .when_some(welcome_identity_label(APP_NAME), |this, identity| {
+                                    this.child(
+                                        h_flex()
+                                            .gap_1()
+                                            .child(
+                                                Icon::new(IconName::Compass)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Accent),
+                                            )
+                                            .child(
+                                                Label::new(identity)
+                                                    .size(LabelSize::XSmall)
+                                                    .color(Color::Muted)
+                                                    .weight(FontWeight::MEDIUM),
+                                            ),
+                                    )
+                                })
                                 .child(
                                     div()
                                         .font_weight(FontWeight::MEDIUM)
@@ -1456,6 +1477,8 @@ mod tests {
         );
         assert_eq!(welcome_title("Dez", false), "Continue your work");
         assert_eq!(welcome_title("Dez", true), "Continue your work");
+        assert_eq!(welcome_identity_label("Dez"), Some("Dez"));
+        assert_eq!(welcome_identity_label("Zed"), None);
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");

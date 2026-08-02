@@ -274,11 +274,13 @@ Panels** projection of its native Main Work Area. It appears for one or more
 open items, so Files, Git, terminals, code, diffs, Settings, and Agent tabs do
 not vanish from navigation simply because no agent is running. A single-pane
 Workspace stays flat; real user-created splits add quiet **Pane 1**, **Pane
-2**, and later group labels. The focused split is named in text. Every row is
-left-aligned, keeps its native icon and disambiguated title together, and names
-the active item instead of relying on color alone. Dirty and pinned state stay
-visible as supporting marks. Terminal rows retain their task, provider, tmux,
-or shell identity.
+2**, and later group labels. The focused split is named in text. The compact
+count names real splits only; a single pane reports only how many items are
+open. Every row is left-aligned and keeps its native icon and disambiguated
+title together. The selected row treatment and accessibility label identify
+focused and visible items without a redundant `Active` badge. Dirty and pinned
+state stay visible as supporting marks. Terminal rows retain their task,
+provider, tmux, or shell identity.
 
 Activating a row calls the owning Workspace's native item activation path.
 Tabs & Panels never owns close, middle-click, ordering, dragging, preview,
@@ -403,10 +405,11 @@ read-only controls are scoped to the owning tab, so split panes and rapid tab
 switching cannot transfer hover, focus, or activation state to a sibling tab.
 
 Existing generated Dez profiles are upgraded consistently. A known legacy
-profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
-to IBM Plex Sans for interface chrome, Lilex for code and terminals, and
-system-selected Lumin Light/Lumin Blur. Custom font or theme choices are not
-treated as generated defaults.
+profile that pinned `.ZedSans`, One Light, or the generated all-JetBrains
+dark-Lumin combination migrates to IBM Plex Sans for interface chrome, Lilex
+for code and terminals, and system-selected Lumin Light/Lumin Blur. Font sizes,
+panel positions, and unrelated preferences are preserved. Custom font or theme
+choices are not treated as generated defaults.
 
 Creation emphasis also follows state. An inactive, ready Workspace without a
 Session shows one quiet **Open Terminal** command row; the active Workspace
@@ -595,7 +598,7 @@ require creating a Built-in Agent Session, and opening the Built-in Agent does
 not wrap or replace the terminal.
 
 An embedded **Live Preview** is planned as a normal Main Work Area Surface but
-is not present in the v0.2.2 source candidate. URL actions currently open the
+is not present in the 0.4.0 source candidate. URL actions currently open the
 system browser, while Markdown, SVG, and CSV use native file previews. A real
 Live Preview must own pane-scoped browser navigation without owning or
 restarting the terminal's dev-server process. The platform and security gate is
@@ -878,7 +881,7 @@ Warp, another IDE, or an unrelated application. Those processes are neither
 owned nor safely controllable by Dez, so they never become Workspace or Agent
 Session rows.
 
-Dez v0.2 retains explicit integration for tmux, Herdr, and cmux. Each source
+Dez v0.4 retains explicit integration for tmux, Herdr, and cmux. Each source
 updates independently and reports one truthful state:
 
 - **Missing** — the source executable is unavailable;
@@ -1177,7 +1180,7 @@ Dez is not:
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 
-The v0.2 product promise is a complete native IDE with one sharp wedge:
+The v0.4 product promise is a complete native IDE with one sharp wedge:
 trustworthy supervision, reattachment, and review of terminal-native and
 agent-driven work.
 
@@ -1214,6 +1217,7 @@ steps remain source claims until an exact newer package records runtime proof.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.4 Readiness](./development/dez/v0.4-readiness.md)
 - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
 - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
 - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)

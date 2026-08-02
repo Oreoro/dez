@@ -604,12 +604,17 @@ native tool, honest ownership, inline recovery**.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
-- Tabs & Panels stays flat for a single-pane Workspace. With a user-created
-  split it groups rows under **Pane 1**, **Pane 2**, and so on and names the
-  focused pane in text. Rows activate native tabs but do not close, pin,
-  reorder, drag, or split them.
+- Tabs & Panels stays flat for a single-pane Workspace and reports only the
+  open-item count. With a user-created split it adds the real pane count,
+  groups rows under **Pane 1**, **Pane 2**, and so on, and names the focused
+  pane in text. Selection styling and accessibility copy carry focused and
+  visible state without repeating an `Active` badge. Rows activate native tabs
+  but do not close, pin, reorder, drag, or split them.
 - Long detail text wraps inside the owning surface; it does not create a new
   persistent column.
+- Every curated Settings field has a registered native renderer. A missing
+  renderer is a release blocker; `NO RENDERER` and `NO DEFAULT` diagnostics
+  never ship as controls.
 
 ## Acceptance checklist
 

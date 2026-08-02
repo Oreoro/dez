@@ -720,6 +720,7 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::SnippetSortOrder>(render_dropdown)
         .add_basic_renderer::<settings::ClosePosition>(render_dropdown)
         .add_basic_renderer::<settings::DockSide>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasSide>(render_dropdown)
         .add_basic_renderer::<settings::TerminalDockPosition>(render_dropdown)
         .add_basic_renderer::<settings::DockPosition>(render_dropdown)
         .add_basic_renderer::<settings::SidebarDockPosition>(render_dropdown)
@@ -1330,6 +1331,26 @@ impl SettingsPageItem {
                             cx,
                         )
                     }),
+                    Err("NO RENDERER") if paths::APP_NAME != "Zed" => render_settings_item(
+                        settings_window,
+                        setting_item,
+                        file.clone(),
+                        Button::new("open-unsupported-setting", "Edit in settings.json")
+                            .style(ButtonStyle::Outlined)
+                            .size(ButtonSize::Medium)
+                            .tab_index(0isize)
+                            .tooltip(Tooltip::for_action_title_in(
+                                "Edit this setting in settings.json",
+                                &OpenCurrentFile,
+                                &settings_window.focus_handle,
+                            ))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.open_current_settings_file(window, cx);
+                            }))
+                            .into_any_element(),
+                        sub_field,
+                        cx,
+                    ),
                     Err(warning) => render_settings_item(
                         settings_window,
                         setting_item,

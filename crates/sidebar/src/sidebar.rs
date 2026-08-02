@@ -1255,10 +1255,11 @@ fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
 
 fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
     if app_name != "Zed" {
-        format!(
-            "{tab_count} open · {pane_count} {}",
-            if pane_count == 1 { "pane" } else { "panes" }
-        )
+        if pane_count > 1 {
+            format!("{tab_count} open · {pane_count} panes")
+        } else {
+            format!("{tab_count} open")
+        }
     } else {
         format!(
             "{tab_count} {}",
@@ -2609,8 +2610,8 @@ mod session_start_state_tests {
         assert!(workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
-        assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 open · 1 pane");
-        assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 open · 1 pane");
+        assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 open");
+        assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 open");
         assert_eq!(workspace_tab_layout_label("Dez", 3, 2), "3 open · 2 panes");
         assert_eq!(workspace_tab_layout_label("Zed", 3, 1), "3 tabs");
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
@@ -17969,13 +17970,6 @@ impl Sidebar {
                                             .truncate()
                                             .flex_1(),
                                     )
-                                    .when(is_focused, |this| {
-                                        this.child(
-                                            Label::new("Active")
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Accent),
-                                        )
-                                    })
                                     .when(is_dirty, |this| {
                                         this.child(
                                             Icon::new(IconName::Circle)

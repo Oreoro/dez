@@ -238,6 +238,7 @@
   - [Historical: Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
   - [Dez Development](./development/dez/index.md)
     - [Fork Notes](./development/dez/fork-notes.md)
+    - [v0.4 Readiness](./development/dez/v0.4-readiness.md)
     - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
     - [Native Surface Contract](./development/dez/surface-contract.md)
     - [Navigation Wireframe Proposal](./development/dez/tmux-claude-navigation-wireframe.md)

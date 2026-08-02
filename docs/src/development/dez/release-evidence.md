@@ -2,11 +2,13 @@
 
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
-The [v0.2 Workspace Polish](./v0.2-workspace-polish.md) contract defines the
-active source lane. The preserved
-[v0.1 Product Hardening](./v0.1-product-hardening.md) ladder defines the
-release order and remaining runtime gates. Historical artifacts below do not
-validate a newer source tree.
+The [v0.4 Readiness](./v0.4-readiness.md) contract defines the active source and
+exact-artifact lane. The [Native Surface Contract](./surface-contract.md)
+defines the interface, while the preserved [v0.2 Workspace
+Polish](./v0.2-workspace-polish.md) and [v0.1 Product
+Hardening](./v0.1-product-hardening.md) documents retain the ownership and
+release foundations. Historical artifacts below do not validate a newer source
+tree.
 
 ## 2026-08-01: native terminal-agent workflow polish
 
