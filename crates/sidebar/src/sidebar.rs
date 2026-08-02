@@ -165,7 +165,7 @@ const DETAILED_MIN_WIDTH: Pixels = px(380.0);
 const SUPPLEMENTAL_METADATA_MIN_WIDTH: Pixels = px(440.0);
 const MIN_WIDTH: Pixels = px(240.0);
 const MAX_WIDTH: Pixels = px(800.0);
-const DEZ_MAX_WIDTH: Pixels = px(380.0);
+const DEZ_MAX_WIDTH: Pixels = px(360.0);
 const RESPONSIVE_MIN_WIDTH: Pixels = px(200.0);
 const SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0.30;
 const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
@@ -9226,7 +9226,7 @@ impl Sidebar {
                                     )
                                 },
                             )
-                            .submenu("Continue Agent", move |mut submenu, _window, _cx| {
+                            .submenu("Resume Existing Agent", move |mut submenu, _window, _cx| {
                                 for (label, icon, startup_command) in [
                                     (
                                         "Codex · Last Session",
@@ -18066,19 +18066,9 @@ impl Sidebar {
                                     .color(Color::Muted),
                                 )
                                 .child(
-                                    v_flex()
-                                        .min_w_0()
-                                        .flex_1()
-                                        .child(
-                                            Label::new(workspace_tabs_section_title(APP_NAME))
-                                                .size(LabelSize::Small),
-                                        )
-                                        .child(
-                                            Label::new(workspace_label)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted)
-                                                .truncate(),
-                                        ),
+                                    Label::new(workspace_tabs_section_title(APP_NAME))
+                                        .size(LabelSize::Small)
+                                        .flex_1(),
                                 )
                                 .child(
                                     Label::new(workspace_tab_layout_label(

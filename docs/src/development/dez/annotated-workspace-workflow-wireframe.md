@@ -11,7 +11,7 @@ The product loop is:
 > **Open Workspace → start or resume work → supervise Activity → inspect and
 > review in the Main Work Area.**
 
-![Annotated black-and-white Dez Workspace workflow](./assets/dez-workspace-workflow-wireframe-v3.png)
+![Annotated black-and-white Dez native navigation workflow](./assets/dez-native-navigation-wireframe-v4.png)
 
 The raster was reviewed for one-sidebar ownership, activation-only Layout rows,
 native adjacent `+` controls, healthy-state access visibility, inline return
@@ -124,6 +124,34 @@ Permission recovery belongs to Workspaces and is aggregated once per exact
 root. Attach recovery belongs to Terminal and preserves output. Neither flow
 uses a custom overlay or claims external process migration.
 
+## F. Open Files and return without losing tabs
+
+```text
+┌ Workspaces ───────────┬ app.rs | Terminal | Files | Git Changes | + ─┐
+│ paykit · main         │                                                 │
+│ Layout                │ app.rs                                          │
+│  Pane 1 · Focused     │                                                 │
+│   app.rs              │ Open Files activates the existing Files tab.   │
+│   Terminal            │ Activating Files again returns to app.rs       │
+│   Files               │ through native recent-tab history.             │
+│   Git Changes         │                                                 │
+├───────────────────────┴─────────────────────────────────────────────────┤
+│ Workspaces · paykit | main | Ln 14, Col 22                              │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+Files is an ordinary pane tab, not a permanent drawer. Opening a different
+file creates a durable tab by default; preview tabs remain an explicit user
+preference. The top Files control reflects whether Files is active and uses
+**Return from Files** for its second action. The native `+` menu groups
+**Workspace tmux**, **Browse Running Sessions…**, and **Open Workspace in
+cmux** under **Sessions and Multiplexers**, then exposes icon-backed **Files**,
+**Git Changes**, **Search Workspace…**, **Run Task…**, and **Debug** rows.
+
+The labeled **Workspaces · name** status control remains present whether the
+navigator is open or closed. It changes between **Open Workspaces** and **Hide
+Workspaces** without removing the durable status line.
+
 ## Annotation ledger
 
 | # | Owner | Action | Invariant | Failure rule |
@@ -132,10 +160,10 @@ uses a custom overlay or claims external process migration.
 | 02 | Workspace | activate durable codebase context | Workspace is not a terminal list | access/install state replaces background failure loops |
 | 03 | native pane entities | activate existing pane/tab | no close, pin, reorder, drag, preview, or split ownership | hidden for one tab and while search owns the list |
 | 04 | trusted agent/task/terminal stores | focus an actionable owner | no transcript preview or guessed success | absent when empty; stale external state is named |
-| 05 | native pane tab strip | create content through native Add | adjacent `+` remains visible per pane | disabled action explains missing capability |
+| 05 | native pane tab strip | create content through native Add | adjacent `+` remains visible per pane; files stay open by default | disabled action explains missing capability |
 | 06 | native pane group | focus a pane | focus is text plus treatment, never color alone | narrow mode preserves pane identity before tab rows |
 | 07 | TerminalView and terminal host | interact with the provider TUI | Dez does not wrap TUIs in custom chat chrome | output remains visible under lifecycle recovery |
-| 08 | native status bar | expose durable target and repository context | one status line | explicit preference may hide it; recovery route remains labeled |
+| 08 | native status bar | expose durable target and repository context | one status line; Workspaces remains labeled while open or closed | explicit preference may hide it; recovery route remains labeled |
 | 09 | Home/Workspace open action | open one codebase | one primary empty-state action | install-first or root grant stays native and inline |
 | 10 | active Workspace | start named Terminal/agent work | launch names its destination | missing command routes to Terminal Launch settings |
 | 11 | Workspace navigation action namespace | enter one-shot target mode | no content-covering overlay | one action or Escape exits and restores normal status |

@@ -2835,6 +2835,13 @@ pub fn prompt_for_open_path_and_open(
 }
 
 pub fn init(app_state: Arc<AppState>, cx: &mut App) {
+    if paths::APP_NAME != "Zed" {
+        SettingsStore::update_global(cx, |store, cx| {
+            store.update_default_settings(cx, |settings| {
+                settings.preview_tabs.get_or_insert_default().enabled = Some(false);
+            });
+        });
+    }
     component::init();
     theme_preview::init(cx);
     toast_layer::init(cx);
@@ -7404,6 +7411,15 @@ impl Workspace {
         })
     }
 
+    pub(crate) fn panel_item_is_active_for_key(&self, panel_key: &str, cx: &App) -> bool {
+        self.panel_item_for_key(panel_key, cx)
+            .is_some_and(|(pane, item_index, _)| {
+                pane == self.active_pane
+                    && pane.read(cx).is_visible()
+                    && pane.read(cx).active_item_index() == item_index
+            })
+    }
+
     fn panel_item_for_proto_id(
         &self,
         panel_id: PanelId,
@@ -7474,6 +7490,49 @@ impl Workspace {
         })?;
         self.add_panel_handle_to_panel_pane(panel.clone(), false, window, cx);
         self.activate_panel_item_for_id(panel.panel_id(), focus, window, cx)
+    }
+
+    fn toggle_panel_item_for_key(
+        &mut self,
+        panel_key: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Arc<dyn PanelHandle>> {
+        if let Some((pane, item_index, panel)) = self.panel_item_for_key(panel_key, cx) {
+            let previous_item_index = {
+                let pane_state = pane.read(cx);
+                if pane != self.active_pane
+                    || !pane_state.is_visible()
+                    || pane_state.active_item_index() != item_index
+                {
+                    None
+                } else {
+                    let active_item_id = pane_state
+                        .items()
+                        .nth(item_index)
+                        .map(|item| item.item_id());
+                    pane_state
+                        .activation_history()
+                        .iter()
+                        .rev()
+                        .filter(|entry| Some(entry.entity_id) != active_item_id)
+                        .find_map(|entry| {
+                            pane_state
+                                .items()
+                                .position(|item| item.item_id() == entry.entity_id)
+                        })
+                }
+            };
+
+            if let Some(previous_item_index) = previous_item_index {
+                pane.update(cx, |pane, cx| {
+                    pane.activate_item(previous_item_index, true, true, window, cx);
+                });
+                return Some(panel);
+            }
+        }
+
+        self.activate_panel_item_for_key(panel_key, true, window, cx)
     }
 
     fn activate_panel_item<T: Panel>(
@@ -13707,7 +13766,7 @@ impl Workspace {
                     if paths::APP_NAME == "Zed" {
                         workspace.toggle_panel_pane_visibility(PaneKind::Agent, window, cx);
                     } else {
-                        workspace.activate_panel_item_for_key("agent_panel", true, window, cx);
+                        workspace.toggle_panel_item_for_key("agent_panel", window, cx);
                     }
                 },
             ))
@@ -13716,7 +13775,7 @@ impl Workspace {
                     if paths::APP_NAME == "Zed" {
                         workspace.toggle_panel_pane_visibility(PaneKind::Project, window, cx);
                     } else {
-                        workspace.activate_panel_item_for_key("ProjectPanel", true, window, cx);
+                        workspace.toggle_panel_item_for_key("ProjectPanel", window, cx);
                     }
                 },
             ))

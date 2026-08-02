@@ -955,18 +955,18 @@ fn action_name_for_product(name: &str, app_name: &str) -> String {
         "terminal::OpenShellTerminal" => return "terminal::OpenNativeShell".to_owned(),
         "terminal::OpenTmuxTerminal" => return "terminal::OpenWorkspaceTmux".to_owned(),
         "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
-        "terminal::ResumeCodexTerminal" => return "terminal::ContinueCodex".to_owned(),
+        "terminal::ResumeCodexTerminal" => return "terminal::ResumeCodex".to_owned(),
         "terminal::OpenClaudeCodeTerminal" => {
             return "terminal::LaunchClaudeCode".to_owned();
         }
         "terminal::ResumeClaudeCodeTerminal" => {
-            return "terminal::ContinueClaudeCode".to_owned();
+            return "terminal::ResumeClaudeCode".to_owned();
         }
         "terminal::OpenOpenCodeTerminal" => {
             return "terminal::LaunchOpenCode".to_owned();
         }
         "terminal::ResumeOpenCodeTerminal" => {
-            return "terminal::ContinueOpenCode".to_owned();
+            return "terminal::ResumeOpenCode".to_owned();
         }
         "terminal::OpenGeminiTerminal" => return "terminal::LaunchGeminiCli".to_owned(),
         "terminal::OpenAiderTerminal" => return "terminal::LaunchAider".to_owned(),

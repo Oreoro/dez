@@ -186,7 +186,7 @@ fn render_sidebar_header_controls_for_state(
     multi_workspace: Entity<MultiWorkspace>,
     enabled: bool,
     sidebar: SidebarRenderState,
-    _active_workspace: Option<Entity<Workspace>>,
+    active_workspace: Option<Entity<Workspace>>,
     project_pane_visible: Option<bool>,
     _agent_pane_visible: Option<bool>,
     cx: &mut App,
@@ -206,7 +206,16 @@ fn render_sidebar_header_controls_for_state(
     let sidebar_label = sidebar_toggle_label(paths::APP_NAME, sidebar_open);
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
-
+    let project_pane_visible = project_pane_visible.or_else(|| {
+        active_workspace.as_ref().map(|workspace| {
+            let workspace = workspace.read(cx);
+            if paths::APP_NAME == "Zed" {
+                workspace.panel_pane_visible(crate::pane::PaneKind::Project, cx)
+            } else {
+                workspace.panel_item_is_active_for_key("ProjectPanel", cx)
+            }
+        })
+    });
     let sidebar_toggle_button = sidebar_side_context_menu("sidebar-toggle-menu", cx)
         .anchor(if on_right {
             gpui::Anchor::BottomRight
@@ -292,8 +301,8 @@ fn project_pane_toggle_label(app_name: &str, pane_open: bool) -> &'static str {
     match (app_name == "Zed", pane_open) {
         (true, true) => "Hide Project Pane",
         (true, false) => "Show Project Pane",
-        (false, true) => "Hide Workspace Tools",
-        (false, false) => "Show Workspace Tools",
+        (false, true) => "Return from Files",
+        (false, false) => "Open Files",
     }
 }
 

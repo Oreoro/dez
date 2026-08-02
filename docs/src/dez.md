@@ -30,9 +30,9 @@ The main journey uses native surfaces throughout:
    a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. **More
    Agent CLIs** adds Gemini CLI, Aider, and Herdr without crowding that primary
    list. Use **Open Workspace in cmux** for an explicit external handoff.
-4. Use **Continue Agent** to resume the last Codex, Claude Code, or OpenCode
-   session in this Workspace. Use **Browse Running Sessions…** for discovered
-   tmux, Herdr, and cmux work.
+4. Use **Resume Existing Agent** to resume the last Codex, Claude Code, or
+   OpenCode session in this Workspace. Use **Browse Running Sessions…** for
+   discovered tmux, Herdr, and cmux work.
 5. Supervise attention in **Workspaces**, then use **Open Files**, **Run Task…**,
    diagnostics, Debug, and **Review Changes** against the same codebase.
 
@@ -66,7 +66,7 @@ Set the frequent path in **Settings → Workspaces & Terminals → Terminal Laun
 Code, OpenCode, Gemini CLI, Aider, Herdr, tmux Session, and Custom Command. A
 custom command is the escape hatch for another TUI or wrapper. Provider and
 tmux marks lead each choice while the current choice keeps a separate trailing
-check. Use **Continue Agent** when returning to the most recent provider
+check. Use **Resume Existing Agent** when returning to the most recent provider
 session. Provider authentication and subscriptions remain owned by each
 provider CLI.
 
@@ -195,7 +195,7 @@ CLIs** keeps Gemini CLI, Aider, and Herdr one level deeper. The Add menu also
 opens the optional Built-in Agent, a file, Files, Review Changes, Run Task,
 Debug, Workspace search, or symbol search. Terminal and Agent routes lead;
 running-session and cmux handoffs follow; Home and Recent Workspaces remain at
-the end as secondary navigation. **Continue Agent** resumes the last native
+the end as secondary navigation. **Resume Existing Agent** resumes the last native
 provider session without mixing it into running-session discovery. The control
 follows the final tab while space remains and stays pinned to the tab viewport
 edge when tabs overflow. **Browse Running
@@ -219,7 +219,7 @@ route leads a first-time user into a model-less Agent surface. Terminal agents
 remain independent of this provider setup.
 
 The Dez **File → Open Terminal** submenu mirrors the native **+** launch routes
-in the same order, followed by **Continue Agent**. Its first row previews the
+in the same order, followed by **Resume Existing Agent**. Its first row previews the
 configured result as **Default · Native Shell**, **Default · Codex**, **Default
 · Claude Code**, **Default · OpenCode**, **Default · tmux Session**, a detected
 agent, or **Default · Custom Command**; the pane **+** keeps the shorter
@@ -805,7 +805,7 @@ terminal title breadcrumbs remain off in the default Dez profile and can be
 enabled through native terminal settings. cmux is not configured as the shell
 because its documented [CLI](https://github.com/manaflow-ai/cmux) defines a
 separate macOS workspace and terminal application. Instead, native terminal,
-Continue Agent, and Built-in Agent actions lead Workspace Options. **Open
+Resume Existing Agent, and Built-in Agent actions lead Workspace Options. **Open
 Workspace in cmux** begins the external-work group beside discovered
 multiplexer Sessions. It invokes the documented `cmux open <path>` handoff,
 keeps Dez open, and

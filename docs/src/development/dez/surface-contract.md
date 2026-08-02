@@ -271,7 +271,7 @@ provider, or Custom Command—while the provider glyph reinforces that identity.
 │  Workspace tmux                   Diff · config.rs                        │
 │  Codex · Claude Code · OpenCode   Terminal · Pinned                       │
 │  More Agent CLIs ›                Settings                                │
-│  Continue Agent ›                                                         │
+│  Resume Existing Agent ›                                                  │
 │  Browse Running Sessions…                                                  │
 │  Open Workspace in cmux                                                   │
 │  Files · Review · Task · Debug                                             │
@@ -283,6 +283,18 @@ The two menus are alternate anchored native menus and never appear together in
 the product. `+` follows the final visible tab and remains pinned to the tab
 viewport edge during overflow. **Switch Tab** lists only the owning pane and
 preserves active, modified, and pinned meaning in text as well as icon state.
+
+Dez disables preview tabs by default so opening another file does not replace
+the previous file tab. Users may explicitly enable preview tabs for Zed-style
+single-click browsing. The Files titlebar control activates the existing Files
+tab; activating it again returns to the pane's most recently active different
+tab. It never opens a second Files drawer or changes the Workspace layout.
+
+The Add menu keeps **Sessions and Multiplexers** visible as a first-class
+group: **Workspace tmux**, **Browse Running Sessions…**, and the applicable
+**Open Workspace in cmux** handoff. **Open Terminal → Claude Code** always
+starts `claude`; **Resume Existing Agent → Claude Code · Last Session** is the
+separate opt-in `claude --continue` path.
 
 ### 11. Discover and supervise
 

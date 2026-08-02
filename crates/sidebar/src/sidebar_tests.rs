@@ -73,7 +73,7 @@ fn session_rail_render_width_matches_reserved_width_for_each_mode() {
 
 #[test]
 fn dez_projects_rail_has_a_deliberate_navigation_width_cap() {
-    assert_eq!(session_rail_max_width("Dez"), DETAILED_MIN_WIDTH);
+    assert_eq!(session_rail_max_width("Dez"), DEZ_MAX_WIDTH);
     assert_eq!(session_rail_max_width("Zed"), MAX_WIDTH);
     assert!(
         session_rail_max_width("Dez") < MAX_WIDTH,

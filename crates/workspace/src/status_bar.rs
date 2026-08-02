@@ -76,6 +76,7 @@ struct SidebarStatus {
     side: SidebarSide,
     has_notifications: bool,
     show_toggle: bool,
+    workspace_name: Option<SharedString>,
 }
 
 impl SidebarStatus {
@@ -86,11 +87,21 @@ impl SidebarStatus {
             .map(|mw| {
                 let mw = mw.read(cx);
                 let enabled = mw.multi_workspace_enabled(cx);
+                let workspace_name = mw
+                    .workspace()
+                    .read(cx)
+                    .project_group_key(cx)
+                    .path_list()
+                    .ordered_paths()
+                    .next()
+                    .and_then(|path| path.file_name())
+                    .map(|name| SharedString::from(name.to_string_lossy().into_owned()));
                 Self {
                     open: mw.sidebar_open() && enabled,
                     side: mw.sidebar_side(cx),
                     has_notifications: mw.sidebar_has_notifications(cx),
                     show_toggle: enabled,
+                    workspace_name,
                 }
             })
             .unwrap_or_default()
@@ -114,25 +125,40 @@ fn status_bar_label(app_name: &str) -> &'static str {
     }
 }
 
-fn sidebar_toggle_label(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
-        "Open Sessions"
-    } else {
-        "Open Workspaces"
-    }
-}
-
-fn sidebar_toggle_accessibility_label(app_name: &str, has_notifications: bool) -> &'static str {
-    match (app_name == "Zed", has_notifications) {
-        (true, true) => "Open Sessions, attention needed",
+fn sidebar_toggle_label(app_name: &str, open: bool) -> &'static str {
+    match (app_name == "Zed", open) {
+        (true, true) => "Hide Sessions",
         (true, false) => "Open Sessions",
-        (false, true) => "Open Workspaces, attention needed",
+        (false, true) => "Hide Workspaces",
         (false, false) => "Open Workspaces",
     }
 }
 
-fn sidebar_toggle_visible_label(app_name: &str) -> Option<&'static str> {
-    (app_name != "Zed").then_some("Workspaces")
+fn sidebar_toggle_accessibility_label(
+    app_name: &str,
+    open: bool,
+    has_notifications: bool,
+) -> &'static str {
+    match (app_name == "Zed", open, has_notifications) {
+        (true, true, true) => "Hide Sessions, attention needed",
+        (true, true, false) => "Hide Sessions",
+        (true, false, true) => "Open Sessions, attention needed",
+        (true, false, false) => "Open Sessions",
+        (false, true, true) => "Hide Workspaces, attention needed",
+        (false, true, false) => "Hide Workspaces",
+        (false, false, true) => "Open Workspaces, attention needed",
+        (false, false, false) => "Open Workspaces",
+    }
+}
+
+fn sidebar_toggle_visible_label(
+    app_name: &str,
+    workspace_name: Option<&SharedString>,
+) -> Option<SharedString> {
+    (app_name != "Zed").then(|| match workspace_name {
+        Some(workspace_name) => format!("Workspaces · {workspace_name}").into(),
+        None => "Workspaces".into(),
+    })
 }
 
 fn toggle_workspace_sidebar(window: &mut Window, cx: &mut App) {
@@ -231,18 +257,28 @@ mod tests {
     fn dez_status_bar_names_its_workspace_scope() {
         assert_eq!(status_bar_label("Dez"), "Workspace status and navigation");
         assert_eq!(status_bar_label("Zed"), "Status bar");
-        assert_eq!(sidebar_toggle_label("Dez"), "Open Workspaces");
-        assert_eq!(sidebar_toggle_label("Zed"), "Open Sessions");
+        assert_eq!(sidebar_toggle_label("Dez", false), "Open Workspaces");
+        assert_eq!(sidebar_toggle_label("Dez", true), "Hide Workspaces");
+        assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
+        assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", true),
+            sidebar_toggle_accessibility_label("Dez", false, true),
             "Open Workspaces, attention needed"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", false),
-            "Open Workspaces"
+            sidebar_toggle_accessibility_label("Dez", true, false),
+            "Hide Workspaces"
         );
-        assert_eq!(sidebar_toggle_visible_label("Dez"), Some("Workspaces"));
-        assert_eq!(sidebar_toggle_visible_label("Zed"), None);
+        let workspace_name: SharedString = "paykit".into();
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name)),
+            Some("Workspaces · paykit".into())
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", None),
+            Some("Workspaces".into())
+        );
+        assert_eq!(sidebar_toggle_visible_label("Zed", None), None);
     }
 }
 
@@ -258,7 +294,7 @@ impl StatusBar {
             .min_w_0()
             .overflow_x_hidden()
             .when(
-                sidebar.show_toggle && !sidebar.open && sidebar.side == SidebarSide::Left,
+                sidebar.show_toggle && sidebar.side == SidebarSide::Left,
                 |this| {
                     this.child(
                         div()
@@ -298,7 +334,7 @@ impl StatusBar {
                     }),
             )
             .when(
-                sidebar.show_toggle && !sidebar.open && sidebar.side == SidebarSide::Right,
+                sidebar.show_toggle && sidebar.side == SidebarSide::Right,
                 |this| {
                     this.child(
                         div()
@@ -315,11 +351,13 @@ impl StatusBar {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let on_right = sidebar.side == SidebarSide::Right;
+        let open = sidebar.open;
         let has_notifications = sidebar.has_notifications;
         let indicator_border = cx.theme().colors().status_bar_background;
-        let toggle_label = sidebar_toggle_label(APP_NAME);
-        let accessibility_label = sidebar_toggle_accessibility_label(APP_NAME, has_notifications);
-        let visible_label = sidebar_toggle_visible_label(APP_NAME);
+        let toggle_label = sidebar_toggle_label(APP_NAME, open);
+        let accessibility_label =
+            sidebar_toggle_accessibility_label(APP_NAME, open, has_notifications);
+        let visible_label = sidebar_toggle_visible_label(APP_NAME, sidebar.workspace_name.as_ref());
 
         let toggle = sidebar_side_context_menu("sidebar-status-toggle-menu", cx)
             .anchor(if on_right {
@@ -333,10 +371,11 @@ impl StatusBar {
                 Anchor::TopLeft
             })
             .trigger(move |_is_active, _window, _cx| {
-                let icon = if on_right {
-                    IconName::SidebarRightClosed
-                } else {
-                    IconName::SidebarLeftClosed
+                let icon = match (open, on_right) {
+                    (true, true) => IconName::SidebarRightOpen,
+                    (true, false) => IconName::SidebarLeftOpen,
+                    (false, true) => IconName::SidebarRightClosed,
+                    (false, false) => IconName::SidebarLeftClosed,
                 };
 
                 if let Some(visible_label) = visible_label {
@@ -352,6 +391,7 @@ impl StatusBar {
                         .label_size(LabelSize::Small)
                         .tab_index(0isize)
                         .aria_label(accessibility_label)
+                        .aria_expanded(open)
                         .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
                         .on_click(move |_, window, cx| {
                             toggle_workspace_sidebar(window, cx);
@@ -362,6 +402,7 @@ impl StatusBar {
                         .icon_size(IconSize::Small)
                         .tab_index(0isize)
                         .aria_label(accessibility_label)
+                        .aria_expanded(open)
                         .when(has_notifications, |this| {
                             this.indicator(Indicator::dot().color(Color::Accent))
                                 .indicator_border_color(Some(indicator_border))
