@@ -106,7 +106,8 @@ a second navigation model:
 - every discovery source distinguishes **Missing**, **Empty**, **Failed**, and
   **Ready**, preserving only failed-source rows as **last known**;
 - browsing running Sessions clears transient navigator filters, refreshes
-  sources, expands matching groups, and focuses Workspaces;
+  sources, expands each matching Workspace and its nested running-session
+  disclosure, and focuses Workspaces;
 - expanded Workspaces now separate **Layout** from **Activity**: Layout returns
   to native open tabs, while Activity retains only active, running, actionable,
   recoverable, or review-ready work; completed history remains in Agent

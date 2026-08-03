@@ -1290,7 +1290,7 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
 }
 
 fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
-    app_name != "Zed" && tab_count > 0
+    app_name != "Zed" && tab_count > 1
 }
 
 fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
@@ -2675,7 +2675,7 @@ mod session_start_state_tests {
         assert_eq!(workspace_tabs_section_title("Dez"), "Open");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 2));
-        assert!(workspace_tabs_section_visible("Dez", 1));
+        assert!(!workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
         assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 open");
@@ -5826,6 +5826,8 @@ impl Sidebar {
                                     == Some(project_group_key)
                             }) {
                                 this.set_group_expanded(project_group_key, true, cx);
+                                this.workspace_external_sessions_expanded
+                                    .insert(project_group_key.clone());
                             }
                         }
                     }
@@ -19423,6 +19425,8 @@ impl WorkspaceSidebar for Sidebar {
                         == Some(project_group_key)
                 }) {
                     self.set_group_expanded(project_group_key, true, cx);
+                    self.workspace_external_sessions_expanded
+                        .insert(project_group_key.clone());
                 }
             }
         }

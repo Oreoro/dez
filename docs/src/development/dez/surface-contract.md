@@ -120,12 +120,13 @@ never the only state signal.
 ```
 
 **Browse Running Sessions…** focuses Workspaces, clears transient filters,
-expands groups with activity, refreshes discovery, and preserves the active
-Main Work Area tab. It never creates a duplicate Sessions page. Recovery is
-inline and states both cause and next action. Terminal Details is a disclosure
-within the terminal surface, not a floating inspector. An attach tab names tmux
-or Herdr as the external owner and describes itself only as the attach client.
-Destructive legacy termination remains behind a native confirmation.
+expands each matching Workspace and its nested **Running Sessions** disclosure,
+refreshes discovery, and preserves the active Main Work Area tab. It never
+creates a duplicate Sessions page. Recovery is inline and states both cause and
+next action. Terminal Details is a disclosure within the terminal surface, not
+a floating inspector. An attach tab names tmux or Herdr as the external owner
+and describes itself only as the attach client. Destructive legacy termination
+remains behind a native confirmation.
 
 ### 4. Review and intentional split
 
@@ -615,7 +616,9 @@ native tool, honest ownership, inline recovery**.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
-- Open stays flat for a single-pane Workspace and reports only the
+- Open is omitted while the active Workspace has only one tab because the
+  native tab strip already exposes that sole destination. Beginning with the
+  second tab, Open stays flat for a single-pane Workspace and reports only the
   open-item count. With a user-created split it adds the real pane count,
   groups rows under **Pane 1**, **Pane 2**, and so on, and names the focused
   pane in text. Selection styling and accessibility copy carry focused and
