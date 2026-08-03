@@ -2158,3 +2158,52 @@ signature integrity for the density source. It does not yet prove installed
 Home, Workspaces, pane tabs, adjacent Add, Settings, permission, terminal-host,
 tmux, Herdr, cmux, restart, keyboard, accessibility, or visual behavior. Those
 remain installed-runtime gates, and the Preview is not promoted as Stable.
+
+## 2026-08-03: running-session reveal candidate
+
+Source commit `fe4a48cf86307bdb7ffce447329638c878fafab0` corrects the
+Workspace projection without introducing a second navigation model. **Browse
+Running Sessions…** expands matching tmux, Herdr, and cmux groups both from the
+current discovery snapshot and after an in-flight refresh completes. A
+Workspace with one open item omits the redundant **Open** projection because
+the native tab strip remains the authoritative control; Workspaces continues
+to project multiple open tabs and panes when they provide useful navigation.
+
+GitHub Actions run
+[`30836170113`](https://github.com/Oreoro/dez/actions/runs/30836170113)
+completed successfully for that exact source in 1 hour 5 minutes. The Apple M2
+target guard, complete source and bundle guard, optimized application build,
+package verification, and artifact upload all passed. GitHub artifact
+`8866797253`, named
+`Dez-preview-macOS-M2-fe4a48cf86307bdb7ffce447329638c878fafab0`, is
+145,625,654 bytes and expires on 2026-08-17. Its manifest and packaged smoke
+reported:
+
+- `Dez: v0.4.0+preview.95.fe4a48cf86307bdb7ffce447329638c878fafab0
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.182255`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+The downloaded artifact's portable DMG SHA-256 is
+`d410cab8b445374c43d6f5ccb00f52198f0a694b1a324cf99bf4adf0f1774c70`.
+`hdiutil verify` passed every partition checksum. An independent read-only
+mount reproduced all four executable hashes from the manifest, and
+`codesign --verify --deep --strict` validated the complete application bundle.
+Its application Code Directory hash is
+`2653388d4229239fa4639998d0e3cea41e45d4f3`. The signature remains ad-hoc,
+has no Team Identifier, and is not notarized. The auditing Mac reported
+`override=security disabled`, so local `spctl` acceptance is not Gatekeeper or
+Stable-release evidence.
+
+No local compilation or tests were run for this candidate. The downloaded
+application was not installed or launched. Installed-runtime validation still
+must prove that running-session browsing reveals the expected rows, a one-tab
+Workspace remains uncluttered, native tabs and adjacent Add remain intact,
+the status bar is visible, protected-folder access is requested once, tmux and
+Herdr attach and Retry behave correctly, cmux hands off externally, durable
+terminal ownership survives restart, and keyboard and accessibility flows
+remain native. Until those checks pass, this artifact is a Preview candidate,
+not a v0.4 Stable release.
