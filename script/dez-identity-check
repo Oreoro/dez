@@ -3155,6 +3155,12 @@ require_pattern script/bundle-mac \
     'channel="\$\{DEZ_BUNDLE_CHANNEL:-\$source_channel\}"' \
     'the macOS bundle cannot select a release identity without rewriting source'
 require_multiline_pattern script/bundle-mac \
+    'export ZED_RELEASE_CHANNEL="\$\{channel\}".*?export RELEASE_CHANNEL="\$\{channel\}"' \
+    'the selected bundle identity is not compiled into the packaged binaries'
+require_multiline_pattern crates/release_channel/src/lib.rs \
+    'resolve_release_channel_name\(.*?option_env!\("RELEASE_CHANNEL"\).*?include_str!\("\.\./\.\./zed/RELEASE_CHANNEL"\)' \
+    'release binaries ignore the compile-time release identity selected by the bundler'
+require_multiline_pattern script/bundle-mac \
     'case "\$channel" in.*?dev\|nightly\|preview\|stable' \
     'the macOS bundle accepts an unknown release identity'
 require_multiline_pattern script/bundle-mac \
@@ -3191,7 +3197,7 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'Stable Dez builds require \$credential.*?Developer ID Application signature.*?TeamIdentifier.*?stapler validate' \
     'Stable can regress to accepting unsigned output or Preview can masquerade as Stable'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    '"\$main" --system-specs.*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "\$expected_version".*?grep -F "Usage: dez-terminal-host"' \
+    'system_specs="\$\(\$main --system-specs\)".*?grep -F "\(\$\{expected_name\} ".*?Packaged binary release channel does not match.*?printf.*?"\$system_specs".*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "\$expected_version".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 reject_pattern .github/workflows/dez-build.yml \
     'grep -F "[0-9]+\.[0-9]+\.[0-9]+"' \

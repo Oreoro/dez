@@ -11,13 +11,24 @@ const ZED_DOCS_URL: &str = "https://zed.dev/docs";
 
 /// stable | dev | nightly | preview
 pub static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
-    if cfg!(debug_assertions) {
-        env::var("ZED_RELEASE_CHANNEL")
-            .unwrap_or_else(|_| include_str!("../../zed/RELEASE_CHANNEL").trim().to_string())
-    } else {
-        include_str!("../../zed/RELEASE_CHANNEL").trim().to_string()
-    }
+    resolve_release_channel_name(
+        cfg!(debug_assertions)
+            .then(|| env::var("ZED_RELEASE_CHANNEL").ok())
+            .flatten(),
+        option_env!("RELEASE_CHANNEL"),
+        include_str!("../../zed/RELEASE_CHANNEL").trim(),
+    )
 });
+
+fn resolve_release_channel_name(
+    runtime_override: Option<String>,
+    compiled_override: Option<&str>,
+    source_channel: &str,
+) -> String {
+    runtime_override
+        .or_else(|| compiled_override.map(str::to_owned))
+        .unwrap_or_else(|| source_channel.to_owned())
+}
 
 #[doc(hidden)]
 pub static RELEASE_CHANNEL: LazyLock<ReleaseChannel> =
@@ -283,7 +294,20 @@ impl FromStr for ReleaseChannel {
 
 #[cfg(test)]
 mod tests {
-    use super::ReleaseChannel;
+    use super::{ReleaseChannel, resolve_release_channel_name};
+
+    #[test]
+    fn compiled_release_channel_overrides_the_source_channel() {
+        assert_eq!(
+            resolve_release_channel_name(None, Some("preview"), "dev"),
+            "preview"
+        );
+        assert_eq!(
+            resolve_release_channel_name(Some("nightly".into()), Some("preview"), "dev"),
+            "nightly"
+        );
+        assert_eq!(resolve_release_channel_name(None, None, "dev"), "dev");
+    }
 
     #[test]
     fn test_dez_release_identities() {

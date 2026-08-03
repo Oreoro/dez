@@ -226,11 +226,18 @@ jobs:
           artifact_dmg="${artifact_label}-macOS-M2.dmg"
           cp "$dmg" "$artifact_dir/$artifact_dmg"
 
+          system_specs="$($main --system-specs)"
+          if ! grep -F "(${expected_name} " <<<"$system_specs"; then
+            echo "::error::Packaged binary release channel does not match $expected_name"
+            printf '%s\n' "$system_specs"
+            exit 1
+          fi
+
           {
             echo "Packaged entry-point smoke test"
             echo "================================"
             echo
-            "$main" --system-specs
+            printf '%s\n' "$system_specs"
             echo
             "$cli" --dez "$app" --version
             echo
@@ -250,6 +257,7 @@ jobs:
             echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
             echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
             echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            echo "binary_channel=$expected_name"
             if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
               echo "signature=Developer ID (notarized)"
             elif [[ "$release_signed" = true ]]; then
