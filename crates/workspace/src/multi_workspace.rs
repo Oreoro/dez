@@ -305,7 +305,7 @@ fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
     }
 }
 
-fn sidebar_header_control_metrics(
+pub fn sidebar_header_control_metrics(
     app_name: &str,
     density: settings::CanvasDensity,
 ) -> (ButtonSize, IconSize) {

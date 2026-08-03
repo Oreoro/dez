@@ -102,7 +102,7 @@ use workspace::{
         WorkspaceEvidenceProvenance,
     },
     notifications::NotificationId,
-    render_sidebar_header_controls_with_state,
+    render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
 };
 
 use git_ui::{
@@ -1205,11 +1205,7 @@ fn workspace_navigation_control_metrics(
         return (ButtonSize::Medium, IconSize::Small);
     }
 
-    match density {
-        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
-        settings::CanvasDensity::Balanced => (ButtonSize::Default, IconSize::Small),
-        settings::CanvasDensity::Spacious => (ButtonSize::Medium, IconSize::Small),
-    }
+    sidebar_header_control_metrics(app_name, density)
 }
 
 fn workspace_open_row_metrics(density: settings::CanvasDensity) -> (ButtonSize, IconSize) {

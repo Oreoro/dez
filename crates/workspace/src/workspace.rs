@@ -38,7 +38,8 @@ pub use multi_workspace::{
     ProjectGroup, ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent,
     SidebarHandle, SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
     render_sidebar_header_controls_with_auxiliary_visibility,
-    render_sidebar_header_controls_with_state, sidebar_side_context_menu,
+    render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
+    sidebar_side_context_menu,
 };
 pub use path_list::{PathList, SerializedPathList};
 pub use remote::{
