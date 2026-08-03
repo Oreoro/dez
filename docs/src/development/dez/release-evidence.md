@@ -2120,10 +2120,41 @@ not a notarized Stable release. Its runtime smoke proves packaged entry points
 and identity, not the complete installed UI, permission, terminal restoration,
 or visual acceptance matrix.
 
-Later source commits `6b6ef7944e` and `f2399aa569` make native pane, Workspace
-navigation, and status controls consume the shared Compact, Balanced, and
-Spacious metrics. Compact tab controls no longer exceed their 24 px strip;
-Open rows and the labeled Workspaces recovery control scale with their owning
-chrome. Rust formatting, shell syntax, source identity, and diff hygiene are
-the only local evidence for that later source. The successful baseline artifact
-predates those density changes and is not promoted as their runtime proof.
+Later source commits `6b6ef7944e`, `f2399aa569`, and `294d847114` make native
+pane, Workspace navigation, and status controls consume the shared Compact,
+Balanced, and Spacious metrics. Compact tab controls no longer exceed their
+24 px strip; Open rows and the labeled Workspaces recovery control scale with
+their owning chrome.
+
+GitHub Actions run
+[`30829212334`](https://github.com/Oreoro/dez/actions/runs/30829212334)
+subsequently completed for exact density source
+`294d8471145d5721bceb77ddc2439fff604f81a7`. Target and Dez source guards,
+the optimized Apple M2 build, package verification, and upload all passed.
+Artifact
+`Dez-preview-macOS-M2-294d8471145d5721bceb77ddc2439fff604f81a7`
+reported:
+
+- `Dez: v0.4.0+preview.93.294d8471145d5721bceb77ddc2439fff604f81a7
+  (Dez Preview)` from the packaged entry-point smoke test;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2` and release thin LTO,
+  one code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  and build `20260803.165857`;
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables; and
+- DMG checksum
+  `3fc1dca44b2c63356e27162be6cb619baadc91f4f70cba54d9b7025aa8e37819`.
+
+An independent downloaded-artifact audit matched the published SHA-256,
+verified the DMG partition checksums, mounted it read-only, and passed
+`codesign --verify --deep --strict`. The bundle is ad-hoc signed with no Team
+Identifier. The auditing Mac reported `override=security disabled`, so its
+local `spctl` acceptance is not Gatekeeper or Stable-release evidence. No
+downloaded application was installed or launched during this audit.
+
+This exact artifact now proves compilation, optimization, package structure,
+identity, architecture, helper inclusion, entry-point smoke, and ad-hoc
+signature integrity for the density source. It does not yet prove installed
+Home, Workspaces, pane tabs, adjacent Add, Settings, permission, terminal-host,
+tmux, Herdr, cmux, restart, keyboard, accessibility, or visual behavior. Those
+remain installed-runtime gates, and the Preview is not promoted as Stable.
