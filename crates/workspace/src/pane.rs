@@ -1151,25 +1151,30 @@ impl Pane {
                             )
                             .when(is_dez, |this| {
                                 this.child(
-                                    Button::new("empty-project-browse-sessions", "Browse Sessions")
-                                        .tab_index(1isize)
-                                        .style(ButtonStyle::Outlined)
-                                        .start_icon(Icon::new(IconName::ListTree))
-                                        .aria_label("Browse Running Sessions")
-                                        .tooltip(|_, cx| {
-                                            Tooltip::for_action(
-                                                "Browse Running Sessions",
-                                                &BrowseRunningSessions,
-                                                cx,
-                                            )
-                                        })
-                                        .on_click(move |_, window, cx| {
+                                    Button::new(
+                                        "empty-project-browse-sessions",
+                                        "Browse Running Sessions",
+                                    )
+                                    .tab_index(1isize)
+                                    .style(ButtonStyle::Outlined)
+                                    .start_icon(Icon::new(IconName::ListTree))
+                                    .aria_label("Browse Running Sessions")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "Browse Running Sessions",
+                                            &BrowseRunningSessions,
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(
+                                        move |_, window, cx| {
                                             browse_sessions_focus.dispatch_action(
                                                 &BrowseRunningSessions,
                                                 window,
                                                 cx,
                                             );
-                                        }),
+                                        },
+                                    ),
                                 )
                             })
                             .child(

@@ -4457,3 +4457,18 @@ Completed for the Workspace Layout ownership source slice:
 - updated the native surface contract and static identity guards; and
 - retained source-only verification. No build, test binary, alternate binary,
   package, or app launch was performed.
+
+Completed for the explicit running-session result source slice:
+
+- kept **Other Running Sessions** absent when ordinary navigation has no rows,
+  while preserving one bounded result after **Browse Running Sessions…**;
+- distinguished checking, source failure, private cmux activity, sessions
+  already grouped under open Workspaces, and a genuinely empty inventory;
+- prevented one healthy source from masking a failed or access-limited source;
+- removed the decorative zero-session count from the explicit empty result;
+- changed the disclosure from a pointer-only row to a keyboard target with an
+  announced expanded state, and exposed Retry only when discovery can help;
+- aligned the empty Main Work Area button with the full **Browse Running
+  Sessions** product noun; and
+- retained source-only verification. No build, test binary, alternate binary,
+  package, or app launch was performed.

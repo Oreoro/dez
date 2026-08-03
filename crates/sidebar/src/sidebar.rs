@@ -4148,6 +4148,30 @@ mod external_multiplexer_project_group_tests {
             other_running_sessions_empty_label(false, &ready),
             "All running sessions belong to open Workspaces"
         );
+
+        let ready_and_failed = [
+            source_status(MultiplexerKind::Tmux, MultiplexerSourceAvailability::Ready),
+            source_status(
+                MultiplexerKind::Herdr,
+                MultiplexerSourceAvailability::Failed,
+            ),
+        ];
+        assert_eq!(
+            other_running_sessions_empty_label(false, &ready_and_failed),
+            "Running session discovery needs attention"
+        );
+
+        let ready_and_private = [
+            source_status(MultiplexerKind::Tmux, MultiplexerSourceAvailability::Ready),
+            source_status(
+                MultiplexerKind::Cmux,
+                MultiplexerSourceAvailability::AccessRequired,
+            ),
+        ];
+        assert_eq!(
+            other_running_sessions_empty_label(false, &ready_and_private),
+            "cmux activity sharing is off; no other running sessions"
+        );
     }
 
     #[test]
@@ -4291,15 +4315,28 @@ fn other_running_sessions_empty_label(
     refreshing: bool,
     statuses: &[MultiplexerSourceStatus],
 ) -> &'static str {
-    if !refreshing
-        && statuses
-            .iter()
-            .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
-    {
-        "All running sessions belong to open Workspaces"
-    } else {
-        external_sessions_empty_label(refreshing, statuses)
+    if refreshing {
+        return "Checking tmux, Herdr, and cmux…";
     }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::Failed)
+    {
+        return "Running session discovery needs attention";
+    }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::AccessRequired)
+    {
+        return "cmux activity sharing is off; no other running sessions";
+    }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
+    {
+        return "All running sessions belong to open Workspaces";
+    }
+    external_sessions_empty_label(false, statuses)
 }
 
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
@@ -17307,6 +17344,14 @@ impl Sidebar {
             .map(|multi_workspace| multi_workspace.read(cx).project_group_keys().to_vec())
             .unwrap_or_default();
         let query = self.filter_editor.read(cx).text(cx);
+        let multiplexer_store = MultiplexerSessionStore::try_global(cx);
+        let (external_activity_refreshing, external_source_statuses) = multiplexer_store
+            .as_ref()
+            .map(|store| {
+                let store = store.read(cx);
+                (store.is_refreshing(), store.source_statuses().to_vec())
+            })
+            .unwrap_or_default();
         let multiplexer_sessions = self
             .contents
             .multiplexer_sessions
@@ -17322,21 +17367,25 @@ impl Sidebar {
             .collect::<Vec<_>>();
         let has_rows = !multiplexer_sessions.is_empty()
             || (APP_NAME == "Zed" && !self.contents.machine_terminals.is_empty());
-        if !has_rows {
+        let show_explicit_empty_state =
+            APP_NAME != "Zed" && self.external_activity_expanded && query.is_empty();
+        if !has_rows && !show_explicit_empty_state {
             return None;
         }
 
         let attachable_count = multiplexer_sessions.len();
         let observed_count = self.contents.machine_terminals.len();
         let count_label = if APP_NAME != "Zed" {
-            match attachable_count {
+            has_rows.then(|| match attachable_count {
                 1 => "1 session".to_owned(),
                 count => format!("{count} sessions"),
-            }
+            })
         } else if self.rendered_width < RESPONSIVE_MIN_WIDTH {
-            format!("{attachable_count} · {observed_count}")
+            Some(format!("{attachable_count} · {observed_count}"))
         } else {
-            format!("{attachable_count} attachable · {observed_count} observed")
+            Some(format!(
+                "{attachable_count} attachable · {observed_count} observed"
+            ))
         };
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible_for_product(APP_NAME, self.rendered_width);
@@ -17540,22 +17589,37 @@ impl Sidebar {
 
         let disclosure_sidebar = sidebar.clone();
         let disclosure_label = if APP_NAME != "Zed" {
-            "Sessions outside the currently open Workspace roots"
+            if self.external_activity_expanded {
+                "Hide Other Running Sessions"
+            } else {
+                "Show Other Running Sessions"
+            }
         } else if self.external_activity_expanded {
             "Hide observed machine terminals"
         } else {
             "Show observed machine terminals"
         };
-        let section_header = h_flex()
-            .id("external-terminal-section-header")
-            .flex_none()
-            .h(Tab::content_height(cx))
-            .px_1p5()
-            .gap_1()
-            .justify_between()
-            .cursor_pointer()
+        let empty_label = (!has_rows && show_explicit_empty_state).then(|| {
+            SharedString::from(other_running_sessions_empty_label(
+                external_activity_refreshing,
+                &external_source_statuses,
+            ))
+        });
+        let section_header_accessibility_label = empty_label
+            .as_ref()
+            .map(|empty_label| format!("{disclosure_label}. {empty_label}"))
+            .unwrap_or_else(|| disclosure_label.to_owned());
+        let section_header = ButtonLike::new("external-terminal-section-header")
+            .size(ButtonSize::Medium)
+            .style(ButtonStyle::Subtle)
+            .full_width()
+            .tab_index(0isize)
+            .aria_label(section_header_accessibility_label)
+            .aria_expanded(self.external_activity_expanded)
             .child(
                 h_flex()
+                    .w_full()
+                    .min_w_0()
                     .gap_1()
                     .child(
                         Icon::new(if self.external_activity_expanded {
@@ -17572,13 +17636,17 @@ impl Sidebar {
                         } else {
                             "Other Running Sessions"
                         })
-                        .size(LabelSize::Small),
-                    ),
-            )
-            .child(
-                Label::new(count_label)
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
+                        .size(LabelSize::Small)
+                        .truncate(),
+                    )
+                    .child(div().flex_1())
+                    .when_some(count_label, |this, count_label| {
+                        this.child(
+                            Label::new(count_label)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                    }),
             )
             .tooltip(Tooltip::text(disclosure_label));
         let section_header = section_header.on_click(move |_, _, cx| {
@@ -17588,6 +17656,64 @@ impl Sidebar {
                     cx.notify();
                 })
                 .log_err();
+        });
+        let discovery_failed = external_source_statuses
+            .iter()
+            .any(|status| status.availability == MultiplexerSourceAvailability::Failed);
+        let refresh_store = (!external_activity_refreshing
+            && (discovery_failed || external_source_statuses.is_empty()))
+        .then(|| multiplexer_store.clone())
+        .flatten();
+        let refresh_label = if discovery_failed { "Retry" } else { "Refresh" };
+        let empty_state = empty_label.map(|empty_label| {
+            h_flex()
+                .id("other-running-sessions-empty-state")
+                .role(gpui::Role::Status)
+                .w_full()
+                .min_w_0()
+                .gap_2()
+                .px_2()
+                .py_1p5()
+                .child(
+                    Icon::new(if external_activity_refreshing {
+                        IconName::LoadCircle
+                    } else if discovery_failed {
+                        IconName::Warning
+                    } else {
+                        IconName::ListTree
+                    })
+                    .size(IconSize::XSmall)
+                    .color(if discovery_failed {
+                        Color::Warning
+                    } else {
+                        Color::Muted
+                    })
+                    .when(external_activity_refreshing, |icon| {
+                        icon.with_rotate_animation(2)
+                    }),
+                )
+                .child(
+                    Label::new(empty_label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .flex_1(),
+                )
+                .when_some(refresh_store, |this, store| {
+                    this.child(
+                        Button::new("refresh-empty-running-sessions", refresh_label)
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0isize)
+                            .aria_label(format!("{refresh_label} Running Sessions"))
+                            .tooltip(Tooltip::text(format!(
+                                "{refresh_label} tmux, Herdr, and cmux discovery"
+                            )))
+                            .on_click(move |_, _window, cx| {
+                                store.update(cx, |store, cx| store.refresh(cx));
+                            }),
+                    )
+                })
+                .into_any_element()
         });
         let rows_visible = APP_NAME == "Zed" || self.external_activity_expanded;
         let section = v_flex()
@@ -17607,6 +17733,7 @@ impl Sidebar {
             .border_t_1()
             .border_color(cx.theme().colors().border)
             .child(section_header)
+            .when_some(empty_state, |this, empty_state| this.child(empty_state))
             .when(rows_visible && !rows.is_empty(), |this| this.child(
                 v_flex()
                     .id("external-terminal-list")

@@ -310,11 +310,11 @@ The active empty Main Work Area uses the same **Open Terminal** vocabulary. Its
 orientation is part of the native work surface, not a bordered card floating
 over it. The focused empty work area is headed **Main Work Area**, names what
 can open there in one sentence, and presents **Open Terminal** plus three
-immediate actions for resume, inspect, and review: **Browse Sessions**, **Find
-File**, and **Review Changes**. It does not repeat Home's product summary. In an
-explicit multi-pane layout, inactive empty work areas say **Open something
-here** and keep the same operational actions. The action row owns all
-interactive styling. Copy describes live terminal and Agent state without
+immediate actions for resume, inspect, and review: **Browse Running Sessions**,
+**Find File**, and **Review Changes**. It does not repeat Home's product
+summary. In an explicit multi-pane layout, inactive empty work areas say
+**Open something here** and keep the same operational actions. The action row
+owns all interactive styling. Copy describes live terminal and Agent state without
 assuming either GUI or Host ownership; durability is shown only when an
 external Host actually owns the exact Session.
 

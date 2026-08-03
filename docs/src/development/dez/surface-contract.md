@@ -251,7 +251,8 @@ control's meaning or accessible identity.
 │ No activity yet   │ Files and Git review open as tabs here.          │
 │                   │                                                  │
 │ superzed          │ [Open Terminal · Codex]                          │
-│ website           │ [Browse Sessions] [Find File] [Review Changes]   │
+│ website           │ [Browse Running Sessions] [Find File]            │
+│                   │ [Review Changes]                                 │
 ├───────────────────┴──────────────────────────────────────────────────┤
 │ Workspace: dez | main | Permissions: Healthy                       │
 └──────────────────────────────────────────────────────────────────────┘
@@ -325,6 +326,13 @@ refresh requests coalesce, and last-known rows remain visibly qualified. A
 truly empty list uses one primary **Open Terminal** action. Search recovery uses
 one primary **Clear Search** action, while a caught-up Attention scope uses a
 subordinate **Show All** action.
+
+**Other Running Sessions** remains absent during ordinary work when it has no
+rows. After the user explicitly chooses **Browse Running Sessions…**, it may
+stay open long enough to report **Checking…**, **All running sessions belong to
+open Workspaces**, **No running sessions**, or **Discovery needs attention**.
+It omits a decorative zero count, exposes **Retry** only for failed discovery,
+and uses a keyboard-operable disclosure with an announced expanded state.
 
 ### 12. Terminal launch failure
 
