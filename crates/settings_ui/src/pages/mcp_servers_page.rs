@@ -20,6 +20,28 @@ use zed_actions::ExtensionCategoryFilter;
 
 use crate::{PROJECT, SettingField, SettingItem, SettingsPageItem, SettingsWindow, USER};
 
+fn mcp_servers_page_copy(app_name: &str) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        (
+            "Configured Servers",
+            "Manage servers connected directly or via extensions.",
+        )
+    } else {
+        (
+            "Built-in Agent Tools (MCP)",
+            "Manage MCP servers used by the Built-in Agent in this Workspace.",
+        )
+    }
+}
+
+fn mcp_servers_empty_copy(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "No MCP servers added yet. Click \"Add Server\" to get started."
+    } else {
+        "No MCP servers are configured. Add one to give the Built-in Agent tools."
+    }
+}
+
 pub(crate) fn render_mcp_servers_page(
     settings_window: &SettingsWindow,
     scroll_handle: &ScrollHandle,
@@ -27,6 +49,7 @@ pub(crate) fn render_mcp_servers_page(
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {
     let context_server_store = get_context_server_store(settings_window, cx);
+    let (page_title, page_description) = mcp_servers_page_copy(paths::APP_NAME);
 
     let server_list = if let Some(store) = context_server_store.as_ref() {
         let server_ids = store.read(cx).server_ids().to_vec();
@@ -55,8 +78,8 @@ pub(crate) fn render_mcp_servers_page(
                 .px_8()
                 .gap_2()
                 .child(
-                    v_flex().child(Label::new("Configured Servers")).child(
-                        Label::new("Manage servers connected directly or via extensions.")
+                    v_flex().child(Label::new(page_title)).child(
+                        Label::new(page_description)
                             .size(LabelSize::Small)
                             .color(Color::Muted),
                     ),
@@ -108,7 +131,7 @@ fn render_empty_state(cx: &App) -> AnyElement {
         .border_color(cx.theme().colors().border.opacity(0.6))
         .rounded_sm()
         .child(
-            Label::new("No MCP servers added yet. Click \"Add Server\" to get started.")
+            Label::new(mcp_servers_empty_copy(paths::APP_NAME))
                 .color(Color::Muted)
                 .size(LabelSize::Small),
         )
@@ -127,7 +150,7 @@ fn render_no_project_state(cx: &App) -> AnyElement {
             Label::new(if paths::APP_NAME == "Zed" {
                 "No active project found. Open a workspace to manage MCP servers."
             } else {
-                "No active workspace found. Open one to manage MCP servers."
+                "Open a Workspace to manage MCP servers."
             })
             .color(Color::Muted)
             .size(LabelSize::Small),
@@ -1367,6 +1390,22 @@ fn collect_kv(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dez_names_mcp_servers_as_built_in_agent_tools() {
+        assert_eq!(
+            mcp_servers_page_copy("Dez"),
+            (
+                "Built-in Agent Tools (MCP)",
+                "Manage MCP servers used by the Built-in Agent in this Workspace.",
+            )
+        );
+        assert_eq!(
+            mcp_servers_empty_copy("Dez"),
+            "No MCP servers are configured. Add one to give the Built-in Agent tools."
+        );
+        assert_eq!(mcp_servers_page_copy("Zed").0, "Configured Servers");
+    }
 
     fn values(transport: McpTransport) -> McpServerFormValues {
         McpServerFormValues {
