@@ -645,6 +645,22 @@ fn session_scope_accessibility_copy_keeps_control_names_stable() {
 }
 
 #[test]
+fn workspace_running_sessions_disclosure_announces_count_attention_and_state() {
+    assert_eq!(
+        workspace_running_sessions_disclosure_accessibility_label(false, 1, 0),
+        "Show running multiplexer sessions. 1 running session"
+    );
+    assert_eq!(
+        workspace_running_sessions_disclosure_accessibility_label(false, 2, 1),
+        "Show running multiplexer sessions. 2 running sessions. 1 needs attention"
+    );
+    assert_eq!(
+        workspace_running_sessions_disclosure_accessibility_label(true, 3, 2),
+        "Hide running multiplexer sessions. 3 running sessions. 2 need attention"
+    );
+}
+
+#[test]
 fn observed_machine_terminal_search_uses_visible_identity_and_context() {
     let terminal = ObservedMachineTerminal {
         id: "ttys004:410".to_owned(),

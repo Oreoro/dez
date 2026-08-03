@@ -77,7 +77,7 @@ require_multiline_pattern .agents/skills/dez-workspace-design/SKILL.md \
     '^name: dez-workspace-design.*?Require an annotated monochrome wireframe before structural UI changes.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?Wireframe before structural edits.*?cargo fmt --all -- --check.*?GitHub Actions' \
     'the Dez Workspace design skill can regress from its wireframe, ownership, or remote-validation contract'
 require_multiline_pattern docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
-    'Tabs & Panels and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 \| cmux external owner \|' \
+    'Layout and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 \| cmux external owner \|' \
     'the annotated Workspace workflow can regress to an incomplete or unowned visual proposal'
 require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
@@ -126,7 +126,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'the native Workspaces toggle can regress outside the sidebar header'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_navigation_control_metrics.*?app_name == "Zed".*?ButtonSize::Medium, IconSize::Small.*?sidebar_header_control_metrics\(app_name, density\).*?fn workspace_open_row_metrics.*?CanvasDensity::Compact.*?ButtonSize::Default, IconSize::XSmall.*?CanvasDensity::Balanced.*?ButtonSize::Medium, IconSize::XSmall.*?CanvasDensity::Spacious.*?ButtonSize::Large, IconSize::Small.*?fn render_project_header.*?workspace_navigation_control_metrics.*?fn render_active_workspace_tabs.*?workspace_open_row_metrics.*?fn render_sidebar_header.*?workspace_navigation_control_metrics' \
-    'Workspace chrome and Open rows can regress to a fixed or inconsistent control density'
+    'Workspace chrome and Layout rows can regress to a fixed or inconsistent control density'
 reject_pattern crates/title_bar/src/title_bar.rs \
     'render_sidebar_header_controls' \
     'Workspaces controls can regress to squeezing duplicate navigation into native work-tab chrome'
@@ -643,7 +643,7 @@ require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
 require_file docs/src/development/dez/surface-contract.md \
     'the source-controlled native surface contract is missing'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
-    '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Open \(activation-only projection of the active Workspace\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Running Sessions.*?Browse Running Sessions….*?never creates a duplicate Sessions page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Open.*?Sessions.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
+    '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Layout \(activation-only projection of the active Workspace\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Running Sessions.*?Browse Running Sessions….*?never creates a duplicate Sessions page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Layout.*?Sessions.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
     'the source-controlled wireframe can regress to omitting a primary surface, ownership rule, or recovery state'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'complete Herdr source.*?scan.*?shares one four-second deadline.*?Results[[:space:]]+completed before that deadline are preserved.*?Each integration exposes one distinct source state.*?\*\*Missing\*\*.*?\*\*Empty\*\*.*?\*\*Failed\*\*.*?\*\*Ready\*\*.*?Browse Running Sessions….*?Host connection, reconnection, and command cycles remain bounded.*?GUI groups every frame-safe chunk.*?one queue item.*?queue admission accepts or rejects the[[:space:]]+batch as a unit.*?admission atomicity does not guarantee end-to-end[[:space:]]+delivery.*?prefix delivered.*?outcome as uncertain.*?never.*?replays it.*?four-mebibyte PTY budget.*?sixteen-mebibyte aggregate[[:space:]]+queued-input cap.*?independently bounds its own queued input by[[:space:]]+message count and bytes.*?separate PTY control channel.*?app bundle outside `/Applications` opens native Home.*?Continue your work.*?Install Dez to[[:space:]]+continue.*?Install and Relaunch.*?Workspaces says that no[[:space:]]+Workspace has restored.*?does not duplicate the primary action.*?no startup dialog,[[:space:]]+prompt, modal, overlay' \
@@ -2200,6 +2200,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'workspace_external_sessions_expanded: HashSet<ProjectGroupKey>.*?has_threads \|\| !external_sessions\.is_empty\(\).*?Label::new\(if APP_NAME == "Zed".*?"Sessions".*?external_sessions_expanded.*?workspace_external_sessions_expanded\.contains\(key\).*?Running Sessions.*?external_session_count\.to_string\(\).*?workspace_external_sessions_expanded.*?\.remove\(&disclosure_key\).*?\.insert\(disclosure_key\.clone\(\)\).*?child\(external_sessions_disclosure\).*?children\(external_rows\)' \
     'Workspace-owned multiplexer activity can regress to an always-expanded technical inventory or disappear from Sessions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_running_sessions_disclosure_accessibility_label.*?expanded: bool.*?session_count: usize.*?attention_count: usize.*?1 running session.*?needs attention.*?let disclosure_accessibility_label =[[:space:]]*workspace_running_sessions_disclosure_accessibility_label.*?aria_expanded\(external_sessions_expanded\).*?aria_label\(disclosure_accessibility_label\.clone\(\)\).*?Tooltip::text\(disclosure_accessibility_label\)' \
+    'Workspace Running Sessions can regress to an unannounced disclosure, incorrect singular copy, or color-only attention state'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let action_label = external_multiplexer_action_label\(session\).*?let port_detail_label = session\.port_label\(\).*?let compact_port_label =[[:space:]]*session\.compact_port_label\(\).*?Listening ports:.*?let accessibility_label =.*?Listening ports:.*?aria_label\(accessibility_label\).*?when_some\(compact_port_label.*?Label::new\(port_label\).*?Color::Muted' \
     'matching cmux rows can regress to hiding authoritative ports, crushing titles, or styling passive metadata as an action'
 require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
@@ -2212,8 +2215,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_tabs_section_title.*?"Open Tabs".*?"Open".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 1.*?fn workspace_tab_layout_label.*?pane_count > 1.*?"\{tab_count\} open · \{pane_count\} panes".*?"\{tab_count\} open".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?workspace_tab_layout_label\([[:space:]]*APP_NAME, tab_count, pane_count.*?Tabs and panels in the active Workspace' \
-    'Open navigation can regress to duplicating a lone native tab, adding a fake single-pane label, losing real split counts, or stopping native activation'
+    'fn workspace_tabs_section_title.*?"Open Tabs".*?"Layout".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 1.*?fn workspace_tab_layout_label.*?pane_count > 1.*?"\{tab_count\} open · \{pane_count\} panes".*?"\{tab_count\} open".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?workspace_tab_layout_label\([[:space:]]*APP_NAME, tab_count, pane_count.*?Tabs and panels in the active Workspace' \
+    'Layout navigation can regress to the rejected Open noun, duplicate a lone native tab, add a fake single-pane label, lose real split counts, or stop native activation'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'workspace-native-tab-close|middle_click_pane' \
     'Workspace Layout can regress to duplicating native pane close ownership'

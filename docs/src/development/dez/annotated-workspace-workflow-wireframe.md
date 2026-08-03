@@ -1,7 +1,7 @@
 # Annotated Workspace Workflow Wireframe
 
 > Status: implementation contract for the native surfaces identified below.
-> Tabs & Panels and bounded Activity are implemented. Temporary navigation mode and
+> Layout and bounded Activity are implemented. Temporary navigation mode and
 > return recap remain unimplemented until their rows explicitly say otherwise.
 > The monochrome raster is a review aid; this document owns copy and
 > interaction semantics.
@@ -13,10 +13,11 @@ The product loop is:
 
 ![Annotated black-and-white Dez native navigation workflow](./assets/dez-native-navigation-wireframe-v4.png)
 
-The raster was reviewed for one-sidebar ownership, activation-only Tabs & Panels rows,
+The raster was reviewed for one-sidebar ownership, activation-only Layout rows,
 native adjacent `+` controls, healthy-state access visibility, inline return
 recap, and terminal-owned recovery. The numbered ledger below remains
-authoritative where generated lettering is abbreviated.
+authoritative where generated lettering is abbreviated or predates the final
+**Layout** product noun.
 
 ## A. Begin without an overlay
 
@@ -47,7 +48,7 @@ Workspace supplies a root, Git context, search scope, and review destination.
 ┌ Workspaces [01] ─────────┬ main.rs | Files | + [05] ┬ Claude Code | + ┐
 │ paykit · main [02]       │ editor                   │ provider TUI [07]│
 │                          │                          │                  │
-│ Tabs & Panels · 4 open   │                          │                  │
+│ Layout · 4 open          │                          │                  │
 │  Pane 1 · Focused [06]   │                          │                  │
 │   main.rs                │                          │                  │
 │   Files                  │                          │                  │
@@ -63,7 +64,7 @@ Workspace supplies a root, Git context, search scope, and review destination.
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-Tabs & Panels activates native tabs but never closes or reorganizes them. Activity is
+Layout activates native tabs but never closes or reorganizes them. Activity is
 bounded and contains only authoritative running or actionable signals.
 
 ## C. Navigate without covering work
@@ -71,7 +72,7 @@ bounded and contains only authoritative running or actionable signals.
 ```text
 ┌ Workspaces ───────────────┬ [1] main.rs | Files | + ┬ [2] Claude Code | + ┐
 │ paykit                    │ existing content         │ existing TUI          │
-│ Tabs & Panels             │ remains visible          │ remains visible       │
+│ Layout                    │ remains visible          │ remains visible       │
 │  Pane 1 · Focused         │                          │                       │
 │  Pane 2                   │                          │                       │
 ├───────────────────────────┴──────────────────────────┴───────────────────────┤
@@ -87,7 +88,7 @@ palette, dim content, or draw a blocking target overlay.
 ```text
 ┌ Workspaces ───────────────┬ main.rs | Files | + ─────────────────────┐
 │ paykit                    │ Since you left [12]                       │
-│ Tabs & Panels             │ 3 files changed · test passed             │
+│ Layout                    │ 3 files changed · test passed             │
 │  Pane 1 · Focused         │ Review ready            [Review] [Dismiss]│
 │  Pane 2 · Claude Code     ├───────────────────────────────────────────┤
 │                           │ editor                                    │
@@ -129,7 +130,7 @@ uses a custom overlay or claims external process migration.
 ```text
 ┌ Workspaces ───────────┬ app.rs | Terminal | Files | Git Changes | + ─┐
 │ paykit · main         │                                                 │
-│ Tabs & Panels         │ app.rs                                          │
+│ Layout              │ app.rs                                          │
 │   app.rs              │ Open Files activates the existing Files tab.   │
 │   Terminal            │ Activating Files again returns to app.rs       │
 │   Files               │ through native recent-tab history.             │
@@ -173,7 +174,7 @@ Workspaces** without removing the durable status line.
 
 ## Implementation order
 
-1. **Implemented:** active Workspace contains activation-only Tabs & Panels.
+1. **Implemented:** active Workspace contains activation-only Layout.
 2. **Implemented:** Activity contains only active, running, actionable,
    recoverable, or review-ready work from trusted lifecycle state. Completed
    history remains in Agent History.

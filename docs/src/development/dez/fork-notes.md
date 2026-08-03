@@ -2007,3 +2007,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Recent Workspace recovery uses the same inline state grammar. Dez opens URLs
   in the system browser and hands Workspaces to cmux explicitly because cmux
   retains ownership of its browser, tabs, splits, hooks, and action registry.
+- **2026-08-04: Layout is the final pane-and-tab projection noun.** This
+  supersedes the earlier **Open Tabs**, **Open Tabs & Tools**, **Tabs &
+  Panels**, and **Open** labels in Dez. **Layout** is activation-only: it reads
+  the active Workspace's native pane model and focuses an existing tab. Native
+  panes continue to own order, drag, preview, pin, dirty, close, and split
+  state. The section remains absent for one tab and groups rows only when a
+  user-created split produces real pane ownership.

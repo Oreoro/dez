@@ -1285,7 +1285,7 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
     } else {
-        "Open"
+        "Layout"
     }
 }
 
@@ -1564,6 +1564,25 @@ fn workspace_header_accessibility_label(
         label.push_str(", 1 session needs attention");
     } else if attention_count > 1 {
         label.push_str(&format!(", {attention_count} sessions need attention"));
+    }
+    label
+}
+
+fn workspace_running_sessions_disclosure_accessibility_label(
+    expanded: bool,
+    session_count: usize,
+    attention_count: usize,
+) -> String {
+    let action = if expanded { "Hide" } else { "Show" };
+    let mut label = if session_count == 1 {
+        format!("{action} running multiplexer sessions. 1 running session")
+    } else {
+        format!("{action} running multiplexer sessions. {session_count} running sessions")
+    };
+    if attention_count == 1 {
+        label.push_str(". 1 needs attention");
+    } else if attention_count > 1 {
+        label.push_str(&format!(". {attention_count} need attention"));
     }
     label
 }
@@ -2672,7 +2691,7 @@ mod session_start_state_tests {
             session_rail_accessibility_label("Dez"),
             "Workspaces and Activity"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Open");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Layout");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 2));
         assert!(!workspace_tabs_section_visible("Dez", 1));
@@ -8755,26 +8774,31 @@ impl Sidebar {
                 })
                 .unwrap_or_default();
             let external_session_count = external_sessions.len();
-            let external_sessions_need_attention = external_sessions.iter().any(|session| {
-                session.state == MultiplexerSessionState::NeedsAttention || session.is_last_known()
-            });
+            let external_sessions_attention_count = external_sessions
+                .iter()
+                .filter(|session| {
+                    session.state == MultiplexerSessionState::NeedsAttention
+                        || session.is_last_known()
+                })
+                .count();
+            let external_sessions_need_attention = external_sessions_attention_count > 0;
             let disclosure_key = key.clone();
             let disclosure_sidebar = cx.weak_entity();
-            let disclosure_label = if external_sessions_expanded {
-                "Hide running multiplexer sessions"
-            } else {
-                "Show running multiplexer sessions"
-            };
+            let disclosure_accessibility_label =
+                workspace_running_sessions_disclosure_accessibility_label(
+                    external_sessions_expanded,
+                    external_session_count,
+                    external_sessions_attention_count,
+                );
             let external_sessions_disclosure =
                 ButtonLike::new(ElementId::from(format!("workspace-running-sessions-{ix}")))
                     .size(ButtonSize::Medium)
                     .style(ButtonStyle::Subtle)
                     .full_width()
                     .tab_index(0isize)
-                    .aria_label(format!(
-                        "{disclosure_label}. {external_session_count} running sessions"
-                    ))
-                    .tooltip(Tooltip::text(disclosure_label))
+                    .aria_expanded(external_sessions_expanded)
+                    .aria_label(disclosure_accessibility_label.clone())
+                    .tooltip(Tooltip::text(disclosure_accessibility_label))
                     .child(
                         h_flex()
                             .w_full()

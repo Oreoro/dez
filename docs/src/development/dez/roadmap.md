@@ -4472,3 +4472,18 @@ Completed for the explicit running-session result source slice:
   Sessions** product noun; and
 - retained source-only verification. No build, test binary, alternate binary,
   package, or app launch was performed.
+
+Completed for the Layout noun and running-session disclosure source slice:
+
+- restored **Layout** as the final name for the active Workspace's
+  activation-only native pane/tab projection, replacing the regressed
+  **Open** label;
+- aligned the surface contract, release-readiness contract, annotated
+  wireframe, permanent fork decision, exact-copy assertion, and static guard;
+- announced the Running Sessions disclosure's expanded state, natural
+  singular/plural count, and attention count to keyboard and assistive
+  navigation;
+- kept pane lifecycle, tab ordering, and split ownership in the native Main
+  Work Area; and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
