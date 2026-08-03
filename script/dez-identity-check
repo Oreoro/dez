@@ -481,7 +481,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?0\.4\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?Tabs & Panels.*?tmux.*?Herdr.*?Unrelated machine terminals.*?\*\*Workspace tools\*\*.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Terminal.*?\*\*Terminal Sessions\*\*.*?The primary user story.*?\*\*Home\*\*.*?\*\*Open Terminal\*\*.*?\*\*Workspaces\*\*.*?\*\*Open Files\*\*.*?\*\*Review Changes\*\*.*?Browse Running Sessions….*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.4 release.*?v0\.4 Readiness' \
+    '^# Dez.*?0\.4\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?\*\*Open\*\*.*?Running[[:space:]]+Sessions.*?tmux.*?Herdr.*?Unrelated machine terminals.*?\*\*Workspace tools\*\*.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Terminal.*?\*\*Terminal Sessions\*\*.*?The primary user story.*?\*\*Home\*\*.*?\*\*Open Terminal\*\*.*?\*\*Workspaces\*\*.*?\*\*Open Files\*\*.*?\*\*Review Changes\*\*.*?Browse Running Sessions….*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.4 release.*?v0\.4 Readiness' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -490,7 +490,7 @@ require_multiline_pattern README.md \
     'Native launch menus keep identity visible.*?primary[[:space:]]+agents use their provider marks.*?Gemini CLI has its provider mark.*?Aider uses[[:space:]]+the edit-agent mark.*?Herdr uses the orchestration mark.*?tmux uses the[[:space:]]+split-session mark.*?Built-in Agent uses the Dez Agent mark.*?shells[[:space:]]+retain the terminal icon.*?live state[[:space:]]+remains separate status text' \
     'the repository front page can regress to conflating provider identity with transient runtime state'
 require_multiline_pattern README.md \
-    'cmux row also keeps its API-reported listening ports visible.*?Dez does not infer ports for other processes' \
+    'Source, state,[[:space:]]+working directory, listening ports, and ownership remain available.*?Dez does not infer ports for other processes' \
     'the repository front page can regress to overstating inferred port discovery or hiding cmux-owned evidence'
 require_multiline_pattern docs/src/dez.md \
     'cmux additionally[[:space:]]+supplies authoritative `listening_ports`.*?first[[:space:]]+`:port` plus a remaining count in compact, muted trailing metadata.*?tooltip and accessibility label retain the richer bounded port list.*?Other[[:space:]]+local Workspace processes do not receive inferred port labels.*?does not scrape terminal output or infer ports from process names' \
@@ -547,13 +547,13 @@ require_multiline_pattern docs/src/dez.md \
     'Host-owned terminal · connection unavailable.*?event-stream failure.*?authoritative Session list.*?valid attachment.*?End Terminal….*?Host acknowledges PTY teardown.*?interrupted transport.*?intentionally omits the inherited Workspace Bar.*?centered Command[[:space:]]+Search row.*?duplicate project/branch identity strip.*?cross-platform application menu.*?Restricted Mode.*?multiplexer prefix indicator' \
     'the public guide can lose truthful Host recovery or misrepresent the simplified Workspaces header'
 require_multiline_pattern docs/src/dez.md \
-    '### External session prerequisites and troubleshooting.*?Install tmux, Herdr, or cmux to browse running sessions.*?Running session discovery needs attention.*?No running session matches this Workspace.*?Other Running Sessions.*?No running tmux,[[:space:]]+Herdr, or cmux sessions.*?/opt/homebrew/bin/tmux.*?/Applications.*?cmux\.app.*?\*\*Retry\*\*.*?Refresh Running Sessions.*?last[[:space:]]+known.*?Retry Attach' \
+    '### External session prerequisites and troubleshooting.*?Install tmux, Herdr, or cmux to browse running sessions.*?Running session discovery needs attention.*?No running session matches this Workspace.*?Other Running Sessions.*?No running tmux,[[:space:]]+Herdr, or cmux sessions.*?/opt/homebrew/bin/tmux.*?/Applications.*?cmux\.app.*?Retry Running Sessions.*?Refresh Running Sessions.*?last[[:space:]]+known.*?Retry Attach' \
     'the public guide can lose actionable tmux, Herdr, and cmux prerequisites or recovery'
 require_multiline_pattern docs/src/dez.md \
-    'tmux and Herdr open their.*?documented attach command.*?executes that[[:space:]]+client directly.*?`\$0`.*?`\$1`.*?login shell.*?cmux not installed.*?Get cmux.*?tmux and Herdr remain usable.*?no external Session[[:space:]]+is changed' \
+    'tmux and Herdr open their.*?documented attach command.*?executes that[[:space:]]+client directly.*?`\$0`.*?`\$1`.*?login shell.*?cmux is not discoverable.*?Workspace Options.*?Get cmux….*?tmux and Herdr remain usable.*?no external Session[[:space:]]+is changed' \
     'the public guide can regress to hiding literal multiplexer attachment or optional cmux setup behavior'
 require_multiline_pattern docs/src/terminal.md \
-    'tmux and Herdr open the documented attach command directly.*?`\$0`.*?`\$1`.*?login shell.*?Get cmux.*?cmux not installed.*?tmux and Herdr remain available.*?does not change their Sessions' \
+    'tmux and Herdr open the documented attach command directly.*?`\$0`.*?`\$1`.*?login shell.*?Workspace Options.*?Get cmux….*?tmux and[[:space:]]+Herdr remain available.*?does not change their[[:space:]]+Sessions' \
     'the terminal guide can regress to hiding literal tmux identifiers or truthful missing-cmux recovery'
 require_multiline_pattern docs/src/dez.md \
     'Open Workspace tmux.*?primary Workspace root.*?stable root identity.*?same folder name.*?cannot attach to one[[:space:]]+another.*?basename-only.*?active pane is inside the current Workspace root.*?never[[:space:]]+renames or terminates that session' \
@@ -627,7 +627,7 @@ require_multiline_pattern docs/src/SUMMARY.md \
     'Dez Development.*?Fork Notes.*?v0\.4 Readiness.*?v0\.2 Workspace Polish.*?Native Surface Contract' \
     'the documentation navigation can regress to hiding the active v0.4 contract behind historical release lanes'
 require_multiline_pattern docs/src/development/dez/v0.4-readiness.md \
-    '^# Dez v0\.4 readiness.*?active source and exact-artifact.*?0\.4\.0.*?signed or notarized.*?## Product promise.*?open a Workspace.*?Codex, Claude Code, OpenCode, tmux, Herdr.*?## v0\.4 surface contract.*?Home.*?Workspaces.*?Main Work Area.*?Status bar.*?Terminal Details.*?Settings.*?Identity.*?## Terminal and integration contract.*?claude --continue.*?Legacy.*?Access[[:space:]]+blocked.*?## Reliability and access gates.*?Install and Relaunch.*?GPUI entity.*?## Release ladder.*?Do not compile Dez locally.*?GitHub Actions.*?Developer ID.*?notarization.*?## Stop-ship defects.*?NO RENDERER.*?## Completion evidence' \
+    '^# Dez v0\.4 readiness.*?active source and exact-artifact.*?0\.4\.0.*?signed or notarized.*?## Product promise.*?open a Workspace.*?Codex, Claude Code, OpenCode, tmux, Herdr.*?## v0\.4 surface contract.*?Home.*?Workspaces.*?Main Work Area.*?Top Bar and Status Bar.*?Terminal Details.*?Settings.*?Identity.*?## Terminal and integration contract.*?claude --continue.*?Legacy.*?Access[[:space:]]+blocked.*?## Reliability and access gates.*?Install and Relaunch.*?GPUI entity.*?## Release ladder.*?Do not compile Dez locally.*?GitHub Actions.*?Developer ID.*?notarization.*?## Stop-ship defects.*?NO RENDERER.*?## Completion evidence' \
     'the v0.4 lane can regress without its product, surface, ownership, reliability, exact-artifact, and stop-ship gates'
 require_file docs/src/development/dez/v0.2-workspace-polish.md \
     'the preserved v0.2 Workspace polish contract is missing'
@@ -637,7 +637,7 @@ require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
 require_file docs/src/development/dez/surface-contract.md \
     'the source-controlled native surface contract is missing'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
-    '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Tabs & Panels \(activation-only projection of the active Workspace\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Browse Running Sessions….*?never creates a duplicate Sessions page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Tabs & Panels.*?Activity.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
+    '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Open \(activation-only projection of the active Workspace\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Running Sessions.*?Browse Running Sessions….*?never creates a duplicate Sessions page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Open.*?Sessions.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
     'the source-controlled wireframe can regress to omitting a primary surface, ownership rule, or recovery state'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'complete Herdr source.*?scan.*?shares one four-second deadline.*?Results[[:space:]]+completed before that deadline are preserved.*?Each integration exposes one distinct source state.*?\*\*Missing\*\*.*?\*\*Empty\*\*.*?\*\*Failed\*\*.*?\*\*Ready\*\*.*?Browse Running Sessions….*?Host connection, reconnection, and command cycles remain bounded.*?GUI groups every frame-safe chunk.*?one queue item.*?queue admission accepts or rejects the[[:space:]]+batch as a unit.*?admission atomicity does not guarantee end-to-end[[:space:]]+delivery.*?prefix delivered.*?outcome as uncertain.*?never.*?replays it.*?four-mebibyte PTY budget.*?sixteen-mebibyte aggregate[[:space:]]+queued-input cap.*?independently bounds its own queued input by[[:space:]]+message count and bytes.*?separate PTY control channel.*?app bundle outside `/Applications` opens native Home.*?Continue your work.*?Install Dez to[[:space:]]+continue.*?Install and Relaunch.*?Workspaces says that no[[:space:]]+Workspace has restored.*?does not duplicate the primary action.*?no startup dialog,[[:space:]]+prompt, modal, overlay' \
@@ -1003,11 +1003,11 @@ require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     'fn apply_scan.*?for issue in &source_issues.*?source_issue_is_new\(&self\.source_issues, issue\).*?discovery issue.*?fn source_issue_is_new.*?!previous_issues\.contains\(issue\).*?repeated_source_issue_is_not_new_until_its_state_changes.*?!source_issue_is_new\(std::slice::from_ref\(&issue\), &issue\)' \
     'unchanged integration failures can regress to flooding diagnostics on every discovery cycle'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn external_activity_issue_description.*?Last-known rows stay visible\..*?No current rows are shown\..*?fn render_external_activity_status.*?source_issues\(\).*?terminal integrations unavailable.*?Callout::new\(\).*?Severity::Warning.*?Button::new\("retry-external-activity", "Retry"\).*?Retry External Terminal Discovery.*?store\.refresh\(cx\).*?render_session_notices.*?render_external_activity_status' \
-    'tmux, Herdr, or cmux discovery failures can regress to silent logs without one native retry surface'
+    'fn external_activity_issue_description.*?Last-known rows stay visible\..*?No current rows are shown\..*?fn render_external_activity_status.*?source_issues\(\).*?terminal integrations unavailable.*?Callout::new\(\).*?Severity::Warning.*?Button::new\("retry-external-activity", "Retry"\).*?Retry External Terminal Discovery.*?store\.refresh\(cx\).*?render_session_notices.*?if APP_NAME == "Zed".*?render_external_activity_status' \
+    'upstream discovery failures can regress to silent logs or Dez can regress to pinning provider failures above Workspace navigation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'CMUX_API_GUIDE_URL.*?https://cmux\.com/docs/api.*?CMUX_WEBSITE_URL.*?https://cmux\.com.*?fn cmux_integration_status_presentation.*?MultiplexerSourceAvailability::MissingExecutable.*?cmux not installed.*?Get cmux.*?CMUX_WEBSITE_URL.*?MultiplexerSourceAvailability::AccessRequired.*?Open Workspace in cmux still works.*?Dez never changes this setting.*?cmux activity sharing is off.*?Open API Guide.*?CMUX_API_GUIDE_URL.*?fn render_cmux_integration_status.*?Callout::new\(\).*?Severity::Info.*?open-cmux-integration-guide.*?cx\.open_url\(presentation\.action_url\).*?render_session_notices.*?render_cmux_integration_status' \
-    'cmux integration setup can regress to a warning overlay, dead-end copy, or missing official setup and access guidance'
+    'CMUX_API_GUIDE_URL.*?https://cmux\.com/docs/api.*?CMUX_WEBSITE_URL.*?https://cmux\.com.*?fn cmux_integration_status_presentation.*?MultiplexerSourceAvailability::MissingExecutable => None.*?MultiplexerSourceAvailability::AccessRequired.*?Open Workspace in cmux still works.*?Dez never changes this setting.*?cmux activity sharing is off.*?Open API Guide.*?CMUX_API_GUIDE_URL.*?let cmux_is_missing.*?MultiplexerKind::Cmux.*?MultiplexerSourceAvailability::MissingExecutable.*?ContextMenuEntry::new\("Get cmux…"\).*?IconName::Screen.*?cx\.open_url\(CMUX_WEBSITE_URL\).*?fn render_cmux_integration_status.*?Callout::new\(\).*?Severity::Info.*?open-cmux-integration-guide.*?cx\.open_url\(presentation\.action_url\).*?render_session_notices.*?if APP_NAME == "Zed".*?render_cmux_integration_status' \
+    'cmux integration can regress to a global Dez notice, a dead-end missing state, or missing official setup and access guidance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_workspace_access_status.*?WorkspaceAccessState::AccessRequired.*?Workspace access required.*?Grant Access….*?let workspace_access_required = matches!.*?WorkspaceAccessState::AccessRequired.*?let has_supervision_or_recovery.*?workspace_access_required.*?terminal_host_needs_recovery;.*?render_session_notices.*?render_workspace_access_status' \
     'Workspace access recovery can regress to a Home overlay or disappear when restored Workspaces reconcile visibility'
@@ -1095,6 +1095,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn terminal_agent_row_state_label.*?strip_prefix\("Detected · "\).*?"Running".*?agent_kind\.display_name\(\).*?fn running_terminal_agent_summary.*?"\{\} running".*?running_terminal_agent_label =.*?terminal_run_review_state.*?RunReviewState::Running.*?running_terminal_agent_label: running_terminal_agent_label\.clone\(\).*?render_project_header.*?running_terminal_agent_label.*?Color::Accent' \
     'starting a terminal agent can regress to an invisible compact-row or collapsed-Workspace transition in Sessions'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn terminal_agent_row_state_label.*?else if app_name == "Zed".*?agent_kind\.display_name\(\).*?else \{[[:space:]]*state\.into\(\).*?fn dez_terminal_agent_state_does_not_repeat_the_provider_title.*?"Dez".*?"Running".*?"Needs attention".*?"Zed".*?"Codex · Running"' \
+    'Dez terminal rows can regress to repeating the provider in both the title and supporting state line'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn terminal_sessions_refresh_on_state_changes_not_output_frames.*?TerminalEvent::ProcessInfoChanged.*?!terminal_event_refreshes_session\(&TerminalEvent::Wakeup\)' \
     'terminal output frames can regress into full Sessions rebuilds'
@@ -1156,8 +1159,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_activity_thread_visible.*?app_name == "Zed".*?has_draft_content.*?is_active.*?has_notification.*?has_reviewable_changes.*?AgentThreadStatus::Running.*?AgentThreadStatus::WaitingForConfirmation.*?AgentThreadStatus::Error.*?fn workspace_activity_terminal_visible.*?RunReviewState::Running.*?RunReviewState::WaitingForPermission.*?RunReviewState::WaitingForInput.*?RunReviewState::Failed.*?RunReviewState::Detached.*?RunReviewState::Reconnecting.*?RunReviewState::Missing.*?RunReviewState::Incompatible.*?RunReviewState::Resumable.*?fn workspace_activity_multiplexer_visible.*?state != MultiplexerSessionState::Completed.*?fn workspace_activity_section_visible.*?app_name != "Zed".*?!is_sticky.*?!is_collapsed.*?has_activity' \
     'Workspace Activity can regress from its bounded, current, actionable lifecycle contract'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn thread_metadata_would_render_sidebar_row.*?APP_NAME == "Zed".*?terminals\.retain\(\|terminal\|.*?workspace_activity_terminal_visible.*?workspace_activity_multiplexer_visible\(APP_NAME, session\.state\).*?threads\.retain\(\|thread\|.*?has_reviewable_changes.*?workspace_activity_thread_visible.*?let workspace_activity_visible =.*?workspace_activity_section_visible.*?Label::new\("Activity"\).*?when\(workspace_activity_visible.*?workspace_activity_heading' \
-    'Workspaces can regress to unbounded history rows or lose the nested Activity hierarchy'
+    'fn thread_metadata_would_render_sidebar_row.*?APP_NAME == "Zed".*?terminals\.retain\(\|terminal\|.*?workspace_activity_terminal_visible.*?workspace_activity_multiplexer_visible\(APP_NAME, session\.state\).*?threads\.retain\(\|thread\|.*?has_reviewable_changes.*?workspace_activity_thread_visible.*?let workspace_activity_visible =.*?workspace_activity_section_visible.*?Label::new\(if APP_NAME == "Zed".*?"Activity".*?"Sessions".*?when\(workspace_activity_visible.*?workspace_activity_heading' \
+    'Workspaces can regress to unbounded history rows or lose the nested Sessions hierarchy'
 require_pattern crates/sidebar/src/sidebar.rs \
     'fn dez_workspace_activity_is_bounded_to_current_actionable_work' \
     'the bounded Workspace Activity policy is no longer pinned by source assertions'
@@ -1618,8 +1621,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Button::new\([[:space:]]*"open-recent-workspaces".*?\.size\(ButtonSize::Compact\)' \
     'the labeled recent-Workspace utility can regress to medium padding that overflows the compact rail'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?\.size\(if is_dez \{.*?ButtonSize::Medium.*?\} else \{.*?ButtonSize::Compact' \
-    'the labeled Agent Tools utility can regress to medium padding that overflows the compact rail'
+    'ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?\.size\(if is_dez \{.*?session_rail_header_button_size\(APP_NAME\).*?\} else \{.*?ButtonSize::Compact' \
+    'the Workspaces menu utility can regress to unrelated sizing that overflows the compact header'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let history_visible_label = session_rail_agent_history_utility_label\(rail_width\).*?Button::new\("history", history_visible_label\).*?\.size\(ButtonSize::Compact\)' \
     'the labeled History utility can regress to medium padding that overflows the compact rail'
@@ -2179,8 +2182,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'use terminal_view::\{.*?WORKSPACE_TMUX_LAUNCHER_LABEL.*?let workspace_root = project_group_key.*?ordered_paths\(\).*?next\(\).*?map\(PathBuf::as_path\).*?tmux_startup_command_for_workspace\(workspace_root\).*?let menu = menu\.submenu.*?WORKSPACE_TMUX_LAUNCHER_LABEL\.to_owned\(\).*?IconName::SplitAlt.*?Some\(tmux_startup_command\.clone\(\)\).*?let more_agents_sidebar = terminal_sidebar\.clone\(\).*?let more_agents_key = terminal_key\.clone\(\).*?let more_agents_menu = terminal_menu\.clone\(\).*?submenu\.submenu\([[:space:]]*"More Agent CLIs"' \
     'Workspace Options can regress to presenting root-scoped tmux as an unowned generic terminal action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'self\.external_activity_expanded && !has_rows.*?div\(\)\.px_2\(\)\.pb_2\(\)\.child\([[:space:]]*Label::new\(empty_label\).*?LabelSize::XSmall.*?Color::Muted' \
-    'the native running-session empty state can regress to applying unsupported padding directly to Label'
+    'fn render_external_terminal_section.*?let has_rows = !multiplexer_sessions\.is_empty\(\).*?if !has_rows \{[[:space:]]*return None;[[:space:]]*\}.*?Other Running Sessions' \
+    'empty external-session inventory can regress to a permanent zero-session footer'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn open_tmux_terminal\(.*?ordered_paths\(\)[[:space:]]*\.next\(\)[[:space:]]*\.map\(PathBuf::as_path\).*?tmux_startup_command_for_workspace\(workspace_root\)' \
     'the native tmux launcher can regress to passing a PathBuf reference across its Path API boundary'
@@ -2188,7 +2191,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = groups.*?let mut visible_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?session\.source_label\(\).*?session\.state_label\(\).*?working_directory\.display\(\).*?workspace-external-session-.*?tab_index\(0isize\).*?aria_label\(accessibility_label\).*?external_multiplexer_icon\(session\).*?open_external_multiplexer_session' \
     'external terminal and cmux activity can regress from the most specific Workspace or become a pointer-only inventory'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'let action_label = external_multiplexer_action_label\(session\).*?let port_detail_label = session\.port_label\(\).*?let compact_port_label = session\.compact_port_label\(\).*?Listening ports:.*?let accessibility_label =.*?Listening ports:.*?aria_label\(accessibility_label\).*?when_some\(compact_port_label.*?Label::new\(port_label\).*?Color::Muted' \
+    'workspace_external_sessions_expanded: HashSet<ProjectGroupKey>.*?has_threads \|\| !external_sessions\.is_empty\(\).*?Label::new\(if APP_NAME == "Zed".*?"Sessions".*?external_sessions_expanded.*?workspace_external_sessions_expanded\.contains\(key\).*?Running Sessions.*?external_session_count\.to_string\(\).*?workspace_external_sessions_expanded.*?\.remove\(&disclosure_key\).*?\.insert\(disclosure_key\.clone\(\)\).*?child\(external_sessions_disclosure\).*?children\(external_rows\)' \
+    'Workspace-owned multiplexer activity can regress to an always-expanded technical inventory or disappear from Sessions'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'let action_label = external_multiplexer_action_label\(session\).*?let port_detail_label = session\.port_label\(\).*?let compact_port_label =[[:space:]]*session\.compact_port_label\(\).*?Listening ports:.*?let accessibility_label =.*?Listening ports:.*?aria_label\(accessibility_label\).*?when_some\(compact_port_label.*?Label::new\(port_label\).*?Color::Muted' \
     'matching cmux rows can regress to hiding authoritative ports, crushing titles, or styling passive metadata as an action'
 require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
     'fn compact_port_label\(ports: &\[u16\]\).*?ports\.first\(\)\?.*?remaining_count = ports\.len\(\)\.saturating_sub\(1\).*?format!\(":\{first_port\} \+\{remaining_count\}"\).*?fn compact_port_labels_preserve_row_width_and_report_hidden_ports.*?compact_port_label\(&\[\]\).*?compact_port_label\(&\[3000\]\).*?compact_port_label\(&\[3000, 5173, 8080, 9000\]\).*?Some\(":3000 \+3"\)' \
@@ -2200,8 +2206,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'menu\.when\(is_active.*?action\("Open Files", Box::new\(RevealFiles\)\).*?action\("Review Changes", Box::new\(ReviewGitChanges\)\).*?action\([[:space:]]*"Open Debug".*?ApplyCanvasLayoutRecipe.*?name: "debug"' \
     'Workspace Options can regress to hiding Files, Git, or Debug behind layout administration'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_tabs_section_title.*?"Open Tabs".*?"Tabs & Panels".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 0.*?fn workspace_tab_layout_label.*?pane_count > 1.*?"\{tab_count\} open · \{pane_count\} panes".*?"\{tab_count\} open".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?workspace_tab_layout_label\([[:space:]]*APP_NAME, tab_count, pane_count.*?Tabs and panels in the active Workspace' \
-    'Tabs and Panels can regress to hiding one-tab Workspaces, adding a fake single-pane label, losing real split counts, or stopping native activation'
+    'fn workspace_tabs_section_title.*?"Open Tabs".*?"Open".*?fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 0.*?fn workspace_tab_layout_label.*?pane_count > 1.*?"\{tab_count\} open · \{pane_count\} panes".*?"\{tab_count\} open".*?fn render_active_workspace_tabs.*?workspace_tabs_section_visible\(APP_NAME, tab_count\).*?workspace_pane_navigation_label.*?workspace\.activate_item.*?workspace_tab_layout_label\([[:space:]]*APP_NAME, tab_count, pane_count.*?Tabs and panels in the active Workspace' \
+    'Open navigation can regress to hiding one-tab Workspaces, adding a fake single-pane label, losing real split counts, or stopping native activation'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'workspace-native-tab-close|middle_click_pane' \
     'Workspace Layout can regress to duplicating native pane close ownership'
@@ -2341,11 +2347,11 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_row_is_compact.*?width < DETAILED_MIN_WIDTH.*?fn session_rail_recency_visible' \
     'compact Session rows do not have an explicit metadata hierarchy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'SUPPLEMENTAL_METADATA_MIN_WIDTH.*?fn session_rail_supplemental_metadata_visible.*?fn session_rail_supplemental_metadata_visible_for_product.*?if app_name == "Zed".*?session_rail_supplemental_metadata_visible\(width\).*?width >= PRIMARY_ACTION_LABELS_MIN_WIDTH.*?session_rail_supplemental_metadata_visible_for_product\([[:space:]]*"Dez",[[:space:]]*DEFAULT_WIDTH.*?!session_rail_supplemental_metadata_visible_for_product\([[:space:]]*"Dez",[[:space:]]*RESPONSIVE_MIN_WIDTH.*?show_worktree_metadata && supplemental_metadata_visible.*?actor_label_visible\(supplemental_metadata_visible\).*?host_label_visible\(supplemental_metadata_visible\)' \
-    'Dez Session rows can regress to hiding provider, host, and worktree detail at every supported Workspaces width'
+    'SUPPLEMENTAL_METADATA_MIN_WIDTH.*?fn session_rail_supplemental_metadata_visible.*?fn session_rail_supplemental_metadata_visible_for_product.*?if app_name == "Zed".*?session_rail_supplemental_metadata_visible\(width\).*?else \{[[:space:]]*false[[:space:]]*\}.*?!session_rail_supplemental_metadata_visible_for_product\([[:space:]]*"Dez",[[:space:]]*DEFAULT_WIDTH.*?!session_rail_supplemental_metadata_visible_for_product\([[:space:]]*"Dez",[[:space:]]*RESPONSIVE_MIN_WIDTH.*?show_worktree_metadata && supplemental_metadata_visible.*?actor_label_visible\(supplemental_metadata_visible\).*?host_label_visible\(supplemental_metadata_visible\)' \
+    'Dez Session rows can regress to repeating technical owner, host, and worktree badges in primary navigation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_external_terminal_section.*?let supplemental_metadata_visible =.*?session_rail_supplemental_metadata_visible_for_product.*?self\.rendered_width.*?actor_label\(owner\).*?actor_label_visible\(supplemental_metadata_visible\).*?state_label\(state\).*?host_label\(location\).*?host_label_visible\(supplemental_metadata_visible\)' \
-    'external terminal rows can regress to hiding authoritative owner and working-directory metadata in Dez'
+    'external terminal rows can regress to losing authoritative owner and working-directory metadata from disclosure and accessibility'
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'actor_label_visible: bool.*?host_label_visible: bool.*?pub fn actor_label_visible.*?pub fn host_label_visible.*?has_visible_actor_label.*?has_visible_host_label.*?when\(self\.actor_label_visible.*?when\(self\.host_label_visible' \
     'hidden Session ownership context can regress to disappearing from accessibility and tooltips'
@@ -2833,6 +2839,15 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_session_notices.*?impl Render for Sidebar.*?let session_notices = \(!installation_required[[:space:]]*&& matches!\(self\.view, SidebarView::ThreadList\)\).*?self\.render_session_notices\(window, cx\).*?\.child\(self\.render_sidebar_header\(window, cx\)\).*?\.when_some\(session_notices, \|this, notices\| this\.child\(notices\)\).*?match &self\.view.*?SidebarView::ThreadList' \
     'Workspaces notices can regress to being duplicated, hidden in one list state, or mounted below navigation content'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn session_rail_header_button_size.*?ButtonSize::Medium.*?ButtonSize::Default.*?open-workspace.*?session_rail_header_button_size\(APP_NAME\).*?open-session-search.*?session_rail_header_button_size\(APP_NAME\).*?agent-sidebar-options-menu-trigger.*?session_rail_header_button_size\(APP_NAME\)' \
+    'Workspaces top-bar controls can regress to unrelated local sizing instead of the shared compact chrome scale'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'IconButton::new\("sidebar-toggle".*?size\(control_size\).*?icon_size\(icon_size\).*?IconButton::new\("project-pane-toggle".*?size\(control_size\).*?icon_size\(icon_size\).*?fn sidebar_header_control_metrics.*?CanvasDensity::Compact.*?ButtonSize::Default, IconSize::XSmall.*?CanvasDensity::Balanced.*?ButtonSize::Default, IconSize::Small.*?CanvasDensity::Spacious.*?ButtonSize::Medium, IconSize::Small' \
+    'native top-bar toggles can regress to oversized or density-inconsistent marks'
+require_multiline_pattern crates/workspace/src/status_bar.rs \
+    'fn status_bar_height.*?CanvasDensity::Compact => 24\.0.*?CanvasDensity::Balanced => 26\.0.*?CanvasDensity::Spacious => 30\.0.*?DesignSystemSettings::get_global\(cx\)\.density.*?when_some\(status_bar_height.*?\.h\(height\)\.gap_1\(\)\.px_1\(\)\.py_0\(\).*?LabelSize::Small' \
+    'Dez status chrome can regress to an unbounded inherited height or typography scale'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'WORKSPACE_NOTIFICATION_SHELF_MAX_WIDTH: f32 = 400\..*?WORKSPACE_NOTIFICATION_SHELF_MIN_WIDTH: f32 = 280\..*?WORKSPACE_NOTIFICATION_SHELF_WIDTH_FRACTION: f32 = 0\.32.*?WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION: f32 = 0\.36.*?fn workspace_notification_shelf_width.*?fn workspace_notification_shelf_top.*?fn render_notifications.*?self\.bounds\.size\.width.*?self\.bounds\.size\.height.*?id\("workspace-notification-shelf"\).*?role\(gpui::Role::Region\).*?aria_label\("Workspace notifications"\).*?right_3\(\).*?top\(workspace_notification_shelf_top\(cx\)\).*?workspace_notification_shelf_width\(surface_width\).*?max_h\(surface_height \* WORKSPACE_NOTIFICATION_SHELF_MAX_VIEWPORT_FRACTION\).*?overflow_y_scroll\(\)' \
     'Workspace notifications can regress to a fixed full-height overlay over the Main Work Area'

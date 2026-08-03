@@ -1,12 +1,13 @@
 use crate::{
-    ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleSidebar, sidebar_side_context_menu,
+    DesignSystemSettings, ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleSidebar,
+    sidebar_side_context_menu,
 };
 use gpui::{
     Anchor, AnyView, App, Context, Decorations, Entity, FocusHandle, Focusable, IntoElement,
-    ParentElement, Render, Role, SharedString, Styled, Subscription, WeakEntity, Window,
+    ParentElement, Pixels, Render, Role, SharedString, Styled, Subscription, WeakEntity, Window,
 };
 use paths::APP_NAME;
-use settings::{SettingsContent, update_settings_file};
+use settings::{Settings as _, SettingsContent, update_settings_file};
 use std::{any::TypeId, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
 use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, right_click_menu};
@@ -125,6 +126,16 @@ fn status_bar_label(app_name: &str) -> &'static str {
     }
 }
 
+fn status_bar_height(app_name: &str, density: settings::CanvasDensity) -> Option<Pixels> {
+    (app_name != "Zed").then(|| {
+        px(match density {
+            settings::CanvasDensity::Compact => 24.0,
+            settings::CanvasDensity::Balanced => 26.0,
+            settings::CanvasDensity::Spacious => 30.0,
+        })
+    })
+}
+
 fn sidebar_toggle_label(app_name: &str, open: bool) -> &'static str {
     match (app_name == "Zed", open) {
         (true, true) => "Hide Sessions",
@@ -178,6 +189,8 @@ impl Focusable for StatusBar {
 impl Render for StatusBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar = SidebarStatus::query(&self.multi_workspace, cx);
+        let status_bar_height =
+            status_bar_height(APP_NAME, DesignSystemSettings::get_global(cx).density);
 
         h_flex()
             .id("status-bar")
@@ -212,8 +225,13 @@ impl Render for StatusBar {
             )
             .w_full()
             .justify_between()
-            .gap(DynamicSpacing::Base08.rems(cx))
-            .p(DynamicSpacing::Base04.rems(cx))
+            .when(APP_NAME == "Zed", |this| {
+                this.gap(DynamicSpacing::Base08.rems(cx))
+                    .p(DynamicSpacing::Base04.rems(cx))
+            })
+            .when_some(status_bar_height, |this, height| {
+                this.h(height).gap_1().px_1().py_0()
+            })
             .bg(cx.theme().colors().status_bar_background)
             .map(|el| match window.window_decorations() {
                 Decorations::Server => el,
@@ -279,6 +297,22 @@ mod tests {
             Some("Workspaces".into())
         );
         assert_eq!(sidebar_toggle_visible_label("Zed", None), None);
+        assert_eq!(
+            status_bar_height("Dez", settings::CanvasDensity::Compact),
+            Some(px(24.0))
+        );
+        assert_eq!(
+            status_bar_height("Dez", settings::CanvasDensity::Balanced),
+            Some(px(26.0))
+        );
+        assert_eq!(
+            status_bar_height("Dez", settings::CanvasDensity::Spacious),
+            Some(px(30.0))
+        );
+        assert_eq!(
+            status_bar_height("Zed", settings::CanvasDensity::Balanced),
+            None
+        );
     }
 }
 

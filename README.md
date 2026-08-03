@@ -25,7 +25,7 @@ Workspace instead of separate applications or hidden panel modes.
 - **Workspaces** — an optional, collapsible navigator for codebases, open
   Surfaces, and Agent Sessions. Fresh windows keep it closed unless the user
   enables it, restored layouts may reopen it, and its window edge is
-  configurable. Its collapsible **Tabs & Panels** section appears for every
+  configurable. Its collapsible **Open** section appears for every
   open native Main Work Area surface. It mirrors Home, code, diffs, terminals,
   Files, Git, Settings, and other Workspace-owned tabs, grouping them by pane
   only after the user creates a real split. Selecting a row activates that
@@ -41,13 +41,14 @@ Workspace instead of separate applications or hidden panel modes.
   root names remain searchable and available in the header tooltip and
   accessibility label. A Workspace can explicitly attach a discovered tmux or
   Herdr session, or open a discovered cmux Workspace in cmux, without taking
-  ownership. Each item with a matching working directory appears beneath the
-  most specific Workspace with source, state, and working-directory metadata.
-  A cmux row also keeps its API-reported listening ports visible as compact
-  operational metadata; Dez does not infer ports for other processes.
+  ownership. Matching multiplexer work contributes to one compact **Running
+  Sessions** disclosure beneath the most specific Workspace. Source, state,
+  working directory, listening ports, and ownership remain available after the
+  disclosure is opened or in Terminal Details; they do not compete with the
+  primary navigation label. Dez does not infer ports for other processes.
   Discovered tmux, Herdr, and cmux activity without a matching open root stays
-  reachable in **Other Running Sessions** instead of being hidden or assigned
-  to the wrong codebase. Opening an unmatched tmux or Herdr item with a known
+  reachable in **Other Running Sessions** when such items exist; an empty
+  section is omitted. Opening an unmatched tmux or Herdr item with a known
   working directory first establishes that directory as a native Workspace,
   then attaches the external client there. Pathless items use the active
   Workspace; cmux remains an external handoff. Workspace headers show live Git
@@ -195,9 +196,10 @@ codex` retain the same identity.
 automation boundary. cmux still owns its custom actions and multi-pane layouts;
 Dez keeps those layouts externally owned. Its secure socket default accepts
 cmux-owned processes; Dez never enables cross-app access on the user's behalf.
-When that boundary rejects live discovery, Workspaces reports **cmux activity
-sharing is off** as an informational privacy state rather than presenting cmux
-as broken. The path handoff remains available independently.
+When that boundary rejects live discovery, the Workspace menu keeps the
+official guide and retry route available without pinning a technical notice
+above navigation. If cmux is missing, that menu offers **Get cmux…**. The path
+handoff remains available independently.
 Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
@@ -326,10 +328,10 @@ access, and timeout failures offer **Open cmux API guide**. Successful handoffs
 remain brief confirmations.
 Live cmux discovery treats the documented process-only refusal as **activity
 sharing is off**, not as a failed terminal integration. Previously discovered
-rows remain last known, and an inline **Open API Guide** action explains the
-opt-in boundary without changing cmux configuration.
-If cmux is absent, Workspaces shows **cmux not installed** with **Get cmux**;
-tmux and Herdr remain available. Their attach clients execute directly so tmux
+rows remain last known, and Workspace Options keeps **Open API Guide** available
+without changing cmux configuration or adding a global notice. If cmux is
+absent, Workspace Options offers **Get cmux…**; tmux and Herdr remain available.
+Their attach clients execute directly so tmux
 identifiers such as `$0` are never expanded by the user's login shell.
 
 Last-known external rows are never attached blindly. Their action refreshes

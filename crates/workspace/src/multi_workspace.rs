@@ -20,7 +20,7 @@ use util::ResultExt;
 use util::path_list::PathList;
 use zed_actions::sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
 
-use crate::workspace_settings::SidebarSettings;
+use crate::workspace_settings::{DesignSystemSettings, SidebarSettings};
 use settings::{CanvasSide, SidebarDockPosition};
 use ui::{ContextMenu, TintColor, Tooltip, right_click_menu};
 
@@ -204,6 +204,10 @@ fn render_sidebar_header_controls_for_state(
         (false, SidebarSide::Right) => IconName::SidebarRightClosed,
     };
     let sidebar_label = sidebar_toggle_label(paths::APP_NAME, sidebar_open);
+    let (control_size, icon_size) = sidebar_header_control_metrics(
+        paths::APP_NAME,
+        DesignSystemSettings::get_global(cx).density,
+    );
     let on_right = sidebar_side == SidebarSide::Right;
     let sidebar_multi_workspace = multi_workspace.clone();
     let project_pane_visible = project_pane_visible.or_else(|| {
@@ -229,8 +233,8 @@ fn render_sidebar_header_controls_for_state(
         })
         .trigger(move |_is_active, _window, _cx| {
             IconButton::new("sidebar-toggle", sidebar_icon)
-                .size(ButtonSize::Medium)
-                .icon_size(IconSize::Medium)
+                .size(control_size)
+                .icon_size(icon_size)
                 .icon_color(Color::Muted)
                 .aria_label(sidebar_label)
                 .aria_expanded(sidebar_open)
@@ -256,8 +260,8 @@ fn render_sidebar_header_controls_for_state(
             let label = project_pane_toggle_label(paths::APP_NAME, is_visible);
 
             IconButton::new("project-pane-toggle", IconName::FileTree)
-                .size(ButtonSize::Medium)
-                .icon_size(IconSize::Medium)
+                .size(control_size)
+                .icon_size(icon_size)
                 .icon_color(if is_visible {
                     Color::Default
                 } else {
@@ -298,6 +302,21 @@ fn sidebar_toggle_label(app_name: &str, sidebar_open: bool) -> &'static str {
         (true, false) => "Open Sessions",
         (false, true) => "Hide Workspaces",
         (false, false) => "Open Workspaces",
+    }
+}
+
+fn sidebar_header_control_metrics(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
+    if app_name == "Zed" {
+        return (ButtonSize::Medium, IconSize::Medium);
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
+        settings::CanvasDensity::Balanced => (ButtonSize::Default, IconSize::Small),
+        settings::CanvasDensity::Spacious => (ButtonSize::Medium, IconSize::Small),
     }
 }
 
@@ -368,10 +387,11 @@ mod sidebar_chrome_tests {
     use super::{
         SIDEBAR_KEYBOARD_RESIZE_STEP, project_pane_toggle_label,
         project_pane_toggle_visible_in_header, sidebar_chrome_toggle_visible,
-        sidebar_keyboard_resize_target, sidebar_resize_copy,
+        sidebar_header_control_metrics, sidebar_keyboard_resize_target, sidebar_resize_copy,
         sidebar_resize_handle_occludes_main_work_area, sidebar_toggle_label,
     };
     use gpui::px;
+    use ui::{ButtonSize, IconSize};
 
     #[test]
     fn native_sidebar_chrome_keeps_its_toggle_available_in_both_states() {
@@ -390,6 +410,14 @@ mod sidebar_chrome_tests {
         assert!(!project_pane_toggle_visible_in_header("Dez", true, true));
         assert!(project_pane_toggle_visible_in_header("Zed", true, true));
         assert!(!project_pane_toggle_visible_in_header("Dez", false, false));
+        assert!(matches!(
+            sidebar_header_control_metrics("Dez", settings::CanvasDensity::Balanced),
+            (ButtonSize::Default, IconSize::Small)
+        ));
+        assert!(matches!(
+            sidebar_header_control_metrics("Zed", settings::CanvasDensity::Balanced),
+            (ButtonSize::Medium, IconSize::Medium)
+        ));
     }
 
     #[test]

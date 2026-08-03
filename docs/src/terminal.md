@@ -233,11 +233,11 @@ scan is active queues one immediate follow-up scan rather than disappearing.
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
 success or the exact launch failure through a native toast and refreshes the
-external Session projection afterward. Missing-cmux and failure notices remain
-visible with one recovery action: **Get cmux** when it is absent, or **Open cmux
-API guide** when the installed CLI cannot complete the handoff.
-Workspaces also keeps **cmux not installed** visible while cmux is missing;
-tmux and Herdr remain available and Dez does not change their Sessions.
+external Session projection afterward. If cmux is absent, Workspace Options
+replaces the handoff with **Get cmux…**. If an installed CLI cannot complete the
+handoff, the resulting native toast offers **Open cmux API guide**. tmux and
+Herdr remain available, navigation stays quiet, and Dez does not change their
+Sessions.
 
 For cmux installed from its DMG or Homebrew cask, Dez checks the CLI bundled at
 `/Applications/cmux.app/Contents/Resources/bin/cmux` as well as standard

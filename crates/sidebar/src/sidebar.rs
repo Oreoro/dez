@@ -444,7 +444,7 @@ fn session_rail_supplemental_metadata_visible_for_product(app_name: &str, width:
     if app_name == "Zed" {
         session_rail_supplemental_metadata_visible(width)
     } else {
-        width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
+        false
     }
 }
 
@@ -497,6 +497,7 @@ fn session_row_primary_action_labels_visible(width: Pixels) -> bool {
 }
 
 fn terminal_agent_row_state_label(
+    app_name: &str,
     agent_kind: Option<TerminalAgentKind>,
     state: SharedString,
     actor_label_visible: bool,
@@ -525,8 +526,10 @@ fn terminal_agent_row_state_label(
         } else {
             state.into()
         }
-    } else {
+    } else if app_name == "Zed" {
         format!("{} · {state}", agent_kind.display_name()).into()
+    } else {
+        state.into()
     }
 }
 
@@ -628,6 +631,24 @@ fn terminal_title_for_editing(metadata: &TerminalThreadMetadata) -> SharedString
             title.to_owned().into()
         }
     })
+}
+
+fn terminal_activity_title(
+    metadata: &TerminalThreadMetadata,
+    detected_agent_kind: Option<TerminalAgentKind>,
+) -> SharedString {
+    let title = metadata.display_title();
+    let title_is_generic = metadata.custom_title.is_none()
+        && terminal_title_without_prefix(metadata.title.as_ref())
+            .trim()
+            .eq_ignore_ascii_case("terminal");
+    if title_is_generic {
+        detected_agent_kind
+            .map(|agent_kind| SharedString::from(agent_kind.display_name()))
+            .unwrap_or(title)
+    } else {
+        title
+    }
 }
 
 fn terminal_custom_title_from_edit(
@@ -1176,6 +1197,14 @@ fn session_rail_title(app_name: &str) -> &'static str {
     }
 }
 
+fn session_rail_header_button_size(app_name: &str) -> ButtonSize {
+    if app_name == "Zed" {
+        ButtonSize::Medium
+    } else {
+        ButtonSize::Default
+    }
+}
+
 fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
@@ -1245,7 +1274,7 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
     } else {
-        "Tabs & Panels"
+        "Open"
     }
 }
 
@@ -2600,11 +2629,13 @@ mod session_start_state_tests {
         assert!(!session_start_state_visible(false, 1, false, false, false));
         assert_eq!(session_rail_title("Dez"), "Workspaces");
         assert_eq!(session_rail_title("Zed"), "Sessions");
+        assert_eq!(session_rail_header_button_size("Dez"), ButtonSize::Default);
+        assert_eq!(session_rail_header_button_size("Zed"), ButtonSize::Medium);
         assert_eq!(
             session_rail_accessibility_label("Dez"),
             "Workspaces and Activity"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Tabs & Panels");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Open");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
         assert!(workspace_tabs_section_visible("Dez", 2));
         assert!(workspace_tabs_section_visible("Dez", 1));
@@ -2754,7 +2785,7 @@ mod session_start_state_tests {
         assert!(session_rail_supplemental_metadata_visible(
             SUPPLEMENTAL_METADATA_MIN_WIDTH
         ));
-        assert!(session_rail_supplemental_metadata_visible_for_product(
+        assert!(!session_rail_supplemental_metadata_visible_for_product(
             "Dez",
             DEFAULT_WIDTH
         ));
@@ -3029,6 +3060,31 @@ mod session_row_action_tests {
     }
 
     #[test]
+    fn generic_terminal_activity_uses_the_detected_agent_identity() {
+        let mut metadata = TerminalThreadMetadata {
+            terminal_id: TerminalId::from_stable_key("test", "activity-title"),
+            title: "Terminal".into(),
+            custom_title: None,
+            created_at: Utc::now(),
+            worktree_paths: WorktreePaths::default(),
+            remote_connection: None,
+            working_directory: None,
+            attention: TerminalAttentionState::default(),
+            session_ref: None,
+        };
+
+        assert_eq!(
+            terminal_activity_title(&metadata, Some(TerminalAgentKind::Herdr)).as_ref(),
+            "Herdr"
+        );
+        metadata.custom_title = Some("API review".into());
+        assert_eq!(
+            terminal_activity_title(&metadata, Some(TerminalAgentKind::Herdr)).as_ref(),
+            "API review"
+        );
+    }
+
+    #[test]
     fn notice_stack_preserves_most_of_the_window_for_primary_work() {
         assert!(SESSION_NOTICES_MAX_VIEWPORT_FRACTION > 0.25);
         assert!(SESSION_NOTICES_MAX_VIEWPORT_FRACTION < 0.5);
@@ -3165,25 +3221,28 @@ mod terminal_runtime_label_tests {
     }
 
     #[test]
-    fn compact_terminal_agent_state_names_the_actor_and_actionable_state() {
+    fn dez_terminal_agent_state_does_not_repeat_the_provider_title() {
         assert_eq!(
             terminal_agent_row_state_label(
+                "Dez",
                 Some(TerminalAgentKind::Codex),
                 "Detected · Live".into(),
                 false,
             ),
-            "Codex · Running"
+            "Running"
         );
         assert_eq!(
             terminal_agent_row_state_label(
+                "Dez",
                 Some(TerminalAgentKind::Claude),
                 "Detected · Needs attention".into(),
                 false,
             ),
-            "Claude Code · Needs attention"
+            "Needs attention"
         );
         assert_eq!(
             terminal_agent_row_state_label(
+                "Dez",
                 Some(TerminalAgentKind::Codex),
                 "Detected · Live".into(),
                 true,
@@ -3191,8 +3250,17 @@ mod terminal_runtime_label_tests {
             "Running · Observed"
         );
         assert_eq!(
-            terminal_agent_row_state_label(None, "Live".into(), false),
+            terminal_agent_row_state_label("Dez", None, "Live".into(), false),
             "Live"
+        );
+        assert_eq!(
+            terminal_agent_row_state_label(
+                "Zed",
+                Some(TerminalAgentKind::Codex),
+                "Detected · Live".into(),
+                false,
+            ),
+            "Codex · Running"
         );
     }
 
@@ -4047,14 +4115,14 @@ mod external_multiplexer_project_group_tests {
 
     #[test]
     fn cmux_status_distinguishes_missing_setup_from_private_activity() {
-        let missing = cmux_integration_status_presentation(
-            MultiplexerSourceAvailability::MissingExecutable,
-            false,
-        )
-        .expect("missing cmux should have a setup presentation");
-        assert_eq!(missing.title, "cmux not installed");
-        assert_eq!(missing.action_label, "Get cmux");
-        assert_eq!(missing.action_url, CMUX_WEBSITE_URL);
+        assert!(
+            cmux_integration_status_presentation(
+                MultiplexerSourceAvailability::MissingExecutable,
+                false,
+            )
+            .is_none(),
+            "missing optional integrations belong in the Workspace menu, not a global notice"
+        );
 
         let access_required = cmux_integration_status_presentation(
             MultiplexerSourceAvailability::AccessRequired,
@@ -4215,16 +4283,7 @@ fn cmux_integration_status_presentation(
     had_successful_scan: bool,
 ) -> Option<CmuxIntegrationStatusPresentation> {
     match availability {
-        MultiplexerSourceAvailability::MissingExecutable => {
-            Some(CmuxIntegrationStatusPresentation {
-                title: "cmux not installed",
-                description: "Install cmux if you want to open this Workspace there. tmux and Herdr remain available, and Dez never changes external sessions.",
-                action_label: "Get cmux",
-                action_aria_label: "Open the cmux website",
-                action_tooltip: "Open the official cmux website",
-                action_url: CMUX_WEBSITE_URL,
-            })
-        }
+        MultiplexerSourceAvailability::MissingExecutable => None,
         MultiplexerSourceAvailability::AccessRequired => {
             let description = if had_successful_scan {
                 "cmux stopped sharing live Workspace activity with Dez. Last-known rows remain visible; Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows. Dez never changes this setting."
@@ -5547,6 +5606,10 @@ pub struct Sidebar {
     /// navigation. Keep them behind an explicit disclosure so Workspaces stays
     /// focused on codebases and actionable agent sessions.
     external_activity_expanded: bool,
+    /// Running multiplexer sessions belong to a Workspace, but their detailed
+    /// technical rows should only occupy navigation space after the user asks
+    /// to inspect them.
+    workspace_external_sessions_expanded: HashSet<ProjectGroupKey>,
     reveal_running_sessions_after_refresh: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
@@ -5824,6 +5887,7 @@ impl Sidebar {
             attention_only: false,
             session_search_open: false,
             external_activity_expanded: false,
+            workspace_external_sessions_expanded: HashSet::new(),
             reveal_running_sessions_after_refresh: false,
             selection: None,
             active_entry: None,
@@ -8473,129 +8537,214 @@ impl Sidebar {
             (APP_NAME != "Zed" && is_active && !is_sticky && !is_collapsed && !has_filter)
                 .then(|| self.render_active_workspace_tabs(window, cx))
                 .flatten();
-        let workspace_activity_visible =
-            workspace_activity_section_visible(APP_NAME, is_sticky, is_collapsed, has_threads);
+        let workspace_activity_visible = workspace_activity_section_visible(
+            APP_NAME,
+            is_sticky,
+            is_collapsed,
+            has_threads || !external_sessions.is_empty(),
+        );
         let workspace_activity_heading = || {
             h_flex().w_full().px_3().pt_1().pb_0p5().child(
-                Label::new("Activity")
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
+                Label::new(if APP_NAME == "Zed" {
+                    "Activity"
+                } else {
+                    "Sessions"
+                })
+                .size(LabelSize::XSmall)
+                .color(Color::Muted),
             )
         };
 
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
-            let external_rows = external_sessions
-                .iter()
-                .map(|session| {
-                    let sidebar = cx.weak_entity();
-                    let open_session = session.clone();
-                    let action_label = external_multiplexer_action_label(session);
-                    let port_detail_label = session.port_label().map(SharedString::from);
-                    let compact_port_label = session.compact_port_label().map(SharedString::from);
-                    let source_and_state = match &session.working_directory {
-                        Some(working_directory) => SharedString::from(format!(
-                            "{} · {} · {}",
-                            session.source_label(),
-                            session.state_label(),
-                            working_directory.display()
-                        )),
-                        None => SharedString::from(format!(
-                            "{} · {}",
-                            session.source_label(),
-                            session.state_label()
-                        )),
-                    };
-                    let mut tooltip_label = match &session.working_directory {
-                        Some(working_directory) => format!(
-                            "{action_label}\nWorking directory: {}",
-                            working_directory.display()
-                        ),
-                        None => action_label.clone(),
-                    };
-                    if let Some(port_label) = port_detail_label.as_deref() {
-                        tooltip_label.push_str("\nListening ports: ");
-                        tooltip_label.push_str(port_label);
-                    }
-                    let accessibility_label = if let Some(port_label) = port_detail_label.as_deref()
-                    {
-                        format!("{action_label} Listening ports: {port_label}.")
-                    } else {
-                        action_label.clone()
-                    };
-                    ButtonLike::new(ElementId::from(format!(
-                        "workspace-external-session-{}",
-                        session.id
-                    )))
+            let external_sessions_expanded =
+                self.workspace_external_sessions_expanded.contains(key);
+            let external_rows = external_sessions_expanded
+                .then(|| {
+                    external_sessions
+                        .iter()
+                        .map(|session| {
+                            let sidebar = cx.weak_entity();
+                            let open_session = session.clone();
+                            let action_label = external_multiplexer_action_label(session);
+                            let port_detail_label = session.port_label().map(SharedString::from);
+                            let compact_port_label =
+                                session.compact_port_label().map(SharedString::from);
+                            let source_and_state = match &session.working_directory {
+                                Some(working_directory) => SharedString::from(format!(
+                                    "{} · {} · {}",
+                                    session.source_label(),
+                                    session.state_label(),
+                                    working_directory.display()
+                                )),
+                                None => SharedString::from(format!(
+                                    "{} · {}",
+                                    session.source_label(),
+                                    session.state_label()
+                                )),
+                            };
+                            let mut tooltip_label = match &session.working_directory {
+                                Some(working_directory) => format!(
+                                    "{action_label}\nWorking directory: {}",
+                                    working_directory.display()
+                                ),
+                                None => action_label.clone(),
+                            };
+                            if let Some(port_label) = port_detail_label.as_deref() {
+                                tooltip_label.push_str("\nListening ports: ");
+                                tooltip_label.push_str(port_label);
+                            }
+                            let accessibility_label =
+                                if let Some(port_label) = port_detail_label.as_deref() {
+                                    format!("{action_label} Listening ports: {port_label}.")
+                                } else {
+                                    action_label.clone()
+                                };
+                            ButtonLike::new(ElementId::from(format!(
+                                "workspace-external-session-{}",
+                                session.id
+                            )))
+                            .size(ButtonSize::Medium)
+                            .style(ButtonStyle::Subtle)
+                            .full_width()
+                            .tab_index(0isize)
+                            .aria_label(accessibility_label)
+                            .tooltip(Tooltip::text(tooltip_label))
+                            .child(
+                                h_flex()
+                                    .w_full()
+                                    .min_w_0()
+                                    .gap_2()
+                                    .child(
+                                        Icon::new(external_multiplexer_icon(session))
+                                            .size(IconSize::XSmall)
+                                            .color(
+                                                if session.state
+                                                    == MultiplexerSessionState::NeedsAttention
+                                                {
+                                                    Color::Warning
+                                                } else {
+                                                    Color::Muted
+                                                },
+                                            ),
+                                    )
+                                    .child(
+                                        v_flex()
+                                            .min_w_0()
+                                            .flex_1()
+                                            .gap(px(1.0))
+                                            .child(
+                                                Label::new(session.title.clone())
+                                                    .size(if labels_visible {
+                                                        LabelSize::XSmall
+                                                    } else {
+                                                        LabelSize::Small
+                                                    })
+                                                    .truncate(),
+                                            )
+                                            .when(labels_visible, |this| {
+                                                this.child(
+                                                    Label::new(source_and_state)
+                                                        .size(LabelSize::XSmall)
+                                                        .color(Color::Muted)
+                                                        .truncate(),
+                                                )
+                                            }),
+                                    ),
+                            )
+                            .when_some(compact_port_label, |this, port_label| {
+                                this.child(
+                                    h_flex().flex_none().child(
+                                        Label::new(port_label)
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    ),
+                                )
+                            })
+                            .on_click(move |_, window, cx| {
+                                sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar.open_external_multiplexer_session(
+                                            open_session.clone(),
+                                            window,
+                                            cx,
+                                        );
+                                    })
+                                    .log_err();
+                            })
+                            .into_any_element()
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let external_session_count = external_sessions.len();
+            let external_sessions_need_attention = external_sessions.iter().any(|session| {
+                session.state == MultiplexerSessionState::NeedsAttention || session.is_last_known()
+            });
+            let disclosure_key = key.clone();
+            let disclosure_sidebar = cx.weak_entity();
+            let disclosure_label = if external_sessions_expanded {
+                "Hide running multiplexer sessions"
+            } else {
+                "Show running multiplexer sessions"
+            };
+            let external_sessions_disclosure =
+                ButtonLike::new(ElementId::from(format!("workspace-running-sessions-{ix}")))
                     .size(ButtonSize::Medium)
                     .style(ButtonStyle::Subtle)
                     .full_width()
                     .tab_index(0isize)
-                    .aria_label(accessibility_label)
-                    .tooltip(Tooltip::text(tooltip_label))
+                    .aria_label(format!(
+                        "{disclosure_label}. {external_session_count} running sessions"
+                    ))
+                    .tooltip(Tooltip::text(disclosure_label))
                     .child(
                         h_flex()
                             .w_full()
                             .min_w_0()
                             .gap_2()
                             .child(
-                                Icon::new(external_multiplexer_icon(session))
-                                    .size(IconSize::XSmall)
-                                    .color(
-                                        if session.state == MultiplexerSessionState::NeedsAttention
-                                        {
-                                            Color::Warning
-                                        } else {
-                                            Color::Muted
-                                        },
-                                    ),
+                                Icon::new(if external_sessions_expanded {
+                                    IconName::ChevronDown
+                                } else {
+                                    IconName::ChevronRight
+                                })
+                                .size(IconSize::XSmall)
+                                .color(Color::Muted),
                             )
                             .child(
-                                v_flex()
-                                    .min_w_0()
-                                    .flex_1()
-                                    .gap(px(1.0))
-                                    .child(
-                                        Label::new(session.title.clone())
-                                            .size(if labels_visible {
-                                                LabelSize::XSmall
-                                            } else {
-                                                LabelSize::Small
-                                            })
-                                            .truncate(),
-                                    )
-                                    .when(labels_visible, |this| {
-                                        this.child(
-                                            Label::new(source_and_state)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted)
-                                                .truncate(),
-                                        )
-                                    }),
-                            ),
-                    )
-                    .when_some(compact_port_label, |this, port_label| {
-                        this.child(
-                            h_flex().flex_none().child(
-                                Label::new(port_label)
+                                Label::new("Running Sessions")
+                                    .size(LabelSize::XSmall)
+                                    .truncate(),
+                            )
+                            .child(div().flex_1())
+                            .when(external_sessions_need_attention, |this| {
+                                this.child(
+                                    Icon::new(IconName::Warning)
+                                        .size(IconSize::XSmall)
+                                        .color(Color::Warning),
+                                )
+                            })
+                            .child(
+                                Label::new(external_session_count.to_string())
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted),
                             ),
-                        )
-                    })
-                    .on_click(move |_, window, cx| {
-                        sidebar
+                    )
+                    .on_click(move |_, _window, cx| {
+                        disclosure_sidebar
                             .update(cx, |sidebar, cx| {
-                                sidebar.open_external_multiplexer_session(
-                                    open_session.clone(),
-                                    window,
-                                    cx,
-                                );
+                                if !sidebar
+                                    .workspace_external_sessions_expanded
+                                    .remove(&disclosure_key)
+                                {
+                                    sidebar
+                                        .workspace_external_sessions_expanded
+                                        .insert(disclosure_key.clone());
+                                }
+                                cx.notify();
                             })
                             .log_err();
-                    })
-                    .into_any_element()
-                })
-                .collect::<Vec<_>>();
+                    });
 
             v_flex()
                 .w_full()
@@ -8610,6 +8759,7 @@ impl Sidebar {
                         .px_2()
                         .pb_1()
                         .gap_0p5()
+                        .child(external_sessions_disclosure)
                         .children(external_rows),
                 )
                 .into_any_element()
@@ -9161,6 +9311,15 @@ impl Sidebar {
                     .as_ref()
                     .map(|store| store.read(cx).source_statuses().to_vec())
                     .unwrap_or_default();
+                let cmux_is_missing = external_source_statuses.iter().any(|status| {
+                    status.kind == MultiplexerKind::Cmux
+                        && status.availability
+                            == MultiplexerSourceAvailability::MissingExecutable
+                });
+                let running_session_discovery_failed =
+                    external_source_statuses.iter().any(|status| {
+                        status.availability == MultiplexerSourceAvailability::Failed
+                    });
                 let attachable_sessions = multiplexer_store
                     .as_ref()
                     .map(|store| {
@@ -9249,7 +9408,8 @@ impl Sidebar {
                                 terminal_view::tmux_startup_command_for_workspace(workspace_root);
                             let cmux_key = project_group_key.clone();
                             let cmux_sidebar = this_for_menu.clone();
-                            let cmux_menu = weak_menu.clone();
+                            let get_cmux_menu = weak_menu.clone();
+                            let open_cmux_menu = weak_menu.clone();
                             let menu = menu.submenu(
                                 terminal_launch_label(APP_NAME),
                                 move |mut submenu, _window, _cx| {
@@ -9455,22 +9615,35 @@ impl Sidebar {
                             menu.when(
                                 project_group_key.host().is_none(),
                                 |menu| {
-                                    menu.separator().item(
-                                        ContextMenuEntry::new("Open Workspace in cmux")
-                                            .icon(IconName::ArrowUpRight)
-                                            .handler(move |window, cx| {
-                                                cmux_sidebar
-                                                    .update(cx, |sidebar, cx| {
-                                                        sidebar.open_project_group_in_cmux(
-                                                            &cmux_key, window, cx,
-                                                        );
-                                                    })
-                                                    .ok();
-                                                cmux_menu
-                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                    .ok();
-                                            }),
-                                    )
+                                    if cmux_is_missing {
+                                        menu.separator().item(
+                                            ContextMenuEntry::new("Get cmux…")
+                                                .icon(IconName::Screen)
+                                                .handler(move |_window, cx| {
+                                                    cx.open_url(CMUX_WEBSITE_URL);
+                                                    get_cmux_menu
+                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                        .log_err();
+                                                }),
+                                        )
+                                    } else {
+                                        menu.separator().item(
+                                            ContextMenuEntry::new("Open Workspace in cmux")
+                                                .icon(IconName::ArrowUpRight)
+                                                .handler(move |window, cx| {
+                                                    cmux_sidebar
+                                                        .update(cx, |sidebar, cx| {
+                                                            sidebar.open_project_group_in_cmux(
+                                                                &cmux_key, window, cx,
+                                                            );
+                                                        })
+                                                        .log_err();
+                                                    open_cmux_menu
+                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                        .log_err();
+                                                }),
+                                        )
+                                    }
                                 },
                             )
                         }
@@ -9523,14 +9696,22 @@ impl Sidebar {
                             )
                         } else {
                             let multiplexer_store = multiplexer_store.clone();
-                            menu.entry("Refresh Running Sessions", None, move |_window, cx| {
-                                if let Some(store) = &multiplexer_store {
-                                    store.update(cx, |store, cx| store.refresh(cx));
-                                }
-                                refresh_menu
-                                    .update(cx, |_, cx| cx.emit(DismissEvent))
-                                    .log_err();
-                            })
+                            menu.entry(
+                                if running_session_discovery_failed {
+                                    "Retry Running Sessions"
+                                } else {
+                                    "Refresh Running Sessions"
+                                },
+                                None,
+                                move |_window, cx| {
+                                    if let Some(store) = &multiplexer_store {
+                                        store.update(cx, |store, cx| store.refresh(cx));
+                                    }
+                                    refresh_menu
+                                        .update(cx, |_, cx| cx.emit(DismissEvent))
+                                        .log_err();
+                                },
+                            )
                         }
                         .separator();
 
@@ -14872,7 +15053,8 @@ impl Sidebar {
             };
         let is_remote = terminal.workspace.is_remote(cx);
 
-        let display_title = terminal.metadata.display_title();
+        let display_title =
+            terminal_activity_title(&terminal.metadata, terminal.detected_agent_kind);
         let is_renaming = self
             .renaming_terminal
             .as_ref()
@@ -14935,6 +15117,7 @@ impl Sidebar {
             "Opening…".into()
         } else {
             terminal_agent_row_state_label(
+                APP_NAME,
                 terminal_agent_kind,
                 terminal_agent_state_label(
                     terminal.agent.as_ref(),
@@ -17088,17 +17271,9 @@ impl Sidebar {
             })
             .cloned()
             .collect::<Vec<_>>();
-        let (external_activity_refreshing, external_source_statuses) =
-            MultiplexerSessionStore::try_global(cx)
-                .map(|store| {
-                    let store = store.read(cx);
-                    (store.is_refreshing(), store.source_statuses().to_vec())
-                })
-                .unwrap_or_default();
         let has_rows = !multiplexer_sessions.is_empty()
             || (APP_NAME == "Zed" && !self.contents.machine_terminals.is_empty());
-        if !has_rows && (!query.is_empty() || APP_NAME == "Zed" || !self.external_activity_expanded)
-        {
+        if !has_rows {
             return None;
         }
 
@@ -17366,10 +17541,6 @@ impl Sidebar {
                 .log_err();
         });
         let rows_visible = APP_NAME == "Zed" || self.external_activity_expanded;
-        let empty_label = other_running_sessions_empty_label(
-            external_activity_refreshing,
-            &external_source_statuses,
-        );
         let section = v_flex()
             .id("external-terminal-section")
             .role(gpui::Role::Region)
@@ -17400,19 +17571,7 @@ impl Sidebar {
                     .flex_1()
                     .overflow_y_scroll()
                     .children(rows),
-            ))
-            .when(
-                APP_NAME != "Zed" && self.external_activity_expanded && !has_rows,
-                |this| {
-                    this.child(
-                        div().px_2().pb_2().child(
-                            Label::new(empty_label)
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        ),
-                    )
-                },
-            );
+            ));
 
         Some(if has_workspace_rows {
             section
@@ -17933,11 +18092,13 @@ impl Sidebar {
         if let Some(terminal_host_status) = self.render_terminal_host_status(cx) {
             notices.push(terminal_host_status);
         }
-        if let Some(cmux_integration_status) = self.render_cmux_integration_status(cx) {
-            notices.push(cmux_integration_status);
-        }
-        if let Some(external_activity_status) = self.render_external_activity_status(cx) {
-            notices.push(external_activity_status);
+        if APP_NAME == "Zed" {
+            if let Some(cmux_integration_status) = self.render_cmux_integration_status(cx) {
+                notices.push(cmux_integration_status);
+            }
+            if let Some(external_activity_status) = self.render_external_activity_status(cx) {
+                notices.push(external_activity_status);
+            }
         }
         if notices.is_empty() {
             return None;
@@ -18318,7 +18479,7 @@ impl Sidebar {
                 |this| {
                     this.child(
                         IconButton::new("open-workspace", IconName::Plus)
-                            .size(ButtonSize::Medium)
+                            .size(session_rail_header_button_size(APP_NAME))
                             .icon_size(IconSize::Small)
                             .tab_index(0isize)
                             .aria_label("Open Workspace")
@@ -18346,7 +18507,7 @@ impl Sidebar {
             .when(show_search_control, |this| {
                 this.child(
                     IconButton::new("open-session-search", IconName::MagnifyingGlass)
-                        .size(ButtonSize::Medium)
+                        .size(session_rail_header_button_size(APP_NAME))
                         .icon_size(IconSize::Small)
                         .tab_index(0isize)
                         .aria_label(session_rail_search_label(APP_NAME))
@@ -18476,7 +18637,7 @@ impl Sidebar {
         let menu_open = self.agent_options_menu_handle.is_deployed();
         let trigger = ButtonLike::new("agent-sidebar-options-menu-trigger")
             .size(if is_dez {
-                ButtonSize::Medium
+                session_rail_header_button_size(APP_NAME)
             } else {
                 ButtonSize::Compact
             })

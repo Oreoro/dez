@@ -179,7 +179,7 @@ terminal, diff, search result, settings page, or review can be tabbed, split,
 moved, and focused through the same rules. Its tab strip provides native
 reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Workspaces can
-project all open files and tools under **Tabs & Panels**, grouped only when
+project all open files and tools under **Open**, grouped only when
 real pane splits exist; selecting one focuses its existing pane-owned tab.
 Terminals can be split below or beside code while keeping their Workspace
 ownership.
@@ -269,8 +269,8 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
-When Workspaces is open, the active Workspace contains a compact **Tabs &
-Panels** projection of its native Main Work Area. It appears for one or more
+When Workspaces is open, the active Workspace contains a compact **Open**
+projection of its native Main Work Area. It appears for one or more
 open items, so Files, Git, terminals, code, diffs, Settings, and Agent tabs do
 not vanish from navigation simply because no agent is running. A single-pane
 Workspace stays flat; real user-created splits add quiet **Pane 1**, **Pane
@@ -283,7 +283,7 @@ state stay visible as supporting marks. Terminal rows retain their task,
 provider, tmux, or shell identity.
 
 Activating a row calls the owning Workspace's native item activation path.
-Tabs & Panels never owns close, middle-click, ordering, dragging, preview,
+Open never owns close, middle-click, ordering, dragging, preview,
 pinning, overflow, or split behavior; those remain in the native tab strip.
 Workspace search temporarily hides the projection to keep filtering focused.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
@@ -935,9 +935,9 @@ Attach terminals keep the native rerun control. Failure shows an explicit
 **Retry Attach** action and refreshes discovery after completion without
 starting a duplicate attach automatically. Raw Herdr shells without structured
 agent state are labeled **Available**, not unknown.
-When cmux is not discoverable, Workspaces shows **cmux not installed** with a
-single **Get cmux** action; tmux and Herdr remain usable and no external Session
-is changed.
+When cmux is not discoverable, Workspace Options replaces the inapplicable
+handoff with one **Get cmux…** action; tmux and Herdr remain usable, navigation
+stays quiet, and no external Session is changed.
 The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.
@@ -966,7 +966,8 @@ The empty-state copy distinguishes source availability from Workspace matching.
 executable is missing. **Running session discovery needs attention** means at least one
 source failed. **cmux activity sharing is off; no other running sessions** means
 cmux is installed with its secure process-only boundary and no peer source has
-current activity; the informational notice links to the official access guide.
+current activity; Workspace Options keeps the official access guide available
+without inserting a permanent notice into navigation.
 **No running session matches this Workspace** means a ready
 source has activity, but none belongs beneath the selected Workspace; check
 **Other Running Sessions** for unmatched or pathless items. **No running tmux,
@@ -992,12 +993,13 @@ state means Dez adopted or ended an external process.
   refreshing activity. Dez follows Herdr's configured registry and does not
   assume that its sockets live under `~/.config`.
 
-Use **Retry** in the provider warning or **Refresh Running Sessions** after
-correcting a prerequisite. A **last known** row means that source's latest scan
-failed and the external application may still own the session. Refresh that
-source before selecting the row again; if attach fails, use **Retry Attach**
-after reading the terminal diagnostic. Neither action starts a duplicate
-attachment automatically.
+Use **Retry Running Sessions** in Workspace Options after correcting a failed
+prerequisite; otherwise the action reads **Refresh Running Sessions**. A **last
+known** row means that source's latest scan failed and the external application
+may still own the session. Refresh that source before selecting the row again;
+if attach fails, use **Retry Attach** after reading the terminal diagnostic.
+Neither action starts a duplicate attachment automatically. Missing cmux is a
+contextual **Get cmux…** action, not a global warning.
 
 Dez only renders metadata with an authoritative owner. Git supplies branch and
 changed-file counts; terminal and multiplexer snapshots supply working
@@ -1015,6 +1017,14 @@ Dez follows the system appearance with **Lumin Blur** and **Lumin Light**.
 IBM Plex Sans gives native interface chrome a calm proportional voice. Lilex
 keeps editors, terminals, prompts, and review code compact and legible. Users
 can still override any role through normal settings.
+
+Navigation chrome follows one density-aware scale rather than sizing each
+surface independently. Workspace and tab-bar actions use quiet 12–14px marks
+inside compact native hit targets; the status bar uses 12–14px supporting type
+and a 24–30px height across Compact, Balanced, and Spacious density. Provider
+marks identify the owner, semantic status marks report attention or failure,
+and neither role is stretched into a decorative badge. The same scale applies
+to the top bar, pane Add control, Workspaces rows, and status navigation.
 
 Empty Main Work Area panes avoid a centered onboarding card: they use compact
 top-left native chrome with **Open Terminal**, **Browse Sessions**, **Find
@@ -1076,9 +1086,11 @@ Agent Session.
 
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
-collapses the Workspace's nested Tabs & Panels and Activity. Tabs & Panels
-returns to real open pane tabs. Activity shows only current, actionable, recoverable, or
-review-ready work; inactive completed Agent Sessions remain in Agent History.
+collapses the Workspace's nested **Open** and **Sessions** sections. Open
+returns to real pane-owned tabs. Sessions shows only current, actionable,
+recoverable, or review-ready work; inactive completed Agent Sessions remain in
+Agent History. Externally owned tmux, Herdr, and cmux work is summarized by one
+**Running Sessions** disclosure until the user asks for detailed rows.
 **View → Navigate Workspaces** collects
 **Focus Workspaces**, **Search Workspaces and Activity…**, **Previous
 Workspace**, and **Next Workspace**. Search opens a closed navigator before
