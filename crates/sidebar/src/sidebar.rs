@@ -1197,11 +1197,26 @@ fn session_rail_title(app_name: &str) -> &'static str {
     }
 }
 
-fn session_rail_header_button_size(app_name: &str) -> ButtonSize {
+fn workspace_navigation_control_metrics(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
     if app_name == "Zed" {
-        ButtonSize::Medium
-    } else {
-        ButtonSize::Default
+        return (ButtonSize::Medium, IconSize::Small);
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
+        settings::CanvasDensity::Balanced => (ButtonSize::Default, IconSize::Small),
+        settings::CanvasDensity::Spacious => (ButtonSize::Medium, IconSize::Small),
+    }
+}
+
+fn workspace_open_row_metrics(density: settings::CanvasDensity) -> (ButtonSize, IconSize) {
+    match density {
+        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
+        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::XSmall),
+        settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
     }
 }
 
@@ -2629,8 +2644,34 @@ mod session_start_state_tests {
         assert!(!session_start_state_visible(false, 1, false, false, false));
         assert_eq!(session_rail_title("Dez"), "Workspaces");
         assert_eq!(session_rail_title("Zed"), "Sessions");
-        assert_eq!(session_rail_header_button_size("Dez"), ButtonSize::Default);
-        assert_eq!(session_rail_header_button_size("Zed"), ButtonSize::Medium);
+        assert!(
+            workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert!(
+            workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Balanced)
+                == (ButtonSize::Default, IconSize::Small)
+        );
+        assert!(
+            workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert!(
+            workspace_navigation_control_metrics("Zed", settings::CanvasDensity::Compact)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert!(
+            workspace_open_row_metrics(settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert!(
+            workspace_open_row_metrics(settings::CanvasDensity::Balanced)
+                == (ButtonSize::Medium, IconSize::XSmall)
+        );
+        assert!(
+            workspace_open_row_metrics(settings::CanvasDensity::Spacious)
+                == (ButtonSize::Large, IconSize::Small)
+        );
         assert_eq!(
             session_rail_accessibility_label("Dez"),
             "Workspaces and Activity"
@@ -8158,6 +8199,8 @@ impl Sidebar {
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
+        let (workspace_control_size, workspace_icon_size) =
+            workspace_navigation_control_metrics(APP_NAME, design_system.density);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
         let (header_height, header_padding_left, header_padding_right, header_gap, label_size) =
@@ -8343,8 +8386,8 @@ impl Sidebar {
                                     )),
                                     disclosure_icon,
                                 )
-                                .size(ButtonSize::Medium)
-                                .icon_size(IconSize::Small)
+                                .size(workspace_control_size)
+                                .icon_size(workspace_icon_size)
                                 .tab_index(0isize)
                                 .aria_label(disclosure_label.clone())
                                 .tooltip(Tooltip::text(disclosure_label))
@@ -8895,6 +8938,10 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let focus_handle = self.focus_handle.clone();
+        let (control_size, icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
 
         let menu_handle = self
             .project_header_new_thread_menu_handles
@@ -8916,9 +8963,9 @@ impl Sidebar {
                     .as_deref(),
             ),
         )
-        .size(ButtonSize::Medium)
+        .size(control_size)
         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-        .icon_size(IconSize::Small)
+        .icon_size(icon_size)
         .tab_index(0isize)
         .aria_label(new_terminal_label.clone())
         .when(
@@ -9215,6 +9262,10 @@ impl Sidebar {
     ) -> AnyElement {
         let multi_workspace = self.multi_workspace.clone();
         let project_group_key = project_group_key.clone();
+        let (control_size, icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
 
         let show_multi_project_entries = multi_workspace
             .read_with(cx, |mw, _| {
@@ -9238,9 +9289,9 @@ impl Sidebar {
             .with_handle(menu_handle)
             .trigger(
                 IconButton::new(trigger_id, IconName::Ellipsis)
-                    .size(ButtonSize::Medium)
+                    .size(control_size)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                    .icon_size(IconSize::Small)
+                    .icon_size(icon_size)
                     .tab_index(0isize)
                     .aria_label(workspace_options_label.clone())
                     .tooltip(Tooltip::text(workspace_options_tooltip_label()))
@@ -18128,6 +18179,8 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let workspace = self.active_workspace(cx)?;
+        let (row_size, row_icon_size) =
+            workspace_open_row_metrics(DesignSystemSettings::get_global(cx).density);
         let active_pane = workspace.read(cx).active_pane().clone();
         let pane_items = workspace
             .read(cx)
@@ -18202,7 +18255,7 @@ impl Sidebar {
                 } else {
                     item.tab_icon(window, cx)
                         .unwrap_or_else(|| Icon::new(IconName::File))
-                        .size(IconSize::XSmall)
+                        .size(row_icon_size)
                         .color(icon_color)
                         .into_any_element()
                 };
@@ -18236,7 +18289,7 @@ impl Sidebar {
                             ButtonLike::new(ElementId::from(format!(
                                 "workspace-native-tab-{item_id}"
                             )))
-                            .size(ButtonSize::Medium)
+                            .size(row_size)
                             .style(ButtonStyle::Subtle)
                             .full_width()
                             .toggle_state(is_visible)
@@ -18346,6 +18399,10 @@ impl Sidebar {
         let show_search_control =
             session_search_control_visible(paths::APP_NAME, searchable_item_count)
                 && !search_is_active;
+        let (header_control_size, header_icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let header_status_label = session_header_status_label(
             APP_NAME,
@@ -18479,8 +18536,8 @@ impl Sidebar {
                 |this| {
                     this.child(
                         IconButton::new("open-workspace", IconName::Plus)
-                            .size(session_rail_header_button_size(APP_NAME))
-                            .icon_size(IconSize::Small)
+                            .size(header_control_size)
+                            .icon_size(header_icon_size)
                             .tab_index(0isize)
                             .aria_label("Open Workspace")
                             .tooltip(|_, cx| {
@@ -18507,8 +18564,8 @@ impl Sidebar {
             .when(show_search_control, |this| {
                 this.child(
                     IconButton::new("open-session-search", IconName::MagnifyingGlass)
-                        .size(session_rail_header_button_size(APP_NAME))
-                        .icon_size(IconSize::Small)
+                        .size(header_control_size)
+                        .icon_size(header_icon_size)
                         .tab_index(0isize)
                         .aria_label(session_rail_search_label(APP_NAME))
                         .tooltip(|_, cx| {
@@ -18635,9 +18692,13 @@ impl Sidebar {
             );
         let sidebar_can_hide = !SidebarSettings::get_global(cx).always_open;
         let menu_open = self.agent_options_menu_handle.is_deployed();
+        let (workspace_control_size, workspace_icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let trigger = ButtonLike::new("agent-sidebar-options-menu-trigger")
             .size(if is_dez {
-                session_rail_header_button_size(APP_NAME)
+                workspace_control_size
             } else {
                 ButtonSize::Compact
             })
@@ -18647,7 +18708,7 @@ impl Sidebar {
             .selected_style(ButtonStyle::Tinted(TintColor::Accent))
             .child(if is_dez {
                 Icon::new(IconName::Ellipsis)
-                    .size(IconSize::Small)
+                    .size(workspace_icon_size)
                     .into_any_element()
             } else {
                 h_flex()

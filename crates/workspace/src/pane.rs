@@ -106,6 +106,21 @@ fn canvas_tab_bar_height(cx: &App) -> Pixels {
     canvas_tab_density(cx).container_height(cx)
 }
 
+fn canvas_tab_bar_control_metrics_for_density(
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
+    match density {
+        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
+        settings::CanvasDensity::Balanced | settings::CanvasDensity::Spacious => {
+            (ButtonSize::Medium, IconSize::Small)
+        }
+    }
+}
+
+fn canvas_tab_bar_control_metrics(cx: &App) -> (ButtonSize, IconSize) {
+    canvas_tab_bar_control_metrics_for_density(DesignSystemSettings::get_global(cx).density)
+}
+
 fn pane_drag_handle_visible(app_name: &str) -> bool {
     app_name == "Zed"
 }
@@ -4151,10 +4166,11 @@ impl Pane {
         }
 
         let focus_handle = self.focus_handle.clone();
+        let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
 
         let navigate_backward = IconButton::new("navigate_backward", IconName::ArrowLeft)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label("Go Back")
             .on_click({
@@ -4179,8 +4195,8 @@ impl Pane {
             });
 
         let navigate_forward = IconButton::new("navigate_forward", IconName::ArrowRight)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label("Go Forward")
             .on_click({
@@ -4456,7 +4472,7 @@ impl Pane {
                     .flex_none()
                     .h_full()
                     .px(DynamicSpacing::Base04.rems(cx))
-                    .child(render_new_surface_control(self))
+                    .child(render_new_surface_control(self, cx))
                     .into_any_element()
             });
         let fixed_new_surface_control =
@@ -4466,7 +4482,7 @@ impl Pane {
                     .flex_none()
                     .h_full()
                     .px(DynamicSpacing::Base04.rems(cx))
-                    .child(render_new_surface_control(self))
+                    .child(render_new_surface_control(self, cx))
                     .into_any_element()
             });
 
@@ -4519,12 +4535,13 @@ impl Pane {
         let pane = cx.entity();
         let (overflow_control_label, overflow_menu_header) =
             pane_tab_overflow_copy(paths::APP_NAME);
+        let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
 
         PopoverMenu::new("pane-tab-overflow-menu")
             .trigger_with_tooltip(
                 IconButton::new("pane-tab-overflow-menu-button", IconName::ListTree)
-                    .size(ButtonSize::Medium)
-                    .icon_size(IconSize::Small)
+                    .size(control_size)
+                    .icon_size(icon_size)
                     .tab_index(0isize)
                     .aria_label(overflow_control_label),
                 Tooltip::text(overflow_control_label),
@@ -5674,13 +5691,13 @@ fn default_render_tab_bar_buttons(
             PaneKind::Project => {
                 return (
                     None,
-                    Some(render_auxiliary_pane_hide_control(PaneKind::Project)),
+                    Some(render_auxiliary_pane_hide_control(PaneKind::Project, cx)),
                 );
             }
             PaneKind::Agent => {
                 return (
                     None,
-                    Some(render_auxiliary_pane_hide_control(PaneKind::Agent)),
+                    Some(render_auxiliary_pane_hide_control(PaneKind::Agent, cx)),
                 );
             }
             PaneKind::Tabs => {}
@@ -5699,20 +5716,21 @@ fn default_render_tab_bar_buttons(
     };
     let split_enabled = can_clone || can_split_move;
     let (split_aria_label, split_tooltip) = pane_split_control_copy(paths::APP_NAME, split_enabled);
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
     // Ideally we would return a vec of elements here to pass directly to the [TabBar]'s
     // `end_slot`, but due to needing a view here that isn't possible.
     let right_children = h_flex()
         // Instead we need to replicate the spacing from the [TabBar]'s `end_slot` here.
         .gap(DynamicSpacing::Base04.rems(cx))
         .when(paths::APP_NAME == "Zed", |this| {
-            this.child(render_new_surface_control(pane))
+            this.child(render_new_surface_control(pane, cx))
         })
         .child(
             PopoverMenu::new("pane-tab-bar-split")
                 .trigger_with_tooltip(
                     IconButton::new("split", IconName::Split)
-                        .size(ButtonSize::Medium)
-                        .icon_size(IconSize::Small)
+                        .size(control_size)
+                        .icon_size(icon_size)
                         .tab_index(0isize)
                         .aria_label(split_aria_label)
                         .disabled(!split_enabled),
@@ -5744,17 +5762,18 @@ fn default_render_tab_bar_buttons(
     (None, right_children)
 }
 
-fn render_new_surface_control(pane: &Pane) -> AnyElement {
+fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
     let (aria_label, tooltip) = pane_new_surface_control_copy(paths::APP_NAME);
     let workspace = pane.workspace();
     let (new_file, open_file, search_workspace, search_symbols) =
         pane_new_surface_menu_copy(paths::APP_NAME);
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
 
     PopoverMenu::new("pane-tab-bar-popover-menu")
         .trigger_with_tooltip(
             IconButton::new("plus", IconName::Plus)
-                .size(ButtonSize::Medium)
-                .icon_size(IconSize::Small)
+                .size(control_size)
+                .icon_size(icon_size)
                 .tab_index(0isize)
                 .aria_label(aria_label),
             Tooltip::text(tooltip),
@@ -5973,14 +5992,15 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
         .into_any_element()
 }
 
-fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
+fn render_auxiliary_pane_hide_control(pane_kind: PaneKind, cx: &App) -> AnyElement {
     let label = pane_auxiliary_hide_control_copy(pane_kind)
         .expect("only auxiliary panes have dedicated hide controls");
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
 
     match pane_kind {
         PaneKind::Project => IconButton::new("hide-workspace-tools", IconName::Close)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label(label)
             .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
@@ -5989,8 +6009,8 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
             })
             .into_any_element(),
         PaneKind::Agent => IconButton::new("hide-agent", IconName::Close)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label(label)
             .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleAgentPane, cx))
@@ -6097,9 +6117,10 @@ fn pane_tab_end_control_is_keyboard_focusable(
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
     let zoomed = pane.is_zoomed();
     let label = if zoomed { "Zoom Out" } else { "Zoom In" };
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
     IconButton::new("toggle_zoom", IconName::Maximize)
-        .size(ButtonSize::Medium)
-        .icon_size(IconSize::Small)
+        .size(control_size)
+        .icon_size(icon_size)
         .tab_index(0isize)
         .aria_label(label)
         .toggle_state(zoomed)
@@ -7066,6 +7087,22 @@ mod tests {
             "Zed",
             PaneKind::Tabs
         ));
+    }
+
+    #[test]
+    fn canvas_tab_bar_controls_follow_the_selected_density() {
+        assert!(
+            canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert!(
+            canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Balanced)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert!(
+            canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
     }
 
     // drop_call_count is a Cell here because `handle_drop` takes &self, not &mut self.

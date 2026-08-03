@@ -580,8 +580,10 @@ native tool, honest ownership, inline recovery**.
   an overflow menu.
 - Use native Zed buttons, tabs, menus, prompts, focus, and theme tokens.
 - Use the shared density scale for top-bar, tab-bar, sidebar, and status-bar
-  controls. Navigation marks stay 12–14px in compact native targets; status
-  type remains supporting text and the Dez status bar scales from 24–30px.
+  controls. Compact navigation uses 22px targets with 12px marks; Balanced
+  uses 22–28px targets with 14px marks; Spacious uses 28–32px targets with
+  14px marks. Status type remains supporting text and the Dez status bar
+  scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
 - Preserve visible keyboard focus and a visual reading order that matches
@@ -607,6 +609,9 @@ native tool, honest ownership, inline recovery**.
   labeled status-bar control.
 - Top and status chrome must change size together when Compact, Balanced, or
   Spacious density changes; individual surfaces do not invent local scales.
+- Pane Back, Forward, adjacent Add, overflow, split, zoom, and close controls
+  share one tab-bar metric. Workspace disclosure, terminal launch, options,
+  search, and Open rows share the Workspace navigation metrics.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
