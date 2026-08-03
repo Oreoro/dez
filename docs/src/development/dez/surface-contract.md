@@ -121,12 +121,12 @@ never the only state signal.
 
 **Browse Running Sessions…** focuses Workspaces, clears transient filters,
 expands each matching Workspace and its nested **Running Sessions** disclosure,
-refreshes discovery, and preserves the active Main Work Area tab. It never
-creates a duplicate Sessions page. Recovery is inline and states both cause and
-next action. Terminal Details is a disclosure within the terminal surface, not
-a floating inspector. An attach tab names tmux or Herdr as the external owner
-and describes itself only as the attach client. Destructive legacy termination
-remains behind a native confirmation.
+refreshes discovery, and preserves the active Main Work Area tab.
+It never creates a duplicate Sessions page. Recovery is inline and states both cause
+and next action. Terminal Details is a disclosure within the terminal surface, not a
+floating inspector. An attach tab names tmux or Herdr as the external owner and
+describes itself only as the attach client. Destructive legacy termination remains
+behind a native confirmation.
 
 ### 4. Review and intentional split
 
