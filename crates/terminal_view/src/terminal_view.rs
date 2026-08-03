@@ -271,11 +271,12 @@ fn terminal_foreground_multiplexer_presentation(
 fn terminal_context_activity_label(
     status: &str,
     foreground_agent: Option<TerminalForegroundPresentation>,
+    foreground_multiplexer: Option<TerminalForegroundPresentation>,
 ) -> Option<String> {
     if terminal_context_uses_foreground_activity(status)
-        && let Some(agent) = foreground_agent
+        && let Some(foreground_tool) = foreground_agent.or(foreground_multiplexer)
     {
-        return Some(format!("{} running", agent.display_name));
+        return Some(format!("{} running", foreground_tool.display_name));
     }
 
     (status != "Active").then(|| status.to_owned())
@@ -433,6 +434,54 @@ fn terminal_details_disclosure_accessibility_label(expanded: bool) -> &'static s
         "Hide Terminal Details"
     } else {
         "Show Terminal Details"
+    }
+}
+
+fn terminal_details_process_summary(
+    foreground_agent: Option<&str>,
+    foreground_multiplexer: Option<&str>,
+    foreground_command: Option<&str>,
+    process_id: Option<&str>,
+) -> String {
+    let (kind, name) = if let Some(agent) = foreground_agent {
+        ("Agent", agent)
+    } else if let Some(multiplexer) = foreground_multiplexer {
+        ("Multiplexer", multiplexer)
+    } else if let Some(command) = foreground_command.filter(|command| !command.trim().is_empty()) {
+        ("Process", command)
+    } else {
+        ("Process", "Shell")
+    };
+
+    if let Some(process_id) = process_id {
+        format!("{kind} · {name} · PID {process_id}")
+    } else {
+        format!("{kind} · {name}")
+    }
+}
+
+fn terminal_details_git_summary(
+    has_workspace_files: bool,
+    repository: &str,
+    changes: &str,
+) -> String {
+    if has_workspace_files {
+        format!("Git · {repository} · {changes}")
+    } else {
+        "Git · No Workspace repository".to_owned()
+    }
+}
+
+fn terminal_details_ownership_note(
+    has_persistent_owner: bool,
+    host_connection_verified: bool,
+) -> &'static str {
+    if has_persistent_owner && !host_connection_verified {
+        "Ownership · Dez Terminal Host · Connection unavailable; detaching preserves the Session record."
+    } else if has_persistent_owner {
+        "Ownership · Dez Terminal Host · Closing this tab detaches the Session."
+    } else {
+        "Ownership · Workspace · Closing Dez ends this process."
     }
 }
 
@@ -3056,7 +3105,12 @@ impl TerminalView {
         let foreground_command = terminal.foreground_process_command_name();
         let foreground_agent =
             terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
-        let activity_label = terminal_context_activity_label(status, foreground_agent);
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let activity_label =
+            terminal_context_activity_label(status, foreground_agent, foreground_multiplexer);
         let activity_accessibility_label = activity_label.as_deref().unwrap_or(status).to_owned();
         let activity_label_visible =
             activity_label.is_some() && terminal_context_activity_label_visible(context_width);
@@ -3068,14 +3122,12 @@ impl TerminalView {
             };
         let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
         let host_connection_verified = terminal_host_connection_verified(&terminal, cx);
-        let ownership = if has_persistent_owner && !host_connection_verified {
-            "Host-owned terminal · connection unavailable"
-        } else {
-            terminal_ownership_label(paths::APP_NAME, has_persistent_owner, false)
-        };
         let working_directory = terminal
             .working_directory()
             .map(|path| path.to_string_lossy().into_owned());
+        let process_id = terminal
+            .pid_getter()
+            .map(|pid_getter| pid_getter.fallback_pid().to_string());
         let session_id = terminal.session_id().to_string();
 
         let project = self.project.upgrade();
@@ -3105,13 +3157,17 @@ impl TerminalView {
             changed_files,
         );
 
-        let details_status = format!("{activity_accessibility_label} · {ownership}");
-        let details_foreground_agent = foreground_agent.map(|agent| agent.display_name);
-        let details_repository = repository_label.clone();
-        let details_changes = changes_label.clone();
+        let details_status = format!("Status · {activity_accessibility_label}");
+        let details_process = terminal_details_process_summary(
+            foreground_agent.map(|agent| agent.display_name),
+            foreground_multiplexer.map(|multiplexer| multiplexer.display_name),
+            foreground_command.as_deref(),
+            process_id.as_deref(),
+        );
+        let details_git =
+            terminal_details_git_summary(has_workspace_files, &repository_label, &changes_label);
         let details_working_directory = working_directory.clone();
         let details_session_id = session_id.clone();
-        let details_has_workspace_files = has_workspace_files;
         let details_visible_label = terminal_details_disclosure_label(
             self.show_terminal_details,
             action_label_visibility.details,
@@ -3137,13 +3193,8 @@ impl TerminalView {
             "Review {changed_files} changed {}",
             if changed_files == 1 { "file" } else { "files" }
         );
-        let ownership_note = if has_persistent_owner && !host_connection_verified {
-            "The Dez Terminal Host owns this process, but its connection is unavailable. Detaching does not claim that the process ended."
-        } else if has_persistent_owner {
-            "The external Dez Terminal Host owns this process. Detaching the tab does not stop it."
-        } else {
-            "This Workspace owns the process. Closing Dez also ends it."
-        };
+        let ownership_note =
+            terminal_details_ownership_note(has_persistent_owner, host_connection_verified);
         let details_toggle = Button::new(
             ("terminal-session-details-trigger", terminal_entity_id),
             details_visible_label,
@@ -3160,8 +3211,12 @@ impl TerminalView {
         }));
 
         let details = self.show_terminal_details.then(|| {
+            let details_path = details_working_directory
+                .as_deref()
+                .map(|working_directory| format!("Path · {working_directory}"))
+                .unwrap_or_else(|| "Path · Unavailable".to_owned());
             let details_accessibility_label = format!(
-                "Terminal Details. {details_status}. {details_repository}. {details_changes}."
+                "Terminal Details. {details_status}. {details_process}. {details_path}. {details_git}. {ownership_note}"
             );
             let copy_working_directory = details_working_directory.clone();
             let copy_session_id = details_session_id.clone();
@@ -3194,52 +3249,35 @@ impl TerminalView {
                             Label::new(details_status)
                                 .size(LabelSize::XSmall)
                                 .color(Color::Muted),
-                        )
-                        .child(
-                            Label::new(details_repository)
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        )
-                        .child(
-                            Label::new(details_changes)
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        )
-                        .when_some(details_foreground_agent, |this, foreground_agent| {
-                            this.child(
-                                Label::new(format!("Foreground · {foreground_agent}"))
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted),
-                            )
-                        }),
+                        ),
                 )
-                .when_some(details_working_directory, |this, working_directory| {
-                    this.child(
-                        Label::new(format!("Working directory · {working_directory}"))
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted),
-                    )
-                })
                 .child(
-                    Label::new(ownership_note)
+                    h_flex()
+                        .w_full()
+                        .min_w_0()
+                        .flex_wrap()
+                        .gap_x_3()
+                        .gap_y_1()
+                        .child(
+                            Label::new(details_process)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new(details_git)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        ),
+                )
+                .child(
+                    Label::new(details_path)
                         .size(LabelSize::XSmall)
                         .color(Color::Muted),
                 )
                 .child(
-                    Label::new(
-                        "Evidence · lifecycle comes from Terminal and Host; Git belongs to the Workspace; terminal text is display content, not proof.",
-                    )
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-                )
-                .child(
-                    Label::new(if details_has_workspace_files {
-                        "Workflow · run here, supervise in Workspaces, review with Files and Git."
-                    } else {
-                        "Workflow · run here, supervise in Workspaces, then open a Workspace for Files and Git."
-                    })
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
+                    Label::new(ownership_note)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
                 )
                 .child(
                     h_flex()
@@ -3249,11 +3287,12 @@ impl TerminalView {
                             this.child(
                                 Button::new(
                                     ("copy-terminal-working-directory", terminal_entity_id),
-                                    "Copy Working Directory",
+                                    "Copy Path",
                                 )
                                 .size(ButtonSize::Compact)
                                 .style(ButtonStyle::Subtle)
                                 .tab_index(0isize)
+                                .aria_label("Copy terminal working directory")
                                 .on_click(move |_, _, cx| {
                                     cx.write_to_clipboard(ClipboardItem::new_string(
                                         working_directory.clone(),
@@ -4724,36 +4763,36 @@ mod tests {
             .expect("Codex should receive native terminal presentation");
         assert_eq!(codex.display_name, "Codex");
         assert_eq!(
-            terminal_context_activity_label("Active", Some(codex)),
+            terminal_context_activity_label("Active", Some(codex), None),
             Some("Codex running".to_owned())
         );
-        assert_eq!(terminal_context_activity_label("Active", None), None);
+        assert_eq!(terminal_context_activity_label("Active", None, None), None);
         assert_eq!(
-            terminal_context_activity_label("Failed", None),
+            terminal_context_activity_label("Failed", None, None),
             Some("Failed".to_owned())
         );
         assert_eq!(
-            terminal_context_activity_label("Running", Some(codex)),
+            terminal_context_activity_label("Running", Some(codex), None),
             Some("Codex running".to_owned())
         );
         assert_eq!(
-            terminal_context_activity_label("Running", None),
+            terminal_context_activity_label("Running", None, None),
             Some("Running".to_owned())
         );
         assert_eq!(
-            terminal_context_activity_label("Failed", Some(codex)),
+            terminal_context_activity_label("Failed", Some(codex), None),
             Some("Failed".to_owned())
         );
         assert_eq!(
-            terminal_context_activity_label("Exited", Some(codex)),
+            terminal_context_activity_label("Exited", Some(codex), None),
             Some("Exited".to_owned())
         );
         assert_eq!(
-            terminal_context_activity_label("Completed", Some(codex)),
+            terminal_context_activity_label("Completed", Some(codex), None),
             Some("Completed".to_owned())
         );
         assert_eq!(
-            terminal_context_activity_label("Status unknown", Some(codex)),
+            terminal_context_activity_label("Status unknown", Some(codex), None),
             Some("Status unknown".to_owned())
         );
         assert!(!terminal_context_activity_label_visible(px(359.)));
@@ -4773,7 +4812,7 @@ mod tests {
         assert_eq!(herdr.display_name, "Herdr");
         assert_eq!(herdr.icon, IconName::Inception);
         assert_eq!(
-            terminal_context_activity_label("Active", Some(herdr)),
+            terminal_context_activity_label("Active", Some(herdr), None),
             Some("Herdr running".to_owned())
         );
 
@@ -4781,6 +4820,10 @@ mod tests {
             terminal_foreground_multiplexer_presentation("Dez", Some("/opt/homebrew/bin/tmux"))
                 .expect("tmux should receive native terminal presentation");
         assert_eq!(tmux.display_name, "tmux");
+        assert_eq!(
+            terminal_context_activity_label("Active", None, Some(tmux)),
+            Some("tmux running".to_owned())
+        );
         assert_eq!(tmux.icon, IconName::SplitAlt);
         assert!(
             terminal_foreground_multiplexer_presentation("Dez", Some("herdr")).is_none(),
@@ -4906,6 +4949,39 @@ mod tests {
         assert_eq!(
             terminal_details_disclosure_accessibility_label(true),
             "Hide Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_process_summary(
+                Some("Claude Code"),
+                None,
+                Some("claude"),
+                Some("4242"),
+            ),
+            "Agent · Claude Code · PID 4242"
+        );
+        assert_eq!(
+            terminal_details_process_summary(None, Some("tmux"), Some("tmux"), None),
+            "Multiplexer · tmux"
+        );
+        assert_eq!(
+            terminal_details_process_summary(None, None, None, None),
+            "Process · Shell"
+        );
+        assert_eq!(
+            terminal_details_git_summary(true, "dez / main", "3 changes"),
+            "Git · dez / main · 3 changes"
+        );
+        assert_eq!(
+            terminal_details_git_summary(false, "Scratch Workspace", "0 changes"),
+            "Git · No Workspace repository"
+        );
+        assert_eq!(
+            terminal_details_ownership_note(true, true),
+            "Ownership · Dez Terminal Host · Closing this tab detaches the Session."
+        );
+        assert_eq!(
+            terminal_details_ownership_note(true, false),
+            "Ownership · Dez Terminal Host · Connection unavailable; detaching preserves the Session record."
         );
         assert_eq!(
             terminal_surface_tab_label("Dez", "Codex"),
