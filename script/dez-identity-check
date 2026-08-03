@@ -3227,7 +3227,7 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'Stable Dez builds require \$credential.*?Developer ID Application signature.*?TeamIdentifier.*?stapler validate' \
     'Stable can regress to accepting unsigned output or Preview can masquerade as Stable'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    'system_specs="\$\(\$main --system-specs\)".*?grep -F "\(\$\{expected_name\} ".*?Packaged binary release channel does not match.*?printf.*?"\$system_specs".*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "\$expected_version".*?grep -F "Usage: dez-terminal-host"' \
+    'system_specs="\$\("\$main" --system-specs\)".*?grep -F "\(\$\{expected_name\} ".*?Packaged binary release channel does not match.*?printf.*?"\$system_specs".*?"\$cli" --dez "\$app" --version.*?"\$terminal_host" --help.*?runtime-smoke\.txt.*?grep -F "\$expected_name".*?grep -F "\$expected_version".*?grep -F "Usage: dez-terminal-host"' \
     'the public macOS workflow no longer executes and verifies every packaged Dez entry point'
 reject_pattern .github/workflows/dez-build.yml \
     'grep -F "[0-9]+\.[0-9]+\.[0-9]+"' \

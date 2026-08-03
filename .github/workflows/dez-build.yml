@@ -226,7 +226,7 @@ jobs:
           artifact_dmg="${artifact_label}-macOS-M2.dmg"
           cp "$dmg" "$artifact_dir/$artifact_dmg"
 
-          system_specs="$($main --system-specs)"
+          system_specs="$("$main" --system-specs)"
           if ! grep -F "(${expected_name} " <<<"$system_specs"; then
             echo "::error::Packaged binary release channel does not match $expected_name"
             printf '%s\n' "$system_specs"
