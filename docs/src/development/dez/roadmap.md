@@ -4487,3 +4487,19 @@ Completed for the Layout noun and running-session disclosure source slice:
   Work Area; and
 - retained source-only verification. No local build, test binary, alternate
   binary, package, or app launch was performed.
+
+Completed for the Activity noun source slice:
+
+- corrected the active Workspace's bounded live projection from **Sessions**
+  to **Activity**, matching the existing actionable-lifecycle filters and
+  Workspace-first information architecture;
+- preserved official Zed's existing **Activity** wording and kept **Session**
+  as the entity noun in Agent History, Running Sessions, resume, and
+  multiplexer actions;
+- kept idle open tabs in **Layout**, completed inactive Agent Sessions in Agent
+  History, and only current authoritative signals in Activity;
+- synchronized the native surface contract, v0.4 readiness contract,
+  navigation wireframe, permanent fork decision, source assertion, and static
+  identity guards; and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.

@@ -1281,6 +1281,10 @@ fn workspace_activity_section_visible(
     app_name != "Zed" && !is_sticky && !is_collapsed && has_activity
 }
 
+fn workspace_activity_section_title(_app_name: &str) -> &'static str {
+    "Activity"
+}
+
 fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
@@ -2693,6 +2697,8 @@ mod session_start_state_tests {
         );
         assert_eq!(workspace_tabs_section_title("Dez"), "Layout");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
+        assert_eq!(workspace_activity_section_title("Dez"), "Activity");
+        assert_eq!(workspace_activity_section_title("Zed"), "Activity");
         assert!(workspace_tabs_section_visible("Dez", 2));
         assert!(!workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
@@ -8642,13 +8648,9 @@ impl Sidebar {
         );
         let workspace_activity_heading = || {
             h_flex().w_full().px_3().pt_1().pb_0p5().child(
-                Label::new(if APP_NAME == "Zed" {
-                    "Activity"
-                } else {
-                    "Sessions"
-                })
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
+                Label::new(workspace_activity_section_title(APP_NAME))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
             )
         };
 

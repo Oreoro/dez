@@ -1,9 +1,9 @@
 # tmux and Claude Code Navigation Wireframe
 
-> Status: partially implemented. The active Workspace now owns an
-> activation-only **Layout** projection of its native panes and tabs. The
-> proposed Activity model, temporary navigation mode, and return recap remain
-> design work and are not release claims.
+> Status: partially implemented. The active Workspace owns an activation-only
+> **Layout** projection of its native panes and tabs plus bounded **Activity**
+> derived from current authoritative lifecycle state. Temporary navigation
+> mode and return recap remain design work and are not release claims.
 
 This direction keeps Dez native to Zed while borrowing interaction principles
 from two terminal-first products:
@@ -48,8 +48,8 @@ Dez window
 
 The previous separate **Sessions** and **Open Tabs & Tools** sections were too
 easy to read as two competing navigation models. The selected Workspace now
-uses **Layout** for its native pane/tab projection; the remaining proposal is
-to separate live signals into:
+uses **Layout** for its native pane/tab projection and separates live signals
+into:
 
 - **Layout**, a hierarchy of real panes and their real tabs. Its rows activate
   existing targets. It owns no close, pin, drag, reorder, or split controls.
@@ -195,6 +195,6 @@ work and never claims attachment, transfer, or migration.
 - Validate the hierarchy with one pane, four panes, multiple Workspaces, long
   names, external sessions, keyboard-only use, and assistive navigation.
 
-Until those decisions are resolved, only the activation-only **Layout** slice is
-implemented. This document must not be used as evidence that Activity,
-navigation mode, or return recaps ship in the current application.
+The activation-only **Layout** and bounded **Activity** slices are implemented.
+This document must not be used as evidence that temporary navigation mode or
+return recaps ship in the current application.

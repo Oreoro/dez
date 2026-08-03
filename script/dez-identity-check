@@ -71,6 +71,8 @@ require_file .agents/skills/dez-workspace-design/references/workflow-state-matri
     'the Dez Workspace design skill is missing its workflow state matrix'
 require_file docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
     'the authoritative annotated Workspace workflow is missing'
+require_file docs/src/development/dez/tmux-claude-navigation-wireframe.md \
+    'the Workspace, Layout, Activity, and status-line navigation contract is missing'
 require_file docs/src/development/dez/assets/dez-native-navigation-wireframe-v4.png \
     'the reviewed monochrome Workspace workflow sheet is missing'
 require_multiline_pattern .agents/skills/dez-workspace-design/SKILL.md \
@@ -79,6 +81,9 @@ require_multiline_pattern .agents/skills/dez-workspace-design/SKILL.md \
 require_multiline_pattern docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
     'Layout and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 \| cmux external owner \|' \
     'the annotated Workspace workflow can regress to an incomplete or unowned visual proposal'
+require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
+    'activation-only.*?\*\*Layout\*\*.*?bounded \*\*Activity\*\*.*?Temporary navigation.*?return recap remain design work.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?The activation-only \*\*Layout\*\* and bounded \*\*Activity\*\* slices are implemented\.' \
+    'the Workspace navigation contract can regress to claiming unfinished modes or losing the implemented Layout and Activity boundary'
 require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
@@ -643,7 +648,7 @@ require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
 require_file docs/src/development/dez/surface-contract.md \
     'the source-controlled native surface contract is missing'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
-    '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Layout \(activation-only projection of the active Workspace\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Running Sessions.*?Browse Running Sessions….*?never creates a duplicate Sessions page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Layout.*?Sessions.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
+    '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Layout \(activation-only projection of the active Workspace\).*?Activity \(bounded running or actionable signals\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Running Sessions.*?Browse Running Sessions….*?never creates a duplicate Activity page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Layout.*?Activity.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
     'the source-controlled wireframe can regress to omitting a primary surface, ownership rule, or recovery state'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'complete Herdr source.*?scan.*?shares one four-second deadline.*?Results[[:space:]]+completed before that deadline are preserved.*?Each integration exposes one distinct source state.*?\*\*Missing\*\*.*?\*\*Empty\*\*.*?\*\*Failed\*\*.*?\*\*Ready\*\*.*?Browse Running Sessions….*?Host connection, reconnection, and command cycles remain bounded.*?GUI groups every frame-safe chunk.*?one queue item.*?queue admission accepts or rejects the[[:space:]]+batch as a unit.*?admission atomicity does not guarantee end-to-end[[:space:]]+delivery.*?prefix delivered.*?outcome as uncertain.*?never.*?replays it.*?four-mebibyte PTY budget.*?sixteen-mebibyte aggregate[[:space:]]+queued-input cap.*?independently bounds its own queued input by[[:space:]]+message count and bytes.*?separate PTY control channel.*?app bundle outside `/Applications` opens native Home.*?Continue your work.*?Install Dez to[[:space:]]+continue.*?Install and Relaunch.*?Workspaces says that no[[:space:]]+Workspace has restored.*?does not duplicate the primary action.*?no startup dialog,[[:space:]]+prompt, modal, overlay' \
@@ -1133,40 +1138,40 @@ require_multiline_pattern crates/terminal/src/session_host/local.rs \
     'local terminal Host metadata can regress to polling every output frame or miss process changes'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?sidebar_handle\.responsive_width\(window\.viewport_size\(\)\.width, cx\).*?\.w\(sidebar_width\)' \
-    'the outer Sessions reservation can stop following its window-responsive width contract'
+    'the outer Workspaces reservation can stop following its window-responsive width contract'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0\.30.*?fn responsive_width.*?viewport_width \* SESSION_RAIL_MAX_VIEWPORT_FRACTION.*?rendered_width: Pixels.*?fn responsive_width\(&self, viewport_width: Pixels, cx: &App\).*?responsive_width\(self\.width, viewport_width\).*?session_rail_max_width\(APP_NAME\).*?responsive_width\(self\.width, window\.viewport_size\(\)\.width\).*?session_rail_max_width\(APP_NAME\).*?self\.rendered_width = rail_width' \
-    'Sessions can regress to reserving and painting different widths or overtake the Main Work Area'
+    'Workspaces can regress to reserving and painting different widths or overtake the Main Work Area'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows.*?px\(800\.0\).*?px\(240\.0\).*?px\(600\.0\).*?RESPONSIVE_MIN_WIDTH.*?px\(1400\.0\).*?COMPACT_MAX_WIDTH' \
-    'the responsive Sessions width matrix is no longer protected'
+    'the responsive Workspaces width matrix is no longer protected'
 require_multiline_pattern crates/zed/src/zed.rs \
     'fn product_window_min_size\(app_name: &str\).*?app_name == "Zed".*?width: px\(360\.0\).*?height: px\(240\.0\).*?width: px\(600\.0\).*?height: px\(400\.0\).*?window_min_size: Some\(product_window_min_size\(APP_NAME\)\).*?fn dez_window_floor_preserves_a_usable_main_work_area.*?product_window_min_size\("Dez"\).*?width: px\(600\.0\).*?height: px\(400\.0\).*?product_window_min_size\("Zed"\).*?width: px\(360\.0\).*?height: px\(240\.0\)' \
-    'Dez can regress to accepting a native window narrower than the documented Sessions and Main Work Area layout floors'
+    'Dez can regress to accepting a native window narrower than the documented Workspaces and Main Work Area layout floors'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_uses_absolute_client_geometry\(app_name: &str\).*?app_name == "Zed".*?Decorations::Client \{ tiling, \.\. \}.*?!session_rail_uses_absolute_client_geometry\(APP_NAME\).*?el\.h_full\(\).*?\.w\(rail_width\).*?Decorations::Client \{ tiling, \.\. \} => el.*?\.absolute\(\)' \
-    'the Dez Sessions root can regress to a second absolute client-decoration surface'
+    'the Dez Workspaces root can regress to a second absolute client-decoration surface'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_sessions_uses_normal_flow_client_geometry.*?!session_rail_uses_absolute_client_geometry\("Dez"\).*?!session_rail_uses_card_frame\("Dez"\).*?session_rail_uses_absolute_client_geometry\("Zed"\).*?session_rail_uses_card_frame\("Zed"\)' \
-    'the normal-flow Sessions root is no longer pinned by a product assertion'
+    'the normal-flow Workspaces root is no longer pinned by a product assertion'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_rail_uses_card_frame\(app_name: &str\).*?app_name == "Zed".*?let rail_on_left = self\.side\(cx\) == SidebarSide::Left.*?if !session_rail_uses_absolute_client_geometry\(APP_NAME\).*?Only the window-facing corners round.*?if session_rail_uses_card_frame\(APP_NAME\).*?this\.rounded_lg\(\)\.border_1\(\).*?else if rail_on_left.*?this\.border_r_1\(\).*?this\.border_l_1\(\)' \
-    'Dez Sessions can regress from one flush structural edge to a detached four-sided card'
+    'Dez Workspaces can regress from one flush structural edge to a detached four-sided card'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?\.h\(Tab::container_height\(cx\)\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.tab_bar_background\).*?\.border_b_1\(\).*?\.border_color\(cx\.theme\(\)\.colors\(\)\.border\)' \
-    'the Sessions header can lose its native inline divider'
+    'the Workspaces header can lose its native inline divider'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_sidebar_title_in_titlebar\(app_name: &str\).*?app_name != "Zed".*?fn session_rail_title\(app_name: &str\).*?"Sessions".*?"Workspaces".*?fn session_rail_accessibility_label\(app_name: &str\).*?"Workspaces and Activity".*?fn session_rail_search_label.*?"Search Workspaces and Activity".*?fn session_rail_search_placeholder.*?"Search Workspaces or activity…".*?fn session_notices_accessibility_label.*?"Workspace notices".*?fn session_rail_hide_label.*?"Hide Workspaces".*?fn session_rail_menu_label.*?"Workspaces Menu".*?fn session_empty_state_uses_icon_badge\(app_name: &str\).*?app_name == "Zed".*?when\(!session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\).*?fn render_sidebar_header.*?when\(session_sidebar_title_in_titlebar\(APP_NAME\).*?Label::new\(session_rail_title\(APP_NAME\)\)' \
     'Dez Workspaces can regress to losing its native title or using inconsistent navigation labels'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_tabs_section_visible.*?app_name != "Zed" && tab_count > 1.*?fn workspace_pane_navigation_label.*?pane_count > 1.*?cx\.observe\(workspace.*?this\.is_active_workspace\(&workspace, cx\).*?cx\.notify\(\).*?fn render_project_header.*?let workspace_layout =.*?is_active.*?!is_sticky.*?!is_collapsed.*?!has_filter.*?render_active_workspace_tabs\(window, cx\).*?when_some\(workspace_layout.*?fn render_active_workspace_tabs.*?window: &mut Window.*?active_pane\(\)\.clone\(\).*?\.panes\(\).*?for \(pane_index, \(pane, items\)\).*?pinned_count\(\).*?workspace::tab_details.*?item\.tab_content_text.*?item_index < pinned_count.*?\.tab_icon.*?item\.is_dirty.*?workspace\.activate_item.*?aria_label\("Tabs and panels in the active Workspace"\)' \
-    'Open navigation can regress to duplicating a lone native tab, owning duplicate tab state, stopping native activation, or escaping the active Workspace hierarchy'
+    'Layout navigation can regress to duplicating a lone native tab, owning duplicate tab state, stopping native activation, or escaping the active Workspace hierarchy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_activity_thread_visible.*?app_name == "Zed".*?has_draft_content.*?is_active.*?has_notification.*?has_reviewable_changes.*?AgentThreadStatus::Running.*?AgentThreadStatus::WaitingForConfirmation.*?AgentThreadStatus::Error.*?fn workspace_activity_terminal_visible.*?RunReviewState::Running.*?RunReviewState::WaitingForPermission.*?RunReviewState::WaitingForInput.*?RunReviewState::Failed.*?RunReviewState::Detached.*?RunReviewState::Reconnecting.*?RunReviewState::Missing.*?RunReviewState::Incompatible.*?RunReviewState::Resumable.*?fn workspace_activity_multiplexer_visible.*?state != MultiplexerSessionState::Completed.*?fn workspace_activity_section_visible.*?app_name != "Zed".*?!is_sticky.*?!is_collapsed.*?has_activity' \
     'Workspace Activity can regress from its bounded, current, actionable lifecycle contract'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn thread_metadata_would_render_sidebar_row.*?APP_NAME == "Zed".*?terminals\.retain\(\|terminal\|.*?workspace_activity_terminal_visible.*?workspace_activity_multiplexer_visible\(APP_NAME, session\.state\).*?threads\.retain\(\|thread\|.*?has_reviewable_changes.*?workspace_activity_thread_visible.*?let workspace_activity_visible =.*?workspace_activity_section_visible.*?Label::new\(if APP_NAME == "Zed".*?"Activity".*?"Sessions".*?when\(workspace_activity_visible.*?workspace_activity_heading' \
-    'Workspaces can regress to unbounded history rows or lose the nested Sessions hierarchy'
+    'fn workspace_activity_section_title.*?"Activity".*?fn thread_metadata_would_render_sidebar_row.*?APP_NAME == "Zed".*?terminals\.retain\(\|terminal\|.*?workspace_activity_terminal_visible.*?workspace_activity_multiplexer_visible\(APP_NAME, session\.state\).*?threads\.retain\(\|thread\|.*?has_reviewable_changes.*?workspace_activity_thread_visible.*?let workspace_activity_visible =.*?workspace_activity_section_visible.*?Label::new\(workspace_activity_section_title\(APP_NAME\)\).*?when\(workspace_activity_visible.*?workspace_activity_heading' \
+    'Workspaces can regress to unbounded history rows, lose the nested Activity hierarchy, or reuse the broad Sessions inventory noun'
 require_pattern crates/sidebar/src/sidebar.rs \
     'fn dez_workspace_activity_is_bounded_to_current_actionable_work' \
     'the bounded Workspace Activity policy is no longer pinned by source assertions'
@@ -1184,10 +1189,10 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Workspace Activity counts or provider state can regress to competing with the primary row title'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?session_sidebar_title_in_titlebar\("Dez"\).*?!session_empty_state_uses_icon_badge\("Dez"\).*?!session_sidebar_title_in_titlebar\("Zed"\).*?session_empty_state_uses_icon_badge\("Zed"\)' \
-    'the native Sessions title and plain empty-state presentation are no longer product-gated'
+    'the native Workspaces title and plain empty-state presentation are no longer product-gated'
 reject_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_sidebar_header.*?div\(\).*?\.absolute\(\).*?\.size_full\(\).*?\.border_b_1\(\)' \
-    'the Sessions header regressed to painting a full-size absolute decorative layer over its controls'
+    'the Workspaces header regressed to painting a full-size absolute decorative layer over its controls'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_overview_status_label.*?is_restoring: bool.*?"Loading sessions".*?"Restoring Workspaces".*?fn session_overview_status_label_with_observed_terminals.*?if is_restoring.*?session_overview_status_label\(.*?if app_name != "Zed".*?let workspace_status = session_overview_status_label.*?\{workspace_status\} · \{observed_terminal_count\} \{terminal_noun\} observed.*?fn session_empty_state_copy.*?"Restoring Workspaces".*?"Reconnecting saved terminals and Workspace activity\.".*?workspace_restore_is_pending.*?WorkspaceRestoreState::Ready' \
     'Session Rail can claim to be empty while Workspace and terminal restoration is unresolved'
@@ -2197,8 +2202,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = groups.*?let mut visible_multiplexer_session_ids.*?let group_external_sessions = multiplexer_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(group_key\).*?has_visible_rows =.*?!external_sessions\.is_empty\(\).*?external_sessions,[[:space:]]*\}\);.*?fn render_project_header\(.*?external_sessions: &\[ExternalMultiplexerSession\].*?session\.source_label\(\).*?session\.state_label\(\).*?working_directory\.display\(\).*?workspace-external-session-.*?tab_index\(0isize\).*?aria_label\(accessibility_label\).*?external_multiplexer_icon\(session\).*?open_external_multiplexer_session' \
     'external terminal and cmux activity can regress from the most specific Workspace or become a pointer-only inventory'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'workspace_external_sessions_expanded: HashSet<ProjectGroupKey>.*?has_threads \|\| !external_sessions\.is_empty\(\).*?Label::new\(if APP_NAME == "Zed".*?"Sessions".*?external_sessions_expanded.*?workspace_external_sessions_expanded\.contains\(key\).*?Running Sessions.*?external_session_count\.to_string\(\).*?workspace_external_sessions_expanded.*?\.remove\(&disclosure_key\).*?\.insert\(disclosure_key\.clone\(\)\).*?child\(external_sessions_disclosure\).*?children\(external_rows\)' \
-    'Workspace-owned multiplexer activity can regress to an always-expanded technical inventory or disappear from Sessions'
+    'workspace_external_sessions_expanded: HashSet<ProjectGroupKey>.*?has_threads \|\| !external_sessions\.is_empty\(\).*?external_sessions_expanded.*?workspace_external_sessions_expanded\.contains\(key\).*?Label::new\("Running Sessions"\).*?external_session_count\.to_string\(\).*?workspace_external_sessions_expanded.*?\.remove\(&disclosure_key\).*?\.insert\(disclosure_key\.clone\(\)\).*?child\(external_sessions_disclosure\).*?children\(external_rows\)' \
+    'Workspace-owned multiplexer Activity can regress to an always-expanded technical inventory or lose its Running Sessions disclosure'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_running_sessions_disclosure_accessibility_label.*?expanded: bool.*?session_count: usize.*?attention_count: usize.*?1 running session.*?needs attention.*?let disclosure_accessibility_label =[[:space:]]*workspace_running_sessions_disclosure_accessibility_label.*?aria_expanded\(external_sessions_expanded\).*?aria_label\(disclosure_accessibility_label\.clone\(\)\).*?Tooltip::text\(disclosure_accessibility_label\)' \
     'Workspace Running Sessions can regress to an unannounced disclosure, incorrect singular copy, or color-only attention state'

@@ -7,7 +7,7 @@ document disagree, this document wins.
 
 The [tmux and Claude Code Navigation Wireframe](./tmux-claude-navigation-wireframe.md)
 tracks the remaining exploration around the Workspace → Pane → Tab hierarchy.
-Its activation-only **Layout** projection and bounded **Sessions** feed are
+Its activation-only **Layout** projection and bounded **Activity** feed are
 authoritative here; navigation mode and return recaps remain proposals until
 this contract is deliberately updated again.
 
@@ -32,7 +32,7 @@ Window
 ├── Workspaces (optional global navigator)
 │   ├── Workspace rows
 │   ├── Layout (activation-only projection of the active Workspace)
-│   ├── Sessions (bounded running, actionable, recovery, or review signal)
+│   ├── Activity (bounded running or actionable signals)
 │   └── Workspace notices (bounded recovery states)
 ├── Main Work Area (authoritative native pane and tab model)
 │   ├── Home, files, diffs, search, Settings, browser, diagnostics
@@ -80,7 +80,7 @@ provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
 ```text
 ┌ Workspaces ──────┬ Codex · Working | app.rs | Terminal | Files | Git | + ┐
 │ dez  main        │ Workspace: dez · main · ~/code/dez · Codex working     │
-│ Sessions         ├─────────────────────────────────────────────────────────┤
+│ Activity         ├─────────────────────────────────────────────────────────┤
 │  Codex · Working │                                                         │
 │  Claude · Attention  Native TerminalView renders the provider TUI here.   │
 │  Terminal · Ready│  Dez does not place a custom chat renderer around it.  │
@@ -105,7 +105,7 @@ never the only state signal.
 │ dez  main               │ Herdr attach failed · Connection refused    │
 │ Workspace access required│ [Retry Attach] [Open new shell here]       │
 │ [Grant Access…]         ├──────────────────────────────────────────────┤
-│ Sessions                │ Existing terminal output remains visible.    │
+│ Activity                │ Existing terminal output remains visible.    │
 │  Codex · Working        │                                              │
 │  Claude · Attention     │ Terminal Details                             │
 │  Terminal · Ready       │ Provider · Herdr                             │
@@ -122,7 +122,7 @@ never the only state signal.
 **Browse Running Sessions…** focuses Workspaces, clears transient filters,
 expands each matching Workspace and its nested **Running Sessions** disclosure,
 refreshes discovery, and preserves the active Main Work Area tab.
-It never creates a duplicate Sessions page. Recovery is inline and states both cause
+It never creates a duplicate Activity page. Recovery is inline and states both cause
 and next action. Terminal Details is a disclosure within the terminal surface, not a
 floating inspector. An attach tab names tmux or Herdr as the external owner and
 describes itself only as the attach client. Destructive legacy termination remains
@@ -305,7 +305,7 @@ separate opt-in `claude --continue` path.
 ┌ Workspaces ─────────────────┬ app.rs ─ + ────────────────────────────┐
 │ Search · All · Attention    │ Existing editor remains active.        │
 │ dez · main                  │                                        │
-│ Sessions                    │ Browse Running Sessions never opens    │
+│ Activity                    │ Browse Running Sessions never opens    │
 │  Codex · Working            │ or replaces this Main Work Area tab.   │
 │  Claude Code · Attention    │                                        │
 │  tmux · Available           │                                        │
@@ -365,8 +365,8 @@ the general Settings and raw JSON alternatives available.
 ┌ Workspaces ─────┬ Review · app.rs | app.rs | + ──────────────┐
 │ dez · main       │ 3 files  +52  -17                              │
 │                 │ [Previous Change] [Next Change]                   │
-│ Open Tabs &     │ [Reject All Changes] [Keep All Changes]           │
-│ Tools           ├──────────────────────────────────────────┤
+│ Layout          │ [Reject All Changes] [Keep All Changes]           │
+│                 ├──────────────────────────────────────────┤
 │  Built-in Agent│ src/app.rs       [Review] [Reject] [Keep]          │
 │  Git Changes   │ src/config.rs    [Review] [Reject] [Keep]          │
 │  Terminal      │ tests/app_tests.rs [Review] [Reject] [Keep]        │
@@ -461,7 +461,7 @@ session…** remains a context-menu action behind native confirmation.
 ┌ Workspaces ─────────┬ Files | Search | + ──────┬ Workspace Diagnostics | + ┐
 │ paykit              │ Files tree | editor       │ No problems in Workspace   │
 │ main · 2 panes      │                           │ [Refresh]                   │
-│ Sessions            │ Search this Workspace     │                             │
+│ Activity            │ Search this Workspace     │                             │
 │  Claude · Working   │ No matches                │                             │
 │  tmux · Attached    │ Broaden the query or      │                             │
 │ Layout              │ remove path filters.      │                             │
@@ -486,7 +486,7 @@ turning a healthy state into a warning.
 ```text
 ┌ Workspaces ─────────┬ main.rs | Task · test | + ─────────────────────────────┐
 │ paykit              │ Task · test                 Running       [Stop Task] │
-│ Sessions            │ cargo test --workspace                                  │
+│ Activity            │ cargo test --workspace                                  │
 │  Claude · Working   │ running 42 tests…                                       │
 │  tmux · Attached    │                                                         │
 │  Task · test        │ ┌ Run Task ──────────────────────────────────────────┐  │
@@ -536,7 +536,7 @@ second Debug navigation system.
 ```text
 ┌ Workspaces ─────────┬ Home | + ──────────────────────────────────────────────┐
 │ paykit              │ Recent Workspaces                                      │
-│ Sessions            │ paykit · ~/dev/paykit                                  │
+│ Activity            │ paykit · ~/dev/paykit                                  │
 │  Claude · Working   │ client-app · Access required     [Grant Folder Access] │
 │  tmux · Attached    │ Recent Workspaces unavailable                 [Retry]  │
 │ Layout              │                                                        │
@@ -569,7 +569,7 @@ native tool, honest ownership, inline recovery**.
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
 | Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | visible for every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
-| Sessions | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; external work begins as one Running Sessions disclosure; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
+| Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; external work begins as one Running Sessions disclosure; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
@@ -642,10 +642,10 @@ native tool, honest ownership, inline recovery**.
 ## Acceptance checklist
 
 - Every open panel, tool, terminal, file, diff, and browser surface is reachable
-  as a native tab and appears in Open for the active Workspace.
+  as a native tab and appears in Layout for the active Workspace.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
-- Sessions excludes inactive completed history while preserving active,
-  attention, recovery, and review-ready rows. Open remains the route to idle
+- Activity excludes inactive completed history while preserving active,
+  attention, recovery, and review-ready rows. Layout remains the route to idle
   open tabs and Agent History remains the route to completed Agent Sessions.
 - Empty Workspaces and search states expose one visually primary recovery;
   caught-up scope changes remain subordinate.

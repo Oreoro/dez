@@ -2014,3 +2014,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   panes continue to own order, drag, preview, pin, dirty, close, and split
   state. The section remains absent for one tab and groups rows only when a
   user-created split produces real pane ownership.
+- **2026-08-04: Activity is the final live-supervision projection noun.** This
+  supersedes the broad visible **Sessions** section label in Dez while
+  preserving Session as the entity noun and official Zed's existing Activity
+  wording.
+  Activity contains only authoritative active, running, actionable,
+  recoverable, or review-ready agent, terminal, task, tmux, and Herdr signals.
+  It disappears when empty; idle open content stays in **Layout**, inactive
+  completed Agent Sessions stay in Agent History, and externally discovered
+  work remains under the explicit **Running Sessions** disclosure.
