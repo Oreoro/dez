@@ -17665,7 +17665,28 @@ impl Sidebar {
         .then(|| multiplexer_store.clone())
         .flatten();
         let refresh_label = if discovery_failed { "Retry" } else { "Refresh" };
+        let animate_empty_state_icon =
+            external_activity_refreshing && design_system.motion != settings::CanvasMotion::Reduced;
         let empty_state = empty_label.map(|empty_label| {
+            let empty_state_icon = Icon::new(if external_activity_refreshing {
+                IconName::LoadCircle
+            } else if discovery_failed {
+                IconName::Warning
+            } else {
+                IconName::ListTree
+            })
+            .size(IconSize::XSmall)
+            .color(if discovery_failed {
+                Color::Warning
+            } else {
+                Color::Muted
+            });
+            let empty_state_icon = if animate_empty_state_icon {
+                empty_state_icon.with_rotate_animation(2).into_any_element()
+            } else {
+                empty_state_icon.into_any_element()
+            };
+
             h_flex()
                 .id("other-running-sessions-empty-state")
                 .role(gpui::Role::Status)
@@ -17674,24 +17695,7 @@ impl Sidebar {
                 .gap_2()
                 .px_2()
                 .py_1p5()
-                .child(
-                    Icon::new(if external_activity_refreshing {
-                        IconName::LoadCircle
-                    } else if discovery_failed {
-                        IconName::Warning
-                    } else {
-                        IconName::ListTree
-                    })
-                    .size(IconSize::XSmall)
-                    .color(if discovery_failed {
-                        Color::Warning
-                    } else {
-                        Color::Muted
-                    })
-                    .when(external_activity_refreshing, |icon| {
-                        icon.with_rotate_animation(2)
-                    }),
-                )
+                .child(empty_state_icon)
                 .child(
                     Label::new(empty_label)
                         .size(LabelSize::XSmall)
