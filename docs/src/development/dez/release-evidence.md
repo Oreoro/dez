@@ -2271,3 +2271,65 @@ and Herdr attach/Retry, cmux handoff, and durable terminal ownership across a
 restart. Until those checks pass—and a Stable artifact is Developer ID signed
 and notarized—this remains a Preview candidate rather than a v0.4 Stable
 release.
+
+## 2026-08-04: Workspace Layout noun and accessible Running Sessions Preview
+
+Source commit `bad2c9876b9cc861b28c7bc3bdf3300d38abbd16` restores
+**Layout** as the final noun for the active Workspace's activation-only native
+pane/tab projection. It replaces the regressed **Open** label without changing
+pane ownership, tab lifecycle, split behavior, or the adjacent Add control.
+The nested **Running Sessions** disclosure now announces expanded state,
+natural singular or plural counts, and the number of sessions needing
+attention instead of relying on color.
+
+GitHub Actions run
+[`30853792138`](https://github.com/Oreoro/dez/actions/runs/30853792138)
+completed successfully for that exact source in 1 hour 4 minutes 17 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8873261829`,
+named
+`Dez-preview-macOS-M2-bad2c9876b9cc861b28c7bc3bdf3300d38abbd16`, is
+145,573,586 bytes, expires on 2026-08-17, and has archive digest
+`3e7f90d925099c1bf47edc47a22bfc507587b6d938619dbe0a7b5772a8545a64`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.98.bad2c9876b9cc861b28c7bc3bdf3300d38abbd16
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.221725`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive digest
+and the portable DMG SHA-256
+`53e263e8192de18e7c6df5e6760295980558471b145368106fb487d8944813de`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `012c4a079bb3f3dc3165dd6239ef32d51cb50a2ca95eb8611203b6a990420364`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`bb14ebabe5f14b1510986a42f1151fbc06f067e0`. The signature is ad-hoc, has no
+Team Identifier, and has no stapled notarization ticket. The auditing Mac
+reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and complete source identity
+checks. Installed-runtime validation must still prove the Layout label and
+activation flow, Running Sessions keyboard and screen-reader behavior, Home
+and Workspace restoration, one-time protected-folder access, native pane tabs
+and adjacent Add, status-line visibility, tmux and Herdr attach/Retry, cmux
+handoff, and durable terminal ownership across a restart. Until those checks
+pass—and a Stable artifact is Developer ID signed and notarized—this remains a
+Preview candidate rather than a v0.4 Stable release.
