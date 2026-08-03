@@ -63,6 +63,7 @@ case "$channel" in
         ;;
 esac
 export ZED_RELEASE_CHANNEL="${channel}"
+export RELEASE_CHANNEL="${channel}"
 popd
 
 export ZED_BUNDLE=true

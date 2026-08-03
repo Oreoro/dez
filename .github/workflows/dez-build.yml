@@ -226,11 +226,18 @@ jobs:
           artifact_dmg="${artifact_label}-macOS-M2.dmg"
           cp "$dmg" "$artifact_dir/$artifact_dmg"
 
+          system_specs="$($main --system-specs)"
+          if ! grep -F "(${expected_name} " <<<"$system_specs"; then
+            echo "::error::Packaged binary release channel does not match $expected_name"
+            printf '%s\n' "$system_specs"
+            exit 1
+          fi
+
           {
             echo "Packaged entry-point smoke test"
             echo "================================"
             echo
-            "$main" --system-specs
+            printf '%s\n' "$system_specs"
             echo
             "$cli" --dez "$app" --version
             echo
@@ -250,12 +257,13 @@ jobs:
             echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
             echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
             echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            echo "binary_channel=$expected_name"
             if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
               echo "signature=Developer ID (notarized)"
             elif [[ "$release_signed" = true ]]; then
-              echo "signature=Developer ID Preview (not a v0.2 release)"
+              echo "signature=Developer ID Preview (not a stable release)"
             else
-              echo "signature=ad-hoc Preview (not notarized; not a v0.2 release)"
+              echo "signature=ad-hoc Preview (not notarized; not a stable release)"
             fi
             rustc --version
             cargo --version
@@ -274,13 +282,13 @@ jobs:
             if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
               echo "3. Open Dez from Applications."
               echo
-              echo "This v0.2 release has a stable Developer ID signature and notarization."
+              echo "This Dez $expected_version stable release has a Developer ID signature and notarization."
               echo "macOS can therefore retain protected-folder decisions across"
               echo "upgrades that keep the same Dez signing identity."
             else
               echo "3. Control-click ${expected_name} in Applications, choose Open, then Open."
               echo
-              echo "This is a Preview artifact, not a Dez v0.2 release."
+              echo "This is a Dez $expected_version Preview artifact, not a stable release."
               echo "It may be ad-hoc signed and not notarized."
               echo "Because rebuilt ad-hoc apps do not have a stable Apple signing"
               echo "identity, macOS can ask again before accessing protected folders"

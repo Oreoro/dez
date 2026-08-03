@@ -1,5 +1,5 @@
 use anyhow::{Context as _, Result};
-use gpui::{App, AsyncWindowContext, Context, PromptButton, PromptLevel, TaskExt as _, Window};
+use gpui::{App, AsyncWindowContext, Context, PromptButton, PromptLevel, Window};
 use paths::APP_NAME;
 use release_channel::RELEASE_CHANNEL;
 use std::ffi::OsString;

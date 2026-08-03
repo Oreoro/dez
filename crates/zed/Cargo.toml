@@ -2,7 +2,7 @@
 description = "A native IDE for terminal-native developers."
 edition.workspace = true
 name = "zed"
-version = "0.2.2"
+version = "0.4.0"
 publish.workspace = true
 license = "GPL-3.0-or-later"
 authors = ["Dez contributors"]

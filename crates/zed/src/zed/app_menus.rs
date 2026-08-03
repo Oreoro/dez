@@ -142,7 +142,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             MenuItem::submenu(Menu::new("Navigate Workspaces").items([
                 MenuItem::action("Focus Workspaces", workspace::FocusSidebar),
                 MenuItem::action(
-                    "Search Workspaces and Sessions…",
+                    "Search Workspaces and Activity…",
                     zed_actions::sidebar::FocusSidebarFilter,
                 ),
                 MenuItem::separator(),
@@ -401,7 +401,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                     MenuItem::action("Herdr", zed_actions::terminal::OpenHerdrTerminal),
                 ])),
             ])),
-            MenuItem::submenu(Menu::new("Continue Agent").items([
+            MenuItem::submenu(Menu::new("Resume Existing Agent").items([
                 MenuItem::action(
                     "Codex · Last Session",
                     zed_actions::terminal::ResumeCodexTerminal,

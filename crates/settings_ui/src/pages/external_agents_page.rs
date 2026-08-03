@@ -21,6 +21,28 @@ use workspace::{MultiWorkspace, Workspace, create_and_open_local_file};
 
 use crate::SettingsWindow;
 
+fn external_agents_page_copy(app_name: &str) -> (&'static str, &'static str) {
+    if app_name == "Zed" {
+        (
+            "External Agents",
+            "Agents connected through the Agent Client Protocol.",
+        )
+    } else {
+        (
+            "ACP Agents",
+            "Connect Agent Client Protocol providers to the optional Built-in Agent.",
+        )
+    }
+}
+
+fn external_agents_empty_copy(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "No external agents added yet. Click \"Add Agent\" to get started."
+    } else {
+        "No ACP agents are configured. Add one to connect it to the Built-in Agent."
+    }
+}
+
 pub(crate) fn render_external_agents_page(
     settings_window: &SettingsWindow,
     scroll_handle: &ScrollHandle,
@@ -28,6 +50,7 @@ pub(crate) fn render_external_agents_page(
     cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {
     let agent_server_store = get_agent_server_store(settings_window, cx);
+    let (page_title, page_description) = external_agents_page_copy(paths::APP_NAME);
 
     let agent_list = if let Some(store) = agent_server_store.as_ref() {
         let agents = collect_agents(store, cx);
@@ -48,9 +71,9 @@ pub(crate) fn render_external_agents_page(
         .pb_16()
         .track_scroll(scroll_handle)
         .overflow_y_scroll()
-        .child(Label::new("External Agents"))
+        .child(Label::new(page_title))
         .child(
-            Label::new("Agents connected through the Agent Client Protocol.")
+            Label::new(page_description)
                 .size(LabelSize::Small)
                 .color(Color::Muted),
         )
@@ -117,7 +140,7 @@ fn render_empty_state(cx: &App) -> AnyElement {
         .border_color(cx.theme().colors().border.opacity(0.6))
         .rounded_sm()
         .child(
-            Label::new("No external agents added yet. Click \"Add Agent\" to get started.")
+            Label::new(external_agents_empty_copy(paths::APP_NAME))
                 .color(Color::Muted)
                 .size(LabelSize::Small),
         )
@@ -136,7 +159,7 @@ fn render_no_project_state(cx: &App) -> AnyElement {
             Label::new(if paths::APP_NAME == "Zed" {
                 "No active project found. Open a workspace to manage external agents."
             } else {
-                "No active workspace found. Open one to manage external agents."
+                "Open a Workspace to manage ACP agents."
             })
             .color(Color::Muted)
             .size(LabelSize::Small),
@@ -1038,6 +1061,22 @@ fn find_text_in_buffer(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dez_names_acp_agents_as_part_of_the_built_in_agent() {
+        assert_eq!(
+            external_agents_page_copy("Dez"),
+            (
+                "ACP Agents",
+                "Connect Agent Client Protocol providers to the optional Built-in Agent.",
+            )
+        );
+        assert_eq!(
+            external_agents_empty_copy("Dez"),
+            "No ACP agents are configured. Add one to connect it to the Built-in Agent."
+        );
+        assert_eq!(external_agents_page_copy("Zed").0, "External Agents");
+    }
 
     fn values() -> CustomAgentFormValues {
         CustomAgentFormValues {

@@ -1744,6 +1744,39 @@ fn migrate_dez_generated_visual_profile(app_name: &str, content: &str) -> Option
         return Some(migrated);
     }
 
+    if content.contains(GENERATED_AYU_ALL_JETBRAINS_PROFILE)
+        && content.contains("\"ui_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"font_family\": \"JetBrains Mono\"")
+        && content.contains("\"mode\": \"dark\"")
+        && content.contains("\"light\": \"Ayu Light\"")
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        let migrated = restore_current_typography(content)
+            .replacen(
+                GENERATED_AYU_ALL_JETBRAINS_PROFILE,
+                "// Dez follows the system appearance with Lumin, IBM Plex Sans for native-feeling\n// interface text, and Lilex for code, terminals, prompts, and review surfaces.",
+                1,
+            )
+            .replacen("\"mode\": \"dark\"", "\"mode\": \"system\"", 1)
+            .replacen("\"light\": \"Ayu Light\"", "\"light\": \"Lumin Light\"", 1);
+        let migrated = if migrated.contains("\"icon_theme\"") {
+            migrated
+        } else {
+            migrated.replacen("{\n", "{\n  \"icon_theme\": \"Dez (Default)\",\n", 1)
+        };
+        let migrated = if migrated.contains("\"markdown_preview_code_font_family\"") {
+            migrated
+        } else {
+            migrated.replacen(
+                "\"buffer_font_family\": \"Lilex\",\n",
+                "\"buffer_font_family\": \"Lilex\",\n  \"markdown_preview_code_font_family\": \"Lilex\",\n",
+                1,
+            )
+        };
+        return Some(migrated);
+    }
+
     if !content.contains(OLD_UI_FONT)
         || !content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
         || !content.contains("\"terminal\"")
@@ -1866,6 +1899,41 @@ mod tests {
 }"#;
         let migrated =
             migrate_dez_generated_visual_profile("Dez", ayu_all_jetbrains_generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
+        assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"markdown_preview_code_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"mode\": \"system\""));
+        assert!(migrated.contains("\"light\": \"Lumin Light\""));
+        assert!(migrated.contains("\"dark\": \"Lumin Blur\""));
+        assert!(migrated.contains("\"icon_theme\": \"Dez (Default)\""));
+        assert!(migrated.contains("\"ui_font_size\": 14"));
+        assert!(migrated.contains("\"buffer_font_size\": 14"));
+
+        let dark_lumin_all_jetbrains_generated = r#"// Dez settings
+//
+// Lumin follows the system appearance. JetBrains Mono is used across interface,
+// code, terminals, prompts, and review surfaces.
+{
+  "project_panel": { "dock": "right" },
+  "ui_font_family": "JetBrains Mono",
+  "ui_font_size": 14,
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "theme": {
+    "mode": "dark",
+    "light": "Ayu Light",
+    "dark": "Lumin Blur"
+  },
+  "terminal": {
+    "font_family": "JetBrains Mono",
+    "font_size": 14
+  }
+}"#;
+        let migrated =
+            migrate_dez_generated_visual_profile("Dez", dark_lumin_all_jetbrains_generated)
+                .unwrap();
+        assert!(migrated.contains("\"project_panel\": { \"dock\": \"right\" }"));
         assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
         assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
         assert!(migrated.contains("\"markdown_preview_code_font_family\": \"Lilex\""));

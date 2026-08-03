@@ -1048,7 +1048,7 @@
   "sidebar": {
     // Where to position the sidebar. Can be 'left' or 'right'.
     "side": "left",
-    // Workspaces is the global Workspace and session navigator. Fresh windows
+    // Workspaces is the global Workspace and Activity navigator. Fresh windows
     // keep it closed so the native Main Work Area remains primary; restored
     // and explicitly opened Workspaces layouts are still preserved.
     "starts_open": false,
@@ -1094,7 +1094,7 @@
     "show_layout": false,
     "show_agent_attention": true
   },
-  // Settings for Workspaces, Dez's native Workspace and session navigator.
+  // Settings for Workspaces, Dez's native Workspace and Activity navigator.
   "session_rail": {
     "visibility": "auto",
     "mode": "compact",

@@ -1,7 +1,7 @@
 use crate::{
-    BrowseRunningSessions, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace,
-    RevealFiles, RevealGitChanges, SerializedWorkspaceLocation, Workspace, WorkspaceId,
-    WorkspaceSettings,
+    BrowseRunningSessions, MultiWorkspace, NewFile, Open, OpenFolder, OpenMode, PathList,
+    RecentWorkspace, RevealFiles, RevealGitChanges, SerializedWorkspaceLocation, Workspace,
+    WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -300,6 +300,10 @@ fn welcome_title(app_name: &str, _has_workspace: bool) -> &'static str {
 
 fn welcome_surface_label(app_name: &str) -> &'static str {
     if app_name == "Zed" { "Welcome" } else { "Home" }
+}
+
+fn welcome_identity_label(app_name: &str) -> Option<&'static str> {
+    (app_name != "Zed").then_some("Dez")
 }
 
 fn welcome_forces_tab_bar(app_name: &str) -> bool {
@@ -718,13 +722,23 @@ impl WelcomePage {
                                 DefaultOpenBehavior::ExistingWindow => OpenMode::Activate,
                                 DefaultOpenBehavior::NewWindow => OpenMode::NewWindow,
                             };
-                        self.workspace
-                            .update(cx, |workspace, cx| {
-                                workspace
-                                    .open_workspace_for_paths(open_mode, paths, window, cx)
-                                    .detach_and_log_err(cx);
-                            })
-                            .log_err();
+                        let Some(multi_workspace) =
+                            window.window_handle().downcast::<MultiWorkspace>()
+                        else {
+                            return;
+                        };
+                        // Opening can query the active item's toolbar state, so leave the
+                        // WelcomePage action update before changing the Workspace.
+                        cx.defer(move |cx| {
+                            if let Some(task) = multi_workspace
+                                .update(cx, |multi_workspace, window, cx| {
+                                    multi_workspace.open_project(paths, open_mode, window, cx)
+                                })
+                                .log_err()
+                            {
+                                task.detach_and_log_err(cx);
+                            }
+                        });
                     }
                     SerializedWorkspaceLocation::Remote(_) => {
                         window.dispatch_action(
@@ -843,7 +857,7 @@ impl WelcomePage {
 }
 
 impl Render for WelcomePage {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = APP_NAME != "Zed";
         let (has_workspace, local_workspace) = self
             .workspace
@@ -1160,6 +1174,23 @@ impl Render for WelcomePage {
                                 .w_full()
                                 .min_w_0()
                                 .gap_1()
+                                .when_some(welcome_identity_label(APP_NAME), |this, identity| {
+                                    this.child(
+                                        h_flex()
+                                            .gap_1()
+                                            .child(
+                                                Icon::new(IconName::Compass)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Accent),
+                                            )
+                                            .child(
+                                                Label::new(identity)
+                                                    .size(LabelSize::XSmall)
+                                                    .color(Color::Muted)
+                                                    .weight(FontWeight::MEDIUM),
+                                            ),
+                                    )
+                                })
                                 .child(
                                     div()
                                         .font_weight(FontWeight::MEDIUM)
@@ -1456,6 +1487,8 @@ mod tests {
         );
         assert_eq!(welcome_title("Dez", false), "Continue your work");
         assert_eq!(welcome_title("Dez", true), "Continue your work");
+        assert_eq!(welcome_identity_label("Dez"), Some("Dez"));
+        assert_eq!(welcome_identity_label("Zed"), None);
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");

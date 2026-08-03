@@ -11,7 +11,7 @@ and agent ecosystem, then reorganizes them around a clearer product promise:
 > See what is running, what needs attention, what changed, and what is ready
 > for review without reconstructing terminal and editor state.
 
-This repository currently carries the **Dez v0.2.2 source candidate**. It is
+This repository currently carries the **Dez 0.4.0 source candidate**. It is
 not yet a signed or supported binary release; promotion depends on the exact
 remote artifact and evidence gates documented below.
 
@@ -25,14 +25,13 @@ Workspace instead of separate applications or hidden panel modes.
 - **Workspaces** — an optional, collapsible navigator for codebases, open
   Surfaces, and Agent Sessions. Fresh windows keep it closed unless the user
   enables it, restored layouts may reopen it, and its window edge is
-  configurable. Its collapsible **Open Tabs & Tools** section appears when at
-  least two native Main Work Area surfaces are open. It mirrors Home, code,
-  diffs, terminals, Files, Git, and other Workspace-owned tabs, grouping them
-  by pane only after the user creates a split. Selecting a row activates that exact native tab;
-  unpinned rows expose the Surface's native close action on hover and accept
-  middle-click, while pinned rows remain protected and visibly pinned. Tab
-  ownership, dirty state, close confirmation, dragging, and ordering remain in
-  Zed's pane model rather than being copied into the navigator. Agent Session
+  configurable. Its collapsible **Open** section appears for every
+  open native Main Work Area surface. It mirrors Home, code, diffs, terminals,
+  Files, Git, Settings, and other Workspace-owned tabs, grouping them by pane
+  only after the user creates a real split. Selecting a row activates that
+  exact native tab. Close, pin, preview, middle-click, drag, ordering, dirty
+  state, overflow, and split ownership remain in Zed's pane model rather than
+  being copied into the navigator. Agent Session
   rows keep their Dez or provider identity mark while Running, Needs Input,
   Waiting for Permission, Reconnecting, Completed, or Error remains a separate
   state treatment. Drafts keep the selected agent mark instead of becoming an
@@ -42,13 +41,14 @@ Workspace instead of separate applications or hidden panel modes.
   root names remain searchable and available in the header tooltip and
   accessibility label. A Workspace can explicitly attach a discovered tmux or
   Herdr session, or open a discovered cmux Workspace in cmux, without taking
-  ownership. Each item with a matching working directory appears beneath the
-  most specific Workspace with source, state, and working-directory metadata.
-  A cmux row also keeps its API-reported listening ports visible as compact
-  operational metadata; Dez does not infer ports for other processes.
+  ownership. Matching multiplexer work contributes to one compact **Running
+  Sessions** disclosure beneath the most specific Workspace. Source, state,
+  working directory, listening ports, and ownership remain available after the
+  disclosure is opened or in Terminal Details; they do not compete with the
+  primary navigation label. Dez does not infer ports for other processes.
   Discovered tmux, Herdr, and cmux activity without a matching open root stays
-  reachable in **Other Running Sessions** instead of being hidden or assigned
-  to the wrong codebase. Opening an unmatched tmux or Herdr item with a known
+  reachable in **Other Running Sessions** when such items exist; an empty
+  section is omitted. Opening an unmatched tmux or Herdr item with a known
   working directory first establishes that directory as a native Workspace,
   then attaches the external client there. Pathless items use the active
   Workspace; cmux remains an external handoff. Workspace headers show live Git
@@ -196,9 +196,10 @@ codex` retain the same identity.
 automation boundary. cmux still owns its custom actions and multi-pane layouts;
 Dez keeps those layouts externally owned. Its secure socket default accepts
 cmux-owned processes; Dez never enables cross-app access on the user's behalf.
-When that boundary rejects live discovery, Workspaces reports **cmux activity
-sharing is off** as an informational privacy state rather than presenting cmux
-as broken. The path handoff remains available independently.
+When that boundary rejects live discovery, the Workspace menu keeps the
+official guide and retry route available without pinning a technical notice
+above navigation. If cmux is missing, that menu offers **Get cmux…**. The path
+handoff remains available independently.
 Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
@@ -284,7 +285,7 @@ one Zed-compatible Project:
 A terminal is therefore not embedded in chat, and the editor is not a separate
 mode. They are peer Surfaces in one native pane grid. Dez detects supported
 agents running in its terminals, including Codex, Claude Code, OpenCode, and
-Herdr. Dez v0.2 discovers explicitly shared tmux sessions, live Herdr panes
+Herdr. Dez v0.4 discovers explicitly shared tmux sessions, live Herdr panes
 through Herdr's JSON session registry and snapshot API, and cmux Workspaces.
 tmux and Herdr attach through ordinary terminal tabs; cmux Workspaces open in
 cmux. Native terminal tabs use observed foreground-process evidence for their
@@ -327,8 +328,11 @@ access, and timeout failures offer **Open cmux API guide**. Successful handoffs
 remain brief confirmations.
 Live cmux discovery treats the documented process-only refusal as **activity
 sharing is off**, not as a failed terminal integration. Previously discovered
-rows remain last known, and an inline **Open API Guide** action explains the
-opt-in boundary without changing cmux configuration.
+rows remain last known, and Workspace Options keeps **Open API Guide** available
+without changing cmux configuration or adding a global notice. If cmux is
+absent, Workspace Options offers **Get cmux…**; tmux and Herdr remain available.
+Their attach clients execute directly so tmux
+identifiers such as `$0` are never expanded by the user's login shell.
 
 Last-known external rows are never attached blindly. Their action refreshes
 that source first; select a fresh row again before opening it. Retry resolves
@@ -419,7 +423,7 @@ Fresh Dez windows open the top-anchored native Home launcher inside the normal
 Main Work Area tab frame. The tab strip and its adjacent Add control remain
 visible before the first file or terminal opens. Home does not auto-read a
 previous Workspace folder, avoiding a macOS privacy prompt for a stale recent
-path. GitHub Actions marks ad-hoc artifacts **Dez Preview**; they are not v0.2
+path. GitHub Actions marks ad-hoc artifacts **Dez Preview**; they are not stable
 releases and macOS may ask again when their signing identity changes. A stable
 workflow fails unless Developer ID signing and notarization credentials are
 present, and the artifact passes signature, TeamIdentifier, Gatekeeper, and
@@ -427,7 +431,7 @@ stapled-ticket validation.
 
 ## Current status
 
-The v0.2.2 source candidate contains the opinionated Dez shell,
+The 0.4.0 source candidate contains the opinionated Dez shell,
 identity isolation, Workspace composition, persistent Workspace state with
 optional Workspaces navigation, ordinary closeable workspace-tool tabs,
 explicit Agent Session state, host-owned local terminal lifecycle,
@@ -438,18 +442,19 @@ static product-contract checks.
 Arbitrary machine terminals are deliberately absent because Dez cannot safely
 control or attribute them.
 
-**Live Preview is not implemented in the v0.2.2 source candidate.** URL actions
+**Live Preview is not implemented in the 0.4.0 source candidate.** URL actions
 still open the system browser, while Markdown, SVG, and CSV use native file
 previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited
 geometry-only `BrowserDevelopment` recipe as a fake preview.
 
-A public v0.2 release still requires exact build, rendered, restart, crash,
+A public v0.4 release still requires exact build, rendered, restart, crash,
 accessibility, integration, coexistence, and packaging evidence. The ordered
-release ladder and open gates remain documented in
-[v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md).
-The active source-polish lane is
-[v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md);
+release ladder and open gates are active in
+[v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md). The preserved
+[v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
+and [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
+documents remain ownership and reliability input;
 the completed ownership baseline remains in the historical
 [v0.0.4 External Sessions Plan](./docs/src/development/dez/v0.0.4-external-sessions.md),
 with exact results recorded in
@@ -459,8 +464,10 @@ runbook remains historical evidence, not the current release plan.
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
+- [v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md) — active
+  source, exact-artifact, stop-ship, and promotion contract
 - [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
-  — active native Workspace shell and source-polish contract
+  — preserved native Workspace shell and source-polish contract
 - [Native Surface Contract](./docs/src/development/dez/surface-contract.md) —
   final text wireframes, surface ownership, recovery, and responsive behavior
 - [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
@@ -528,7 +535,7 @@ flow from Zed.
 
 ## Contributing
 
-The public contributor workflow is being prepared for v0.2. Until its
+The public contributor workflow is being prepared for v0.4. Until its
 fork-specific policy is complete, use [CONTRIBUTING.md](./CONTRIBUTING.md) for
 the inherited engineering workflow and include:
 

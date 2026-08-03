@@ -30,9 +30,9 @@ The main journey uses native surfaces throughout:
    a native shell, tmux, Codex, Claude Code, or OpenCode in native tabs. **More
    Agent CLIs** adds Gemini CLI, Aider, and Herdr without crowding that primary
    list. Use **Open Workspace in cmux** for an explicit external handoff.
-4. Use **Continue Agent** to resume the last Codex, Claude Code, or OpenCode
-   session in this Workspace. Use **Browse Running Sessions…** for discovered
-   tmux, Herdr, and cmux work.
+4. Use **Resume Existing Agent** to resume the last Codex, Claude Code, or
+   OpenCode session in this Workspace. Use **Browse Running Sessions…** for
+   discovered tmux, Herdr, and cmux work.
 5. Supervise attention in **Workspaces**, then use **Open Files**, **Run Task…**,
    diagnostics, Debug, and **Review Changes** against the same codebase.
 
@@ -66,7 +66,7 @@ Set the frequent path in **Settings → Workspaces & Terminals → Terminal Laun
 Code, OpenCode, Gemini CLI, Aider, Herdr, tmux Session, and Custom Command. A
 custom command is the escape hatch for another TUI or wrapper. Provider and
 tmux marks lead each choice while the current choice keeps a separate trailing
-check. Use **Continue Agent** when returning to the most recent provider
+check. Use **Resume Existing Agent** when returning to the most recent provider
 session. Provider authentication and subscriptions remain owned by each
 provider CLI.
 
@@ -179,7 +179,7 @@ terminal, diff, search result, settings page, or review can be tabbed, split,
 moved, and focused through the same rules. Its tab strip provides native
 reorder, cross-pane drag, preview replacement, pin, and close behavior; Dez
 does not imitate browser tabs with a separate navigation system. Workspaces can
-project all open files and tools under **Open Tabs & Tools**, grouped only when
+project all open files and tools under **Open**, grouped only when
 real pane splits exist; selecting one focuses its existing pane-owned tab.
 Terminals can be split below or beside code while keeping their Workspace
 ownership.
@@ -190,12 +190,14 @@ not flatten pane ownership or conceal unsaved work.
 
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
-a **Workspace tmux** session, Codex, Claude Code, or OpenCode. **More Agent
-CLIs** keeps Gemini CLI, Aider, and Herdr one level deeper. The Add menu also
-opens the optional Built-in Agent, a file, Files, Review Changes, Run Task,
+Codex, Claude Code, or OpenCode. **More Agent CLIs** keeps Gemini CLI, Aider,
+and Herdr one level deeper. **Sessions and Multiplexers** keeps **Workspace
+tmux**, **Browse Running Sessions…**, and the applicable cmux handoff visible
+at the first menu level. The Add menu also opens the optional Built-in Agent,
+a file, Files, Git Changes, Run Task,
 Debug, Workspace search, or symbol search. Terminal and Agent routes lead;
 running-session and cmux handoffs follow; Home and Recent Workspaces remain at
-the end as secondary navigation. **Continue Agent** resumes the last native
+the end as secondary navigation. **Resume Existing Agent** resumes the last native
 provider session without mixing it into running-session discovery. The control
 follows the final tab while space remains and stays pinned to the tab viewport
 edge when tabs overflow. **Browse Running
@@ -219,7 +221,7 @@ route leads a first-time user into a model-less Agent surface. Terminal agents
 remain independent of this provider setup.
 
 The Dez **File → Open Terminal** submenu mirrors the native **+** launch routes
-in the same order, followed by **Continue Agent**. Its first row previews the
+in the same order, followed by **Resume Existing Agent**. Its first row previews the
 configured result as **Default · Native Shell**, **Default · Codex**, **Default
 · Claude Code**, **Default · OpenCode**, **Default · tmux Session**, a detected
 agent, or **Default · Custom Command**; the pane **+** keeps the shorter
@@ -267,30 +269,23 @@ generic row. Provider icons identify Codex, Claude Code, OpenCode, Herdr, and
 other detected agents. Native status treatments distinguish Running, Needs
 Input, Waiting for Permission, Reconnecting, Completed, and Error without
 rendering a second terminal transcript.
-When Workspaces is open, its collapsible **Open Tabs & Tools** section projects
-the active Workspace's native Main Work Area surfaces above the Workspace and
-Session list when at least two tabs are open. Home, code, terminals, diffs,
-Files, Git, and other Workspace tools all appear through the same projection;
-only running terminal and agent activity appears under **Sessions**. A one-pane
-layout remains a flat list. Real splits add quiet **Pane 1**,
-**Pane 2**, and later group labels, so the hierarchy describes the layout that
-already exists instead of manufacturing one. Each row uses the Surface's
-native icon, disambiguated tab title, active state, dirty state, and pinned
-state. Terminal rows preserve their task, Agent provider, or tmux mark.
-Built-in and external Agent tabs preserve the same Dez or provider mark used
-by their native tab, and the projection announces each row's position in the
-native tab set. In split layouts, each pane's visible tab has a quiet selected
-row and the focused pane keeps the accent icon, so pane visibility does not
-disappear when focus moves. The collapsed summary reports tabs and panes; when
-expanded, the focused pane's group label names that state directly. Activating
-a row calls the owning Workspace's native item activation path. An unpinned row
-exposes the Surface's native close icon on hover, keeps it
-visible while that Surface is active in its pane, and accepts middle-click.
-Both routes call the owning pane's normal close path, including unsaved-work
-confirmation. Pinned rows remain protected. Ordering, dragging, preview
-replacement, pinning, and split ownership remain in the native tab strip. The
-disclosure state persists, while Workspace search temporarily hides the section
-to keep filtering focused.
+When Workspaces is open, the active Workspace contains a compact **Open**
+projection of its native Main Work Area. It appears for one or more
+open items, so Files, Git, terminals, code, diffs, Settings, and Agent tabs do
+not vanish from navigation simply because no agent is running. A single-pane
+Workspace stays flat; real user-created splits add quiet **Pane 1**, **Pane
+2**, and later group labels. The focused split is named in text. The compact
+count names real splits only; a single pane reports only how many items are
+open. Every row is left-aligned and keeps its native icon and disambiguated
+title together. The selected row treatment and accessibility label identify
+focused and visible items without a redundant `Active` badge. Dirty and pinned
+state stay visible as supporting marks. Terminal rows retain their task,
+provider, tmux, or shell identity.
+
+Activating a row calls the owning Workspace's native item activation path.
+Open never owns close, middle-click, ordering, dragging, preview,
+pinning, overflow, or split behavior; those remain in the native tab strip.
+Workspace search temporarily hides the projection to keep filtering focused.
 Each Main Work Area pane keeps native Back and Forward controls in its tab
 bar. They traverse files, terminals, diffs, settings, and other native
 Surfaces without inventing a separate browser or duplicating Workspace
@@ -410,10 +405,11 @@ read-only controls are scoped to the owning tab, so split panes and rapid tab
 switching cannot transfer hover, focus, or activation state to a sibling tab.
 
 Existing generated Dez profiles are upgraded consistently. A known legacy
-profile that pinned `.ZedSans`, One Light, and light-only appearance migrates
-to IBM Plex Sans for interface chrome, Lilex for code and terminals, and
-system-selected Lumin Light/Lumin Blur. Custom font or theme choices are not
-treated as generated defaults.
+profile that pinned `.ZedSans`, One Light, or the generated all-JetBrains
+dark-Lumin combination migrates to IBM Plex Sans for interface chrome, Lilex
+for code and terminals, and system-selected Lumin Light/Lumin Blur. Font sizes,
+panel positions, and unrelated preferences are preserved. Custom font or theme
+choices are not treated as generated defaults.
 
 Creation emphasis also follows state. An inactive, ready Workspace without a
 Session shows one quiet **Open Terminal** command row; the active Workspace
@@ -602,7 +598,7 @@ require creating a Built-in Agent Session, and opening the Built-in Agent does
 not wrap or replace the terminal.
 
 An embedded **Live Preview** is planned as a normal Main Work Area Surface but
-is not present in the v0.2.2 source candidate. URL actions currently open the
+is not present in the 0.4.0 source candidate. URL actions currently open the
 system browser, while Markdown, SVG, and CSV use native file previews. A real
 Live Preview must own pane-scoped browser navigation without owning or
 restarting the terminal's dev-server process. The platform and security gate is
@@ -805,7 +801,7 @@ terminal title breadcrumbs remain off in the default Dez profile and can be
 enabled through native terminal settings. cmux is not configured as the shell
 because its documented [CLI](https://github.com/manaflow-ai/cmux) defines a
 separate macOS workspace and terminal application. Instead, native terminal,
-Continue Agent, and Built-in Agent actions lead Workspace Options. **Open
+Resume Existing Agent, and Built-in Agent actions lead Workspace Options. **Open
 Workspace in cmux** begins the external-work group beside discovered
 multiplexer Sessions. It invokes the documented `cmux open <path>` handoff,
 keeps Dez open, and
@@ -885,7 +881,7 @@ Warp, another IDE, or an unrelated application. Those processes are neither
 owned nor safely controllable by Dez, so they never become Workspace or Agent
 Session rows.
 
-Dez v0.2 retains explicit integration for tmux, Herdr, and cmux. Each source
+Dez v0.4 retains explicit integration for tmux, Herdr, and cmux. Each source
 updates independently and reports one truthful state:
 
 - **Missing** — the source executable is unavailable;
@@ -928,7 +924,9 @@ no-op.
 Dez discovers tmux sessions through the documented CLI format, asks Herdr's JSON
 session registry which endpoints are live before using its snapshot API, and
 discovers cmux Workspaces through its JSON CLI. tmux and Herdr open their
-documented attach command in a normal terminal Surface.
+documented attach command in a normal terminal Surface. Dez executes that
+client directly, so opaque tmux identifiers such as `$0` and `$1` reach tmux
+unchanged instead of being expanded by the user's login shell.
 cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh Running Sessions** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
@@ -937,6 +935,9 @@ Attach terminals keep the native rerun control. Failure shows an explicit
 **Retry Attach** action and refreshes discovery after completion without
 starting a duplicate attach automatically. Raw Herdr shells without structured
 agent state are labeled **Available**, not unknown.
+When cmux is not discoverable, Workspace Options replaces the inapplicable
+handoff with one **Get cmux…** action; tmux and Herdr remain usable, navigation
+stays quiet, and no external Session is changed.
 The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.
@@ -965,7 +966,8 @@ The empty-state copy distinguishes source availability from Workspace matching.
 executable is missing. **Running session discovery needs attention** means at least one
 source failed. **cmux activity sharing is off; no other running sessions** means
 cmux is installed with its secure process-only boundary and no peer source has
-current activity; the informational notice links to the official access guide.
+current activity; Workspace Options keeps the official access guide available
+without inserting a permanent notice into navigation.
 **No running session matches this Workspace** means a ready
 source has activity, but none belongs beneath the selected Workspace; check
 **Other Running Sessions** for unmatched or pathless items. **No running tmux,
@@ -991,12 +993,13 @@ state means Dez adopted or ended an external process.
   refreshing activity. Dez follows Herdr's configured registry and does not
   assume that its sockets live under `~/.config`.
 
-Use **Retry** in the provider warning or **Refresh Running Sessions** after
-correcting a prerequisite. A **last known** row means that source's latest scan
-failed and the external application may still own the session. Refresh that
-source before selecting the row again; if attach fails, use **Retry Attach**
-after reading the terminal diagnostic. Neither action starts a duplicate
-attachment automatically.
+Use **Retry Running Sessions** in Workspace Options after correcting a failed
+prerequisite; otherwise the action reads **Refresh Running Sessions**. A **last
+known** row means that source's latest scan failed and the external application
+may still own the session. Refresh that source before selecting the row again;
+if attach fails, use **Retry Attach** after reading the terminal diagnostic.
+Neither action starts a duplicate attachment automatically. Missing cmux is a
+contextual **Get cmux…** action, not a global warning.
 
 Dez only renders metadata with an authoritative owner. Git supplies branch and
 changed-file counts; terminal and multiplexer snapshots supply working
@@ -1014,6 +1017,14 @@ Dez follows the system appearance with **Lumin Blur** and **Lumin Light**.
 IBM Plex Sans gives native interface chrome a calm proportional voice. Lilex
 keeps editors, terminals, prompts, and review code compact and legible. Users
 can still override any role through normal settings.
+
+Navigation chrome follows one density-aware scale rather than sizing each
+surface independently. Workspace and tab-bar actions use quiet 12–14px marks
+inside compact native hit targets; the status bar uses 12–14px supporting type
+and a 24–30px height across Compact, Balanced, and Spacious density. Provider
+marks identify the owner, semantic status marks report attention or failure,
+and neither role is stretched into a decorative badge. The same scale applies
+to the top bar, pane Add control, Workspaces rows, and status navigation.
 
 Empty Main Work Area panes avoid a centered onboarding card: they use compact
 top-left native chrome with **Open Terminal**, **Browse Sessions**, **Find
@@ -1075,10 +1086,16 @@ Agent Session.
 
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
-collapses the Workspace's Sessions. **View → Navigate Workspaces** collects
-**Focus Workspaces**, **Search Workspaces and Sessions…**, **Previous
+collapses the Workspace's nested **Open** and **Sessions** sections. Open
+returns to real pane-owned tabs. Sessions shows only current, actionable,
+recoverable, or review-ready work; inactive completed Agent Sessions remain in
+Agent History. Externally owned tmux, Herdr, and cmux work is summarized by one
+**Running Sessions** disclosure until the user asks for detailed rows.
+**View → Navigate Workspaces** collects
+**Focus Workspaces**, **Search Workspaces and Activity…**, **Previous
 Workspace**, and **Next Workspace**. Search opens a closed navigator before
-focusing its native filter, and matches Workspace names as well as Sessions.
+focusing its native filter, and matches Workspace names as well as current
+Activity.
 The same actions use Workspace vocabulary in Command Palette and remain
 rebindable through **Keyboard & Vim**. The Workspaces ellipsis menu mirrors
 Search and Previous/Next only when there is enough Workspace activity to make
@@ -1180,7 +1197,7 @@ Dez is not:
 - a claim that arbitrary terminals owned by other applications survive through
   Dez.
 
-The v0.2 product promise is a complete native IDE with one sharp wedge:
+The v0.4 product promise is a complete native IDE with one sharp wedge:
 trustworthy supervision, reattachment, and review of terminal-native and
 agent-driven work.
 
@@ -1217,6 +1234,7 @@ steps remain source claims until an exact newer package records runtime proof.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.4 Readiness](./development/dez/v0.4-readiness.md)
 - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
 - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
 - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)

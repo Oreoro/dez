@@ -2,11 +2,13 @@
 
 This log records direct evidence for the consolidated release gate. A source
 claim is not a runtime claim, and an unchecked scenario remains unverified.
-The [v0.2 Workspace Polish](./v0.2-workspace-polish.md) contract defines the
-active source lane. The preserved
-[v0.1 Product Hardening](./v0.1-product-hardening.md) ladder defines the
-release order and remaining runtime gates. Historical artifacts below do not
-validate a newer source tree.
+The [v0.4 Readiness](./v0.4-readiness.md) contract defines the active source and
+exact-artifact lane. The [Native Surface Contract](./surface-contract.md)
+defines the interface, while the preserved [v0.2 Workspace
+Polish](./v0.2-workspace-polish.md) and [v0.1 Product
+Hardening](./v0.1-product-hardening.md) documents retain the ownership and
+release foundations. Historical artifacts below do not validate a newer source
+tree.
 
 ## 2026-08-01: native terminal-agent workflow polish
 
@@ -2048,3 +2050,49 @@ Source-only verification completed for the exact feature commit:
 No local build, test binary, app launch, package, or visual runtime was created.
 Rendered light/dark theme, compact-width, high-contrast, animation, and focus
 proof remains an exact remote-candidate and installed-runtime gate.
+
+## 2026-08-02: activation-only Workspace Layout
+
+The active Workspace now contains a native **Layout** projection of its real
+panes and tabs. Layout is hidden when one tab would make it redundant and while
+Workspace search owns the list. With multiple tabs it names the owning pane and
+marks the focused pane in text, including single-pane Workspaces.
+
+Layout rows only activate their existing native tab. Close, middle-click close,
+pin, reorder, drag, split, preview, and unsaved-work decisions remain owned by
+the native pane and tab strip. Dirty and pinned facts remain visible without
+becoming duplicate controls. Official Zed retains its inherited Sessions and
+tab behavior.
+
+Source-only verification for this slice consists of Rust formatting, the Dez
+identity guard, shell syntax, and diff hygiene. No local compilation, test
+binary, app launch, package, or visual runtime is evidence for this change;
+GitHub Actions remains responsible for the exact-candidate build and tests.
+
+## 2026-08-02: annotated Workspace workflow and bounded Activity
+
+The repository now owns a Dez Workspace design skill and an authoritative
+annotated workflow wireframe. The reviewed monochrome sheet covers Home,
+focused multi-pane work, navigation without content-covering overlays, return
+recap, and terminal/access recovery. Its ASCII companion records native owner,
+action, invariant, and failure behavior for every numbered callout.
+
+The implemented slice separates native navigation from supervision. **Layout**
+continues to activate the real pane/tab entities. **Activity** now retains only
+active, running, waiting, failed, reconnecting, missing, incompatible,
+resumable, unread, or review-ready work. Inactive completed Agent Sessions stay
+available in Agent History; inactive idle or exited terminals remain reachable
+through Layout or their native tab without cluttering Activity. Completed
+external multiplexer work is likewise absent from the live projection.
+
+Expanded Workspaces with projected rows now visibly nest those rows beneath an
+**Activity** heading. Search, empty states, scope controls, overview copy, and
+accessibility labels use Workspaces-and-Activity language while preserving
+official Zed's inherited Sessions behavior. Source policy assertions and the
+identity guard pin the product split.
+
+Local evidence for this slice is limited to skill validation, Rust formatting,
+shell syntax, source identity, and diff hygiene. No local compilation, test
+binary, app launch, package, or installed-runtime claim is permitted. Exact
+compilation, tests, packaging, and rendered validation remain GitHub Actions
+and installed-candidate gates.

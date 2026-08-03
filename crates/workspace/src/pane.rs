@@ -13,6 +13,7 @@ use crate::{
     },
     move_item,
     notifications::NotifyResultExt,
+    panel_pane::PanelItem,
     render_sidebar_header_controls_with_auxiliary_visibility,
     toolbar::Toolbar,
     workspace_settings::{
@@ -21,8 +22,8 @@ use crate::{
     },
 };
 use agent_settings::{
-    AgentSettings, built_in_agent_is_ready, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label,
+    AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, built_in_agent_is_ready,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label,
 };
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -5606,14 +5607,28 @@ impl Pane {
             return None;
         }
         let current_pane = cx.entity();
-        let project_pane_visible = if self.pane_kind == PaneKind::Project {
+        let active_panel_key = if paths::APP_NAME != "Zed" {
+            let active_pane = workspace.read(cx).active_pane().clone();
+            if active_pane == current_pane {
+                self.active_panel_item_key(cx)
+            } else {
+                active_pane.read(cx).active_panel_item_key(cx)
+            }
+        } else {
+            None
+        };
+        let project_pane_visible = if paths::APP_NAME != "Zed" {
+            active_panel_key == Some("ProjectPanel")
+        } else if self.pane_kind == PaneKind::Project {
             self.is_visible()
         } else {
             workspace
                 .read(cx)
                 .panel_pane_visible_except(PaneKind::Project, &current_pane, cx)
         };
-        let agent_pane_visible = if self.pane_kind == PaneKind::Agent {
+        let agent_pane_visible = if paths::APP_NAME != "Zed" {
+            active_panel_key == Some("agent_panel")
+        } else if self.pane_kind == PaneKind::Agent {
             self.is_visible()
         } else {
             workspace
@@ -5628,6 +5643,16 @@ impl Pane {
             agent_pane_visible,
             cx,
         )
+    }
+
+    fn active_panel_item_key(&self, cx: &App) -> Option<&'static str> {
+        if !self.is_visible() {
+            return None;
+        }
+
+        self.active_item()?
+            .downcast::<PanelItem>()
+            .map(|item| item.read(cx).panel_key())
     }
 
     pub fn set_zoom_out_on_close(&mut self, zoom_out_on_close: bool) {
@@ -5794,7 +5819,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         )
                 } else {
                     let menu = menu
-                        .submenu("Open Terminal", |menu, _, _| {
+                        .submenu("Open Terminal", move |menu, _, _| {
                             menu.action_with_icon(
                                 "Default Terminal",
                                 default_terminal_icon,
@@ -5804,11 +5829,6 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 "Native Shell",
                                 IconName::Terminal,
                                 zed_actions::terminal::OpenShellTerminal.boxed_clone(),
-                            )
-                            .action_with_icon(
-                                terminal_view::WORKSPACE_TMUX_LAUNCHER_LABEL,
-                                IconName::SplitAlt,
-                                zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
                             )
                             .separator()
                             .action_with_icon(
@@ -5847,7 +5867,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                                 },
                             )
                         })
-                        .submenu("Continue Agent", |menu, _, _| {
+                        .submenu("Resume Existing Agent", |menu, _, _| {
                             menu.action_with_icon(
                                 "Codex · Last Session",
                                 IconName::AiOpenAi,
@@ -5882,6 +5902,12 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         )
                     };
                     menu.separator()
+                        .header("Sessions and Multiplexers")
+                        .action_with_icon(
+                            WORKSPACE_TMUX_LAUNCHER_LABEL,
+                            IconName::SplitAlt,
+                            zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
+                        )
                         .action_with_icon(
                             "Browse Running Sessions…",
                             IconName::ListTree,
@@ -5895,26 +5921,50 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                             )
                         })
                         .separator()
-                        .action(new_file, NewFile.boxed_clone())
-                        .action(open_file, ToggleFileFinder::default().boxed_clone())
+                        .header("Create and Find")
+                        .action_with_icon(new_file, IconName::File, NewFile.boxed_clone())
+                        .action_with_icon(
+                            open_file,
+                            IconName::FolderSearch,
+                            ToggleFileFinder::default().boxed_clone(),
+                        )
                         .separator()
-                        .action("Open Files", RevealFiles.boxed_clone())
-                        .action("Review Changes", RevealGitChanges.boxed_clone())
-                        .action(
+                        .header("Workspace Tools")
+                        .action_with_icon("Files", IconName::FileTree, RevealFiles.boxed_clone())
+                        .action_with_icon(
+                            "Git Changes",
+                            IconName::GitBranch,
+                            RevealGitChanges.boxed_clone(),
+                        )
+                        .action_with_icon(
+                            search_workspace,
+                            IconName::FolderSearch,
+                            DeploySearch::default().boxed_clone(),
+                        )
+                        .action_with_icon(
                             "Run Task…",
+                            IconName::PlayFilled,
                             zed_actions::Spawn::ViaModal {
                                 reveal_target: None,
                             }
                             .boxed_clone(),
                         )
-                        .action("Open Debug", RevealDebug.boxed_clone())
+                        .action_with_icon("Debug", IconName::Debug, RevealDebug.boxed_clone())
                         .separator()
-                        .action(search_workspace, DeploySearch::default().boxed_clone())
-                        .action(search_symbols, ToggleProjectSymbols.boxed_clone())
+                        .action_with_icon(
+                            search_symbols,
+                            IconName::Code,
+                            ToggleProjectSymbols.boxed_clone(),
+                        )
                         .separator()
-                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
-                        .action(
+                        .action_with_icon(
+                            "Home",
+                            IconName::FolderOpen,
+                            crate::welcome::ShowWelcome.boxed_clone(),
+                        )
+                        .action_with_icon(
                             "Open Recent Workspaces…",
+                            IconName::HistoryRerun,
                             zed_actions::OpenRecent::default().boxed_clone(),
                         )
                 }

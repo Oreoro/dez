@@ -34,6 +34,7 @@ use crate::unicode_confusables;
 use db::kvp::KeyValueStore;
 use gpui::List;
 use gpui::Stateful;
+use gpui::StatefulInteractiveElement;
 use gpui::TaskExt;
 use heapless::Vec as ArrayVec;
 use language_model::{
@@ -11302,6 +11303,7 @@ impl ThreadView {
 
         v_flex()
             .w_full()
+            .id(("subagent-card", entry_ix))
             .role(gpui::Role::Region)
             .aria_label(accessibility_label)
             .rounded_md()

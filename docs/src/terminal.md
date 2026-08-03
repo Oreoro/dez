@@ -180,8 +180,10 @@ matching Workspace. Sessions with no working directory or no matching open root
 remain visible under **Other Running Sessions**. **Browse Running Sessions…**
 opens or refocuses Workspaces, clears temporary filters, expands matching
 groups, and refreshes every source.
-tmux and Herdr open the documented attach command in an ordinary Main Work Area
-terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
+tmux and Herdr open the documented attach command directly in an ordinary Main
+Work Area terminal. Opaque tmux identifiers such as `$0` and `$1` therefore
+reach tmux unchanged instead of being expanded by the user's login shell. A
+cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
@@ -231,9 +233,11 @@ scan is active queues one immediate follow-up scan rather than disappearing.
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
 success or the exact launch failure through a native toast and refreshes the
-external Session projection afterward. Missing-cmux and failure notices remain
-visible with one recovery action: **Get cmux** when it is absent, or **Open cmux
-API guide** when the installed CLI cannot complete the handoff.
+external Session projection afterward. If cmux is absent, Workspace Options
+replaces the handoff with **Get cmux…**. If an installed CLI cannot complete the
+handoff, the resulting native toast offers **Open cmux API guide**. tmux and
+Herdr remain available, navigation stays quiet, and Dez does not change their
+Sessions.
 
 For cmux installed from its DMG or Homebrew cask, Dez checks the CLI bundled at
 `/Applications/cmux.app/Contents/Resources/bin/cmux` as well as standard

@@ -96,6 +96,7 @@ impl TerminalLauncher {
             None => Self::NativeShell,
             Some(command) if command.eq_ignore_ascii_case("codex") => Self::Codex,
             Some(command) if command.eq_ignore_ascii_case("claude") => Self::ClaudeCode,
+            Some(command) if legacy_claude_resume_command(command) => Self::ClaudeCode,
             Some(command) if command.eq_ignore_ascii_case("opencode") => Self::OpenCode,
             Some(command) if command.eq_ignore_ascii_case("gemini") => Self::GeminiCli,
             Some(command) if command.eq_ignore_ascii_case("aider") => Self::Aider,
@@ -123,6 +124,17 @@ impl TerminalLauncher {
         };
         Some(preset.to_owned())
     }
+}
+
+fn legacy_claude_resume_command(command: &str) -> bool {
+    let mut tokens = command.split_ascii_whitespace();
+    let Some(executable) = tokens.next() else {
+        return false;
+    };
+    let executable = executable.rsplit(['/', '\\']).next().unwrap_or(executable);
+    executable.eq_ignore_ascii_case("claude")
+        && matches!(tokens.next(), Some("--continue" | "--resume"))
+        && tokens.next().is_none()
 }
 
 /// Threshold at which agent auto-compaction runs. See
@@ -978,6 +990,14 @@ mod tests {
         assert_eq!(
             TerminalLauncher::from_legacy_command(Some("tmux")),
             TerminalLauncher::Tmux
+        );
+        assert_eq!(
+            TerminalLauncher::from_legacy_command(Some("claude --continue")),
+            TerminalLauncher::ClaudeCode
+        );
+        assert_eq!(
+            TerminalLauncher::from_legacy_command(Some("/opt/homebrew/bin/claude --resume")),
+            TerminalLauncher::ClaudeCode
         );
         assert_eq!(
             TerminalLauncher::from_legacy_command(Some("my-agent --resume")),

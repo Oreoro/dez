@@ -5,6 +5,12 @@ Dez's native shell. It complements the visual review sheet with exact labels,
 ownership, state, and responsive behavior. When a rendered sketch and this
 document disagree, this document wins.
 
+The [tmux and Claude Code Navigation Wireframe](./tmux-claude-navigation-wireframe.md)
+tracks the remaining exploration around the Workspace → Pane → Tab hierarchy.
+Its activation-only **Open** projection and bounded **Sessions** feed are
+authoritative here; navigation mode and return recaps remain proposals until
+this contract is deliberately updated again.
+
 ## Product loop
 
 ```text
@@ -25,8 +31,8 @@ development environment, not a terminal dashboard and not a chat client.
 Window
 ├── Workspaces (optional global navigator)
 │   ├── Workspace rows
-│   ├── Sessions (live activity only)
-│   ├── Open Tabs & Tools (projection of the active Workspace)
+│   ├── Open (activation-only projection of the active Workspace)
+│   ├── Sessions (bounded running, actionable, recovery, or review signal)
 │   └── Workspace notices (bounded recovery states)
 ├── Main Work Area (authoritative native pane and tab model)
 │   ├── Home, files, diffs, search, Settings, browser, diagnostics
@@ -37,9 +43,9 @@ Window
 ```
 
 One Workspace owns every tab, tool, Session, and user-created pane associated
-with its codebase. A Workspace is not a list of terminals. **Open Tabs &
-Tools** reads the native pane model and activates its existing items; it never
-stores duplicate order, focus, close, pin, dirty, or split state.
+with its codebase. A Workspace is not a list of terminals. **Open** reads the
+native pane model and activates its existing items; it never stores duplicate
+order, focus, close, pin, dirty, or split state.
 
 ## Final wireframe
 
@@ -50,7 +56,7 @@ stores duplicate order, focus, close, pin, dirty, or split state.
 │ dez  main        │ Continue your work                                │
 │ 3 agents · 2 ports│ Run a tool, supervise its work, then review it.   │
 │                  │                                                    │
-│ Open Tabs & Tools│ Start with a tool          Recent Workspaces      │
+│ Open             │ Start with a tool          Recent Workspaces      │
 │  Home            │  Open Terminal · Default   superzed               │
 │  Codex · Working │  Codex                     website                │
 │  app.rs          │  Claude Code               infra                  │
@@ -78,7 +84,7 @@ provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
 │  Codex · Working │                                                         │
 │  Claude · Attention  Native TerminalView renders the provider TUI here.   │
 │  Terminal · Ready│  Dez does not place a custom chat renderer around it.  │
-│ Open Tabs & Tools│                                                         │
+│ Open             │                                                         │
 │  Codex · Working │                                                         │
 │  app.rs          │                                                         │
 │  Terminal        │                                                         │
@@ -103,9 +109,9 @@ never the only state signal.
 │  Codex · Working        │                                              │
 │  Claude · Attention     │ Terminal Details                             │
 │  Terminal · Ready       │ Provider · Herdr                             │
-│  tmux · Attach failed   │ Working directory · ~/code/dez               │
+│  Running Sessions · 2   │ Working directory · ~/code/dez               │
 │  Legacy · Access blocked│ Host generation · legacy                     │
-│ Open Tabs & Tools       │ Endpoint · offline                           │
+│ Open                    │ Endpoint · offline                           │
 │  Terminal · Failed      │ Ownership · external process unchanged       │
 │  Files · Diff · Git     │                                              │
 ├─────────────────────────┴──────────────────────────────────────────────┤
@@ -117,15 +123,16 @@ never the only state signal.
 expands groups with activity, refreshes discovery, and preserves the active
 Main Work Area tab. It never creates a duplicate Sessions page. Recovery is
 inline and states both cause and next action. Terminal Details is a disclosure
-within the terminal surface, not a floating inspector. Destructive legacy
-termination remains behind a native confirmation.
+within the terminal surface, not a floating inspector. An attach tab names tmux
+or Herdr as the external owner and describes itself only as the attach client.
+Destructive legacy termination remains behind a native confirmation.
 
 ### 4. Review and intentional split
 
 ```text
 ┌ Workspaces ──────┬ Diff · app.rs | app.rs | + ┬ Terminal | Files | Git | + ┐
 │ dez  main        │                              │                             │
-│ Open Tabs & Tools│ diff                         │ native terminal              │
+│ Open             │ diff                         │ native terminal              │
 │ Pane 1 · Focused │                              │ or review-adjacent tool      │
 │  Diff · app.rs   │                              │                             │
 │  app.rs          │                              │                             │
@@ -179,7 +186,7 @@ Workspaces supplies a quiet explanation rather than a duplicate button.
 │ │ terminals start.    │ │                                            │
 │ │ [Grant Access…]     │ │                                            │
 │ └─────────────────────┘ │                                            │
-│ Open Tabs & Tools       │                                            │
+│ Open                    │                                            │
 ├─────────────────────────┴────────────────────────────────────────────┤
 │ Workspace: dez | main | Permissions: Access required                │
 └──────────────────────────────────────────────────────────────────────┘
@@ -195,8 +202,8 @@ a Workspace, and Home does not mirror the notice over the Main Work Area.
 ```text
 ┌ Workspaces ─────┬ Settings ─ + ──────────────────────────────────────┐
 │ dez             │ Workspaces & Terminals │ Workspaces                │
-│ Open Tabs &     │ Agents                 │ Workspaces Position  Left │
-│ Tools           │ Appearance             │ Show on Startup       Off │
+│ Open            │ Agents                 │ Workspaces Position  Left │
+│                 │ Appearance             │ Show on Startup       Off │
 │  Settings       │ Workspace & Privacy    │───────────────────────────│
 │  Terminal       │ Keyboard & Vim         │ Terminal Launch           │
 │  Files          │ Editor                 │ Default Terminal           │
@@ -240,7 +247,7 @@ control's meaning or accessible identity.
 ┌ Workspaces ───────┬ + ──────────────────────────────────────────────┐
 │ dez · main        │ Main Work Area                                  │
 │                   │ Start a terminal or resume running work.         │
-│ No sessions yet   │ Files and Git review open as tabs here.          │
+│ No activity yet   │ Files and Git review open as tabs here.          │
 │                   │                                                  │
 │ superzed          │ [Open Terminal · Codex]                          │
 │ website           │ [Browse Sessions] [Find File] [Review Changes]   │
@@ -265,7 +272,7 @@ provider, or Custom Command—while the provider glyph reinforces that identity.
 │  Workspace tmux                   Diff · config.rs                        │
 │  Codex · Claude Code · OpenCode   Terminal · Pinned                       │
 │  More Agent CLIs ›                Settings                                │
-│  Continue Agent ›                                                         │
+│  Resume Existing Agent ›                                                  │
 │  Browse Running Sessions…                                                  │
 │  Open Workspace in cmux                                                   │
 │  Files · Review · Task · Debug                                             │
@@ -277,6 +284,18 @@ The two menus are alternate anchored native menus and never appear together in
 the product. `+` follows the final visible tab and remains pinned to the tab
 viewport edge during overflow. **Switch Tab** lists only the owning pane and
 preserves active, modified, and pinned meaning in text as well as icon state.
+
+Dez disables preview tabs by default so opening another file does not replace
+the previous file tab. Users may explicitly enable preview tabs for Zed-style
+single-click browsing. The Files titlebar control activates the existing Files
+tab; activating it again returns to the pane's most recently active different
+tab. It never opens a second Files drawer or changes the Workspace layout.
+
+The Add menu keeps **Sessions and Multiplexers** visible as a first-class
+group: **Workspace tmux**, **Browse Running Sessions…**, and the applicable
+**Open Workspace in cmux** handoff. **Open Terminal → Claude Code** always
+starts `claude`; **Resume Existing Agent → Claude Code · Last Session** is the
+separate opt-in `claude --continue` path.
 
 ### 11. Discover and supervise
 
@@ -436,7 +455,7 @@ session…** remains a context-menu action behind native confirmation.
 │ Sessions            │ Search this Workspace     │                             │
 │  Claude · Working   │ No matches                │                             │
 │  tmux · Attached    │ Broaden the query or      │                             │
-│ Open Tabs & Tools   │ remove path filters.      │                             │
+│ Open                │ remove path filters.      │                             │
 │  Pane 1             │                           │                             │
 │   Files · Search    │                           │                             │
 │  Pane 2             │                           │                             │
@@ -463,7 +482,7 @@ turning a healthy state into a warning.
 │  tmux · Attached    │                                                         │
 │  Task · test        │ ┌ Run Task ──────────────────────────────────────────┐  │
 │    Running          │ │ Find a task, or run a command                      │  │
-│ Open Tabs & Tools   │ │ test · test:unit · test:watch · fmt · clippy       │  │
+│ Open                │ │ test · test:unit · test:watch · fmt · clippy       │  │
 │  Pane 1             │ │ [Rerun Last Task]                            [Run] │  │
 │   main.rs           │ └────────────────────────────────────────────────────┘  │
 │   Task · test       │                                                         │
@@ -483,7 +502,7 @@ command path instead of a dead **No matches** message.
 ```text
 ┌ Workspaces ─────────┬ main.rs | Debug | + ───────────────────────────────────┐
 │ paykit              │ Start debugging                                       │
-│ Open Tabs & Tools   │ [Start Debug Session] [Configure debug.json]           │
+│ Open                │ [Start Debug Session] [Configure debug.json]           │
 │  Pane 1             │ Documentation · Adapter Logs                           │
 │   main.rs           ├───────────────────────────┬────────────────────────────┤
 │   Debug             │ Breakpoints               │ Console                    │
@@ -511,7 +530,7 @@ second Debug navigation system.
 │ Sessions            │ paykit · ~/dev/paykit                                  │
 │  Claude · Working   │ client-app · Access required     [Grant Folder Access] │
 │  tmux · Attached    │ Recent Workspaces unavailable                 [Retry]  │
-│ Open Tabs & Tools   │                                                        │
+│ Open                │                                                        │
 │  Pane 1 · Home      │ External tools                                         │
 │  Pane 2 ·           │ [Open Workspace in cmux]                               │
 │   Diagnostics       │ cmux owns its tabs, splits, and browser.               │
@@ -540,10 +559,10 @@ native tool, honest ownership, inline recovery**.
 | --- | --- | --- | --- | --- |
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
-| Open Tabs & Tools | Workspaces projection | return to an existing surface | expands with two or more tabs | hidden for one tab; pane labels only for real splits; overflow stays pane-scoped |
-| Sessions | Workspaces activity group | observe agents, tasks, tmux, Herdr, and cmux | Browse Running Sessions | source-specific Missing, Empty, Failed, Ready, or last-known state |
+| Open | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | visible for every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
+| Sessions | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; external work begins as one Running Sessions disclosure; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
-| Terminal Details | inline Terminal disclosure | inspect lifecycle, ownership, cwd, and evidence | terminal context strip | connection uncertainty never claims process death |
+| Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
 | Tasks | Main Work Area terminal tab | run a saved task or a one-shot command | tab `+`, command palette, pane Add | loading names Workspace inventory; empty and unmatched states explain the one-shot command path |
 | Agent Review | Main Work Area tab | inspect and decide agent edits | Review Changes, changed-file Review | pending edits disable decisions with an explanation; no custom overlay |
@@ -560,6 +579,9 @@ native tool, honest ownership, inline recovery**.
 - Use one primary action per state. Put secondary actions in ordinary rows or
   an overflow menu.
 - Use native Zed buttons, tabs, menus, prompts, focus, and theme tokens.
+- Use the shared density scale for top-bar, tab-bar, sidebar, and status-bar
+  controls. Navigation marks stay 12–14px in compact native targets; status
+  type remains supporting text and the Dez status bar scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
 - Preserve visible keyboard focus and a visual reading order that matches
@@ -583,20 +605,32 @@ native tool, honest ownership, inline recovery**.
 - The Main Work Area keeps at least 60% of the window width.
 - Workspaces may collapse or close; its state remains reachable from the
   labeled status-bar control.
+- Top and status chrome must change size together when Compact, Balanced, or
+  Spacious density changes; individual surfaces do not invent local scales.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
-- Open Tabs & Tools remains flat for one pane. With a user-created split it
-  groups by pane and names the focused pane.
+- Open stays flat for a single-pane Workspace and reports only the
+  open-item count. With a user-created split it adds the real pane count,
+  groups rows under **Pane 1**, **Pane 2**, and so on, and names the focused
+  pane in text. Selection styling and accessibility copy carry focused and
+  visible state without repeating an `Active` badge. Rows activate native tabs
+  but do not close, pin, reorder, drag, or split them.
 - Long detail text wraps inside the owning surface; it does not create a new
   persistent column.
+- Every curated Settings field has a registered native renderer. A missing
+  renderer or unresolved default is a release blocker; Dez falls back to the
+  native settings file instead of showing `NO RENDERER` or `NO DEFAULT` as a
+  control.
 
 ## Acceptance checklist
 
 - Every open panel, tool, terminal, file, diff, and browser surface is reachable
-  as a native tab and appears in Open Tabs & Tools when that projection is
-  useful.
+  as a native tab and appears in Open for the active Workspace.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
+- Sessions excludes inactive completed history while preserving active,
+  attention, recovery, and review-ready rows. Open remains the route to idle
+  open tabs and Agent History remains the route to completed Agent Sessions.
 - Empty Workspaces and search states expose one visually primary recovery;
   caught-up scope changes remain subordinate.
 - Native pane tabs remain the source of order, focus, dirty, close, and split
@@ -604,7 +638,8 @@ native tool, honest ownership, inline recovery**.
 - Agent review disclosures and decisions remain keyboard reachable, and Git
   History failure retries only the completed failed request.
 - Subagent supervision keeps state in text and opens the existing child Session.
-- Terminal Details expands inline and never obscures terminal output.
+- Terminal Details expands inline, summarizes Status, Agent or Process, Path,
+  Git, and Ownership, and never obscures or re-renders terminal output.
 - Provider and subagent glyphs use the shared icon family; lifecycle remains
   readable without color.
 - Empty, loading, permission, attach-failure, disconnected-host, and legacy

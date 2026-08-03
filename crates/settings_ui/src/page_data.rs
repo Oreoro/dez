@@ -252,7 +252,7 @@ fn terminal_session_init_setting_item() -> SettingsPageItem {
     SettingsPageItem::DynamicItem(DynamicItem {
         discriminant: SettingItem {
             title: "Default Terminal",
-            description: "Choose what Open Terminal and Ctrl+` start in each Workspace. Explicit launchers remain available from the native + and File menus.",
+            description: "Choose what Open Terminal and Ctrl+` start in each Workspace. Claude Code starts with `claude`; resume actions are separate. Every launcher remains available from the native + and File menus.",
             field: Box::new(SettingField {
                 organization_override: None,
                 json_path: Some("agent.terminal_launcher"),
