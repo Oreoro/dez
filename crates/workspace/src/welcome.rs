@@ -1,7 +1,7 @@
 use crate::{
-    BrowseRunningSessions, NewFile, Open, OpenFolder, OpenMode, PathList, RecentWorkspace,
-    RevealFiles, RevealGitChanges, SerializedWorkspaceLocation, Workspace, WorkspaceId,
-    WorkspaceSettings,
+    BrowseRunningSessions, MultiWorkspace, NewFile, Open, OpenFolder, OpenMode, PathList,
+    RecentWorkspace, RevealFiles, RevealGitChanges, SerializedWorkspaceLocation, Workspace,
+    WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -722,13 +722,23 @@ impl WelcomePage {
                                 DefaultOpenBehavior::ExistingWindow => OpenMode::Activate,
                                 DefaultOpenBehavior::NewWindow => OpenMode::NewWindow,
                             };
-                        self.workspace
-                            .update(cx, |workspace, cx| {
-                                workspace
-                                    .open_workspace_for_paths(open_mode, paths, window, cx)
-                                    .detach_and_log_err(cx);
-                            })
-                            .log_err();
+                        let Some(multi_workspace) =
+                            window.window_handle().downcast::<MultiWorkspace>()
+                        else {
+                            return;
+                        };
+                        // Opening can query the active item's toolbar state, so leave the
+                        // WelcomePage action update before changing the Workspace.
+                        cx.defer(move |cx| {
+                            if let Some(task) = multi_workspace
+                                .update(cx, |multi_workspace, window, cx| {
+                                    multi_workspace.open_project(paths, open_mode, window, cx)
+                                })
+                                .log_err()
+                            {
+                                task.detach_and_log_err(cx);
+                            }
+                        });
                     }
                     SerializedWorkspaceLocation::Remote(_) => {
                         window.dispatch_action(
