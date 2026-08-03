@@ -328,6 +328,9 @@ Live cmux discovery treats the documented process-only refusal as **activity
 sharing is off**, not as a failed terminal integration. Previously discovered
 rows remain last known, and an inline **Open API Guide** action explains the
 opt-in boundary without changing cmux configuration.
+If cmux is absent, Workspaces shows **cmux not installed** with **Get cmux**;
+tmux and Herdr remain available. Their attach clients execute directly so tmux
+identifiers such as `$0` are never expanded by the user's login shell.
 
 Last-known external rows are never attached blindly. Their action refreshes
 that source first; select a fresh row again before opening it. Retry resolves

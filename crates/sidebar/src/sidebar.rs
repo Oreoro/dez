@@ -21,10 +21,10 @@ use agent_ui::threads_archive_view::{
 use agent_ui::{
     AcpThreadImportOnboarding, Agent, AgentPanel, AgentPanelEvent, AgentThreadItem,
     AgentThreadSource, ArchiveSelectedThread, CanvasAgentUiSettings, ConversationView,
-    CrossChannelImportOnboarding, ExternalMultiplexerSession, ExternalSessionOpenMode,
-    MachineTerminalStore, ManageProfiles, MultiplexerKind, MultiplexerSessionState,
-    MultiplexerSessionStore, MultiplexerSourceAvailability, MultiplexerSourceIssue,
-    MultiplexerSourceStatus, NewTerminalThread, ObservedMachineTerminal,
+    CrossChannelImportOnboarding, ExternalMultiplexerSession, ExternalSessionCommand,
+    ExternalSessionOpenMode, MachineTerminalStore, ManageProfiles, MultiplexerKind,
+    MultiplexerSessionState, MultiplexerSessionStore, MultiplexerSourceAvailability,
+    MultiplexerSourceIssue, MultiplexerSourceStatus, NewTerminalThread, ObservedMachineTerminal,
     ObservedRepositoryEvidence, ObservedRunActivity, ObservedRunCheck, ObservedRunCheckStatus,
     ObservedRunCommand, ObservedWorkspaceEvidence, OpenAgentDiff, RenameSelectedThread,
     RunReviewBrief, RunReviewState, TerminalId, ThreadId, ThreadImportModal,
@@ -3818,6 +3818,44 @@ fn external_session_requires_workspace(
         && !has_matching_workspace
 }
 
+fn external_session_attach_spawn(
+    owner: &str,
+    session_id: &str,
+    working_directory: Option<PathBuf>,
+    open: ExternalSessionCommand,
+) -> SpawnInTerminal {
+    let ExternalSessionCommand {
+        program,
+        args,
+        label,
+        ..
+    } = open;
+    SpawnInTerminal {
+        id: TaskId(format!("dez-external-session:{owner}:{session_id}")),
+        full_label: label.clone(),
+        label: label.clone(),
+        command: None,
+        args: Vec::new(),
+        command_label: label.clone(),
+        cwd: working_directory,
+        env: HashMap::default(),
+        use_new_terminal: true,
+        allow_concurrent_runs: true,
+        reveal: RevealStrategy::Always,
+        reveal_target: RevealTarget::Center,
+        hide: HideStrategy::Never,
+        shell: Shell::WithArguments {
+            program,
+            args,
+            title_override: Some(label),
+        },
+        show_summary: false,
+        show_command: false,
+        show_rerun: true,
+        save: SaveStrategy::None,
+    }
+}
+
 fn best_local_project_group_for_path<'a>(
     working_directory: &Path,
     project_group_keys: &'a [ProjectGroupKey],
@@ -3915,6 +3953,42 @@ mod external_multiplexer_project_group_tests {
     }
 
     #[test]
+    fn external_attach_executes_the_multiplexer_without_shell_expansion() {
+        let spawn = external_session_attach_spawn(
+            "tmux",
+            "tmux:$1",
+            Some(PathBuf::from("/workspace/dez")),
+            ExternalSessionCommand {
+                program: "/opt/homebrew/bin/tmux".to_owned(),
+                args: vec![
+                    "attach-session".to_owned(),
+                    "-t".to_owned(),
+                    "$1".to_owned(),
+                ],
+                label: "Attach compiler".to_owned(),
+                mode: ExternalSessionOpenMode::AttachInTerminal,
+            },
+        );
+
+        assert_eq!(spawn.command, None);
+        assert!(spawn.args.is_empty());
+        assert_eq!(spawn.id, TaskId("dez-external-session:tmux:tmux:$1".into()));
+        assert_eq!(spawn.cwd, Some(PathBuf::from("/workspace/dez")));
+        assert_eq!(
+            spawn.shell,
+            Shell::WithArguments {
+                program: "/opt/homebrew/bin/tmux".to_owned(),
+                args: vec![
+                    "attach-session".to_owned(),
+                    "-t".to_owned(),
+                    "$1".to_owned(),
+                ],
+                title_override: Some("Attach compiler".to_owned()),
+            }
+        );
+    }
+
+    #[test]
     fn empty_external_session_copy_distinguishes_setup_from_activity() {
         let missing = [
             source_status(
@@ -3968,6 +4042,35 @@ mod external_multiplexer_project_group_tests {
         assert_eq!(
             other_running_sessions_empty_label(false, &ready),
             "All running sessions belong to open Workspaces"
+        );
+    }
+
+    #[test]
+    fn cmux_status_distinguishes_missing_setup_from_private_activity() {
+        let missing = cmux_integration_status_presentation(
+            MultiplexerSourceAvailability::MissingExecutable,
+            false,
+        )
+        .expect("missing cmux should have a setup presentation");
+        assert_eq!(missing.title, "cmux not installed");
+        assert_eq!(missing.action_label, "Get cmux");
+        assert_eq!(missing.action_url, CMUX_WEBSITE_URL);
+
+        let access_required = cmux_integration_status_presentation(
+            MultiplexerSourceAvailability::AccessRequired,
+            false,
+        )
+        .expect("private cmux activity should have an access presentation");
+        assert_eq!(access_required.title, "cmux activity sharing is off");
+        assert_eq!(access_required.action_label, "Open API Guide");
+        assert_eq!(access_required.action_url, CMUX_API_GUIDE_URL);
+
+        assert!(
+            cmux_integration_status_presentation(
+                MultiplexerSourceAvailability::AvailableEmpty,
+                false,
+            )
+            .is_none()
         );
     }
 }
@@ -4097,6 +4200,51 @@ fn other_running_sessions_empty_label(
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 const CMUX_API_GUIDE_URL: &str = "https://cmux.com/docs/api";
 const CMUX_WEBSITE_URL: &str = "https://cmux.com";
+
+struct CmuxIntegrationStatusPresentation {
+    title: &'static str,
+    description: &'static str,
+    action_label: &'static str,
+    action_aria_label: &'static str,
+    action_tooltip: &'static str,
+    action_url: &'static str,
+}
+
+fn cmux_integration_status_presentation(
+    availability: MultiplexerSourceAvailability,
+    had_successful_scan: bool,
+) -> Option<CmuxIntegrationStatusPresentation> {
+    match availability {
+        MultiplexerSourceAvailability::MissingExecutable => {
+            Some(CmuxIntegrationStatusPresentation {
+                title: "cmux not installed",
+                description: "Install cmux if you want to open this Workspace there. tmux and Herdr remain available, and Dez never changes external sessions.",
+                action_label: "Get cmux",
+                action_aria_label: "Open the cmux website",
+                action_tooltip: "Open the official cmux website",
+                action_url: CMUX_WEBSITE_URL,
+            })
+        }
+        MultiplexerSourceAvailability::AccessRequired => {
+            let description = if had_successful_scan {
+                "cmux stopped sharing live Workspace activity with Dez. Last-known rows remain visible; Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows. Dez never changes this setting."
+            } else {
+                "cmux is installed and keeping its secure process-only API boundary. Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows in Dez. Dez never changes this setting."
+            };
+            Some(CmuxIntegrationStatusPresentation {
+                title: "cmux activity sharing is off",
+                description,
+                action_label: "Open API Guide",
+                action_aria_label: "Open cmux API and Access Guide",
+                action_tooltip: "Open cmux API and Access Guide",
+                action_url: CMUX_API_GUIDE_URL,
+            })
+        }
+        MultiplexerSourceAvailability::AvailableEmpty
+        | MultiplexerSourceAvailability::Failed
+        | MultiplexerSourceAvailability::Ready => None,
+    }
+}
 
 #[derive(Debug)]
 pub enum CmuxWorkspaceHandoffError {
@@ -16063,31 +16211,12 @@ impl Sidebar {
             return;
         }
 
-        let task_id = TaskId(format!(
-            "dez-external-session:{}:{}",
+        let spawn = external_session_attach_spawn(
             session.kind.display_name(),
-            session.id
-        ));
-        let spawn = SpawnInTerminal {
-            id: task_id,
-            full_label: open.label.clone(),
-            label: open.label.clone(),
-            command: Some(open.program),
-            args: open.args,
-            command_label: open.label,
-            cwd: session.working_directory.clone(),
-            env: HashMap::default(),
-            use_new_terminal: true,
-            allow_concurrent_runs: true,
-            reveal: RevealStrategy::Always,
-            reveal_target: RevealTarget::Center,
-            hide: HideStrategy::Never,
-            shell: Shell::System,
-            show_summary: false,
-            show_command: false,
-            show_rerun: true,
-            save: SaveStrategy::None,
-        };
+            &session.id,
+            session.working_directory.clone(),
+            open,
+        );
 
         let weak_workspace = target_workspace.downgrade();
         let session_title = session.title.clone();
@@ -17603,33 +17732,26 @@ impl Sidebar {
         )
     }
 
-    fn render_cmux_access_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_cmux_integration_status(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let store = MultiplexerSessionStore::try_global(cx)?;
         let status = store.read(cx).source_status(MultiplexerKind::Cmux)?.clone();
-        if status.availability != MultiplexerSourceAvailability::AccessRequired {
-            return None;
-        }
-
-        let description = if status.had_successful_scan {
-            "cmux stopped sharing live Workspace activity with Dez. Last-known rows remain visible; Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows. Dez never changes this setting."
-        } else {
-            "cmux is installed and keeping its secure process-only API boundary. Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows in Dez. Dez never changes this setting."
-        };
+        let presentation =
+            cmux_integration_status_presentation(status.availability, status.had_successful_scan)?;
 
         Some(
             Callout::new()
                 .severity(Severity::Info)
                 .icon(IconName::Screen)
-                .title("cmux activity sharing is off")
-                .description(description)
+                .title(presentation.title)
+                .description(presentation.description)
                 .actions_slot(
-                    Button::new("open-cmux-api-guide", "Open API Guide")
+                    Button::new("open-cmux-integration-guide", presentation.action_label)
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Outlined)
                         .tab_index(0isize)
-                        .aria_label("Open cmux API and Access Guide")
-                        .tooltip(Tooltip::text("Open cmux API and Access Guide"))
-                        .on_click(|_, _window, cx| cx.open_url(CMUX_API_GUIDE_URL)),
+                        .aria_label(presentation.action_aria_label)
+                        .tooltip(Tooltip::text(presentation.action_tooltip))
+                        .on_click(move |_, _window, cx| cx.open_url(presentation.action_url)),
                 )
                 .into_any_element(),
         )
@@ -17811,8 +17933,8 @@ impl Sidebar {
         if let Some(terminal_host_status) = self.render_terminal_host_status(cx) {
             notices.push(terminal_host_status);
         }
-        if let Some(cmux_access_status) = self.render_cmux_access_status(cx) {
-            notices.push(cmux_access_status);
+        if let Some(cmux_integration_status) = self.render_cmux_integration_status(cx) {
+            notices.push(cmux_integration_status);
         }
         if let Some(external_activity_status) = self.render_external_activity_status(cx) {
             notices.push(external_activity_status);

@@ -924,7 +924,9 @@ no-op.
 Dez discovers tmux sessions through the documented CLI format, asks Herdr's JSON
 session registry which endpoints are live before using its snapshot API, and
 discovers cmux Workspaces through its JSON CLI. tmux and Herdr open their
-documented attach command in a normal terminal Surface.
+documented attach command in a normal terminal Surface. Dez executes that
+client directly, so opaque tmux identifiers such as `$0` and `$1` reach tmux
+unchanged instead of being expanded by the user's login shell.
 cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh Running Sessions** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
@@ -933,6 +935,9 @@ Attach terminals keep the native rerun control. Failure shows an explicit
 **Retry Attach** action and refreshes discovery after completion without
 starting a duplicate attach automatically. Raw Herdr shells without structured
 agent state are labeled **Available**, not unknown.
+When cmux is not discoverable, Workspaces shows **cmux not installed** with a
+single **Get cmux** action; tmux and Herdr remain usable and no external Session
+is changed.
 The external application remains authoritative; closing a Dez tab detaches,
 Herdr never receives automatic takeover, and Workspaces never becomes a second
 process, transcript, or layout owner.

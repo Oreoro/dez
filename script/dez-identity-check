@@ -550,6 +550,12 @@ require_multiline_pattern docs/src/dez.md \
     '### External session prerequisites and troubleshooting.*?Install tmux, Herdr, or cmux to browse running sessions.*?Running session discovery needs attention.*?No running session matches this Workspace.*?Other Running Sessions.*?No running tmux,[[:space:]]+Herdr, or cmux sessions.*?/opt/homebrew/bin/tmux.*?/Applications.*?cmux\.app.*?\*\*Retry\*\*.*?Refresh Running Sessions.*?last[[:space:]]+known.*?Retry Attach' \
     'the public guide can lose actionable tmux, Herdr, and cmux prerequisites or recovery'
 require_multiline_pattern docs/src/dez.md \
+    'tmux and Herdr open their.*?documented attach command.*?executes that[[:space:]]+client directly.*?`\$0`.*?`\$1`.*?login shell.*?cmux not installed.*?Get cmux.*?tmux and Herdr remain usable.*?no external Session[[:space:]]+is changed' \
+    'the public guide can regress to hiding literal multiplexer attachment or optional cmux setup behavior'
+require_multiline_pattern docs/src/terminal.md \
+    'tmux and Herdr open the documented attach command directly.*?`\$0`.*?`\$1`.*?login shell.*?Get cmux.*?cmux not installed.*?tmux and Herdr remain available.*?does not change their Sessions' \
+    'the terminal guide can regress to hiding literal tmux identifiers or truthful missing-cmux recovery'
+require_multiline_pattern docs/src/dez.md \
     'Open Workspace tmux.*?primary Workspace root.*?stable root identity.*?same folder name.*?cannot attach to one[[:space:]]+another.*?basename-only.*?active pane is inside the current Workspace root.*?never[[:space:]]+renames or terminates that session' \
     'the public guide can regress to basename-colliding tmux identity or claim destructive legacy migration'
 require_multiline_pattern docs/src/dez.md \
@@ -934,7 +940,7 @@ require_multiline_pattern crates/settings_ui/src/pages/external_agents_page.rs \
     'fn get_agent_server_store.*?settings_window\.active_project\(cx\)\?.*?project\.read\(cx\)\.agent_server_store\(\)\.clone\(\).*?fn open_new_custom_agent_in_settings.*?multi_workspace\.workspace\(\)\.downgrade\(\)' \
     'external-agent Settings can regress to an empty launchpad or a background Workspace'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn external_multiplexer_project_match_score.*?local_project_group_match_score\(session\.working_directory\.as_deref\(\)\?.*?fn local_project_group_match_score.*?project_group_key\.host\(\)\.is_some\(\).*?path_list\(\).*?paths\(\).*?working_directory\.starts_with\(root\).*?fn external_multiplexer_project_group.*?best_local_project_group_for_path\(session\.working_directory\.as_deref\(\)\?.*?fn best_local_project_group_for_path.*?max_by_key.*?map\(\|\(_, project_group_key\)\| project_group_key\).*?fn most_specific_workspace_root_owns_external_session.*?/workspace/dez/crates/sidebar.*?project_group_keys\.get\(1\).*?if APP_NAME != "Zed".*?explicitly discovered multiplexer sessions remain available.*?Other Running Sessions.*?machine_terminals\.clear\(\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?util::command::new_command.*?use_new_terminal: true.*?RevealTarget::Center' \
+    'fn external_multiplexer_project_match_score.*?local_project_group_match_score\(session\.working_directory\.as_deref\(\)\?.*?fn local_project_group_match_score.*?project_group_key\.host\(\)\.is_some\(\).*?path_list\(\).*?paths\(\).*?working_directory\.starts_with\(root\).*?fn external_multiplexer_project_group.*?best_local_project_group_for_path\(session\.working_directory\.as_deref\(\)\?.*?fn external_session_attach_spawn.*?use_new_terminal: true.*?RevealTarget::Center.*?fn best_local_project_group_for_path.*?max_by_key.*?map\(\|\(_, project_group_key\)\| project_group_key\).*?fn most_specific_workspace_root_owns_external_session.*?/workspace/dez/crates/sidebar.*?project_group_keys\.get\(1\).*?if APP_NAME != "Zed".*?explicitly discovered multiplexer sessions remain available.*?Other Running Sessions.*?machine_terminals\.clear\(\).*?fn open_external_multiplexer_session.*?ExternalSessionOpenMode::RevealExternal.*?util::command::new_command' \
     'Dez can regress to leaking unrelated terminal activity into Workspaces or taking external process ownership'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn external_session_requires_workspace.*?ExternalSessionOpenMode::AttachInTerminal.*?has_working_directory.*?!has_matching_workspace.*?local external sessions must never activate a lexically matching remote Workspace.*?fn open_external_multiplexer_session_in_workspace.*?project_group_keys\(\)\.to_vec\(\).*?external_multiplexer_project_group.*?workspace_for_paths.*?external_session_requires_workspace.*?open_workspace_and_attach_external_session.*?fn open_workspace_and_attach_external_session.*?PathList::new.*?ProjectGroupKey::new\(None.*?find_or_create_workspace.*?OpenMode::Activate.*?Ok\(workspace\).*?open_external_multiplexer_session_in_workspace.*?Some\(workspace\).*?Could not open the Workspace for.*?external session was not changed' \
@@ -982,7 +988,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'CMUX_HANDOFF_TIMEOUT.*?from_secs\(8\).*?async fn run_bounded_cmux_command.*?kill_on_drop\(true\).*?executor\.timer\(CMUX_HANDOFF_TIMEOUT\).*?futures::future::select.*?cmux did not respond within.*?pub async fn open_workspace_path_in_cmux.*?run_bounded_cmux_command.*?This Workspace is still open in Dez\..*?open_workspace_path_in_cmux\(&path, &handoff_executor\)\.await.*?ExternalSessionOpenMode::RevealExternal.*?run_bounded_cmux_command\(&mut command, &handoff_executor\)\.await' \
     'the explicit cmux Workspace handoff can regress to an unbounded Opening state'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn open_external_multiplexer_session.*?show_rerun: true.*?Retry Attach.*?open_external_multiplexer_session.*?store\.refresh\(cx\)' \
+    'fn external_session_attach_spawn.*?show_rerun: true.*?fn open_external_multiplexer_session.*?Retry Attach.*?open_external_multiplexer_session.*?store\.refresh\(cx\)' \
     'tmux and Herdr attach failures can regress to a dead terminal with no manual retry or refresh'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn external_multiplexer_action_label.*?is_last_known.*?Refresh.*?before opening this last-known session.*?fn open_external_multiplexer_session.*?session\.is_last_known.*?Refreshing.*?Select it again when current.*?No terminal provider was available for this Workspace.*?retry_external_multiplexer_session.*?find\(\|session\| session\.id == session_id\).*?That external session is no longer available.*?let action_icon = if session\.is_last_known\(\).*?IconName::ArrowCircle' \
@@ -1000,8 +1006,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn external_activity_issue_description.*?Last-known rows stay visible\..*?No current rows are shown\..*?fn render_external_activity_status.*?source_issues\(\).*?terminal integrations unavailable.*?Callout::new\(\).*?Severity::Warning.*?Button::new\("retry-external-activity", "Retry"\).*?Retry External Terminal Discovery.*?store\.refresh\(cx\).*?render_session_notices.*?render_external_activity_status' \
     'tmux, Herdr, or cmux discovery failures can regress to silent logs without one native retry surface'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'CMUX_API_GUIDE_URL.*?https://cmux\.com/docs/api.*?fn render_cmux_access_status.*?MultiplexerKind::Cmux.*?MultiplexerSourceAvailability::AccessRequired.*?Open Workspace in cmux still works.*?Dez never changes this setting.*?Callout::new\(\).*?Severity::Info.*?cmux activity sharing is off.*?Button::new\("open-cmux-api-guide", "Open API Guide"\).*?cx\.open_url\(CMUX_API_GUIDE_URL\).*?render_session_notices.*?render_cmux_access_status' \
-    'cmux secure-default privacy can regress to a warning overlay, dead-end copy, or missing official access guidance'
+    'CMUX_API_GUIDE_URL.*?https://cmux\.com/docs/api.*?CMUX_WEBSITE_URL.*?https://cmux\.com.*?fn cmux_integration_status_presentation.*?MultiplexerSourceAvailability::MissingExecutable.*?cmux not installed.*?Get cmux.*?CMUX_WEBSITE_URL.*?MultiplexerSourceAvailability::AccessRequired.*?Open Workspace in cmux still works.*?Dez never changes this setting.*?cmux activity sharing is off.*?Open API Guide.*?CMUX_API_GUIDE_URL.*?fn render_cmux_integration_status.*?Callout::new\(\).*?Severity::Info.*?open-cmux-integration-guide.*?cx\.open_url\(presentation\.action_url\).*?render_session_notices.*?render_cmux_integration_status' \
+    'cmux integration setup can regress to a warning overlay, dead-end copy, or missing official setup and access guidance'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_workspace_access_status.*?WorkspaceAccessState::AccessRequired.*?Workspace access required.*?Grant Access….*?let workspace_access_required = matches!.*?WorkspaceAccessState::AccessRequired.*?let has_supervision_or_recovery.*?workspace_access_required.*?terminal_host_needs_recovery;.*?render_session_notices.*?render_workspace_access_status' \
     'Workspace access recovery can regress to a Home overlay or disappear when restored Workspaces reconcile visibility'
@@ -1192,8 +1198,11 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_details_ownership_note.*?has_persistent_owner && !host_connection_verified.*?Ownership · Dez Terminal Host · Connection unavailable; detaching preserves the Session record.*?Ownership · Dez Terminal Host · Closing this tab detaches the Session.*?Ownership · Workspace · Closing Dez ends this process' \
     'Terminal Details can regress to making an unsafe process-ownership claim'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    '"dez-external-session:\{\}:\{\}".*?session\.kind\.display_name\(\).*?session\.id' \
-    'external attach tasks no longer carry their multiplexer owner into Terminal Details'
+    'fn external_session_attach_spawn.*?"dez-external-session:\{owner\}:\{session_id\}".*?command: None.*?args: Vec::new\(\).*?shell: Shell::WithArguments.*?program.*?args.*?title_override.*?fn external_attach_executes_the_multiplexer_without_shell_expansion.*?"\$1"' \
+    'external attach tasks can regress to losing ownership metadata or expanding opaque multiplexer IDs through the login shell'
+reject_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn external_session_attach_spawn.*?shell: Shell::System' \
+    'external multiplexer attachment can regress to passing opaque session IDs through the login shell'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn external_session_owner_from_task_id.*?strip_prefix\("dez-external-session:"\).*?fn terminal_details_ownership_note_with_external_owner.*?remains external.*?owns only the attach client.*?external_session_owner_from_task_id\(&task\.spawned_task\.id\.0\)' \
     'Terminal Details can regress to claiming ownership of an externally owned multiplexer session'

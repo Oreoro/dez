@@ -180,8 +180,10 @@ matching Workspace. Sessions with no working directory or no matching open root
 remain visible under **Other Running Sessions**. **Browse Running Sessions…**
 opens or refocuses Workspaces, clears temporary filters, expands matching
 groups, and refreshes every source.
-tmux and Herdr open the documented attach command in an ordinary Main Work Area
-terminal. A cmux Workspace opens in cmux through `select-workspace`; Dez does
+tmux and Herdr open the documented attach command directly in an ordinary Main
+Work Area terminal. Opaque tmux identifiers such as `$0` and `$1` therefore
+reach tmux unchanged instead of being expanded by the user's login shell. A
+cmux Workspace opens in cmux through `select-workspace`; Dez does
 not manufacture an attachment terminal for it. The external application
 remains authoritative, closing a Dez tab detaches rather than terminates, and
 Dez never requests a Herdr takeover automatically.
@@ -234,6 +236,8 @@ success or the exact launch failure through a native toast and refreshes the
 external Session projection afterward. Missing-cmux and failure notices remain
 visible with one recovery action: **Get cmux** when it is absent, or **Open cmux
 API guide** when the installed CLI cannot complete the handoff.
+Workspaces also keeps **cmux not installed** visible while cmux is missing;
+tmux and Herdr remain available and Dez does not change their Sessions.
 
 For cmux installed from its DMG or Homebrew cask, Dez checks the CLI bundled at
 `/Applications/cmux.app/Contents/Resources/bin/cmux` as well as standard
