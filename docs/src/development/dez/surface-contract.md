@@ -123,8 +123,9 @@ never the only state signal.
 expands groups with activity, refreshes discovery, and preserves the active
 Main Work Area tab. It never creates a duplicate Sessions page. Recovery is
 inline and states both cause and next action. Terminal Details is a disclosure
-within the terminal surface, not a floating inspector. Destructive legacy
-termination remains behind a native confirmation.
+within the terminal surface, not a floating inspector. An attach tab names tmux
+or Herdr as the external owner and describes itself only as the attach client.
+Destructive legacy termination remains behind a native confirmation.
 
 ### 4. Review and intentional split
 
@@ -561,7 +562,7 @@ native tool, honest ownership, inline recovery**.
 | Tabs & Panels | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | visible for every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
 | Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; completed history remains in Agent History; external sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
-| Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; terminal output remains authoritative and unobscured |
+| Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
 | Tasks | Main Work Area terminal tab | run a saved task or a one-shot command | tab `+`, command palette, pane Add | loading names Workspace inventory; empty and unmatched states explain the one-shot command path |
 | Agent Review | Main Work Area tab | inspect and decide agent edits | Review Changes, changed-file Review | pending edits disable decisions with an explanation; no custom overlay |

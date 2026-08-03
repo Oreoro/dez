@@ -485,6 +485,28 @@ fn terminal_details_ownership_note(
     }
 }
 
+fn external_session_owner_from_task_id(task_id: &str) -> Option<&str> {
+    task_id
+        .strip_prefix("dez-external-session:")?
+        .split_once(':')
+        .map(|(owner, _)| owner)
+        .filter(|owner| !owner.is_empty())
+}
+
+fn terminal_details_ownership_note_with_external_owner(
+    has_persistent_owner: bool,
+    host_connection_verified: bool,
+    external_owner: Option<&str>,
+) -> String {
+    if let Some(external_owner) = external_owner {
+        format!(
+            "Ownership · {external_owner} remains external · This tab owns only the attach client."
+        )
+    } else {
+        terminal_details_ownership_note(has_persistent_owner, host_connection_verified).to_owned()
+    }
+}
+
 fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
     let title = title.trim();
     if app_name == "Zed" || title.is_empty() || title == "Terminal" {
@@ -3193,8 +3215,14 @@ impl TerminalView {
             "Review {changed_files} changed {}",
             if changed_files == 1 { "file" } else { "files" }
         );
-        let ownership_note =
-            terminal_details_ownership_note(has_persistent_owner, host_connection_verified);
+        let external_owner = terminal
+            .task()
+            .and_then(|task| external_session_owner_from_task_id(&task.spawned_task.id.0));
+        let ownership_note = terminal_details_ownership_note_with_external_owner(
+            has_persistent_owner,
+            host_connection_verified,
+            external_owner,
+        );
         let details_toggle = Button::new(
             ("terminal-session-details-trigger", terminal_entity_id),
             details_visible_label,
@@ -4982,6 +5010,19 @@ mod tests {
         assert_eq!(
             terminal_details_ownership_note(true, false),
             "Ownership · Dez Terminal Host · Connection unavailable; detaching preserves the Session record."
+        );
+        assert_eq!(
+            external_session_owner_from_task_id("dez-external-session:tmux:$0"),
+            Some("tmux")
+        );
+        assert_eq!(
+            external_session_owner_from_task_id("dez-external-session:Herdr:session-1"),
+            Some("Herdr")
+        );
+        assert_eq!(external_session_owner_from_task_id("terminal:task"), None);
+        assert_eq!(
+            terminal_details_ownership_note_with_external_owner(false, false, Some("tmux")),
+            "Ownership · tmux remains external · This tab owns only the attach client."
         );
         assert_eq!(
             terminal_surface_tab_label("Dez", "Codex"),

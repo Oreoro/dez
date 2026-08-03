@@ -16063,7 +16063,11 @@ impl Sidebar {
             return;
         }
 
-        let task_id = TaskId(format!("dez-external-session:{}", session.id));
+        let task_id = TaskId(format!(
+            "dez-external-session:{}:{}",
+            session.kind.display_name(),
+            session.id
+        ));
         let spawn = SpawnInTerminal {
             id: task_id,
             full_label: open.label.clone(),
