@@ -1,6 +1,6 @@
 use crate::{
     DesignSystemSettings, ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleSidebar,
-    sidebar_side_context_menu,
+    sidebar_header_control_metrics, sidebar_side_context_menu,
 };
 use gpui::{
     Anchor, AnyView, App, Context, Decorations, Entity, FocusHandle, Focusable, IntoElement,
@@ -392,6 +392,8 @@ impl StatusBar {
         let accessibility_label =
             sidebar_toggle_accessibility_label(APP_NAME, open, has_notifications);
         let visible_label = sidebar_toggle_visible_label(APP_NAME, sidebar.workspace_name.as_ref());
+        let (control_size, icon_size) =
+            sidebar_header_control_metrics(APP_NAME, DesignSystemSettings::get_global(cx).density);
 
         let toggle = sidebar_side_context_menu("sidebar-status-toggle-menu", cx)
             .anchor(if on_right {
@@ -414,14 +416,12 @@ impl StatusBar {
 
                 if let Some(visible_label) = visible_label {
                     Button::new("toggle-workspace-sidebar", visible_label)
-                        .start_icon(Icon::new(icon).size(IconSize::XSmall).color(
-                            if has_notifications {
-                                Color::Accent
-                            } else {
-                                Color::Muted
-                            },
-                        ))
-                        .size(ButtonSize::Compact)
+                        .start_icon(Icon::new(icon).size(icon_size).color(if has_notifications {
+                            Color::Accent
+                        } else {
+                            Color::Muted
+                        }))
+                        .size(control_size)
                         .label_size(LabelSize::Small)
                         .tab_index(0isize)
                         .aria_label(accessibility_label)

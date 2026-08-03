@@ -2096,3 +2096,34 @@ shell syntax, source identity, and diff hygiene. No local compilation, test
 binary, app launch, package, or installed-runtime claim is permitted. Exact
 compilation, tests, packaging, and rendered validation remain GitHub Actions
 and installed-candidate gates.
+
+## 2026-08-03: Apple M2 Preview baseline and shared chrome density
+
+GitHub Actions run
+[`30819926966`](https://github.com/Oreoro/dez/actions/runs/30819926966)
+completed for exact source `cdd4dcab1e616ddb70cad18691959179211fdfcf`.
+The optimized Apple M2 build, packaged entry-point checks, and artifact upload
+all passed. Artifact `Dez-preview-macOS-M2-cdd4dcab1e616ddb70cad18691959179211fdfcf`
+reported:
+
+- `Dez: v0.4.0+preview.91.cdd4dcab1e616ddb70cad18691959179211fdfcf
+  (Dez Preview)` from the packaged application;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, and version
+  `0.4.0`;
+- packaged `dez`, `cli`, `dez-terminal-host`, and Git helper executables; and
+- DMG checksum
+  `5f6a6e5deef02772a5ae127cd46eb43c986254a0be0790128c0f14a1ece5e064`.
+
+The manifest explicitly identifies the artifact as an ad-hoc signed Preview,
+not a notarized Stable release. Its runtime smoke proves packaged entry points
+and identity, not the complete installed UI, permission, terminal restoration,
+or visual acceptance matrix.
+
+Later source commits `6b6ef7944e` and `f2399aa569` make native pane, Workspace
+navigation, and status controls consume the shared Compact, Balanced, and
+Spacious metrics. Compact tab controls no longer exceed their 24 px strip;
+Open rows and the labeled Workspaces recovery control scale with their owning
+chrome. Rust formatting, shell syntax, source identity, and diff hygiene are
+the only local evidence for that later source. The successful baseline artifact
+predates those density changes and is not promoted as their runtime proof.
