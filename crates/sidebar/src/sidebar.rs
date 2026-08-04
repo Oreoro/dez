@@ -1289,6 +1289,13 @@ fn workspace_activity_multiplexer_visible(app_name: &str, state: MultiplexerSess
     app_name == "Zed" || state != MultiplexerSessionState::Completed
 }
 
+fn external_multiplexer_attention_visible(
+    state: MultiplexerSessionState,
+    is_last_known: bool,
+) -> bool {
+    state == MultiplexerSessionState::NeedsAttention || is_last_known
+}
+
 fn workspace_activity_section_visible(
     app_name: &str,
     is_sticky: bool,
@@ -2997,6 +3004,18 @@ mod session_start_state_tests {
         assert!(workspace_activity_multiplexer_visible(
             "Dez",
             MultiplexerSessionState::Unknown,
+        ));
+        assert!(external_multiplexer_attention_visible(
+            MultiplexerSessionState::NeedsAttention,
+            false,
+        ));
+        assert!(external_multiplexer_attention_visible(
+            MultiplexerSessionState::Available,
+            true,
+        ));
+        assert!(!external_multiplexer_attention_visible(
+            MultiplexerSessionState::Available,
+            false,
         ));
         assert!(workspace_activity_section_visible(
             "Dez", false, false, true,
@@ -6723,8 +6742,9 @@ impl Sidebar {
         }
         let machine_terminal_count = machine_terminals.len();
         if self.attention_only {
-            multiplexer_sessions
-                .retain(|session| session.state == MultiplexerSessionState::NeedsAttention);
+            multiplexer_sessions.retain(|session| {
+                external_multiplexer_attention_visible(session.state, session.is_last_known())
+            });
             machine_terminals.clear();
         }
 
@@ -7695,7 +7715,9 @@ impl Sidebar {
             });
             attention_thread_count += external_sessions
                 .iter()
-                .filter(|session| session.state == MultiplexerSessionState::NeedsAttention)
+                .filter(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                })
                 .count();
             let has_visible_rows =
                 !threads.is_empty() || !terminals.is_empty() || !external_sessions.is_empty();
@@ -7789,9 +7811,9 @@ impl Sidebar {
                 let has_terminal_notifications = matched_terminals
                     .iter()
                     .any(|terminal| terminal.needs_attention);
-                let has_external_notifications = external_sessions
-                    .iter()
-                    .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
+                let has_external_notifications = external_sessions.iter().any(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                });
                 visible_multiplexer_session_ids
                     .extend(external_sessions.iter().map(|session| session.id.clone()));
                 let mut activity_entries = Vec::new();
@@ -7843,9 +7865,9 @@ impl Sidebar {
 
                 let has_terminal_notifications =
                     terminals.iter().any(|terminal| terminal.needs_attention);
-                let has_external_notifications = external_sessions
-                    .iter()
-                    .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
+                let has_external_notifications = external_sessions.iter().any(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                });
                 visible_multiplexer_session_ids
                     .extend(external_sessions.iter().map(|session| session.id.clone()));
 
@@ -7990,7 +8012,10 @@ impl Sidebar {
                 .iter()
                 .filter(|session| {
                     visible_multiplexer_session_ids.contains(&session.id)
-                        && session.state == MultiplexerSessionState::NeedsAttention
+                        && external_multiplexer_attention_visible(
+                            session.state,
+                            session.is_last_known(),
+                        )
                 })
                 .count();
         let has_attention = attention_count > 0;
@@ -8975,9 +9000,10 @@ impl Sidebar {
                                         Icon::new(external_multiplexer_icon(session))
                                             .size(IconSize::XSmall)
                                             .color(
-                                                if session.state
-                                                    == MultiplexerSessionState::NeedsAttention
-                                                {
+                                                if external_multiplexer_attention_visible(
+                                                    session.state,
+                                                    session.is_last_known(),
+                                                ) {
                                                     Color::Warning
                                                 } else {
                                                     Color::Muted
@@ -9037,8 +9063,7 @@ impl Sidebar {
             let external_sessions_attention_count = external_sessions
                 .iter()
                 .filter(|session| {
-                    session.state == MultiplexerSessionState::NeedsAttention
-                        || session.is_last_known()
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
                 })
                 .count();
             let external_sessions_need_attention = external_sessions_attention_count > 0;

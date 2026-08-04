@@ -331,9 +331,10 @@ separate opt-in `claude --continue` path.
 Each external source owns one Missing, Empty, Failed, or Ready state. One
 bounded failed-source notice exposes one non-destructive **Retry**; concurrent
 refresh requests coalesce, and last-known rows remain visibly qualified. A
-truly empty list uses one primary **Open Terminal** action. Search recovery uses
-one primary **Clear Search** action, while a caught-up Attention scope uses a
-subordinate **Show All** action.
+last-known tmux, Herdr, or cmux row stays reachable in **Attention** until its
+source refreshes or resolves. A truly empty list uses one primary **Open Terminal**
+action. Search recovery uses one primary **Clear Search** action, while a caught-up
+Attention scope uses a subordinate **Show All** action.
 
 **Other Running Sessions** remains absent during ordinary work when it has no
 rows. After the user explicitly chooses **Browse Running Sessions…**, it may
@@ -579,7 +580,7 @@ native tool, honest ownership, inline recovery**.
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
 | Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | appears once there are at least two open tabs and then includes every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
-| Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; default preview is at most five top-level rows and preserves the current and attention-required destinations; external work begins as one Running Sessions disclosure; native expansion, Search, and Attention scope reveal the complete relevant set; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
+| Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; default preview is at most five top-level rows and prioritizes the current and attention-required destinations; external work begins as one Running Sessions disclosure; native expansion, Search, and Attention scope reveal the complete relevant set; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
