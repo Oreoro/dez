@@ -85,7 +85,7 @@ The primary loop stays inside one native window:
 
 ```text
 Open Workspace
-→ start or continue an agent in a native terminal tab
+→ start or resume an agent in a native terminal tab
 → supervise Activity and attention in Workspaces
 → inspect with Files, tasks, diagnostics, and Debug
 → Review Changes in the Main Work Area
@@ -104,9 +104,9 @@ back into the same Main Work Area. The native tab-strip `+` is the shared Add
 menu for every step; no separate dashboard or onboarding mode is required.
 Its titlebar stays quiet during routine work, then names transient state beside
 **Workspaces**: matching-result count during search, **Restoring…** during
-recovery, or the number of Sessions needing attention. Search counts visible
-Workspace rows as well as Session rows, so the status cannot claim zero while
-a matching codebase is on screen.
+recovery, or the number of Activity items needing attention. Search counts
+visible Workspace rows as well as Activity rows, so the status cannot claim
+zero while a matching codebase is on screen.
 
 Clicking a Workspace header activates that codebase and restores its last
 active tab and pane; its separate chevron only expands or collapses the
@@ -149,26 +149,29 @@ preview replacement, pinning, and horizontal or vertical splits. A terminal
 can therefore sit below code without Dez manufacturing a separate multiplexer
 UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
-terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
-through the existing Zed actions. Its terminal submenu names the configured
-Default Terminal first, followed by Native Shell, Workspace tmux, and explicit
-Codex, Claude Code, and OpenCode launchers. **More Agent CLIs** keeps Gemini
-CLI, Aider, and Herdr available without crowding the frequent path. **Continue
-Agent** resumes the last Codex, Claude Code, or OpenCode session. **Browse
-Running Sessions…** refreshes external discovery and refocuses Workspaces
-without adding another navigation surface.
+terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in
+Agent surface through the existing Zed actions. Its **Open Terminal** submenu
+names the configured Default Terminal first, followed by Native Shell, Codex,
+Claude Code, and OpenCode. **More Agent CLIs** keeps Gemini CLI,
+Aider, and Herdr available without crowding the frequent path. **Resume
+Existing Agent** resumes the last Codex, Claude Code, or OpenCode session. A
+separate **Sessions and Multiplexers** group keeps **Workspace tmux**, **Browse
+Running Sessions…**, and the applicable **Open Workspace in cmux** handoff at
+the first level without mixing external ownership into terminal-provider
+choices.
 
-Dez's **File → Open Terminal** submenu mirrors those native `+` terminal
-launch routes in the same order, followed by **Continue Agent**. Its first row previews the configured result as
+Dez's **File → Open Terminal** submenu keeps the same configured and provider
+launch order, places **Workspace tmux** after Native Shell, and is followed by
+**Resume Existing Agent**. Its first row previews the configured result as
 **Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
 **Default · OpenCode**, **Default · tmux Session**, a detected agent, or
 **Default · Custom Command**; the pane `+` keeps the shorter **Default
 Terminal** label. Native Shell, Workspace tmux, Codex, Claude Code, and OpenCode
 remain explicit alternatives; Gemini CLI, Aider, and Herdr live one level
-deeper under **More Agent CLIs**. Continue uses
+deeper under **More Agent CLIs**. Resume uses
 `codex resume --last`, `claude --continue`, or `opencode --continue` in the
 active Workspace. **Browse Running Sessions…** follows those menus, so starting,
-continuing, and reopening externally owned work stay adjacent.
+resuming, and reopening externally owned work stay adjacent.
 
 Six optional layout commands remain available through **View** and Command
 Palette: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
@@ -180,7 +183,7 @@ and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
 Zed chords, `Ctrl+Backtick` opens the configured terminal, and
 `Ctrl+Shift+Backtick` always opens the native shell. Command Palette can start
-Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; continue a supported
+Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; resume a supported
 provider; launch a shell or **Workspace tmux** session; or hand the Workspace
 to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
@@ -201,7 +204,7 @@ When that boundary rejects live discovery, the Workspace menu keeps the
 official guide and retry route available without pinning a technical notice
 above navigation. If cmux is missing, that menu offers **Get cmux…**. The path
 handoff remains available independently.
-Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
+Provider launchers and Resume actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
@@ -249,9 +252,9 @@ attention, and direct Files/Git review routes.
 Native launch menus keep identity visible before a terminal starts: primary
 agents use their provider marks; Gemini CLI has its provider mark; Aider uses
 the edit-agent mark; Herdr uses the orchestration mark; tmux uses the
-split-session mark; the Built-in Agent uses the Dez Agent mark; and shells
-retain the terminal icon. Those marks identify the actor or owner; live state
-remains separate status text.
+split-session mark; the Built-in Agent and its Subagents use related but
+distinct Dez marks; and shells retain the terminal icon. Those marks identify
+the actor or owner; live state remains separate status text.
 
 cmux notification and supported-session restore hooks remain an explicit cmux
 setup choice:

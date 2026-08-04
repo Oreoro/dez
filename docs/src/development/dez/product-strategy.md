@@ -83,7 +83,7 @@ reconstructing history.
 ## Core product loop {#core-product-loop}
 
 The current product presents this as one short native journey: **Open Workspace
-→ Start or Continue Agent → supervise in Workspaces → inspect with Files,
+→ Start or Resume Agent → supervise in Workspaces → inspect with Files,
 tasks, diagnostics, and Debug → Review Changes**. **Browse Running Sessions…**
 reopens externally owned work; **Open Workspace in cmux** is an explicit
 handoff. The stages below describe the evidence and decision model behind that

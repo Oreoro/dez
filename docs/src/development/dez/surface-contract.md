@@ -267,18 +267,19 @@ provider, or Custom Command—while the provider glyph reinforces that identity.
 ### 10. Add and switch tabs
 
 ```text
-┌ Codex · Working | app.rs* | Diff · config.rs | Terminal | + | Switch Tab ┐
-│ Add to Main Work Area             Tabs in This Pane                      │
-│  Default Terminal                 Codex · Working · Active               │
-│  Native Shell                     app.rs · Modified                       │
-│  Workspace tmux                   Diff · config.rs                        │
-│  Codex · Claude Code · OpenCode   Terminal · Pinned                       │
-│  More Agent CLIs ›                Settings                                │
-│  Resume Existing Agent ›                                                  │
-│  Browse Running Sessions…                                                  │
-│  Open Workspace in cmux                                                   │
-│  Files · Review · Task · Debug                                             │
-│  Home · Recent Workspaces                                                  │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Codex · Working | app.rs* | Diff · config.rs | Terminal | + | Switch Tab    │
+│ Add to Main Work Area             Tabs in This Pane                         │
+│   Open Terminal ›                 Codex · Working · Active                  │
+│     Default · Shell · Agents      app.rs · Modified                         │
+│   Resume Existing Agent ›         Diff · config.rs                          │
+│   Built-in Agent                  Terminal · Pinned                         │
+│   Sessions and Multiplexers       Settings                                  │
+│     Workspace tmux                                                          │
+│     Browse Running Sessions…                                                │
+│     Open Workspace in cmux                                                  │
+│   Files · Review · Task · Debug                                             │
+│   Home · Recent Workspaces                                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -425,9 +426,11 @@ and do not advertise an action that cannot help.
 
 The Edits disclosure announces its file count and expanded state and responds
 to Enter and Space. **Review Changes** is the primary inspection route;
-whole-review decisions are visibly secondary. Subagent state remains text, not
-color alone. **Open Subagent Session** is a visible outlined handoff that
-focuses the existing child Session rather than creating a new one.
+whole-review decisions are visibly secondary. The related but distinct Dez
+Subagent mark preserves hierarchy without reusing a provider logo. Subagent
+state remains text, not color alone. **Open Subagent Session** is a visible
+outlined handoff that focuses the existing child Session rather than creating
+a new one.
 
 ### 16. Resume honestly
 
@@ -568,7 +571,7 @@ native tool, honest ownership, inline recovery**.
 | --- | --- | --- | --- | --- |
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
-| Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | visible for every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
+| Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | appears once there are at least two open tabs and then includes every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
 | Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; external work begins as one Running Sessions disclosure; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
@@ -642,7 +645,8 @@ native tool, honest ownership, inline recovery**.
 ## Acceptance checklist
 
 - Every open panel, tool, terminal, file, diff, and browser surface is reachable
-  as a native tab and appears in Layout for the active Workspace.
+  as a native tab. Once the active Workspace has at least two tabs, every open
+  surface appears in Layout.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
 - A fresh Workspace starts in the Main Work Area without an automatic Files
   column; restored layouts and an explicit Files startup preference still win.
