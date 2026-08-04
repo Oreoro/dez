@@ -79,7 +79,7 @@ require_multiline_pattern .agents/skills/dez-workspace-design/SKILL.md \
     '^name: dez-workspace-design.*?Require an annotated monochrome wireframe before structural UI changes.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?Wireframe before structural edits.*?cargo fmt --all -- --check.*?GitHub Actions' \
     'the Dez Workspace design skill can regress from its wireframe, ownership, or remote-validation contract'
 require_multiline_pattern docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
-    'Layout and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 \| cmux external owner \|' \
+    'Layout and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?No Workspace is open.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 \| cmux external owner \|' \
     'the annotated Workspace workflow can regress to an incomplete or unowned visual proposal'
 require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
     'activation-only.*?\*\*Layout\*\*.*?bounded \*\*Activity\*\*.*?Temporary navigation.*?return recap remain design work.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?The activation-only \*\*Layout\*\* and bounded \*\*Activity\*\* slices are implemented\.' \
@@ -492,7 +492,7 @@ require_pattern assets/fonts/jetbrains-mono/OFL.txt \
     '^Copyright 2020 The JetBrains Mono Project Authors' \
     'the JetBrains Mono source attribution is incomplete'
 require_multiline_pattern README.md \
-    '^# Dez.*?0\.4\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?\*\*Open\*\*.*?Running[[:space:]]+Sessions.*?tmux.*?Herdr.*?Unrelated machine terminals.*?\*\*Workspace tools\*\*.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Terminal.*?\*\*Terminal Sessions\*\*.*?The primary user story.*?\*\*Home\*\*.*?\*\*Open Terminal\*\*.*?\*\*Workspaces\*\*.*?\*\*Open Files\*\*.*?\*\*Review Changes\*\*.*?Browse Running Sessions….*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.4 release.*?v0\.4 Readiness' \
+    '^# Dez.*?0\.4\.0 source candidate.*?not yet a signed or supported binary release.*?## What Dez does.*?\*\*Main Work Area\*\*.*?\*\*Workspaces\*\*.*?\*\*Layout\*\*.*?\*\*Activity\*\*.*?Running[[:space:]]+Sessions.*?tmux.*?Herdr.*?Unrelated machine terminals.*?\*\*Workspace tools\*\*.*?ordinary draggable and closeable native.*?\*\*Built-in Agent\*\*.*?Open Terminal.*?\*\*Terminal Sessions\*\*.*?The primary user story.*?\*\*Home\*\*.*?\*\*Open Terminal\*\*.*?\*\*Workspaces\*\*.*?\*\*Open Files\*\*.*?\*\*Review Changes\*\*.*?Browse Running Sessions….*?## How the IDE is integrated.*?one Zed-compatible Project.*?## Current status.*?A public v0\.4 release.*?v0\.4 Readiness' \
     'the repository front page can regress to upstream branding, omit the Dez product model, or overstate release readiness'
 require_multiline_pattern README.md \
     '## Visual baseline.*?Lumin Blur.*?Lumin Light.*?IBM Plex Sans.*?Lilex.*?## Upstream relationship.*?deliberate fork.*?## License and attribution.*?independent fork' \
@@ -503,6 +503,12 @@ require_multiline_pattern README.md \
 require_multiline_pattern README.md \
     'Source, state,[[:space:]]+working directory, listening ports, and ownership remain available.*?Dez does not infer ports for other processes' \
     'the repository front page can regress to overstating inferred port discovery or hiding cmux-owned evidence'
+require_multiline_pattern README.md \
+    'When Workspaces is visible, \*\*Layout\*\*.*?at least two tabs.*?activation-only.*?\*\*Activity\*\*.*?active, running, actionable, recoverable, or review-ready.*?native tab strip remains the owner of close, reorder, cross-pane drag' \
+    'the repository front page can regress to obsolete navigator nouns or assign tab lifecycle to Workspaces'
+reject_pattern README.md \
+    'Open Tabs & Tools|active unpinned row keeps a native close control|middle-click closes through' \
+    'the repository front page still teaches the superseded navigator or duplicate tab lifecycle'
 require_multiline_pattern docs/src/dez.md \
     'cmux additionally[[:space:]]+supplies authoritative `listening_ports`.*?first[[:space:]]+`:port` plus a remaining count in compact, muted trailing metadata.*?tooltip and accessibility label retain the richer bounded port list.*?Other[[:space:]]+local Workspace processes do not receive inferred port labels.*?does not scrape terminal output or infer ports from process names' \
     'the product guide can regress to claiming unsafe port inference or omitting cmux-owned operational metadata'
@@ -522,6 +528,12 @@ require_multiline_pattern docs/src/dez.md \
     '^# What is Dez\?.*?Workspace-first development environment.*?product promise is simple.*?The main journey uses native surfaces throughout.*?Install and Relaunch.*?Open Workspace.*?Open Terminal.*?tab-strip.*?Open Workspace in cmux.*?Workspaces.*?Files.*?Review Changes.*?## The screen model.*?Workspaces.*?Main Work Area.*?Workspace Tools.*?native pane grid.*?Browse Running[[:space:]]+Sessions….*?## How coding work flows.*?Open Terminal.*?## Terminal and Agent integration.*?Packaged Dez builds.*?Workspaces does not list arbitrary current-user TTYs.*?Dez v0\.4 retains explicit integration for tmux, Herdr, and cmux.*?The v0\.4 product promise.*?## Source-preview limits' \
     'the public product guide can lose the screen model, IDE integration, or honest source-preview boundary'
 require_multiline_pattern docs/src/dez.md \
+    'Each Workspace header is the primary switcher.*?nested \*\*Layout\*\* and \*\*Activity\*\* sections.*?Layout[[:space:]]+returns to real pane-owned tabs.*?Activity shows only current active, running, actionable, recoverable,[[:space:]]+or review-ready work.*?\*\*Running Sessions\*\* disclosure' \
+    'the public product guide can regress to superseded Workspace section nouns or unbounded Activity'
+reject_pattern docs/src/dez.md \
+    'nested \*\*Open\*\* and \*\*Sessions\*\* sections|Open Tabs & Tools|Browse Sessions' \
+    'the public product guide still exposes a superseded Workspaces hierarchy'
+require_multiline_pattern docs/src/dez.md \
     'Settings and navigation visibility.*?Workspaces & Terminals.*?Agents.*?Appearance.*?Workspace &[[:space:]]+Privacy.*?Workspace behavior and Terminal[[:space:]]+Launch.*?Terminal Agents &[[:space:]]+Privacy.*?Attention & Notifications.*?Built-in Agent & Providers.*?Built-in Agent Behavior.*?ACP.*?MCP.*?cannot be mistaken for.*?terminal[[:space:]]+launchers' \
     'the public Settings story can regress to burying the terminal-first workflow beneath optional conversation configuration'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
@@ -537,7 +549,7 @@ require_multiline_pattern docs/src/dez.md \
     'Command Palette labels follow the same grammar.*?`workspace: \.\.\.`.*?`workspaces: \.\.\.`.*?`files: \.\.\.`.*?`git: \.\.\.`.*?`terminal: open terminal …`.*?`layout: \.\.\.`' \
     'the public guide can regress to retired Project or navigator command prefixes'
 require_multiline_pattern docs/src/dez.md \
-    'empty Main Work Area.*?Open Terminal ·[[:space:]]+Native Shell.*?Open Terminal · Codex.*?Open Terminal · Custom[[:space:]]+Command.*?does not repeat Home.s product summary or invent a placeholder tab.*?If a terminal cannot start, Dez opens no substitute process.*?edge-anchored recovery state.*?Edit Terminal Settings.*?Workspaces & Terminals → Terminal[[:space:]]+Launch → Default Terminal.*?centered promotional card, fake shell prompt,[[:space:]]+automatic replacement' \
+    'empty Main Work Area.*?Open Terminal ·[[:space:]]+Native Shell.*?Open Terminal · Codex.*?Open Terminal · Custom[[:space:]]+Command.*?Browse Running[[:space:]]+Sessions.*?does not repeat Home.s product summary or invent a placeholder tab.*?If a terminal cannot start, Dez opens no substitute process.*?edge-anchored recovery state.*?Edit Terminal Settings.*?Workspaces & Terminals → Terminal[[:space:]]+Launch → Default Terminal.*?centered promotional card, fake shell prompt,[[:space:]]+automatic replacement' \
     'the public guide can regress from the resolved empty-work-area action or exact terminal launch recovery route'
 require_multiline_pattern docs/src/dez.md \
     'Keep All Changes.*?Reject All Changes.*?Edits disclosure.*?Enter and[[:space:]]+Space.*?Review Changes.*?subordinate native treatment.*?Git History.*?spinner plus status text.*?Only failure exposes \*\*Retry\*\*.*?completed failed graph request.*?Open Subagent Session.*?visible outlined handoff.*?exact existing child Session' \
@@ -912,10 +924,10 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'Label::new\(session_rail_title\(APP_NAME\)\)' \
     'the supervision region has regressed to internal Session Rail jargon'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn terminal_launch_label.*?app_name == "Zed".*?"Start Terminal Session".*?"Open Terminal".*?fn session_start_state_copy.*?Some\("Open Scratch Terminal"\).*?"No Workspace open".*?"Open a codebase\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\.".*?"Open Workspace…".*?None.*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?\.style\(ButtonStyle::Filled\).*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?\.when_some\(scratch_terminal_label.*?Button::new\("start-terminal", scratch_terminal_label\)' \
+    'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn terminal_launch_label.*?app_name == "Zed".*?"Start Terminal Session".*?"Open Terminal".*?fn session_start_state_copy.*?Some\("Open Scratch Terminal"\).*?"No Workspace is open".*?"Open a folder or repository\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\.".*?"Open Workspace…".*?None.*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?\.style\(ButtonStyle::Filled\).*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?\.when_some\(scratch_terminal_label.*?Button::new\("start-terminal", scratch_terminal_label\)' \
     'the empty Sessions region can regress to a pathless Dez terminal branch or the wrong project-scoped next step'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'session_overview_visible\("Dez", 0, 0, false\).*?session_overview_visible\("Dez", 1, 0, false\).*?Open a codebase\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\..*?Workspace dez, ready for a session.*?Workspace dez, running work, 2 sessions need attention' \
+    'session_overview_visible\("Dez", 0, 0, false\).*?session_overview_visible\("Dez", 1, 0, false\).*?No Workspace is open.*?Open a folder or repository\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\..*?Workspace dez, ready for a session.*?Workspace dez, running work, 2 sessions need attention' \
     'sidebar regression coverage can fall behind the native Workspaces visibility API or restore Project terminology'
 require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
     'impl Render for AgentThreadItem.*?\.id\(\("agent-thread-item", self\.conversation_view\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?\.aria_label\(if paths::APP_NAME == "Zed".*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \

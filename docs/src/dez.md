@@ -255,7 +255,7 @@ unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
 purpose and offers a resolved primary destination such as **Open Terminal ·
 Native Shell**, **Open Terminal · Codex**, or **Open Terminal · Custom
-Command**, followed by **Browse Sessions**, **Find File**, and **Review
+Command**, followed by **Browse Running Sessions**, **Find File**, and **Review
 Changes**. Its provider or terminal mark matches that configured destination.
 It does not repeat Home's product summary or invent a placeholder tab. It is an
 operational start state for the current Workspace, not a second Home screen.
@@ -1027,8 +1027,8 @@ and neither role is stretched into a decorative badge. The same scale applies
 to the top bar, pane Add control, Workspaces rows, and status navigation.
 
 Empty Main Work Area panes avoid a centered onboarding card: they use compact
-top-left native chrome with **Open Terminal**, **Browse Sessions**, **Find
-File**, and **Review Changes**. The Dez visual profile keeps the status bar
+top-left native chrome with **Open Terminal**, **Browse Running Sessions**,
+**Find File**, and **Review Changes**. The Dez visual profile keeps the status bar
 visible and includes active-file and line-ending context alongside the
 inherited language, diagnostics, and cursor controls. Native Back and Forward
 controls are visible in every Main Work Area tab strip, alongside Add, tab
@@ -1091,10 +1091,11 @@ file tree for every newly opened Workspace.
 
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
-collapses the Workspace's nested **Open** and **Sessions** sections. Open
-returns to real pane-owned tabs. Sessions shows only current, actionable,
-recoverable, or review-ready work; inactive completed Agent Sessions remain in
-Agent History. Externally owned tmux, Herdr, and cmux work is summarized by one
+collapses the Workspace's nested **Layout** and **Activity** sections. Layout
+returns to real pane-owned tabs and appears once there are at least two tabs to
+navigate. Activity shows only current active, running, actionable, recoverable,
+or review-ready work; inactive completed Agent Sessions remain in Agent
+History. Externally owned tmux, Herdr, and cmux work is summarized by one
 **Running Sessions** disclosure until the user asks for detailed rows.
 **View → Navigate Workspaces** collects
 **Focus Workspaces**, **Search Workspaces and Activity…**, **Previous

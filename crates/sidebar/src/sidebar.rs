@@ -1500,8 +1500,8 @@ fn session_start_state_copy(
         )
     } else {
         (
-            "No Workspace open",
-            "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+            "No Workspace is open",
+            "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
             "Open Workspace…",
             None,
         )
@@ -2798,8 +2798,8 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_state_copy("Dez"),
             (
-                "No Workspace open",
-                "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+                "No Workspace is open",
+                "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
                 "Open Workspace…",
                 None
             ),

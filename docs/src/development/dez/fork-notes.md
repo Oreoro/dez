@@ -237,8 +237,8 @@ prefixes. The action is named **Rename Terminal…** and double-clicking the tab
 invokes the same editor.
 
 At zero sessions, the overview owns the rail title and **No agent sessions**
-status. With no Workspace open, the compact state says **No Workspace open**,
-explains that project context comes first, and offers one filled **Open
+status. With no Workspace open, the compact state says **No Workspace is
+open**, explains that Workspace context comes first, and offers one filled **Open
 Workspace…** action. It does not create a pathless terminal branch or repeat
 the launch/supervise/review route owned by Welcome. With an active Workspace
 but no Session, that Workspace group owns the primary **Open Terminal**

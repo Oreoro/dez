@@ -4516,3 +4516,17 @@ Completed for the fresh Workspace ownership source slice:
   and
 - retained source-only verification. No local build, test binary, alternate
   binary, package, or app launch was performed.
+
+Completed for the final Workspace navigation-copy source slice:
+
+- changed the empty Workspaces headline to the complete **No Workspace is
+  open** sentence and named folders or repositories as the next context;
+- replaced the public guide's superseded **Open Tabs & Tools** and
+  **Open/Sessions** hierarchy with activation-only **Layout** and bounded
+  **Activity**;
+- removed guide claims that Workspaces owns close or middle-click lifecycle,
+  keeping those actions with the native tab strip;
+- preserved official Zed's existing empty-state wording; and
+- synchronized tests, the annotated wireframe, Fork Notes, and static identity
+  guards with source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.

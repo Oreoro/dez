@@ -25,18 +25,19 @@ Workspace instead of separate applications or hidden panel modes.
 - **Workspaces** — an optional, collapsible navigator for codebases, open
   Surfaces, and Agent Sessions. Fresh windows keep it closed unless the user
   enables it, restored layouts may reopen it, and its window edge is
-  configurable. Its collapsible **Open** section appears for every
-  open native Main Work Area surface. It mirrors Home, code, diffs, terminals,
-  Files, Git, Settings, and other Workspace-owned tabs, grouping them by pane
-  only after the user creates a real split. Selecting a row activates that
-  exact native tab. Close, pin, preview, middle-click, drag, ordering, dirty
-  state, overflow, and split ownership remain in Zed's pane model rather than
-  being copied into the navigator. Agent Session
-  rows keep their Dez or provider identity mark while Running, Needs Input,
-  Waiting for Permission, Reconnecting, Completed, or Error remains a separate
-  state treatment. Drafts keep the selected agent mark instead of becoming an
-  anonymous dot, and the terminal or Session title stays the primary navigation
-  label. A
+  configurable. Its collapsible **Layout** projection appears once the active
+  Workspace has at least two native Main Work Area tabs. It mirrors Home, code,
+  diffs, terminals, Files, Git, Settings, and other Workspace-owned tabs,
+  grouping them by pane only after the user creates a real split. Selecting a
+  row activates that exact native tab. Close, pin, preview, middle-click, drag,
+  ordering, dirty state, overflow, and split ownership remain in Zed's pane
+  model rather than being copied into the navigator. **Activity** contains only
+  current active, running, actionable, recoverable, or review-ready signals.
+  Agent Session rows keep their Dez or provider identity mark while Running,
+  Needs Input, Waiting for Permission, Reconnecting, Completed, or Error
+  remains a separate state treatment. Drafts keep the selected agent mark
+  instead of becoming an anonymous dot, and the terminal or Session title stays
+  the primary navigation label. A
   multi-root Workspace leads with its first root and a bounded root count; all
   root names remain searchable and available in the header tooltip and
   accessibility label. A Workspace can explicitly attach a discovered tmux or
@@ -85,7 +86,7 @@ The primary loop stays inside one native window:
 ```text
 Open Workspace
 → start or continue an agent in a native terminal tab
-→ supervise Sessions and attention in Workspaces
+→ supervise Activity and attention in Workspaces
 → inspect with Files, tasks, diagnostics, and Debug
 → Review Changes in the Main Work Area
 ```
@@ -109,13 +110,14 @@ a matching codebase is on screen.
 
 Clicking a Workspace header activates that codebase and restores its last
 active tab and pane; its separate chevron only expands or collapses the
-Workspace's Sessions. **View → Navigate Workspaces** exposes Focus, Search,
-Previous, and Next routes without requiring the navigator to be open first.
-Search opens Workspaces when needed, focuses its native filter, and matches
-Workspace names alongside Sessions. The same actions remain discoverable and
-rebindable in Command Palette and Keyboard & Vim. The Workspaces ellipsis menu
-mirrors Search and Previous/Next when the current inventory makes those actions
-useful; a one-Workspace, one-item window stays quiet.
+Workspace's Layout and Activity. **View → Navigate Workspaces** exposes Focus,
+Search, Previous, and Next routes without requiring the navigator to be open
+first. Search opens Workspaces when needed, focuses its native filter, and
+matches Workspace names alongside current Activity. The same actions remain
+discoverable and rebindable in Command Palette and Keyboard & Vim. The
+Workspaces ellipsis menu mirrors Search and Previous/Next when the current
+inventory makes those actions useful; a one-Workspace, one-item window stays
+quiet.
 
 Home is headed **Continue your work** in both states and always keeps Recent
 Workspaces available as ordinary rows. Inside an active Workspace, it uses two flat native sections. **Start with a
@@ -124,7 +126,7 @@ Workspace tmux session, or the explicit external cmux handoff. **Inspect and
 resume** opens running Sessions, Files, or Review Changes. The configured-default
 label distinguishes the primary route from a generic terminal launcher. An
 active empty Main Work Area uses the same route with space-aware labels:
-**Open Terminal**, **Browse Sessions**, **Find File**, and **Review Changes**.
+**Open Terminal**, **Browse Running Sessions**, **Find File**, and **Review Changes**.
 **New File** remains available from File, the native `+`, and keyboard
 shortcuts, but is not a primary Home or empty-state action.
 
@@ -134,19 +136,18 @@ Workspaces stays global and optional on its configured window edge. Files, Git,
 Outline, Debug, Built-in Agent, commits, diffs, reviews, agent terminals, and
 ordinary terminals use the native Workspace tab and pane model instead of
 another navigation system.
-When Workspaces is visible, **Open Tabs & Tools** provides a compact vertical
-route to the active Workspace's native surfaces once there is something useful
-to switch between. It stays flat for a single pane and introduces small
-**Pane 1**, **Pane 2**, and
-later group labels only when a real split exists. The section is collapsible,
-remembers its disclosure state, and disappears while Workspace search is active
-so search results keep the full navigator.
-Its active unpinned row keeps a native close control visible; inactive rows show
-that control on hover, and middle-click closes through the same unsaved-work
-contract. Pinned rows show their pin and cannot be closed from the navigator.
-The native tab strip remains the owner of reorder, cross-pane drag, preview
-replacement, pinning, and horizontal or vertical splits. A terminal can
-therefore sit below code without Dez manufacturing a separate multiplexer UI.
+When Workspaces is visible, **Layout** provides a compact vertical route to the
+active Workspace's native surfaces once there are at least two tabs to switch
+between. It stays flat for a single pane and introduces **Pane 1**, **Pane 2**,
+and later group labels only when a real split exists. Layout is activation-only:
+selecting a row focuses its existing native tab. It disappears while Workspace
+search is active so results keep the full navigator. **Activity** follows only
+when work is active, running, actionable, recoverable, or review-ready; idle
+tabs stay in Layout and completed Agent Sessions stay in Agent History.
+The native tab strip remains the owner of close, reorder, cross-pane drag,
+preview replacement, pinning, and horizontal or vertical splits. A terminal
+can therefore sit below code without Dez manufacturing a separate multiplexer
+UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
 terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
 through the existing Zed actions. Its terminal submenu names the configured

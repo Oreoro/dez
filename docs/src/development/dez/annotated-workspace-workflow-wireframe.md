@@ -23,7 +23,7 @@ authoritative where generated lettering is abbreviated or predates the final
 
 ```text
 ┌ Workspaces [01] ───────┬ Home | + [05] ───────────────────────────────┐
-│ No Workspace open      │ Continue your work                           │
+│ No Workspace is open   │ Continue your work                           │
 │                        │ Open a codebase, start work, then review it.  │
 │ [Open Workspace…] [09] │                                              │
 │ Clone Repository…      │ Recent Workspaces                            │

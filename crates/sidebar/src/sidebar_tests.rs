@@ -689,10 +689,10 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert!(!session_start_state_visible(false, 1, false, false, false));
     assert!(!session_start_state_visible(false, 0, true, false, false));
     assert!(!session_start_state_visible(false, 0, false, true, false));
-    assert_eq!(session_start_state_copy("Dez").0, "No Workspace open");
+    assert_eq!(session_start_state_copy("Dez").0, "No Workspace is open");
     assert_eq!(
         session_start_state_copy("Dez").1,
-        "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
+        "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
     );
     assert_eq!(
         session_start_state_copy("Dez").2,
