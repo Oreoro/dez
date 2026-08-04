@@ -150,6 +150,13 @@ jobs:
             test_inline_terminal_displays_all_of_its_lines \
             -- \
             --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package sidebar \
+            test_find_or_create_workspace_returns_the_created_remote_workspace \
+            -- \
+            --nocapture
 
       - name: Build the optimized Dez application bundle
         id: build-dez

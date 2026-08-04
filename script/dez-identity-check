@@ -3102,9 +3102,21 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'pub fn close_workspace.*?workspaces_for_project_group\(&group_key, cx\).*?candidate != &excluded_workspace.*?!candidate\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\).*?fallback_workspace' \
     'closing a Workspace can regress to selecting a disconnected sibling'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub fn open_remote_project_with_new_connection.*?Task<Result<\(Option<Entity<Workspace>>, Vec<Option<Box<dyn ItemHandle>>>\)>>.*?None => return Ok\(\(None, Vec::new\(\)\)\).*?Ok\(\(Some\(workspace\), items\)\).*?pub fn open_remote_project_with_existing_connection.*?Task<Result<\(Entity<Workspace>, Vec<Option<Box<dyn ItemHandle>>>\)>>.*?async fn open_remote_project_inner.*?Result<\(Entity<Workspace>, Vec<Option<Box<dyn ItemHandle>>>\)>.*?Ok\(\([[:space:]]*workspace' \
+    'remote Workspace creation can regress to returning whichever Workspace becomes active later'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'let \(workspace, _items\) = open_remote_project_with_existing_connection.*?multi_workspace\.add\(workspace\.clone\(\), window, cx\)' \
+    'remote Workspace fallback can regress to re-reading a concurrently changed active Workspace'
+require_multiline_pattern crates/recent_projects/src/remote_connections.rs \
+    'let mut remote_workspace = None.*?Ok\(\(workspace, items\)\).*?remote_workspace = workspace.*?if let Some\(remote_workspace\) = remote_workspace.*?register_remote_client\(client, cx\)' \
+    'remote extension registration can regress to targeting a concurrently active local Workspace'
 require_multiline_pattern crates/workspace/src/multi_workspace_tests.rs \
     'test_remove_project_group_prefers_already_loaded_neighboring_workspace.*?remove_project_group\(&key_a.*?multi_workspace\.workspace\(\),[[:space:]]*&workspace_b.*?!multi_workspace\.project_group_keys\(\)\.contains\(&key_a\)' \
     'the loaded-neighbor Workspace-removal regression can lose its source test'
+require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
+    'test_find_or_create_workspace_returns_the_created_remote_workspace.*?MultiWorkspaceEvent::WorkspaceAdded.*?this\.activate\(local_workspace\.clone\(\).*?find_or_create_workspace.*?created\.read_with.*?remote-project.*?multi_workspace\.workspace\(\)\.clone\(\).*?local_workspace' \
+    'the remote Workspace activation race can lose its focused source test'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section, Section\).*?title: "Start a Workspace".*?title: "Open Workspace",[[:space:]]*meta: Some\("Local folder"\),[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository",[[:space:]]*meta: Some\("From Git"\).*?const DEZ_WORKSPACE_CONTENT' \
     'the Dez welcome actions no longer make Workspace context primary'
@@ -3274,7 +3286,7 @@ require_multiline_pattern .github/workflows/dez-build.yml \
     'Restore Rust release intermediates.*?continue-on-error: true.*?actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830.*?target/aarch64-apple-darwin/release/\.fingerprint.*?target/aarch64-apple-darwin/release/build.*?target/aarch64-apple-darwin/release/deps.*?dez-rust-release-macos-arm64-.*?github\.sha.*?restore-keys' \
     'the remote macOS build no longer reuses source-aware Rust release intermediates'
 require_multiline_pattern .github/workflows/dez-build.yml \
-    'Run focused Workspace and terminal regressions.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package workspace.*?test_remove_project_group_prefers_already_loaded_neighboring_workspace.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package terminal_view.*?test_inline_terminal_displays_all_of_its_lines' \
+    'Run focused Workspace and terminal regressions.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package workspace.*?test_remove_project_group_prefers_already_loaded_neighboring_workspace.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package terminal_view.*?test_inline_terminal_displays_all_of_its_lines.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package sidebar.*?test_find_or_create_workspace_returns_the_created_remote_workspace' \
     'the Apple M2 workflow no longer runs the focused native-navigation and terminal-row regressions'
 require_pattern .github/workflows/dez-build.yml \
     '\./script/bundle-mac aarch64-apple-darwin' \
