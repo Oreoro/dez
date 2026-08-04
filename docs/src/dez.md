@@ -974,6 +974,13 @@ source has activity, but none belongs beneath the selected Workspace; check
 Herdr, or cmux sessions** means the available sources returned no activity. No
 state means Dez adopted or ended an external process.
 
+For the current external command and access contracts, use the official
+[cmux CLI/API reference](https://cmux.com/docs/api), [Herdr CLI
+reference](https://herdr.dev/docs/cli-reference/), and [Herdr socket API
+reference](https://herdr.dev/docs/socket-api/). Dez keeps these integrations
+bounded to documented discovery, focus, and explicit attach operations; it
+does not take over or rewrite either application's sessions.
+
 - tmux is discovered at `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or on
   `PATH`. Start or attach to a tmux server and ensure the pane's working
   directory is inside the intended Workspace. **Open Workspace tmux** remains

@@ -570,13 +570,13 @@ require_multiline_pattern docs/src/dez.md \
     'Host-owned terminal · connection unavailable.*?event-stream failure.*?authoritative Session list.*?valid attachment.*?End Terminal….*?Host acknowledges PTY teardown.*?interrupted transport.*?intentionally omits the inherited Workspace Bar.*?centered Command[[:space:]]+Search row.*?duplicate project/branch identity strip.*?cross-platform application menu.*?Restricted Mode.*?multiplexer prefix indicator' \
     'the public guide can lose truthful Host recovery or misrepresent the simplified Workspaces header'
 require_multiline_pattern docs/src/dez.md \
-    '### External session prerequisites and troubleshooting.*?Install tmux, Herdr, or cmux to browse running sessions.*?Running session discovery needs attention.*?No running session matches this Workspace.*?Other Running Sessions.*?No running tmux,[[:space:]]+Herdr, or cmux sessions.*?/opt/homebrew/bin/tmux.*?/Applications.*?cmux\.app.*?Retry Running Sessions.*?Refresh Running Sessions.*?last[[:space:]]+known.*?Retry Attach' \
+    '### External session prerequisites and troubleshooting.*?Install tmux, Herdr, or cmux to browse running sessions.*?Running session discovery needs attention.*?No running session matches this Workspace.*?Other Running Sessions.*?No running tmux,[[:space:]]+Herdr, or cmux sessions.*?https://cmux\.com/docs/api.*?https://herdr\.dev/docs/cli-reference/.*?https://herdr\.dev/docs/socket-api/.*?/opt/homebrew/bin/tmux.*?/Applications.*?cmux\.app.*?Retry Running Sessions.*?Refresh Running Sessions.*?last[[:space:]]+known.*?Retry Attach' \
     'the public guide can lose actionable tmux, Herdr, and cmux prerequisites or recovery'
 require_multiline_pattern docs/src/dez.md \
     'tmux and Herdr open their.*?documented attach command.*?executes that[[:space:]]+client directly.*?`\$0`.*?`\$1`.*?login shell.*?cmux is not discoverable.*?Workspace Options.*?Get cmux….*?tmux and Herdr remain usable.*?no external Session[[:space:]]+is changed' \
     'the public guide can regress to hiding literal multiplexer attachment or optional cmux setup behavior'
 require_multiline_pattern docs/src/terminal.md \
-    'tmux and Herdr open the documented attach command directly.*?`\$0`.*?`\$1`.*?login shell.*?Workspace Options.*?Get cmux….*?tmux and[[:space:]]+Herdr remain available.*?does not change their[[:space:]]+Sessions' \
+    'tmux and Herdr open the documented attach command directly.*?`\$0`.*?`\$1`.*?login shell.*?https://cmux\.com/docs/api.*?https://herdr\.dev/docs/cli-reference/.*?https://herdr\.dev/docs/socket-api/.*?Workspace Options.*?Get cmux….*?tmux and[[:space:]]+Herdr remain available.*?does not change their[[:space:]]+Sessions' \
     'the terminal guide can regress to hiding literal tmux identifiers or truthful missing-cmux recovery'
 require_multiline_pattern docs/src/dez.md \
     'Open Workspace tmux.*?primary Workspace root.*?stable root identity.*?same folder name.*?cannot attach to one[[:space:]]+another.*?basename-only.*?active pane is inside the current Workspace root.*?never[[:space:]]+renames or terminates that session' \

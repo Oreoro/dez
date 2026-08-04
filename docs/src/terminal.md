@@ -234,6 +234,9 @@ endpoint snapshots run concurrently with an individual deadline for each
 session. A large or unresponsive endpoint set therefore becomes **Failed**
 instead of extending one refresh cycle indefinitely. A Retry requested while a
 scan is active queues one immediate follow-up scan rather than disappearing.
+The supported command and snapshot boundaries are documented in the official
+[Herdr CLI reference](https://herdr.dev/docs/cli-reference/) and [Herdr socket
+API reference](https://herdr.dev/docs/socket-api/).
 
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
