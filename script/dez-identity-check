@@ -2844,6 +2844,12 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_container_reuses_terminal_material.*?app_name != "Zed" && transparent_theme.*?FailedToSpawnTerminal.*?\.bg\(cx\.theme\(\)\.colors\(\)\.terminal_background\).*?let terminal_container_background = if terminal_container_reuses_terminal_material\(.*?ui::theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.id\("terminal-unavailable-state"\).*?\.bg\(cx\.theme\(\)\.colors\(\)\.terminal_background\).*?\.id\("terminal-view-container"\).*?\.bg\(terminal_container_background\).*?fn dez_terminal_element_owns_the_translucent_terminal_material.*?terminal_container_reuses_terminal_material\("Dez", true\).*?!terminal_container_reuses_terminal_material\("Dez", false\).*?!terminal_container_reuses_terminal_material\("Zed", true\)' \
     'the terminal wrapper can regress to stacking the editor tint beneath the translucent terminal material'
+require_multiline_pattern crates/terminal_view/src/terminal_element.rs \
+    'ContentMode::Inline.*?scale_factor = window\.scale_factor\(\)\.max\(1\.\).*?height = displayed_lines as f32 \* line_height.*?ceil\(\) / scale_factor' \
+    'fractional display scaling can regress to clipping the first inline-terminal output row'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'test_inline_terminal_displays_all_of_its_lines.*?write_output\(b"line\\n".*?viewport_lines\(\).*?total_lines\(\)' \
+    'the native inline-terminal row-count regression can lose its source test'
 require_multiline_pattern crates/workspace/src/pane.rs \
     '\.id\("empty-project-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.items_start\(\).*?\.justify_start\(\).*?\.px_6\(\).*?\.pt_6\(\).*?\.pb_6\(\)' \
     'the empty Main Work Area can clip its primary actions in a short window'
