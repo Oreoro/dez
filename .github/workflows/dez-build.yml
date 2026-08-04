@@ -133,7 +133,7 @@ jobs:
             done
           fi
 
-      - name: Run focused Workspace and terminal regressions
+      - name: Run focused Workspace, terminal, and integration regressions
         run: |
           set -euo pipefail
           cargo test \
@@ -155,6 +155,13 @@ jobs:
             --target aarch64-apple-darwin \
             --package sidebar \
             test_find_or_create_workspace_returns_the_created_remote_workspace \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package agent_ui \
+            multiplexer_session_store::tests \
             -- \
             --nocapture
 
