@@ -4348,6 +4348,18 @@ mod external_multiplexer_project_group_tests {
             .is_none()
         );
     }
+
+    #[test]
+    fn last_known_external_sessions_use_attention_status() {
+        assert_eq!(
+            external_multiplexer_status(MultiplexerSessionState::Available, true),
+            Some(AgentThreadStatus::WaitingForConfirmation),
+        );
+        assert_eq!(
+            external_multiplexer_status(MultiplexerSessionState::Available, false),
+            Some(AgentThreadStatus::Running),
+        );
+    }
 }
 
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
@@ -4360,7 +4372,14 @@ fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mu
         .detach_and_log_err(cx);
 }
 
-fn external_multiplexer_status(state: MultiplexerSessionState) -> Option<AgentThreadStatus> {
+fn external_multiplexer_status(
+    state: MultiplexerSessionState,
+    is_last_known: bool,
+) -> Option<AgentThreadStatus> {
+    if external_multiplexer_attention_visible(state, is_last_known) {
+        return Some(AgentThreadStatus::WaitingForConfirmation);
+    }
+
     match state {
         MultiplexerSessionState::Available
         | MultiplexerSessionState::Attached
@@ -17771,7 +17790,7 @@ impl Sidebar {
                 } else {
                     IconName::ArrowUpRight
                 };
-                let status = external_multiplexer_status(session.state);
+                let status = external_multiplexer_status(session.state, session.is_last_known());
                 let icon = external_multiplexer_icon(&session);
                 let row_session = session.clone();
                 let action_session = session.clone();

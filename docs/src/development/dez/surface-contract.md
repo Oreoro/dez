@@ -332,9 +332,10 @@ Each external source owns one Missing, Empty, Failed, or Ready state. One
 bounded failed-source notice exposes one non-destructive **Retry**; concurrent
 refresh requests coalesce, and last-known rows remain visibly qualified. A
 last-known tmux, Herdr, or cmux row stays reachable in **Attention** until its
-source refreshes or resolves. A truly empty list uses one primary **Open Terminal**
-action. Search recovery uses one primary **Clear Search** action, while a caught-up
-Attention scope uses a subordinate **Show All** action.
+source refreshes or resolves, and its row uses attention status rather than
+claiming current Running state. A truly empty list uses one primary **Open Terminal**
+action. Search recovery uses one primary **Clear Search** action, while a
+caught-up Attention scope uses a subordinate **Show All** action.
 
 **Other Running Sessions** remains absent during ordinary work when it has no
 rows. After the user explicitly chooses **Browse Running Sessions…**, it may
