@@ -1912,7 +1912,12 @@ mod tests {
         let result = window_handle
             .update(cx, |_, window, cx| {
                 terminal_panel.update(cx, |terminal_panel, cx| {
-                    terminal_panel.add_local_terminal_shell(RevealStrategy::Always, window, cx)
+                    terminal_panel.add_terminal_shell(
+                        None,
+                        RevealStrategy::Always,
+                        window,
+                        cx,
+                    )
                 })
             })
             .unwrap()
