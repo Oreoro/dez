@@ -133,6 +133,24 @@ jobs:
             done
           fi
 
+      - name: Run focused Workspace and terminal regressions
+        run: |
+          set -euo pipefail
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package workspace \
+            test_remove_project_group_prefers_already_loaded_neighboring_workspace \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package terminal_view \
+            test_inline_terminal_displays_all_of_its_lines \
+            -- \
+            --nocapture
+
       - name: Build the optimized Dez application bundle
         id: build-dez
         run: |

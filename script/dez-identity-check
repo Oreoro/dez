@@ -3273,6 +3273,9 @@ require_pattern .github/workflows/dez-build.yml \
 require_multiline_pattern .github/workflows/dez-build.yml \
     'Restore Rust release intermediates.*?continue-on-error: true.*?actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830.*?target/aarch64-apple-darwin/release/\.fingerprint.*?target/aarch64-apple-darwin/release/build.*?target/aarch64-apple-darwin/release/deps.*?dez-rust-release-macos-arm64-.*?github\.sha.*?restore-keys' \
     'the remote macOS build no longer reuses source-aware Rust release intermediates'
+require_multiline_pattern .github/workflows/dez-build.yml \
+    'Run focused Workspace and terminal regressions.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package workspace.*?test_remove_project_group_prefers_already_loaded_neighboring_workspace.*?cargo test.*?--release.*?--target aarch64-apple-darwin.*?--package terminal_view.*?test_inline_terminal_displays_all_of_its_lines' \
+    'the Apple M2 workflow no longer runs the focused native-navigation and terminal-row regressions'
 require_pattern .github/workflows/dez-build.yml \
     '\./script/bundle-mac aarch64-apple-darwin' \
     'the manual macOS workflow bypasses the canonical application bundler'
