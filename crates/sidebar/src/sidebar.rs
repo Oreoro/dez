@@ -85,8 +85,9 @@ use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
     HighlightedLabel, PopoverMenu, PopoverMenuHandle, ScrollAxes, Scrollbars, Severity, Tab,
-    ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus, ThreadItemRadius,
-    ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, right_click_menu,
+    TabDensity, ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus,
+    ThreadItemRadius, ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*,
+    right_click_menu,
 };
 use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
@@ -1206,6 +1207,21 @@ fn workspace_navigation_control_metrics(
     }
 
     sidebar_header_control_metrics(app_name, density)
+}
+
+fn workspace_navigation_tab_density(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> TabDensity {
+    if app_name == "Zed" {
+        return TabDensity::Balanced;
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => TabDensity::Compact,
+        settings::CanvasDensity::Balanced => TabDensity::Balanced,
+        settings::CanvasDensity::Spacious => TabDensity::Spacious,
+    }
 }
 
 fn workspace_open_row_metrics(density: settings::CanvasDensity) -> (ButtonSize, IconSize) {
@@ -2649,6 +2665,26 @@ mod workspace_header_label_tests {
         assert_eq!(
             session_header_status_label("Zed", 2, 1, true, false, false),
             None
+        );
+    }
+
+    #[test]
+    fn dez_workspace_chrome_follows_canvas_density() {
+        assert_eq!(
+            workspace_navigation_tab_density("Dez", settings::CanvasDensity::Compact),
+            TabDensity::Compact
+        );
+        assert_eq!(
+            workspace_navigation_tab_density("Dez", settings::CanvasDensity::Balanced),
+            TabDensity::Balanced
+        );
+        assert_eq!(
+            workspace_navigation_tab_density("Dez", settings::CanvasDensity::Spacious),
+            TabDensity::Spacious
+        );
+        assert_eq!(
+            workspace_navigation_tab_density("Zed", settings::CanvasDensity::Compact),
+            TabDensity::Balanced
         );
     }
 }
@@ -17319,28 +17355,32 @@ impl Sidebar {
     fn render_session_search(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = self.has_filter_query(cx);
         let dismiss_label = session_search_dismiss_label(APP_NAME);
+        let design_density = DesignSystemSettings::get_global(cx).density;
+        let tab_density = workspace_navigation_tab_density(APP_NAME, design_density);
+        let (control_size, icon_size) =
+            workspace_navigation_control_metrics(APP_NAME, design_density);
 
         h_flex()
             .id("session-search")
             .role(gpui::Role::Search)
             .aria_label(session_rail_search_label(APP_NAME))
             .flex_none()
-            .h(Tab::content_height(cx))
+            .h(tab_density.content_height(cx))
             .px_1p5()
             .gap_1()
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(
                 Icon::new(IconName::MagnifyingGlass)
-                    .size(IconSize::Small)
+                    .size(icon_size)
                     .color(Color::Muted),
             )
             .child(self.render_filter_input(cx))
             .when(has_query || paths::APP_NAME != "Zed", |this| {
                 this.child(
                     IconButton::new("clear-session-search", IconName::Close)
-                        .size(ButtonSize::Medium)
-                        .icon_size(IconSize::Small)
+                        .size(control_size)
+                        .icon_size(icon_size)
                         .tab_index(0isize)
                         .aria_label(dismiss_label)
                         .tooltip(Tooltip::text(dismiss_label))
@@ -18558,6 +18598,10 @@ impl Sidebar {
             APP_NAME,
             DesignSystemSettings::get_global(cx).density,
         );
+        let header_tab_density = workspace_navigation_tab_density(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let header_status_label = session_header_status_label(
             APP_NAME,
@@ -18618,7 +18662,7 @@ impl Sidebar {
 
         h_flex()
             .flex_none()
-            .h(Tab::container_height(cx))
+            .h(header_tab_density.container_height(cx))
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)

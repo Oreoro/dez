@@ -588,11 +588,11 @@ native tool, honest ownership, inline recovery**.
 - Use one primary action per state. Put secondary actions in ordinary rows or
   an overflow menu.
 - Use native Zed buttons, tabs, menus, prompts, focus, and theme tokens.
-- Use the shared density scale for top-bar, tab-bar, sidebar, and status-bar
-  controls. Compact navigation uses 22px targets with 12px marks; Balanced
-  uses 22–28px targets with 14px marks; Spacious uses 28–32px targets with
-  14px marks. Status type remains supporting text and the Dez status bar
-  scales from 24–30px.
+- Use the shared density scale for top-bar, tab-bar, sidebar title and search
+  rows, and status-bar controls. Compact navigation uses 22px targets with
+  12px marks; Balanced uses 22–28px targets with 14px marks; Spacious uses
+  28–32px targets with 14px marks. Status type remains supporting text and the
+  Dez status bar scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
 - Preserve visible keyboard focus and a visual reading order that matches
