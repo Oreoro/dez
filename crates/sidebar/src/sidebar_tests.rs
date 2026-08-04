@@ -363,25 +363,25 @@ fn dez_only_projects_truthfully_backed_stored_terminals() {
     let host_session_id = TerminalSessionId::new();
 
     assert_eq!(
-        terminal_entry_source_kind("Dez", false, false, None),
+        terminal_entry_source_kind("Dez", false, false, None, None),
         None,
         "stale metadata must not appear as a resumable Dez Session"
     );
     assert_eq!(
-        terminal_entry_source_kind("Dez", false, true, None),
+        terminal_entry_source_kind("Dez", false, true, None, None),
         Some(TerminalEntrySourceKind::AgentPanel)
     );
     assert_eq!(
-        terminal_entry_source_kind("Dez", false, false, Some(host_session_id)),
+        terminal_entry_source_kind("Dez", false, false, Some(host_session_id), None),
         Some(TerminalEntrySourceKind::HostSession(host_session_id))
     );
     assert_eq!(
-        terminal_entry_source_kind("Dez", true, true, Some(host_session_id)),
+        terminal_entry_source_kind("Dez", true, true, Some(host_session_id), None),
         Some(TerminalEntrySourceKind::WorkspaceItem),
         "a live Main Work Area terminal must own the row before stored or Host projections"
     );
     assert_eq!(
-        terminal_entry_source_kind("Zed", true, false, None),
+        terminal_entry_source_kind("Zed", true, false, None, None),
         Some(TerminalEntrySourceKind::AgentPanel),
         "official Zed retains legacy Terminal Thread restoration"
     );
@@ -1779,6 +1779,9 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: true,
                 has_threads: true,
+                activity_count: 5,
+                activity_expanded: true,
+                activity_disclosure_available: false,
                 external_sessions: Vec::new(),
             },
             ListEntry::Thread(Arc::new(ThreadEntry {
@@ -1935,6 +1938,9 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: false,
                 has_threads: false,
+                activity_count: 0,
+                activity_expanded: false,
+                activity_disclosure_available: false,
                 external_sessions: Vec::new(),
             },
         ];
@@ -2317,7 +2323,7 @@ async fn test_new_agent_thread_noops_without_open_project(cx: &mut TestAppContex
 
 #[test]
 fn session_rail_default_creation_is_terminal_first() {
-    assert_eq!(default_new_session_target(), NewEntryTarget::Terminal);
+    assert_eq!(default_new_session_target(), NewEntryTarget::Terminal(None));
 }
 
 #[test]

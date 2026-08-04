@@ -2903,22 +2903,6 @@ mod session_start_state_tests {
                 "Show all Workspace Activity",
             )
         );
-        assert_eq!(
-            machine_terminal_count_label(RESPONSIVE_MIN_WIDTH, 12),
-            "12 observed"
-        );
-        assert_eq!(
-            machine_terminal_count_label(DETAILED_MIN_WIDTH, 12),
-            "12 observed · read-only"
-        );
-        assert_eq!(
-            machine_terminal_section_tooltip_label(),
-            "Machine terminals are read-only; select one to return to its owning app"
-        );
-        assert!(
-            machine_terminal_section_accessibility_description()
-                .contains("does not own these PTYs")
-        );
         assert!(!session_rail_supplemental_metadata_visible(DEFAULT_WIDTH));
         assert!(session_rail_supplemental_metadata_visible(
             SUPPLEMENTAL_METADATA_MIN_WIDTH

@@ -1140,7 +1140,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'live_workspace_terminal.*?!group_workspaces\.contains\(live_workspace\).*?return None' \
     'stale stored terminal paths can project a live Session under the wrong Workspace'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'terminal_entry_source_kind\("Dez", true, true, Some\(host_session_id\)\).*?Some\(TerminalEntrySourceKind::WorkspaceItem\)' \
+    'terminal_entry_source_kind\("Dez", true, true, Some\(host_session_id\), None\).*?Some\(TerminalEntrySourceKind::WorkspaceItem\)' \
     'the live-terminal precedence policy is no longer pinned by a source assertion'
 require_multiline_pattern crates/agent_ui/src/agent_panel.rs \
     'TerminalEvent::TitleChanged.*?TerminalEvent::BreadcrumbsChanged.*?TerminalEvent::ProcessInfoChanged.*?refresh_terminal_metadata.*?TerminalEvent::Wakeup.*?TerminalEvent::BlinkChanged' \
