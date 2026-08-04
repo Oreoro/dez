@@ -238,7 +238,10 @@ an action or documentation route, never an availability toggle.
 Closing Workspaces gives its width back to the Main Work Area. The labeled
 status-bar control remains the recovery route and uses **Open Workspaces** for
 its tooltip and action. Compact layouts may hide secondary text, never the
-control's meaning or accessible identity.
+control's meaning or accessible identity. At less than 760px of window width,
+the density-scaled Workspaces mark remains the same keyboard, tooltip,
+attention, expanded-state, and accessibility target while its visible
+Workspace label yields space to editor and terminal status.
 
 ## Operational-state wireframe
 

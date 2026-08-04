@@ -12,6 +12,8 @@ use std::{any::TypeId, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
 use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, right_click_menu};
 
+const WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH: Pixels = px(760.0);
+
 /// Describes how a status-bar item can be hidden by the user.
 ///
 /// Every [`StatusItemView`] must either provide this (so that the user gets a
@@ -165,10 +167,13 @@ fn sidebar_toggle_accessibility_label(
 fn sidebar_toggle_visible_label(
     app_name: &str,
     workspace_name: Option<&SharedString>,
+    viewport_width: Pixels,
 ) -> Option<SharedString> {
-    (app_name != "Zed").then(|| match workspace_name {
-        Some(workspace_name) => format!("Workspaces · {workspace_name}").into(),
-        None => "Workspaces".into(),
+    (app_name != "Zed" && viewport_width >= WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH).then(|| {
+        match workspace_name {
+            Some(workspace_name) => format!("Workspaces · {workspace_name}").into(),
+            None => "Workspaces".into(),
+        }
     })
 }
 
@@ -191,6 +196,7 @@ impl Render for StatusBar {
         let sidebar = SidebarStatus::query(&self.multi_workspace, cx);
         let status_bar_height =
             status_bar_height(APP_NAME, DesignSystemSettings::get_global(cx).density);
+        let viewport_width = window.viewport_size().width;
 
         h_flex()
             .id("status-bar")
@@ -262,8 +268,8 @@ impl Render for StatusBar {
                     .border_b(px(1.0))
                     .border_color(cx.theme().colors().status_bar_background),
             })
-            .child(self.render_left_tools(&sidebar, cx))
-            .child(self.render_right_tools(&sidebar, cx))
+            .child(self.render_left_tools(&sidebar, viewport_width, cx))
+            .child(self.render_right_tools(&sidebar, viewport_width, cx))
     }
 }
 
@@ -289,14 +295,23 @@ mod tests {
         );
         let workspace_name: SharedString = "paykit".into();
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(1200.0)),
             Some("Workspaces · paykit".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", None),
+            sidebar_toggle_visible_label("Dez", None, px(1200.0)),
             Some("Workspaces".into())
         );
-        assert_eq!(sidebar_toggle_visible_label("Zed", None), None);
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(600.0)),
+            None,
+            "compact windows should keep the native recovery action without crowding status context"
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(760.0)),
+            Some("Workspaces · paykit".into())
+        );
+        assert_eq!(sidebar_toggle_visible_label("Zed", None, px(1200.0)), None);
         assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Compact),
             Some(px(24.0))
@@ -320,6 +335,7 @@ impl StatusBar {
     fn render_left_tools(
         &self,
         sidebar: &SidebarStatus,
+        viewport_width: Pixels,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         h_flex()
@@ -330,11 +346,11 @@ impl StatusBar {
             .when(
                 sidebar.show_toggle && sidebar.side == SidebarSide::Left,
                 |this| {
-                    this.child(
-                        div()
-                            .flex_none()
-                            .child(self.render_sidebar_toggle(sidebar, cx)),
-                    )
+                    this.child(div().flex_none().child(self.render_sidebar_toggle(
+                        sidebar,
+                        viewport_width,
+                        cx,
+                    )))
                 },
             )
             .child(
@@ -352,6 +368,7 @@ impl StatusBar {
     fn render_right_tools(
         &self,
         sidebar: &SidebarStatus,
+        viewport_width: Pixels,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         h_flex()
@@ -370,11 +387,11 @@ impl StatusBar {
             .when(
                 sidebar.show_toggle && sidebar.side == SidebarSide::Right,
                 |this| {
-                    this.child(
-                        div()
-                            .flex_none()
-                            .child(self.render_sidebar_toggle(sidebar, cx)),
-                    )
+                    this.child(div().flex_none().child(self.render_sidebar_toggle(
+                        sidebar,
+                        viewport_width,
+                        cx,
+                    )))
                 },
             )
     }
@@ -382,6 +399,7 @@ impl StatusBar {
     fn render_sidebar_toggle(
         &self,
         sidebar: &SidebarStatus,
+        viewport_width: Pixels,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let on_right = sidebar.side == SidebarSide::Right;
@@ -391,7 +409,8 @@ impl StatusBar {
         let toggle_label = sidebar_toggle_label(APP_NAME, open);
         let accessibility_label =
             sidebar_toggle_accessibility_label(APP_NAME, open, has_notifications);
-        let visible_label = sidebar_toggle_visible_label(APP_NAME, sidebar.workspace_name.as_ref());
+        let visible_label =
+            sidebar_toggle_visible_label(APP_NAME, sidebar.workspace_name.as_ref(), viewport_width);
         let (control_size, icon_size) =
             sidebar_header_control_metrics(APP_NAME, DesignSystemSettings::get_global(cx).density);
 
@@ -433,7 +452,8 @@ impl StatusBar {
                         .into_any_element()
                 } else {
                     IconButton::new("toggle-workspace-sidebar", icon)
-                        .icon_size(IconSize::Small)
+                        .size(control_size)
+                        .icon_size(icon_size)
                         .tab_index(0isize)
                         .aria_label(accessibility_label)
                         .aria_expanded(open)
