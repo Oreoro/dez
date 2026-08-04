@@ -442,6 +442,13 @@ impl StatusBar {
                         }))
                         .size(control_size)
                         .label_size(LabelSize::Small)
+                        .when(has_notifications, |this| {
+                            this.end_icon(
+                                Icon::new(IconName::Circle)
+                                    .size(IconSize::XSmall)
+                                    .color(Color::Accent),
+                            )
+                        })
                         .tab_index(0isize)
                         .aria_label(accessibility_label)
                         .aria_expanded(open)
