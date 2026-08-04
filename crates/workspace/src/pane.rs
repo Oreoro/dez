@@ -3493,9 +3493,9 @@ impl Pane {
                     this.tab_index(0isize)
                 })
                 .aria_label(if toggleable {
-                    "Unlock File"
+                    "Unlock Tab"
                 } else {
-                    "Locked File"
+                    "Locked Tab"
                 })
                 .disabled(!toggleable)
                 .tooltip(move |_, cx| {
