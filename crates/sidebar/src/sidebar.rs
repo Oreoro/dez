@@ -170,6 +170,7 @@ const DEZ_MAX_WIDTH: Pixels = px(360.0);
 const RESPONSIVE_MIN_WIDTH: Pixels = px(200.0);
 const SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0.30;
 const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
+const WORKSPACE_ACTIVITY_PREVIEW_LIMIT: usize = 5;
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
@@ -1299,6 +1300,38 @@ fn workspace_activity_section_visible(
 
 fn workspace_activity_section_title(_app_name: &str) -> &'static str {
     "Activity"
+}
+
+fn workspace_activity_preview_indices(
+    row_states: &[(bool, bool)],
+    limit: usize,
+    expanded: bool,
+) -> Vec<usize> {
+    if expanded || row_states.len() <= limit {
+        return (0..row_states.len()).collect();
+    }
+
+    let mut selected = Vec::with_capacity(limit);
+    for (index, (is_active, _)) in row_states.iter().enumerate() {
+        if *is_active && selected.len() < limit {
+            selected.push(index);
+        }
+    }
+    for (index, (_, needs_attention)) in row_states.iter().enumerate() {
+        if *needs_attention && selected.len() < limit && !selected.contains(&index) {
+            selected.push(index);
+        }
+    }
+    for index in 0..row_states.len() {
+        if selected.len() == limit {
+            break;
+        }
+        if !selected.contains(&index) {
+            selected.push(index);
+        }
+    }
+    selected.sort_unstable();
+    selected
 }
 
 fn workspace_tabs_section_title(app_name: &str) -> &'static str {
@@ -2974,6 +3007,39 @@ mod session_start_state_tests {
         assert!(!workspace_activity_section_visible(
             "Zed", false, false, true,
         ));
+    }
+
+    #[test]
+    fn workspace_activity_preview_preserves_active_and_attention_rows() {
+        let row_states = [
+            (false, false),
+            (false, false),
+            (false, false),
+            (false, false),
+            (false, false),
+            (false, true),
+            (true, false),
+            (false, true),
+        ];
+
+        assert_eq!(
+            workspace_activity_preview_indices(
+                &row_states,
+                WORKSPACE_ACTIVITY_PREVIEW_LIMIT,
+                false,
+            ),
+            [0, 1, 5, 6, 7],
+            "the bounded preview must retain the current destination and actionable rows"
+        );
+        assert_eq!(
+            workspace_activity_preview_indices(&row_states, 4, false),
+            [0, 5, 6, 7],
+            "a Running Sessions disclosure may reserve one of the five Activity rows"
+        );
+        assert_eq!(
+            workspace_activity_preview_indices(&row_states, WORKSPACE_ACTIVITY_PREVIEW_LIMIT, true,),
+            (0..row_states.len()).collect::<Vec<_>>()
+        );
     }
 }
 
@@ -5086,6 +5152,9 @@ enum ListEntry {
         has_notifications: bool,
         is_active: bool,
         has_threads: bool,
+        activity_count: usize,
+        activity_expanded: bool,
+        activity_disclosure_available: bool,
         external_sessions: Vec<ExternalMultiplexerSession>,
     },
     Thread(Arc<ThreadEntry>),
@@ -5745,6 +5814,10 @@ pub struct Sidebar {
     /// technical rows should only occupy navigation space after the user asks
     /// to inspect them.
     workspace_external_sessions_expanded: HashSet<ProjectGroupKey>,
+    /// Busy Workspaces expose a five-row Activity preview. Expansion changes
+    /// only this projection; the owning terminal and Agent surfaces remain
+    /// unchanged.
+    workspace_activity_expanded: HashSet<ProjectGroupKey>,
     reveal_running_sessions_after_refresh: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
@@ -6025,6 +6098,7 @@ impl Sidebar {
             session_search_open: false,
             external_activity_expanded: false,
             workspace_external_sessions_expanded: HashSet::new(),
+            workspace_activity_expanded: HashSet::new(),
             reveal_running_sessions_after_refresh: false,
             selection: None,
             active_entry: None,
@@ -6684,6 +6758,8 @@ impl Sidebar {
         let mut project_header_indices: Vec<usize> = Vec::new();
         let mut seen_thread_ids: HashSet<agent_ui::ThreadId> = HashSet::new();
         let mut seen_terminal_ids: HashSet<TerminalId> = HashSet::new();
+        let mut managed_activity_count = 0usize;
+        let mut managed_attention_count = 0usize;
 
         let has_open_projects = workspaces
             .iter()
@@ -7718,6 +7794,27 @@ impl Sidebar {
                     .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
                 visible_multiplexer_session_ids
                     .extend(external_sessions.iter().map(|session| session.id.clone()));
+                let mut activity_entries = Vec::new();
+                Self::push_entries_by_session_rail_sort(
+                    &mut activity_entries,
+                    matched_terminals,
+                    matched_threads,
+                    session_rail_sort_by,
+                    &notified_threads,
+                    &notified_terminals,
+                    &manual_entry_order,
+                    &mut current_session_ids,
+                    &mut current_thread_ids,
+                );
+                managed_activity_count += activity_entries.len();
+                managed_attention_count += activity_entries
+                    .iter()
+                    .filter(|entry| {
+                        entry_needs_attention(entry, &notified_threads, &notified_terminals)
+                    })
+                    .count();
+                let activity_count =
+                    activity_entries.len() + usize::from(!external_sessions.is_empty());
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
@@ -7733,20 +7830,12 @@ impl Sidebar {
                         || has_external_notifications,
                     is_active,
                     has_threads,
+                    activity_count,
+                    activity_expanded: true,
+                    activity_disclosure_available: false,
                     external_sessions,
                 });
-
-                Self::push_entries_by_session_rail_sort(
-                    &mut entries,
-                    matched_terminals,
-                    matched_threads,
-                    session_rail_sort_by,
-                    &notified_threads,
-                    &notified_terminals,
-                    &manual_entry_order,
-                    &mut current_session_ids,
-                    &mut current_thread_ids,
-                );
+                entries.extend(activity_entries);
             } else {
                 if !has_threads && !session_rail_shows_idle_workspaces(APP_NAME) {
                     continue;
@@ -7781,6 +7870,66 @@ impl Sidebar {
                         .iter()
                         .any(|t| notified_threads.contains(&t.metadata.thread_id))
                 };
+                let mut activity_entries = Vec::new();
+                Self::push_entries_by_session_rail_sort(
+                    &mut activity_entries,
+                    terminals,
+                    threads,
+                    session_rail_sort_by,
+                    &notified_threads,
+                    &notified_terminals,
+                    &manual_entry_order,
+                    &mut current_session_ids,
+                    &mut current_thread_ids,
+                );
+                managed_activity_count += activity_entries.len();
+                managed_attention_count += activity_entries
+                    .iter()
+                    .filter(|entry| {
+                        entry_needs_attention(entry, &notified_threads, &notified_terminals)
+                    })
+                    .count();
+
+                let external_activity_row_count = usize::from(!external_sessions.is_empty());
+                let activity_count = activity_entries.len() + external_activity_row_count;
+                let activity_disclosure_available = !is_collapsed
+                    && !self.attention_only
+                    && activity_count > WORKSPACE_ACTIVITY_PREVIEW_LIMIT;
+                let activity_expanded = !activity_disclosure_available
+                    || self.workspace_activity_expanded.contains(group_key);
+                if activity_disclosure_available && !activity_expanded {
+                    let preview_limit = WORKSPACE_ACTIVITY_PREVIEW_LIMIT
+                        .saturating_sub(external_activity_row_count);
+                    let row_states = activity_entries
+                        .iter()
+                        .map(|entry| {
+                            (
+                                self.active_entry
+                                    .as_ref()
+                                    .is_some_and(|active| active.matches_entry(entry)),
+                                entry_needs_attention(
+                                    entry,
+                                    &notified_threads,
+                                    &notified_terminals,
+                                ),
+                            )
+                        })
+                        .collect::<Vec<_>>();
+                    let preview_indices = workspace_activity_preview_indices(
+                        &row_states,
+                        preview_limit,
+                        activity_expanded,
+                    )
+                    .into_iter()
+                    .collect::<HashSet<_>>();
+                    activity_entries = activity_entries
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(index, entry)| {
+                            preview_indices.contains(&index).then_some(entry)
+                        })
+                        .collect();
+                }
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
@@ -7796,24 +7945,16 @@ impl Sidebar {
                         || has_external_notifications,
                     is_active,
                     has_threads,
+                    activity_count,
+                    activity_expanded,
+                    activity_disclosure_available,
                     external_sessions,
                 });
 
                 if is_collapsed {
                     continue;
                 }
-
-                Self::push_entries_by_session_rail_sort(
-                    &mut entries,
-                    terminals,
-                    threads,
-                    session_rail_sort_by,
-                    &notified_threads,
-                    &notified_terminals,
-                    &manual_entry_order,
-                    &mut current_session_ids,
-                    &mut current_thread_ids,
-                );
+                entries.extend(activity_entries);
             }
         }
 
@@ -7843,18 +7984,8 @@ impl Sidebar {
                 .map(|session| session.id.clone()),
         );
 
-        let session_count = entries
-            .iter()
-            .filter(|entry| matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)))
-            .count()
-            + visible_multiplexer_session_ids.len();
-        let attention_count = entries
-            .iter()
-            .filter(|entry| {
-                matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_))
-                    && entry_needs_attention(entry, &notified_threads, &notified_terminals)
-            })
-            .count()
+        let session_count = managed_activity_count + visible_multiplexer_session_ids.len();
+        let attention_count = managed_attention_count
             + multiplexer_sessions
                 .iter()
                 .filter(|session| {
@@ -8183,6 +8314,9 @@ impl Sidebar {
                 has_notifications,
                 is_active: is_active_group,
                 has_threads,
+                activity_count,
+                activity_expanded,
+                activity_disclosure_available,
                 external_sessions,
             } => {
                 self.project_header_menu_handles.entry(ix).or_default();
@@ -8205,6 +8339,9 @@ impl Sidebar {
                     *is_active_group,
                     is_selected,
                     *has_threads,
+                    *activity_count,
+                    *activity_expanded,
+                    *activity_disclosure_available,
                     external_sessions,
                     // has_active_draft,
                     window,
@@ -8269,6 +8406,95 @@ impl Sidebar {
         )
     }
 
+    fn render_workspace_activity_heading(
+        &self,
+        ix: usize,
+        key: &ProjectGroupKey,
+        workspace_name: &SharedString,
+        activity_count: usize,
+        activity_expanded: bool,
+        activity_disclosure_available: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let content = h_flex()
+            .w_full()
+            .min_w_0()
+            .gap_1()
+            .child(
+                Label::new(workspace_activity_section_title(APP_NAME))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            )
+            .child(div().flex_1())
+            .child(
+                Label::new(activity_count.to_string())
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            );
+
+        if !activity_disclosure_available {
+            return content.px_3().pt_1().pb_0p5().into_any_element();
+        }
+
+        let accessibility_label = if activity_expanded {
+            format!(
+                "Show fewer Activity items in {}; {} total",
+                workspace_name.as_ref(),
+                activity_count
+            )
+        } else {
+            format!(
+                "Show all {} Activity items in {}",
+                activity_count,
+                workspace_name.as_ref()
+            )
+        };
+        let disclosure_key = key.clone();
+        let sidebar = cx.weak_entity();
+        h_flex()
+            .w_full()
+            .px_2()
+            .pt_1()
+            .pb_0p5()
+            .child(
+                ButtonLike::new(ElementId::from(format!(
+                    "workspace-activity-disclosure-{ix}"
+                )))
+                .size(ButtonSize::Medium)
+                .style(ButtonStyle::Subtle)
+                .full_width()
+                .tab_index(0isize)
+                .aria_expanded(activity_expanded)
+                .aria_label(accessibility_label.clone())
+                .tooltip(Tooltip::text(accessibility_label))
+                .child(
+                    content.child(
+                        Icon::new(if activity_expanded {
+                            IconName::ChevronDown
+                        } else {
+                            IconName::ChevronRight
+                        })
+                        .size(IconSize::XSmall)
+                        .color(Color::Muted),
+                    ),
+                )
+                .on_click(move |_, _window, cx| {
+                    cx.stop_propagation();
+                    sidebar
+                        .update(cx, |sidebar, cx| {
+                            if !sidebar.workspace_activity_expanded.remove(&disclosure_key) {
+                                sidebar
+                                    .workspace_activity_expanded
+                                    .insert(disclosure_key.clone());
+                            }
+                            sidebar.update_entries(cx);
+                        })
+                        .log_err();
+                }),
+            )
+            .into_any_element()
+    }
+
     fn render_project_header(
         &self,
         ix: usize,
@@ -8285,6 +8511,9 @@ impl Sidebar {
         is_active: bool,
         is_focused: bool,
         has_threads: bool,
+        activity_count: usize,
+        activity_expanded: bool,
+        activity_disclosure_available: bool,
         external_sessions: &[ExternalMultiplexerSession],
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -8682,13 +8911,6 @@ impl Sidebar {
             is_collapsed,
             has_threads || !external_sessions.is_empty(),
         );
-        let workspace_activity_heading = || {
-            h_flex().w_full().px_3().pt_1().pb_0p5().child(
-                Label::new(workspace_activity_section_title(APP_NAME))
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-            )
-        };
 
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
             let external_sessions_expanded =
@@ -8891,7 +9113,15 @@ impl Sidebar {
                 .child(header)
                 .when_some(workspace_layout, |this, layout| this.child(layout))
                 .when(workspace_activity_visible, |this| {
-                    this.child(workspace_activity_heading())
+                    this.child(self.render_workspace_activity_heading(
+                        ix,
+                        key,
+                        &workspace_name,
+                        activity_count,
+                        activity_expanded,
+                        activity_disclosure_available,
+                        cx,
+                    ))
                 })
                 .child(
                     v_flex()
@@ -9014,7 +9244,15 @@ impl Sidebar {
                     .child(header)
                     .when_some(workspace_layout, |this, layout| this.child(layout))
                     .when(workspace_activity_visible, |this| {
-                        this.child(workspace_activity_heading())
+                        this.child(self.render_workspace_activity_heading(
+                            ix,
+                            key,
+                            &workspace_name,
+                            activity_count,
+                            activity_expanded,
+                            activity_disclosure_available,
+                            cx,
+                        ))
                     })
                     .into_any_element()
             } else {
@@ -10128,6 +10366,9 @@ impl Sidebar {
             has_notifications,
             is_active,
             has_threads,
+            activity_count,
+            activity_expanded,
+            activity_disclosure_available,
             external_sessions,
         } = self.contents.entries.get(header_idx)?
         else {
@@ -10152,6 +10393,9 @@ impl Sidebar {
             *is_active,
             is_selected,
             *has_threads,
+            *activity_count,
+            *activity_expanded,
+            *activity_disclosure_available,
             external_sessions,
             window,
             cx,

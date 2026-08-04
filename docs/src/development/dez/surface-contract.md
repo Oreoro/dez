@@ -96,7 +96,11 @@ provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
 
 Provider and subagent glyphs identify activity; adjacent state text says
 Working, Needs attention, Completed, Failed, or Available. Color is supportive,
-never the only state signal.
+never the only state signal. The ordinary Workspace projection shows at most
+five top-level Activity rows. A **Running Sessions** disclosure occupies one of
+those rows; the current destination and attention-required rows take priority
+over routine activity. The native Activity disclosure reveals the
+complete current set, while Search and Attention scope remain exhaustive.
 
 ### 3. Supervise and recover
 
@@ -575,7 +579,7 @@ native tool, honest ownership, inline recovery**.
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
 | Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | appears once there are at least two open tabs and then includes every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
-| Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; external work begins as one Running Sessions disclosure; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
+| Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; default preview is at most five top-level rows and preserves the current and attention-required destinations; external work begins as one Running Sessions disclosure; native expansion, Search, and Attention scope reveal the complete relevant set; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
@@ -656,6 +660,9 @@ native tool, honest ownership, inline recovery**.
 - Activity excludes inactive completed history while preserving active,
   attention, recovery, and review-ready rows. Layout remains the route to idle
   open tabs and Agent History remains the route to completed Agent Sessions.
+- Activity shows at most five top-level rows before native expansion, reserves
+  one row for Running Sessions when present, and prioritizes the current and
+  attention-required managed destinations in that preview.
 - Empty Workspaces and search states expose one visually primary recovery;
   caught-up scope changes remain subordinate.
 - Native pane tabs remain the source of order, focus, dirty, close, and split

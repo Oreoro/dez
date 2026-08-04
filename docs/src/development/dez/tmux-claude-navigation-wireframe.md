@@ -130,8 +130,11 @@ existing keymap after a collision audit; this proposal does not assign it.
 ```
 
 The Activity shelf follows Claude Code's content-dependent task visibility: it
-has no empty placeholder, shows at most five rows before scrolling or expanding,
-and keeps state in text. Selecting a row focuses its existing owner.
+has no empty placeholder and shows at most five top-level rows before native
+expansion. Running Sessions consumes one of those rows; the current destination
+and attention-required rows displace routine activity from the preview. Search
+and Attention scope remain exhaustive. State stays in text, and selecting a row
+focuses its existing owner.
 
 The return recap appears once at the top edge of the owning pane, then yields
 space after review or dismissal. It may summarize only authoritative events:
