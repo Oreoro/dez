@@ -41,7 +41,7 @@ jobs:
   build_macos_arm64:
     name: macOS Apple M2 app
     runs-on: macos-15
-    timeout-minutes: 180
+    timeout-minutes: 360
 
     steps:
       - name: Check out Dez
