@@ -419,6 +419,10 @@ Closing the optional Workspaces navigator leaves a compact, labeled
 attention, while the tooltip and accessibility label expose the native
 **Open Workspaces** action.
 
+Fresh Workspaces also keep Files closed so the Main Work Area remains primary.
+Restored layouts are preserved, and **Settings → Workspace Tools → Open Files
+Automatically** provides the deliberate always-open file-tree workflow.
+
 Fresh Dez windows open the top-anchored native Home launcher inside the normal
 Main Work Area tab frame. The tab strip and its adjacent Add control remain
 visible before the first file or terminal opens. Home does not auto-read a

@@ -4503,3 +4503,16 @@ Completed for the Activity noun source slice:
   identity guards; and
 - retained source-only verification. No local build, test binary, alternate
   binary, package, or app launch was performed.
+
+Completed for the fresh Workspace ownership source slice:
+
+- aligned the bundled Files startup default with the existing first-run
+  profile so a fresh Workspace begins in the Main Work Area instead of opening
+  a second column;
+- preserved restored layouts and the explicit Files startup preference;
+- renamed the graphical toggle **Open Files Automatically** and explained its
+  Main Work Area consequence without inherited panel language;
+- synchronized the v0.4 contract, public guides, and static identity guard;
+  and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.

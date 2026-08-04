@@ -1084,6 +1084,11 @@ persistent for people who prefer that layout. **Workspaces Position** chooses
 its window edge. Closing Workspaces never closes a Workspace, terminal, or
 Agent Session.
 
+Files is on demand for the same reason: a fresh Workspace opens in the Main
+Work Area instead of creating a second column. Restored layouts remain intact,
+and **Settings → Workspace Tools → Open Files Automatically** opts into the
+file tree for every newly opened Workspace.
+
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
 collapses the Workspace's nested **Open** and **Sessions** sections. Open

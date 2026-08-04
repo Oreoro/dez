@@ -644,6 +644,8 @@ native tool, honest ownership, inline recovery**.
 - Every open panel, tool, terminal, file, diff, and browser surface is reachable
   as a native tab and appears in Layout for the active Workspace.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
+- A fresh Workspace starts in the Main Work Area without an automatic Files
+  column; restored layouts and an explicit Files startup preference still win.
 - Activity excludes inactive completed history while preserving active,
   attention, recovery, and review-ready rows. Layout remains the route to idle
   open tabs and Agent History remains the route to completed Agent Sessions.

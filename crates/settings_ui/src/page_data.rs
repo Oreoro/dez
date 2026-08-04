@@ -5793,10 +5793,10 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: files_copy("Starts Open", "Open Files with Workspaces"),
+                title: files_copy("Starts Open", "Open Files Automatically"),
                 description: files_copy(
                     "Whether the project panel should open on startup.",
-                    "Whether Files opens automatically when a Workspace opens.",
+                    "Open Files when a Workspace opens. When off, the Main Work Area stays focused until you choose Files.",
                 ),
                 field: Box::new(SettingField {
                     organization_override: None,
