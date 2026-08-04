@@ -667,6 +667,10 @@ native tool, honest ownership, inline recovery**.
   attention-required managed destinations in that preview.
 - Empty Workspaces and search states expose one visually primary recovery;
   caught-up scope changes remain subordinate.
+- Removing the active Workspace group activates the nearest healthy retained
+  Workspace, including a loaded remote Workspace. An unloaded immediate local
+  neighbor may open normally; an unloaded remote path is never reinterpreted as
+  local, and a durable empty Workspace is the final fallback.
 - Native pane tabs remain the source of order, focus, dirty, close, and split
   truth.
 - Agent review disclosures and decisions remain keyboard reachable, and Git

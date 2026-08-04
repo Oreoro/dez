@@ -394,6 +394,12 @@ action, and a Workspace with Session activity keeps that route available.
 Readiness remains in the overview summary and the Workspace header's accessible
 name instead of being repeated as a decorative dot-and-caption row.
 
+**Remove Workspace from Window** removes that Workspace group and activates the
+nearest already loaded Workspace, including a retained remote Workspace. If no
+loaded neighbor exists, Dez may open the immediately adjacent local Workspace;
+it never treats a remote path as local. Only when no reachable neighbor remains
+does the Main Work Area move to a durable empty Workspace.
+
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and tab close controls are keyboard-focusable and specifically
 named. Files, Git, Outline, Debug, and Built-in Agent use the native Main Work

@@ -896,6 +896,56 @@ async fn test_close_workspace_prefers_already_loaded_neighboring_workspace(
 }
 
 #[gpui::test]
+async fn test_remove_project_group_prefers_already_loaded_neighboring_workspace(
+    cx: &mut TestAppContext,
+) {
+    init_test(cx);
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_tree("/root_a", json!({ "file_a.txt": "" })).await;
+    fs.insert_tree("/root_b", json!({ "file_b.txt": "" })).await;
+    let project_a = Project::test(fs.clone(), ["/root_a".as_ref()], cx).await;
+    let key_a = project_a.read_with(cx, |project, cx| project.project_group_key(cx));
+    let project_b = Project::test(fs, ["/root_b".as_ref()], cx).await;
+
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project_a, window, cx));
+    multi_workspace.update(cx, |multi_workspace, cx| {
+        multi_workspace.open_sidebar(cx);
+    });
+    cx.run_until_parked();
+
+    let workspace_a = multi_workspace.read_with(cx, |multi_workspace, _cx| {
+        multi_workspace.workspace().clone()
+    });
+    let workspace_b = multi_workspace.update_in(cx, |multi_workspace, window, cx| {
+        multi_workspace.test_add_workspace(project_b, window, cx)
+    });
+    multi_workspace.update_in(cx, |multi_workspace, window, cx| {
+        multi_workspace.activate(workspace_a, None, window, cx);
+    });
+
+    let removed = multi_workspace
+        .update_in(cx, |multi_workspace, window, cx| {
+            multi_workspace.remove_project_group(&key_a, window, cx)
+        })
+        .await
+        .expect("removing the active project group should succeed");
+
+    assert!(removed, "the active project group should be removed");
+    multi_workspace.read_with(cx, |multi_workspace, _cx| {
+        assert_eq!(
+            multi_workspace.workspace(),
+            &workspace_b,
+            "removing the active group should activate the loaded neighboring Workspace"
+        );
+        assert!(
+            !multi_workspace.project_group_keys().contains(&key_a),
+            "the removed Workspace group must not be recreated by fallback activation"
+        );
+    });
+}
+
+#[gpui::test]
 async fn test_switching_projects_with_sidebar_closed_retains_old_active_workspace(
     cx: &mut TestAppContext,
 ) {

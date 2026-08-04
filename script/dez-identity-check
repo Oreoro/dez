@@ -3096,6 +3096,15 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn open_recent_project.*?SerializedWorkspaceLocation::Local.*?window\.window_handle\(\)\.downcast::<MultiWorkspace>\(\).*?cx\.defer\(move \|cx\|.*?multi_workspace\.open_project\(paths, open_mode, window, cx\).*?task\.detach_and_log_err\(cx\)' \
     'opening a recent Workspace from Home can regress to re-reading WelcomePage during its own action update'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'pub fn remove_project_group.*?active_workspace.*?retain_workspace\(active_workspace, group_key\.clone\(\), cx\).*?fallback_workspace\(group_index, &excluded_workspaces.*?fn fallback_workspace.*?nearest_retained_workspace.*?key\.host\(\)\.is_none\(\).*?create_durable_empty_local_workspace.*?fn nearest_retained_workspace.*?!workspace\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\)' \
+    'removing the active Workspace can regress to a no-op, a disconnected fallback, or a remote path opened as local'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'pub fn close_workspace.*?workspaces_for_project_group\(&group_key, cx\).*?candidate != &excluded_workspace.*?!candidate\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\).*?fallback_workspace' \
+    'closing a Workspace can regress to selecting a disconnected sibling'
+require_multiline_pattern crates/workspace/src/multi_workspace_tests.rs \
+    'test_remove_project_group_prefers_already_loaded_neighboring_workspace.*?remove_project_group\(&key_a.*?multi_workspace\.workspace\(\),[[:space:]]*&workspace_b.*?!multi_workspace\.project_group_keys\(\)\.contains\(&key_a\)' \
+    'the loaded-neighbor Workspace-removal regression can lose its source test'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'const OPEN_WORKSPACE: OpenFolder = OpenFolder \{.*?create_new_window: Some\(false\).*?const DEZ_CONTENT: \(Section, Section\).*?title: "Start a Workspace".*?title: "Open Workspace",[[:space:]]*meta: Some\("Local folder"\),[[:space:]]*action: &OPEN_WORKSPACE.*?title: "Clone Repository",[[:space:]]*meta: Some\("From Git"\).*?const DEZ_WORKSPACE_CONTENT' \
     'the Dez welcome actions no longer make Workspace context primary'
