@@ -1233,12 +1233,11 @@ fn workspace_navigation_tab_density(
     }
 }
 
-fn workspace_open_row_metrics(density: settings::CanvasDensity) -> (ButtonSize, IconSize) {
-    match density {
-        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
-        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::Small),
-        settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
-    }
+fn workspace_open_row_metrics(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
+    workspace_navigation_control_metrics(app_name, density)
 }
 
 fn session_rail_accessibility_label(app_name: &str) -> &'static str {
@@ -2774,16 +2773,16 @@ mod session_start_state_tests {
             ButtonStyle::Tinted(TintColor::Accent)
         );
         assert!(
-            workspace_open_row_metrics(settings::CanvasDensity::Compact)
+            workspace_open_row_metrics("Dez", settings::CanvasDensity::Compact)
                 == (ButtonSize::Default, IconSize::XSmall)
         );
         assert!(
-            workspace_open_row_metrics(settings::CanvasDensity::Balanced)
-                == (ButtonSize::Medium, IconSize::Small)
+            workspace_open_row_metrics("Dez", settings::CanvasDensity::Balanced)
+                == (ButtonSize::Default, IconSize::Small)
         );
         assert!(
-            workspace_open_row_metrics(settings::CanvasDensity::Spacious)
-                == (ButtonSize::Large, IconSize::Small)
+            workspace_open_row_metrics("Dez", settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert_eq!(
             session_rail_accessibility_label("Dez"),
@@ -18820,7 +18819,7 @@ impl Sidebar {
     ) -> Option<AnyElement> {
         let workspace = self.active_workspace(cx)?;
         let (row_size, row_icon_size) =
-            workspace_open_row_metrics(DesignSystemSettings::get_global(cx).density);
+            workspace_open_row_metrics(APP_NAME, DesignSystemSettings::get_global(cx).density);
         let active_pane = workspace.read(cx).active_pane().clone();
         let pane_items = workspace
             .read(cx)
