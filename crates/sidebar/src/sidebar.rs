@@ -8548,6 +8548,10 @@ impl Sidebar {
         activity_disclosure_available: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let (workspace_control_size, workspace_icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let content = h_flex()
             .w_full()
             .min_w_0()
@@ -8593,7 +8597,7 @@ impl Sidebar {
                 ButtonLike::new(ElementId::from(format!(
                     "workspace-activity-disclosure-{ix}"
                 )))
-                .size(ButtonSize::Medium)
+                .size(workspace_control_size)
                 .style(ButtonStyle::Subtle)
                 .full_width()
                 .tab_index(0isize)
@@ -8607,7 +8611,7 @@ impl Sidebar {
                         } else {
                             IconName::ChevronRight
                         })
-                        .size(IconSize::XSmall)
+                        .size(workspace_icon_size)
                         .color(Color::Muted),
                     ),
                 )
@@ -9111,7 +9115,7 @@ impl Sidebar {
                                     .gap_2()
                                     .child(
                                         Icon::new(external_multiplexer_icon(session))
-                                            .size(IconSize::XSmall)
+                                            .size(workspace_icon_size)
                                             .color(
                                                 if external_multiplexer_attention_visible(
                                                     session.state,
@@ -9190,7 +9194,7 @@ impl Sidebar {
                 );
             let external_sessions_disclosure =
                 ButtonLike::new(ElementId::from(format!("workspace-running-sessions-{ix}")))
-                    .size(ButtonSize::Medium)
+                    .size(workspace_control_size)
                     .style(ButtonStyle::Subtle)
                     .full_width()
                     .tab_index(0isize)
@@ -9208,7 +9212,7 @@ impl Sidebar {
                                 } else {
                                     IconName::ChevronRight
                                 })
-                                .size(IconSize::XSmall)
+                                .size(workspace_icon_size)
                                 .color(Color::Muted),
                             )
                             .child(
@@ -9326,7 +9330,7 @@ impl Sidebar {
                                 terminal_launch_label(APP_NAME),
                             )
                             .full_width()
-                            .size(ButtonSize::Medium)
+                            .size(workspace_control_size)
                             .style(if APP_NAME == "Zed" {
                                 ButtonStyle::Filled
                             } else {
@@ -9339,7 +9343,7 @@ impl Sidebar {
                                         .terminal_init_command
                                         .as_deref(),
                                 ))
-                                .size(IconSize::XSmall),
+                                .size(workspace_icon_size),
                             )
                             .tab_index(0isize)
                             .aria_label(SharedString::from(format!(
@@ -17899,6 +17903,8 @@ impl Sidebar {
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible_for_product(APP_NAME, self.rendered_width);
         let design_system = DesignSystemSettings::get_global(cx);
+        let (navigation_control_size, navigation_icon_size) =
+            workspace_navigation_control_metrics(APP_NAME, design_system.density);
         let labels_visible = session_rail_labels_visible(&design_system);
         let sidebar = cx.weak_entity();
         let project_roots = self
@@ -17978,8 +17984,8 @@ impl Sidebar {
                         ),
                         action_icon,
                     )
-                    .size(ButtonSize::Medium)
-                    .icon_size(IconSize::Small)
+                    .size(navigation_control_size)
+                    .icon_size(navigation_icon_size)
                     .tab_index(0isize)
                     .aria_label(action_label.clone())
                     .tooltip(Tooltip::text(action_label))
@@ -18077,8 +18083,8 @@ impl Sidebar {
                                 ),
                                 action_icon,
                             )
-                            .size(ButtonSize::Medium)
-                            .icon_size(IconSize::Small)
+                            .size(navigation_control_size)
+                            .icon_size(navigation_icon_size)
                             .tab_index(0isize)
                             .aria_label(action_label.clone())
                             .tooltip(Tooltip::text(action_label))
@@ -18119,7 +18125,7 @@ impl Sidebar {
             .map(|empty_label| format!("{disclosure_label}. {empty_label}"))
             .unwrap_or_else(|| disclosure_label.to_owned());
         let section_header = ButtonLike::new("external-terminal-section-header")
-            .size(ButtonSize::Medium)
+            .size(navigation_control_size)
             .style(ButtonStyle::Subtle)
             .full_width()
             .tab_index(0isize)
@@ -18136,7 +18142,7 @@ impl Sidebar {
                         } else {
                             IconName::ChevronRight
                         })
-                        .size(IconSize::XSmall)
+                        .size(navigation_icon_size)
                         .color(Color::Muted),
                     )
                     .child(

@@ -292,7 +292,7 @@ fn cmux_integration_action_link() -> SettingsPageItem {
                 .into(),
         ),
         button_text: "Open API & Access Guide".into(),
-        icon: IconName::Screen,
+        icon: IconName::ArrowUpRight,
         on_click: Arc::new(|_settings_window, _window, cx| {
             cx.open_url("https://cmux.com/docs/api");
         }),
@@ -11995,7 +11995,7 @@ mod tests {
             Some((
                 "cmux Workspace Handoff".into(),
                 "Open API & Access Guide".into(),
-                IconName::Screen,
+                IconName::ArrowUpRight,
             ))
         );
     }
