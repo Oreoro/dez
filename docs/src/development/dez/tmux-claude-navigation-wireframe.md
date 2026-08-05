@@ -258,3 +258,5 @@ Annotations:
    the same small icon role as title-bar and status controls. Focus uses the
    selected row, medium-weight label, and explicit “Focused” text; accent color
    remains reserved for attention, modification, and recovery signals.
+   Activity lifecycle metadata stays plain supporting text rather than a
+   badge-like pill.

@@ -84,6 +84,9 @@ require_multiline_pattern docs/src/development/dez/annotated-workspace-workflow-
 require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
     'activation-only.*?\*\*Layout\*\*.*?bounded \*\*Activity\*\*.*?Temporary navigation.*?return recap remain design work.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?The activation-only \*\*Layout\*\* and bounded \*\*Activity\*\* slices are implemented\.' \
     'the Workspace navigation contract can regress to claiming unfinished modes or losing the implemented Layout and Activity boundary'
+require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
+    'Navigation icons share one density scale.*?accent color.*?reserved for attention, modification, and recovery signals\..*?Activity lifecycle metadata stays plain supporting text rather than a.*?badge-like pill\.' \
+    'the Workspace navigation contract can regress to accent-selected rows or badge-like lifecycle metadata'
 require_pattern crates/paths/src/paths.rs \
     '^pub const APP_STORAGE_NAME: &str = "Superzed";' \
     'the documented legacy storage boundary changed without a migration'
@@ -677,6 +680,9 @@ require_file docs/src/development/dez/surface-contract.md \
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
     '^# Dez surface contract.*?## Product loop.*?## Ownership model.*?Layout \(activation-only projection of the active Workspace\).*?Activity \(bounded running or actionable signals\).*?## Final wireframe.*?### 1\. Home and launch.*?### 2\. Run and active work.*?### 3\. Supervise and recover.*?Running Sessions.*?Browse Running Sessions….*?never creates a duplicate Activity page.*?Terminal Details is a disclosure.*?### 4\. Review and intentional split.*?## Surface inventory.*?Home.*?Workspaces.*?Layout.*?Activity.*?Terminal Details.*?Status bar.*?Installation and access.*?## Interaction and copy rules.*?## Responsive contract.*?## Acceptance checklist' \
     'the source-controlled wireframe can regress to omitting a primary surface, ownership rule, or recovery state'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    'Keep labels beside navigation icons.*?Provider glyphs identify a tool; state.*?text identifies lifecycle\..*?Selected navigation uses neutral material and medium-weight type\..*?Lifecycle.*?state stays plain supporting text; accent remains reserved for attention,.*?modification, and recovery\.' \
+    'the native surface contract can regress to accent-selected navigation or badge-like lifecycle copy'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'complete Herdr source.*?scan.*?shares one four-second deadline.*?Results[[:space:]]+completed before that deadline are preserved.*?Each integration exposes one distinct source state.*?\*\*Missing\*\*.*?\*\*Empty\*\*.*?\*\*Failed\*\*.*?\*\*Ready\*\*.*?Browse Running Sessions….*?Host connection, reconnection, and command cycles remain bounded.*?GUI groups every frame-safe chunk.*?one queue item.*?queue admission accepts or rejects the[[:space:]]+batch as a unit.*?admission atomicity does not guarantee end-to-end[[:space:]]+delivery.*?prefix delivered.*?outcome as uncertain.*?never.*?replays it.*?four-mebibyte PTY budget.*?sixteen-mebibyte aggregate[[:space:]]+queued-input cap.*?independently bounds its own queued input by[[:space:]]+message count and bytes.*?separate PTY control channel.*?app bundle outside `/Applications` opens native Home.*?Continue your work.*?Install Dez to[[:space:]]+continue.*?Install and Relaunch.*?Workspaces says that no[[:space:]]+Workspace has restored.*?does not duplicate the primary action.*?no startup dialog,[[:space:]]+prompt, modal, overlay' \
     'the active v0.2 contract can lose truthful discovery, bounded terminal input, or native install-first recovery'
@@ -2309,6 +2315,12 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn canvas_thread_item_style\(.*?design_system: &DesignSystemSettings.*?CanvasDensity::Compact.*?ThreadItemDensity::Compact.*?CanvasDensity::Balanced.*?ThreadItemDensity::Balanced.*?CanvasDensity::Spacious.*?ThreadItemDensity::Spacious.*?CanvasRadius::None.*?ThreadItemRadius::None.*?CanvasRadius::Subtle.*?ThreadItemRadius::Subtle.*?CanvasRadius::Rounded.*?ThreadItemRadius::Rounded.*?CanvasContrast::Low.*?ThreadItemContrast::Low.*?CanvasContrast::Standard.*?ThreadItemContrast::Standard.*?CanvasContrast::High.*?ThreadItemContrast::High.*?metadata_visible\(true\).*?layout_label\.filter\(\|_\| \{.*?APP_NAME == "Zed".*?running_terminal_agent_label.*?APP_NAME == "Zed"' \
     'Dez Workspace rows can regress from the selected native density, radius, and contrast or crowd provider state into the title line'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_navigation_selected_style.*?app_name == "Zed".*?ButtonStyle::Tinted\(TintColor::Accent\).*?ButtonStyle::Filled.*?fn canvas_thread_item_style.*?neutral_selection\(APP_NAME != "Zed"\).*?selected_label_weight\(\(APP_NAME != "Zed"\)\.then_some\(gpui::FontWeight::MEDIUM\)\).*?state_label_badge\(APP_NAME == "Zed"\).*?fn render_new_session_button.*?selected_style\(workspace_navigation_selected_style\(APP_NAME\)\).*?fn render_project_header_ellipsis_menu.*?selected_style\(workspace_navigation_selected_style\(APP_NAME\)\)' \
+    'Dez Workspace navigation can regress to accent-selected controls, normal-weight active labels, or badge-like lifecycle state'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn render_active_workspace_tabs.*?workspace-native-tab-.*?selected_style\(ButtonStyle::Filled\).*?fn render_agent_options_menu.*?selected_style\(workspace_navigation_selected_style\(APP_NAME\)\)' \
+    'Dez Layout rows and the Workspaces menu can regress to inconsistent selected material'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '^[[:space:]]*metadata_visible: bool,$' \
     'ThreadItem lost the flag used to separate secondary metadata from primary navigation labels'
@@ -2321,6 +2333,12 @@ require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
 require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
     'let has_metadata = self\.metadata_visible[[:space:]]*&& labels_visible' \
     'ThreadItem visible metadata is no longer gated independently from accessible labels'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'neutral_selection: bool,.*?selected_label_weight: Option<gpui::FontWeight>,.*?state_label_badge: bool,.*?neutral_selection: false,.*?selected_label_weight: None,.*?state_label_badge: true,.*?pub fn neutral_selection.*?pub fn selected_label_weight.*?pub fn state_label_badge' \
+    'ThreadItem lost its compatibility-preserving native Workspace navigation controls'
+require_multiline_pattern crates/ui/src/components/ai/thread_item.rs \
+    'match \(self\.neutral_selection, self\.contrast\).*?color\.text\.opacity\(0\.08\).*?color\.text\.opacity\(0\.04\).*?if self\.neutral_selection \{[[:space:]]*color\.border.*?let active_title_weight = \(self\.selected \|\| self\.focused\).*?when_some\(active_title_weight.*?let state_label_badge = self\.state_label_badge.*?if state_label_badge.*?else \{.*?h_flex\(\).*?child\(state_label\)' \
+    'ThreadItem can regress from neutral selected material, medium active type, or plain lifecycle metadata'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_search_visible\(.*?app_name == "Zed".*?session_count > 0 \|\| has_query.*?has_query \|\| is_focused \|\| is_open.*?fn session_search_control_visible.*?app_name != "Zed" && session_count > 1.*?fn session_rail_search_label.*?"Search Sessions".*?"Search Workspaces and Activity".*?fn session_rail_search_placeholder.*?"Search sessions…".*?"Search Workspaces or activity…".*?set_placeholder_text\(session_rail_search_placeholder\(APP_NAME\)' \
     'Dez Workspaces search can regress to a permanent row or inherited Sessions vocabulary'
@@ -2551,7 +2569,7 @@ require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
     'fn dez_consolidates_session_utilities_into_one_overview_menu.*?!session_sticky_header_uses_shadow\("Dez"\).*?session_sticky_header_uses_shadow\("Zed"\)' \
     'the flat-Dez and inherited-Zed sticky-header split is no longer pinned'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?tab_index\(0isize\).*?aria_label\(session_rail_menu_label\(APP_NAME\)\).*?aria_expanded\(menu_open\).*?selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \
+    'let popover_open = popover_handle\.is_deployed\(\).*?Button::new\([[:space:]]*"open-recent-workspaces".*?tab_index\(0isize\).*?aria_label\("Open Recent Workspaces"\).*?aria_expanded\(popover_open\).*?let menu_open = self\.agent_options_menu_handle\.is_deployed\(\).*?ButtonLike::new\("agent-sidebar-options-menu-trigger"\).*?tab_index\(0isize\).*?aria_label\(session_rail_menu_label\(APP_NAME\)\).*?aria_expanded\(menu_open\).*?selected_style\(workspace_navigation_selected_style\(APP_NAME\)\).*?Button::new\("history".*?tab_index\(0isize\).*?toggle_state\(is_archive\)' \
     'Session Rail utilities can regress to pointer-only controls or popovers that conceal their expanded state'
 require_multiline_pattern crates/sidebar/src/thread_switcher.rs \
     'fn session_switcher_title.*?app_name == "Zed".*?"Thread Switcher".*?"Switch Sessions".*?fn session_switcher_count.*?"1 recent session".*?"\{count\} recent sessions".*?fn session_switcher_entry_type_label.*?"Thread".*?"Terminal".*?"Agent Session".*?"Terminal Session".*?fn session_switcher_help.*?"Continue to cycle · release to open".*?"Repeat to cycle · Enter to open".*?viewport_size\(\)\.width \* 0\.9.*?Role::Dialog.*?aria_label\(title\).*?aria_description\(accessibility_description\).*?"session-switcher-header".*?actor_label\(entry\.session_type_label\(paths::APP_NAME\)\).*?role\(gpui::Role::Status\).*?aria_label\(help\).*?KeyBinding::for_action_in.*?menu::Confirm.*?KeyBinding::for_action_in.*?menu::Cancel' \

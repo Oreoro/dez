@@ -607,6 +607,9 @@ native tool, honest ownership, inline recovery**.
   Dez status bar scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
+- Selected navigation uses neutral material and medium-weight type. Lifecycle
+  state stays plain supporting text; accent remains reserved for attention,
+  modification, and recovery.
 - Preserve visible keyboard focus and a visual reading order that matches
   accessibility navigation.
 - Use cause plus recovery for errors: **Attach failed · Connection refused**,

@@ -1210,6 +1210,14 @@ fn workspace_navigation_control_metrics(
     sidebar_header_control_metrics(app_name, density)
 }
 
+fn workspace_navigation_selected_style(app_name: &str) -> ButtonStyle {
+    if app_name == "Zed" {
+        ButtonStyle::Tinted(TintColor::Accent)
+    } else {
+        ButtonStyle::Filled
+    }
+}
+
 fn workspace_navigation_tab_density(
     app_name: &str,
     density: settings::CanvasDensity,
@@ -1805,6 +1813,9 @@ fn canvas_thread_item_style(
         .density(density)
         .radius(radius)
         .contrast(contrast)
+        .neutral_selection(APP_NAME != "Zed")
+        .selected_label_weight((APP_NAME != "Zed").then_some(gpui::FontWeight::MEDIUM))
+        .state_label_badge(APP_NAME == "Zed")
         .metadata_visible(true)
 }
 
@@ -2753,6 +2764,14 @@ mod session_start_state_tests {
         assert!(
             workspace_navigation_control_metrics("Zed", settings::CanvasDensity::Compact)
                 == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert_eq!(
+            workspace_navigation_selected_style("Dez"),
+            ButtonStyle::Filled
+        );
+        assert_eq!(
+            workspace_navigation_selected_style("Zed"),
+            ButtonStyle::Tinted(TintColor::Accent)
         );
         assert!(
             workspace_open_row_metrics(settings::CanvasDensity::Compact)
@@ -9334,7 +9353,7 @@ impl Sidebar {
             ),
         )
         .size(control_size)
-        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+        .selected_style(workspace_navigation_selected_style(APP_NAME))
         .icon_size(icon_size)
         .tab_index(0isize)
         .aria_label(new_terminal_label.clone())
@@ -9660,7 +9679,7 @@ impl Sidebar {
             .trigger(
                 IconButton::new(trigger_id, IconName::Ellipsis)
                     .size(control_size)
-                    .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                    .selected_style(workspace_navigation_selected_style(APP_NAME))
                     .icon_size(icon_size)
                     .tab_index(0isize)
                     .aria_label(workspace_options_label.clone())
@@ -18832,7 +18851,7 @@ impl Sidebar {
                             .style(ButtonStyle::Subtle)
                             .full_width()
                             .toggle_state(is_visible)
-                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                            .selected_style(ButtonStyle::Filled)
                             .tab_index(0isize)
                             .aria_label(accessibility_label.clone())
                             .tooltip(Tooltip::text(accessibility_label))
@@ -19255,7 +19274,7 @@ impl Sidebar {
             .tab_index(0isize)
             .aria_label(session_rail_menu_label(APP_NAME))
             .aria_expanded(menu_open)
-            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+            .selected_style(workspace_navigation_selected_style(APP_NAME))
             .child(if is_dez {
                 Icon::new(IconName::Ellipsis)
                     .size(workspace_icon_size)
