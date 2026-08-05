@@ -383,15 +383,18 @@ keeps its Options action visible; opening that menu keeps its scoped close
 controls visible as well. Terminal creation remains visible in the active
 Workspace header, an inactive empty-Workspace row, or a collapsed Workspace
 header, so pointer hover and a separate Main Work Area empty state are never the
-only routes. The active header launcher opens the complete native menu for the
-Default Terminal, Native Shell, Workspace tmux, supported agent CLIs, and cmux
-handoff. Search clearing and banner dismissal are keyboard-focusable. Workspace
-names and their action cluster share one bounded inline row: text truncates
-within its allocation, actions never overlap it, and no gradient mask is painted
-over either side of the header. An inactive expanded Workspace with no Agent
-Sessions shows one labeled **Open Terminal** action below the header instead of
-duplicating the compact menu. Collapsing a Workspace restores the compact header
-action, and a Workspace with Session activity keeps that route available.
+only routes. The active header launcher opens the configured terminal
+destination. **Workspace Options** keeps the broader **Open Terminal** and
+**Resume Existing Agent** menus separate, while one **Sessions and
+Multiplexers** submenu groups cmux handoff, running-session discovery, and the
+Workspace tmux fallback. Search clearing and banner dismissal are
+keyboard-focusable. Workspace names and their action cluster share one bounded
+inline row: text truncates within its allocation, actions never overlap it, and
+no gradient mask is painted over either side of the header. An inactive expanded
+Workspace with no Agent Sessions shows one labeled **Open Terminal** action
+below the header instead of duplicating the compact menu. Collapsing a Workspace
+restores the compact header action, and a Workspace with Session activity keeps
+that route available.
 Readiness remains in the overview summary and the Workspace header's accessible
 name instead of being repeated as a decorative dot-and-caption row.
 

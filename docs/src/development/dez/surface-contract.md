@@ -282,9 +282,9 @@ provider, or Custom Command—while the provider glyph reinforces that identity.
 │   Resume Existing Agent ›         Diff · config.rs                          │
 │   Built-in Agent                  Terminal · Pinned                         │
 │   Sessions and Multiplexers       Settings                                  │
-│     Workspace tmux                                                          │
-│     Browse Running Sessions…                                                │
 │     Open Workspace in cmux                                                  │
+│     Browse Running Sessions…                                                │
+│     Workspace tmux · fallback                                               │
 │   Files · Review · Task · Debug                                             │
 │   Home · Recent Workspaces                                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -302,10 +302,10 @@ tab; activating it again returns to the pane's most recently active different
 tab. It never opens a second Files drawer or changes the Workspace layout.
 
 The Add menu keeps **Sessions and Multiplexers** visible as a first-class
-group: **Workspace tmux**, **Browse Running Sessions…**, and the applicable
-**Open Workspace in cmux** handoff. **Open Terminal → Claude Code** always
-starts `claude`; **Resume Existing Agent → Claude Code · Last Session** is the
-separate opt-in `claude --continue` path.
+group: the applicable **Open Workspace in cmux** handoff, **Browse Running
+Sessions…**, and the **Workspace tmux** fallback. **Open Terminal → Claude
+Code** always starts `claude`; **Resume Existing Agent → Claude Code · Last
+Session** is the separate opt-in `claude --continue` path.
 
 ### 11. Discover and supervise
 

@@ -9834,12 +9834,16 @@ impl Sidebar {
                                 .map(PathBuf::as_path);
                             let tmux_startup_command =
                                 terminal_view::tmux_startup_command_for_workspace(workspace_root);
+                            let tmux_sidebar = terminal_sidebar.clone();
+                            let tmux_key = terminal_key.clone();
+                            let tmux_menu = terminal_menu.clone();
                             let cmux_key = project_group_key.clone();
                             let cmux_sidebar = this_for_menu.clone();
                             let get_cmux_menu = weak_menu.clone();
                             let open_cmux_menu = weak_menu.clone();
-                            let menu = menu.submenu(
+                            let menu = menu.submenu_with_icon(
                                 terminal_launch_label(APP_NAME),
+                                configured_icon,
                                 move |mut submenu, _window, _cx| {
                                     for (label, icon, startup_command) in [
                                         (
@@ -9853,11 +9857,6 @@ impl Sidebar {
                                             "Native Shell".to_owned(),
                                             IconName::Terminal,
                                             Some(String::new()),
-                                        ),
-                                        (
-                                            WORKSPACE_TMUX_LAUNCHER_LABEL.to_owned(),
-                                            IconName::SplitAlt,
-                                            Some(tmux_startup_command.clone()),
                                         ),
                                         (
                                             "Codex".to_owned(),
@@ -9941,8 +9940,11 @@ impl Sidebar {
                                     )
                                 },
                             )
-                            .submenu("Resume Existing Agent", move |mut submenu, _window, _cx| {
-                                for (label, icon, startup_command) in [
+                            .submenu_with_icon(
+                                "Resume Existing Agent",
+                                IconName::HistoryRerun,
+                                move |mut submenu, _window, _cx| {
+                                    for (label, icon, startup_command) in [
                                     (
                                         "Codex · Last Session",
                                         IconName::AiOpenAi,
@@ -9982,8 +9984,9 @@ impl Sidebar {
                                         ),
                                     );
                                 }
-                                submenu
-                            })
+                                    submenu
+                                },
+                            )
                             .separator();
                             let menu = if built_in_agent_ready {
                                 menu.item(
@@ -10040,108 +10043,166 @@ impl Sidebar {
                                         }),
                                 )
                             };
-                            menu.when(
-                                project_group_key.host().is_none(),
-                                |menu| {
-                                    if cmux_is_missing {
-                                        menu.separator().item(
-                                            ContextMenuEntry::new("Get cmux…")
-                                                .icon(IconName::Screen)
-                                                .handler(move |_window, cx| {
-                                                    cx.open_url(CMUX_WEBSITE_URL);
-                                                    get_cmux_menu
-                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                        .log_err();
-                                                }),
-                                        )
-                                    } else {
-                                        menu.separator().item(
-                                            ContextMenuEntry::new("Open Workspace in cmux")
-                                                .icon(IconName::ArrowUpRight)
-                                                .handler(move |window, cx| {
-                                                    cmux_sidebar
-                                                        .update(cx, |sidebar, cx| {
-                                                            sidebar.open_project_group_in_cmux(
-                                                                &cmux_key, window, cx,
-                                                            );
-                                                        })
-                                                        .log_err();
-                                                    open_cmux_menu
-                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                        .log_err();
-                                                }),
-                                        )
-                                    }
-                                },
-                            )
-                        }
-                        .separator();
+                            menu
+                        };
 
+                        let cmux_handoff_available = project_group_key.host().is_none();
                         let attachable_sessions_for_menu = attachable_sessions.clone();
                         let attach_sidebar = this_for_menu.clone();
-                        let menu = if attachable_sessions.is_empty() {
-                            menu.item(
-                                ContextMenuEntry::new(external_sessions_empty_label(
-                                    external_activity_refreshing,
-                                    &external_source_statuses,
-                                ))
-                                .disabled(true),
-                            )
-                        } else {
-                            let attach_sidebar = attach_sidebar.clone();
-                            menu.submenu(
-                                "Open Running Session…",
-                                move |mut submenu, _window, _cx| {
-                                    for session in attachable_sessions_for_menu.clone() {
-                                        let label = format!(
-                                            "{} · {} · {}",
-                                            session.title,
-                                            session.kind.display_name(),
-                                            session.state_label()
-                                        );
-                                        let attach_sidebar = attach_sidebar.clone();
-                                        submenu = submenu.entry(label, None, move |window, cx| {
-                                            attach_sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar.open_external_multiplexer_session(
-                                                        session.clone(),
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                        });
-                                    }
-                                    submenu
-                                },
-                            )
-                        };
                         let refresh_menu = weak_menu.clone();
-                        let menu = if external_activity_refreshing {
-                            menu.item(
-                                ContextMenuEntry::new("Refreshing running sessions…")
-                                    .disabled(true),
-                            )
-                        } else {
-                            let multiplexer_store = multiplexer_store.clone();
-                            menu.entry(
-                                if running_session_discovery_failed {
-                                    "Retry Running Sessions"
-                                } else {
-                                    "Refresh Running Sessions"
-                                },
-                                None,
-                                move |_window, cx| {
-                                    if let Some(store) = &multiplexer_store {
-                                        store.update(cx, |store, cx| store.refresh(cx));
+                        let menu = menu
+                            .separator()
+                            .submenu_with_icon(
+                                "Sessions and Multiplexers",
+                                IconName::ListTree,
+                                move |mut submenu, _window, _cx| {
+                                    if cmux_handoff_available {
+                                        submenu = if cmux_is_missing {
+                                            let get_cmux_menu = get_cmux_menu.clone();
+                                            submenu.item(
+                                                ContextMenuEntry::new("Get cmux…")
+                                                    .icon(IconName::Screen)
+                                                    .handler(move |_window, cx| {
+                                                        cx.open_url(CMUX_WEBSITE_URL);
+                                                        get_cmux_menu
+                                                            .update(cx, |_, cx| {
+                                                                cx.emit(DismissEvent)
+                                                            })
+                                                            .log_err();
+                                                    }),
+                                            )
+                                        } else {
+                                            let cmux_sidebar = cmux_sidebar.clone();
+                                            let cmux_key = cmux_key.clone();
+                                            let open_cmux_menu = open_cmux_menu.clone();
+                                            submenu.item(
+                                                ContextMenuEntry::new("Open Workspace in cmux")
+                                                    .icon(IconName::Screen)
+                                                    .handler(move |window, cx| {
+                                                        cmux_sidebar
+                                                            .update(cx, |sidebar, cx| {
+                                                                sidebar.open_project_group_in_cmux(
+                                                                    &cmux_key, window, cx,
+                                                                );
+                                                            })
+                                                            .log_err();
+                                                        open_cmux_menu
+                                                            .update(cx, |_, cx| {
+                                                                cx.emit(DismissEvent)
+                                                            })
+                                                            .log_err();
+                                                    }),
+                                            )
+                                        };
                                     }
-                                    refresh_menu
-                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                        .log_err();
+
+                                    let tmux_sidebar = tmux_sidebar.clone();
+                                    let tmux_key = tmux_key.clone();
+                                    let tmux_menu = tmux_menu.clone();
+                                    let tmux_startup_command = tmux_startup_command.clone();
+                                    submenu = submenu.item(
+                                        ContextMenuEntry::new(WORKSPACE_TMUX_LAUNCHER_LABEL)
+                                            .icon(IconName::SplitAlt)
+                                            .handler(move |window, cx| {
+                                                tmux_sidebar
+                                                    .update(cx, |sidebar, cx| {
+                                                        sidebar.create_terminal_in_project_group(
+                                                            &tmux_key,
+                                                            Some(tmux_startup_command.clone()),
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    })
+                                                    .log_err();
+                                                tmux_menu
+                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                    .log_err();
+                                            }),
+                                    );
+
+                                    submenu = submenu.separator();
+                                    if attachable_sessions_for_menu.is_empty() {
+                                        submenu = submenu.item(
+                                            ContextMenuEntry::new(external_sessions_empty_label(
+                                                external_activity_refreshing,
+                                                &external_source_statuses,
+                                            ))
+                                            .disabled(true),
+                                        );
+                                    } else {
+                                        let attach_sidebar = attach_sidebar.clone();
+                                        let attachable_sessions =
+                                            attachable_sessions_for_menu.clone();
+                                        submenu = submenu.submenu_with_icon(
+                                            "Open Running Session…",
+                                            IconName::ListTree,
+                                            move |mut sessions, _window, _cx| {
+                                                for session in attachable_sessions.clone() {
+                                                    let label = format!(
+                                                        "{} · {} · {}",
+                                                        session.title,
+                                                        session.kind.display_name(),
+                                                        session.state_label()
+                                                    );
+                                                    let icon =
+                                                        external_multiplexer_icon(&session);
+                                                    let attach_sidebar = attach_sidebar.clone();
+                                                    sessions = sessions.item(
+                                                        ContextMenuEntry::new(label)
+                                                            .icon(icon)
+                                                            .handler(move |window, cx| {
+                                                                attach_sidebar
+                                                                    .update(cx, |sidebar, cx| {
+                                                                        sidebar.open_external_multiplexer_session(
+                                                                            session.clone(),
+                                                                            window,
+                                                                            cx,
+                                                                        );
+                                                                    })
+                                                                    .log_err();
+                                                            }),
+                                                    );
+                                                }
+                                                sessions
+                                            },
+                                        );
+                                    }
+
+                                    if external_activity_refreshing {
+                                        submenu.item(
+                                            ContextMenuEntry::new(
+                                                "Refreshing running sessions…",
+                                            )
+                                            .icon(IconName::ArrowCircle)
+                                            .disabled(true),
+                                        )
+                                    } else {
+                                        let multiplexer_store = multiplexer_store.clone();
+                                        let refresh_menu = refresh_menu.clone();
+                                        submenu.item(
+                                            ContextMenuEntry::new(
+                                                if running_session_discovery_failed {
+                                                    "Retry Running Sessions"
+                                                } else {
+                                                    "Refresh Running Sessions"
+                                                },
+                                            )
+                                            .icon(IconName::ArrowCircle)
+                                            .handler(move |_window, cx| {
+                                                if let Some(store) = &multiplexer_store {
+                                                    store.update(cx, |store, cx| {
+                                                        store.refresh(cx)
+                                                    });
+                                                }
+                                                refresh_menu
+                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                    .log_err();
+                                            }),
+                                        )
+                                    }
                                 },
                             )
-                        }
-                        .separator();
+                            .separator();
 
                         let menu = menu.when(is_active, |menu| {
                             menu.action("Open Files", Box::new(RevealFiles))
