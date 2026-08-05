@@ -1248,6 +1248,14 @@ fn workspace_open_row_metrics(
     workspace_navigation_control_metrics(app_name, density)
 }
 
+fn workspace_running_session_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
+        LabelSize::XSmall
+    } else {
+        LabelSize::Small
+    }
+}
+
 fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
@@ -2799,6 +2807,14 @@ mod session_start_state_tests {
         assert!(
             workspace_open_row_metrics("Dez", settings::CanvasDensity::Spacious)
                 == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert_eq!(
+            workspace_running_session_label_size("Dez"),
+            LabelSize::Small
+        );
+        assert_eq!(
+            workspace_running_session_label_size("Zed"),
+            LabelSize::XSmall
         );
         assert_eq!(
             session_rail_accessibility_label("Dez"),
@@ -9146,11 +9162,9 @@ impl Sidebar {
                                             .gap(px(1.0))
                                             .child(
                                                 Label::new(session.title.clone())
-                                                    .size(if labels_visible {
-                                                        LabelSize::XSmall
-                                                    } else {
-                                                        LabelSize::Small
-                                                    })
+                                                    .size(workspace_running_session_label_size(
+                                                        APP_NAME,
+                                                    ))
                                                     .truncate(),
                                             )
                                             .when(labels_visible, |this| {
@@ -9229,7 +9243,10 @@ impl Sidebar {
                             )
                             .child(
                                 Label::new("Running Sessions")
-                                    .size(LabelSize::XSmall)
+                                    .size(workspace_running_session_label_size(APP_NAME))
+                                    .when(APP_NAME != "Zed", |label| {
+                                        label.weight(gpui::FontWeight::MEDIUM)
+                                    })
                                     .truncate(),
                             )
                             .child(div().flex_1())
@@ -9567,11 +9584,9 @@ impl Sidebar {
                                     ))
                                     .when(is_active_workspace, |this| {
                                         this.child(
-                                            Icon::new(IconName::Check)
-                                                .size(IconSize::Small)
-                                                .color(workspace_navigation_selected_icon_color(
-                                                    APP_NAME,
-                                                )),
+                                            Icon::new(IconName::Check).size(IconSize::Small).color(
+                                                workspace_navigation_selected_icon_color(APP_NAME),
+                                            ),
                                         )
                                     })
                                     .into_any_element()

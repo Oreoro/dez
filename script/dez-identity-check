@@ -1077,7 +1077,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn render_workspace_access_status.*?WorkspaceAccessState::AccessRequired.*?Workspace access required.*?Grant Access….*?let workspace_access_required = matches!.*?WorkspaceAccessState::AccessRequired.*?let has_supervision_or_recovery.*?workspace_access_required.*?terminal_host_needs_recovery;.*?render_session_notices.*?render_workspace_access_status' \
     'Workspace access recovery can regress to a Home overlay or disappear when restored Workspaces reconcile visibility'
 reject_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'when\(APP_NAME != "Zed".*?sidebar_chrome\.clone\(\)' \
+    '\.when\(APP_NAME != "Zed", \|this\|[[:space:]]*(\{[[:space:]]*)?this\.child\(self\.sidebar_chrome\.clone\(\)\)' \
     'Workspaces can regress to mounting duplicate project, branch, and command-search chrome above its native Workspace rows'
 require_multiline_pattern crates/title_bar/src/title_bar.rs \
     'pub fn render_native_sidebar_header_utilities.*?cfg!\(not\(target_os = "macos"\)\).*?render_restricted_mode\(cx\).*?render_canvas_prefix_indicator\(window, cx\).*?native-sidebar-header-utilities' \
@@ -2276,6 +2276,9 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'workspace_external_sessions_expanded: HashSet<ProjectGroupKey>.*?has_threads \|\| !external_sessions\.is_empty\(\).*?external_sessions_expanded.*?workspace_external_sessions_expanded\.contains\(key\).*?Label::new\("Running Sessions"\).*?external_session_count\.to_string\(\).*?workspace_external_sessions_expanded.*?\.remove\(&disclosure_key\).*?\.insert\(disclosure_key\.clone\(\)\).*?child\(external_sessions_disclosure\).*?children\(external_rows\)' \
     'Workspace-owned multiplexer Activity can regress to an always-expanded technical inventory or lose its Running Sessions disclosure'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_running_session_label_size.*?app_name == "Zed".*?LabelSize::XSmall.*?LabelSize::Small.*?Label::new\(session\.title\.clone\(\)\).*?workspace_running_session_label_size\([[:space:]]*APP_NAME.*?Label::new\("Running Sessions"\).*?workspace_running_session_label_size\(APP_NAME\).*?FontWeight::MEDIUM' \
+    'Workspace running-session titles can regress to metadata-sized type without a clear navigational hierarchy'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_running_sessions_disclosure_accessibility_label.*?expanded: bool.*?session_count: usize.*?attention_count: usize.*?1 running session.*?needs attention.*?let disclosure_accessibility_label =[[:space:]]*workspace_running_sessions_disclosure_accessibility_label.*?aria_expanded\(external_sessions_expanded\).*?aria_label\(disclosure_accessibility_label\.clone\(\)\).*?Tooltip::text\(disclosure_accessibility_label\)' \
     'Workspace Running Sessions can regress to an unannounced disclosure, incorrect singular copy, or color-only attention state'
