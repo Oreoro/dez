@@ -246,7 +246,9 @@ Annotations:
    smaller muted role. Terminal and editor content keep the code face.
 5. **Lumin owns one native material.** The macOS window supplies the blur.
    Sidebar, tab bar, editor, terminal, and status line use translucent semantic
-   theme layers without nesting another blur or floating glass card.
+   theme layers without nesting another blur or floating glass card. Generic
+   selection tokens stay neutral across blurred, opaque, and light variants;
+   the warm accent remains available for focus, attention, and recovery.
 6. **One status line closes the hierarchy.** It reports Workspace, repository,
    focused pane, bounded attention, and editor position. Transient handoff or
    discovery messages remain inline with their owner.

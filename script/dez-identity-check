@@ -85,6 +85,9 @@ require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wirefr
     'activation-only.*?\*\*Layout\*\*.*?bounded \*\*Activity\*\*.*?Temporary navigation.*?return recap remain design work.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?The activation-only \*\*Layout\*\* and bounded \*\*Activity\*\* slices are implemented\.' \
     'the Workspace navigation contract can regress to claiming unfinished modes or losing the implemented Layout and Activity boundary'
 require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
+    'Lumin owns one native material\..*?Generic.*?selection tokens stay neutral across blurred, opaque, and light variants;.*?warm accent remains available for focus, attention, and recovery\.' \
+    'the Workspace navigation contract can regress from Lumin neutral selection and semantic accent ownership'
+require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
     'Navigation icons share one density scale.*?accent color.*?reserved for attention, modification, and recovery signals\..*?Activity lifecycle metadata stays plain supporting text rather than a.*?badge-like pill\.' \
     'the Workspace navigation contract can regress to accent-selected rows or badge-like lifecycle metadata'
 require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
@@ -503,6 +506,9 @@ require_file assets/fonts/jetbrains-mono/OFL.txt \
 require_multiline_pattern assets/themes/lumin/lumin.json \
     '"author": "Daksh Sharma".*?"name": "Lumin Blur".*?"background\.appearance": "blurred".*?"background": "#15182159".*?"element\.background": "#FFFFFF0D".*?"element\.hover": "#FFFFFF16".*?"element\.active": "#FFFFFF1F".*?"status_bar\.background": "#11141B61".*?"title_bar\.background": "#11141B61".*?"toolbar\.background": "#252B362E".*?"tab_bar\.background": "#1519233D".*?"tab\.active_background": "#FFFFFF20".*?"panel\.background": "#3036413D".*?"pane\.focused_border": "#FFC79980".*?"editor\.background": "#20252F2E".*?"terminal\.background": "#11151D2E".*?"name": "Lumin Light".*?"background\.appearance": "blurred".*?"background": "#F2F0ED70".*?"element\.background": "#0000000D".*?"element\.hover": "#00000018".*?"element\.active": "#00000024".*?"status_bar\.background": "#E8E2DA70".*?"title_bar\.background": "#F0EAE270".*?"toolbar\.background": "#FFFFFF2E".*?"tab_bar\.background": "#D9CCBD47".*?"tab\.active_background": "#FFFFFFB8".*?"panel\.background": "#DED1C23D".*?"editor\.background": "#FFFEFC2E".*?"terminal\.background": "#FFFEFC2E"' \
     'the attributed Lumin variants or their blur-safe focus hierarchy are missing'
+require_multiline_pattern assets/themes/lumin/lumin.json \
+    '"name": "Lumin Blur".*?"border\.selected": "#FFFFFF66".*?"element\.selected": "#FFFFFF24".*?"ghost_element\.selected": "#FFFFFF24".*?"name": "Lumin".*?"border\.selected": "#FFFFFF66".*?"element\.selected": "#303030".*?"ghost_element\.selected": "#FFFFFF24".*?"name": "Lumin Light".*?"border\.selected": "#00000066".*?"element\.selected": "#0000002A".*?"ghost_element\.selected": "#00000022"' \
+    'Lumin can regress to using the warm attention accent for ordinary selected controls'
 require_multiline_pattern crates/gpui_macos/src/window.rs \
     'fn blurred_view_init_with_frame.*?NSVisualEffectMaterial::UnderWindowBackground.*?NSVisualEffectBlendingMode::BehindWindow.*?NSVisualEffectState::FollowsWindowActiveState' \
     'the macOS Lumin backdrop can regress to a selected-control material or ignore window activation'

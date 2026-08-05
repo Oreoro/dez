@@ -609,7 +609,8 @@ native tool, honest ownership, inline recovery**.
   text identifies lifecycle.
 - Selected navigation uses neutral material and medium-weight type. Lifecycle
   state stays plain supporting text; accent remains reserved for attention,
-  modification, and recovery.
+  modification, and recovery. Lumin's blurred, opaque, and light variants apply
+  that neutral selection ladder at the theme-token level.
 - Native pane-menu triggers expose whether their menu is expanded. The adjacent
   Add, tab-overflow, and split controls use neutral selected material while
   open; they do not become accent-colored status signals.
