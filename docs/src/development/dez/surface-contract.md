@@ -303,7 +303,7 @@ tab. It never opens a second Files drawer or changes the Workspace layout.
 
 The Add menu keeps **Sessions and Multiplexers** visible as a first-class
 group: the applicable **Open Workspace in cmux** handoff, **Browse Running
-Sessions…**, and the **Workspace tmux** fallback. **Open Terminal → Claude
+Sessions…**, and **Workspace tmux · fallback**. **Open Terminal → Claude
 Code** always starts `claude`; **Resume Existing Agent → Claude Code · Last
 Session** is the separate opt-in `claude --continue` path.
 

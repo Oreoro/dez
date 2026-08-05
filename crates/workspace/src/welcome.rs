@@ -6,7 +6,8 @@ use crate::{
     persistence::WorkspaceDb,
 };
 use agent_settings::{
-    AgentSettings, configured_terminal_launcher_icon, configured_terminal_launcher_label,
+    AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label,
 };
 use git::Clone as GitClone;
 use gpui::WeakEntity;
@@ -475,8 +476,8 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             },
             SectionEntry {
                 icon: IconName::SplitAlt,
-                title: "Workspace tmux",
-                meta: Some("In-Dez fallback"),
+                title: WORKSPACE_TMUX_LAUNCHER_LABEL,
+                meta: Some("Durable terminal fallback"),
                 action: &OPEN_TMUX_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -1570,7 +1571,10 @@ mod tests {
             DEZ_WORKSPACE_CONTENT.0.entries[4].title,
             "Open Workspace in cmux"
         );
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[5].title, "Workspace tmux");
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[5].title,
+            WORKSPACE_TMUX_LAUNCHER_LABEL
+        );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(true), 6);
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(false), 5);
         assert_eq!(DEZ_WORKSPACE_CONTENT.1.title, "Inspect and resume");

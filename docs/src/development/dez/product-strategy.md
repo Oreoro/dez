@@ -86,8 +86,8 @@ The current product presents this as one short native journey: **Open Workspace
 → Start or Resume Agent → supervise in Workspaces → inspect with Files,
 tasks, diagnostics, and Debug → Review Changes**. **Open Workspace in cmux** is the
 preferred explicit handoff for developers who want cmux to own the surrounding
-Workspace experience. **Workspace tmux** remains the durable in-Dez terminal
-fallback, and **Browse Running Sessions…** reopens externally owned work. The
+Workspace experience. **Workspace tmux · fallback** remains the durable in-Dez
+terminal fallback, and **Browse Running Sessions…** reopens externally owned work. The
 stages below describe the evidence and decision model behind that visible flow;
 they are not additional navigation screens.
 

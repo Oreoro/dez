@@ -387,10 +387,6 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                     zed_actions::terminal::OpenAgentTerminal,
                 ),
                 MenuItem::action("Native Shell", zed_actions::terminal::OpenShellTerminal),
-                MenuItem::action(
-                    WORKSPACE_TMUX_LAUNCHER_LABEL,
-                    zed_actions::terminal::OpenTmuxTerminal,
-                ),
                 MenuItem::separator(),
                 MenuItem::action("Codex", zed_actions::terminal::OpenCodexTerminal),
                 MenuItem::action("Claude Code", zed_actions::terminal::OpenClaudeCodeTerminal),
@@ -415,11 +411,17 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                     zed_actions::terminal::ResumeOpenCodeTerminal,
                 ),
             ])),
-            MenuItem::action("Browse Running Sessions…", workspace::BrowseRunningSessions),
-            MenuItem::action(
-                "Open Workspace in cmux",
-                zed_actions::dez::OpenWorkspaceInCmux,
-            ),
+            MenuItem::submenu(Menu::new("Sessions and Multiplexers").items([
+                MenuItem::action(
+                    "Open Workspace in cmux",
+                    zed_actions::dez::OpenWorkspaceInCmux,
+                ),
+                MenuItem::action("Browse Running Sessions…", workspace::BrowseRunningSessions),
+                MenuItem::action(
+                    WORKSPACE_TMUX_LAUNCHER_LABEL,
+                    zed_actions::terminal::OpenTmuxTerminal,
+                ),
+            ])),
             MenuItem::separator(),
             MenuItem::action("New File", workspace::NewFile),
         ]);

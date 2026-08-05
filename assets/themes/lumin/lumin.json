@@ -909,7 +909,7 @@
         "toolbar.background": "#FFFFFF2E",
         "tab_bar.background": "#D9CCBD47",
         "tab.inactive_background": "#00000000",
-        "tab.active_background": "#FFFFFF",
+        "tab.active_background": "#FFFFFFB8",
 
         "search.match_background": "#00000020",
         "search.active_match_background": "#98420C40",

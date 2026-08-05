@@ -1785,14 +1785,6 @@ fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
 ) -> ThreadItem {
-    if APP_NAME != "Zed" {
-        return thread_item
-            .density(ThreadItemDensity::Compact)
-            .radius(ThreadItemRadius::None)
-            .contrast(ThreadItemContrast::Standard)
-            .metadata_visible(true);
-    }
-
     let density = match design_system.density {
         settings::CanvasDensity::Compact => ThreadItemDensity::Compact,
         settings::CanvasDensity::Balanced => ThreadItemDensity::Balanced,
@@ -1813,6 +1805,7 @@ fn canvas_thread_item_style(
         .density(density)
         .radius(radius)
         .contrast(contrast)
+        .metadata_visible(true)
 }
 
 fn canvas_layout_recipe_label(recipe_id: &str) -> Option<&'static str> {

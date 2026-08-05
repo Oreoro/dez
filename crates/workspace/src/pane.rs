@@ -3405,7 +3405,11 @@ impl Pane {
         let icon = item
             .tab_icon(window, cx)?
             .size(IconSize::Small)
-            .color(Color::Muted);
+            .color(if is_active {
+                Color::Default
+            } else {
+                Color::Muted
+            });
 
         let item_diagnostic = item
             .project_path(cx)

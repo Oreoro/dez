@@ -33,7 +33,7 @@ authoritative where generated lettering is abbreviated or predates the final
 │                        │ After a Workspace opens                       │
 │                        │  Open Terminal · Default [10]                 │
 │                        │  Codex · Claude Code · OpenCode               │
-│                        │  Open in cmux [15] · Workspace tmux fallback  │
+│                        │  Open in cmux [15] · tmux fallback            │
 ├────────────────────────┴──────────────────────────────────────────────┤
 │ No Workspace | Open Workspace…                         Dez Preview    │
 └───────────────────────────────────────────────────────────────────────┘
@@ -144,8 +144,8 @@ Files is an ordinary pane tab, not a permanent drawer. Opening a different
 file creates a durable tab by default; preview tabs remain an explicit user
 preference. The top Files control reflects whether Files is active and uses
 **Return from Files** for its second action. The native `+` menu groups **Open
-Workspace in cmux**, **Browse Running Sessions…**, and the **Workspace tmux**
-fallback under **Sessions and Multiplexers**, then exposes icon-backed **Files**,
+Workspace in cmux**, **Browse Running Sessions…**, and **Workspace tmux ·
+fallback** under **Sessions and Multiplexers**, then exposes icon-backed **Files**,
 **Git Changes**, **Search Workspace…**, **Run Task…**, and **Debug** rows.
 
 The labeled **Workspaces · name** status control remains present whether the

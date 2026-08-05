@@ -76,7 +76,7 @@ Workspace instead of separate applications or hidden panel modes.
   plain shell, Codex, Claude Code, or OpenCode in the native terminal; **More
   Agent CLIs** adds Gemini CLI, Aider, and Herdr without expanding the primary
   list. **Sessions and Multiplexers** groups the explicit cmux handoff, running
-  Session discovery, and the **Workspace tmux** fallback without pretending
+  Session discovery, and **Workspace tmux · fallback** without pretending
   cmux is a shell.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
@@ -124,10 +124,10 @@ Home is headed **Continue your work** in both states and always keeps Recent
 Workspaces available as ordinary rows. Inside an active Workspace, it uses two
 flat native sections. **Start with a tool** opens the configured default
 terminal, Codex, Claude Code, OpenCode, the preferred external cmux handoff, or
-a Workspace tmux fallback. **Inspect and resume** opens running Sessions, Files,
-or Review Changes. The configured-default label distinguishes the primary route
-from a generic terminal launcher. An active empty Main Work Area uses the same
-route with space-aware labels:
+**Workspace tmux · fallback**. **Inspect and resume** opens running Sessions,
+Files, or Review Changes. The configured-default label distinguishes the
+primary route from a generic terminal launcher. An active empty Main Work Area
+uses the same route with space-aware labels:
 **Open Terminal**, **Browse Running Sessions**, **Find File**, and **Review Changes**.
 **New File** remains available from File, the native `+`, and keyboard
 shortcuts, but is not a primary Home or empty-state action.
@@ -157,20 +157,21 @@ names the configured Default Terminal first, followed by Native Shell, Codex,
 Claude Code, and OpenCode. **More Agent CLIs** keeps Gemini CLI,
 Aider, and Herdr available without crowding the frequent path. **Resume
 Existing Agent** resumes the last Codex, Claude Code, or OpenCode session. A
-separate **Sessions and Multiplexers** group keeps **Workspace tmux**, **Browse
-Running Sessions…**, and the applicable **Open Workspace in cmux** handoff at
-the first level without mixing external ownership into terminal-provider
-choices.
+separate **Sessions and Multiplexers** group keeps the applicable **Open
+Workspace in cmux** handoff first, followed by **Browse Running Sessions…** and
+**Workspace tmux · fallback**, without mixing external ownership into
+terminal-provider choices.
 
 Dez's **File → Open Terminal** submenu keeps the same configured and provider
-launch order, places **Workspace tmux** after Native Shell, and is followed by
-**Resume Existing Agent**. Its first row previews the configured result as
+launch order and is followed by **Resume Existing Agent** and **Sessions and
+Multiplexers**. Its first row previews the configured result as
 **Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
 **Default · OpenCode**, **Default · tmux Session**, a detected agent, or
 **Default · Custom Command**; the pane `+` keeps the shorter **Default
-Terminal** label. Native Shell, Workspace tmux, Codex, Claude Code, and OpenCode
-remain explicit alternatives; Gemini CLI, Aider, and Herdr live one level
-deeper under **More Agent CLIs**. Resume uses
+Terminal** label. Native Shell, Codex, Claude Code, and OpenCode remain explicit
+terminal alternatives; Gemini CLI, Aider, and Herdr live one level deeper under
+**More Agent CLIs**. The separate session group leads with cmux and labels tmux
+as the fallback. Resume uses
 `codex resume --last`, `claude --continue`, or `opencode --continue` in the
 active Workspace. **Browse Running Sessions…** follows those menus, so starting,
 resuming, and reopening externally owned work stay adjacent.
@@ -186,8 +187,8 @@ and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 Zed chords, `Ctrl+Backtick` opens the configured terminal, and
 `Ctrl+Shift+Backtick` always opens the native shell. Command Palette can start
 Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; resume a supported
-provider; launch a shell or **Workspace tmux** session; or hand the Workspace
-to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
+provider; launch a shell or **Workspace tmux · fallback** session; or hand the
+Workspace to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The guided default lives under **Settings → Workspaces &
 Terminals → Terminal Launch → Default Terminal**. Choose Native Shell, Codex,
@@ -321,7 +322,7 @@ machine PTYs remain excluded.
 
 The active Workspace always keeps its compact terminal launcher visible, even
 before a Session exists. That menu exposes the Default Terminal, Native Shell,
-cmux handoff, supported agent CLIs, and the Workspace tmux fallback without
+cmux handoff, supported agent CLIs, and **Workspace tmux · fallback** without
 requiring users to leave Workspaces for an empty Main Work Area. Inactive
 expanded Workspaces retain one labeled **Open Terminal** row, keeping each
 codebase's launch target clear without duplicating actions.

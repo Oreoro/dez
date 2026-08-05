@@ -250,7 +250,7 @@ impl RenderOnce for Tab {
                 .blend(colors.border_variant.opacity(0.12)),
             (TabContrast::High, true) => colors
                 .tab_active_background
-                .blend(colors.border_focused.opacity(0.12)),
+                .blend(colors.text.opacity(0.06)),
         };
         let border_color = match self.contrast {
             TabContrast::Low => colors.border.opacity(0.55),
@@ -290,6 +290,9 @@ impl RenderOnce for Tab {
             })
             .when(self.selected && self.radius == TabRadius::Rounded, |this| {
                 this.rounded_t_md()
+            })
+            .when(self.selected && self.radius != TabRadius::None, |this| {
+                this.border_t_1()
             })
             .map(|this| match self.position {
                 TabPosition::First => {
