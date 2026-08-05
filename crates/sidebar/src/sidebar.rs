@@ -9914,6 +9914,23 @@ impl Sidebar {
                                 APP_NAME,
                                 built_in_agent_ready,
                             );
+                        let terminal_sidebar = this_for_menu.clone();
+                        let terminal_key = project_group_key.clone();
+                        let terminal_menu = weak_menu.clone();
+                        let workspace_root = project_group_key
+                            .path_list()
+                            .ordered_paths()
+                            .next()
+                            .map(PathBuf::as_path);
+                        let tmux_startup_command =
+                            terminal_view::tmux_startup_command_for_workspace(workspace_root);
+                        let tmux_sidebar = terminal_sidebar.clone();
+                        let tmux_key = terminal_key.clone();
+                        let tmux_menu = terminal_menu.clone();
+                        let cmux_key = project_group_key.clone();
+                        let cmux_sidebar = this_for_menu.clone();
+                        let get_cmux_menu = weak_menu.clone();
+                        let open_cmux_menu = weak_menu.clone();
                         let menu = if APP_NAME == "Zed" {
                             menu.entry(
                                 built_in_agent_label,
@@ -9943,9 +9960,6 @@ impl Sidebar {
                                 },
                             )
                         } else {
-                            let terminal_sidebar = this_for_menu.clone();
-                            let terminal_key = project_group_key.clone();
-                            let terminal_menu = weak_menu.clone();
                             let resume_sidebar = this_for_menu.clone();
                             let resume_key = project_group_key.clone();
                             let resume_menu = weak_menu.clone();
@@ -9956,20 +9970,6 @@ impl Sidebar {
                                 APP_NAME,
                                 configured_command.as_deref(),
                             );
-                            let workspace_root = project_group_key
-                                .path_list()
-                                .ordered_paths()
-                                .next()
-                                .map(PathBuf::as_path);
-                            let tmux_startup_command =
-                                terminal_view::tmux_startup_command_for_workspace(workspace_root);
-                            let tmux_sidebar = terminal_sidebar.clone();
-                            let tmux_key = terminal_key.clone();
-                            let tmux_menu = terminal_menu.clone();
-                            let cmux_key = project_group_key.clone();
-                            let cmux_sidebar = this_for_menu.clone();
-                            let get_cmux_menu = weak_menu.clone();
-                            let open_cmux_menu = weak_menu.clone();
                             let menu = menu.submenu_with_icon(
                                 terminal_launch_label(APP_NAME),
                                 configured_icon,
