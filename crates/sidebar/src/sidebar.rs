@@ -1218,6 +1218,14 @@ fn workspace_navigation_selected_style(app_name: &str) -> ButtonStyle {
     }
 }
 
+fn workspace_navigation_selected_icon_color(app_name: &str) -> Color {
+    if app_name == "Zed" {
+        Color::Accent
+    } else {
+        Color::Default
+    }
+}
+
 fn workspace_navigation_tab_density(
     app_name: &str,
     density: settings::CanvasDensity,
@@ -2771,6 +2779,14 @@ mod session_start_state_tests {
         assert_eq!(
             workspace_navigation_selected_style("Zed"),
             ButtonStyle::Tinted(TintColor::Accent)
+        );
+        assert_eq!(
+            workspace_navigation_selected_icon_color("Dez"),
+            Color::Default
+        );
+        assert_eq!(
+            workspace_navigation_selected_icon_color("Zed"),
+            Color::Accent
         );
         assert!(
             workspace_open_row_metrics("Dez", settings::CanvasDensity::Compact)
@@ -4400,7 +4416,7 @@ fn external_multiplexer_icon(session: &ExternalMultiplexerSession) -> IconName {
         .detected_agent_kind
         .map(terminal_agent_icon)
         .unwrap_or(match session.kind {
-            MultiplexerKind::Tmux => IconName::Terminal,
+            MultiplexerKind::Tmux => IconName::SplitAlt,
             MultiplexerKind::Herdr => IconName::Inception,
             MultiplexerKind::Cmux => IconName::Screen,
         })
@@ -8770,17 +8786,13 @@ impl Sidebar {
             settings::CanvasContrast::Standard => color
                 .element_active
                 .blend(color.element_background.opacity(0.2)),
-            settings::CanvasContrast::High => color
-                .element_active
-                .blend(color.border_focused.opacity(0.12)),
+            settings::CanvasContrast::High => color.element_active.blend(color.text.opacity(0.04)),
         };
         let hover_solid = base_bg.blend(hover_base);
         let active_background = match design_system.contrast {
             settings::CanvasContrast::Low => color.element_active.opacity(0.55),
             settings::CanvasContrast::Standard => color.element_active,
-            settings::CanvasContrast::High => color
-                .element_active
-                .blend(color.border_focused.opacity(0.16)),
+            settings::CanvasContrast::High => color.element_active.blend(color.text.opacity(0.08)),
         };
         let focused_border_color = if design_system.is_low_contrast() {
             color.border_variant
@@ -9557,7 +9569,9 @@ impl Sidebar {
                                         this.child(
                                             Icon::new(IconName::Check)
                                                 .size(IconSize::Small)
-                                                .color(Color::Accent),
+                                                .color(workspace_navigation_selected_icon_color(
+                                                    APP_NAME,
+                                                )),
                                         )
                                     })
                                     .into_any_element()
@@ -10391,7 +10405,11 @@ impl Sidebar {
                                                 this.pr_1().child(
                                                     Icon::new(IconName::Check)
                                                         .size(IconSize::Small)
-                                                        .color(Color::Accent),
+                                                        .color(
+                                                            workspace_navigation_selected_icon_color(
+                                                                APP_NAME,
+                                                            ),
+                                                        ),
                                                 )
                                             })
                                             .when(!is_active_workspace, |this| {
@@ -17735,7 +17753,9 @@ impl Sidebar {
                                         })
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(!self.attention_only)
-                                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                        .selected_style(workspace_navigation_selected_style(
+                                            APP_NAME,
+                                        ))
                                         .tab_index(0isize)
                                         .aria_label(all_scope_aria_label)
                                         .aria_keyshortcuts("Shift+A")
