@@ -137,6 +137,14 @@ fn terminal_startup_command_input(command: String) -> Vec<u8> {
     input
 }
 
+fn terminal_startup_title(command: &str) -> Option<String> {
+    if command.split_whitespace().any(|word| word == "tmux") {
+        return Some(WORKSPACE_TMUX_LAUNCHER_LABEL.to_owned());
+    }
+
+    detect_terminal_agent_command(command).map(|agent_kind| agent_kind.display_name().to_owned())
+}
+
 #[cfg(test)]
 mod startup_command_tests {
     use super::*;
@@ -172,6 +180,15 @@ mod startup_command_tests {
             terminal_startup_command_input("opencode".to_owned()),
             b"opencode\r"
         );
+        assert_eq!(
+            terminal_startup_title("claude --continue").as_deref(),
+            Some("Claude Code")
+        );
+        assert_eq!(
+            terminal_startup_title("exec tmux new-session -A -s dez").as_deref(),
+            Some(WORKSPACE_TMUX_LAUNCHER_LABEL)
+        );
+        assert_eq!(terminal_startup_title("echo ready"), None);
     }
 
     #[test]
@@ -198,7 +215,7 @@ mod startup_command_tests {
         assert!(command.contains("tmux has-session"));
         assert!(command.contains("#{pane_current_path}"));
         assert!(command.contains("\"$PWD\"|\"$PWD\"/*"));
-        assert!(command.contains("attach-session -t =Dez-3-0"));
+        assert!(command.contains("attach-session -t '=Dez-3-0'"));
         assert!(command.contains("new-session -A -s Dez-3-0-"));
         assert_eq!(
             tmux_startup_command_for_workspace(None),
@@ -1037,7 +1054,7 @@ fn new_terminal(
 ) {
     let local = action.local;
     let working_directory = default_working_directory(workspace, cx);
-    add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+    add_terminal_to_active_pane(workspace, window, cx, None, move |project, cx| {
         if local {
             project.create_local_terminal(cx)
         } else {
@@ -1132,7 +1149,7 @@ pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
     }
 
     format!(
-        "if tmux has-session -t ={session_name} 2>/dev/null; then exec tmux attach-session -t ={session_name}; elif tmux has-session -t ={legacy_name} 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t ={legacy_name} '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t ={legacy_name} ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
+        "if tmux has-session -t '={session_name}' 2>/dev/null; then exec tmux attach-session -t '={session_name}'; elif tmux has-session -t '={legacy_name}' 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t '={legacy_name}' '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t '={legacy_name}' ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
     )
 }
 
@@ -1310,7 +1327,7 @@ fn open_terminal(
 ) {
     let local = action.local;
     let working_directory = action.working_directory.clone();
-    add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+    add_terminal_to_active_pane(workspace, window, cx, None, move |project, cx| {
         if local {
             project.create_local_terminal(cx)
         } else {
@@ -1324,6 +1341,7 @@ fn add_terminal_to_active_pane<F>(
     workspace: &mut Workspace,
     window: &mut Window,
     cx: &mut Context<Workspace>,
+    initial_title: Option<String>,
     create_terminal: F,
 ) -> Task<Result<WeakEntity<Terminal>>>
 where
@@ -1353,7 +1371,19 @@ where
         workspace.update_in(cx, |workspace, window, cx| match terminal {
             Ok(terminal) => {
                 let pane = workspace.active_pane().clone();
-                attach_terminal_to_workspace(workspace, pane, terminal.clone(), true, window, cx);
+                let terminal_view = attach_terminal_to_workspace(
+                    workspace,
+                    pane,
+                    terminal.clone(),
+                    true,
+                    window,
+                    cx,
+                );
+                if let Some(initial_title) = initial_title {
+                    terminal_view.update(cx, |terminal_view, cx| {
+                        terminal_view.set_custom_title(Some(initial_title), cx);
+                    });
+                }
                 Ok(terminal.downgrade())
             }
             Err(error) => {
@@ -1674,18 +1704,24 @@ impl TerminalView {
             AgentSettings::get_global(cx).terminal_init_command.clone(),
             paths::APP_NAME,
         );
+        let initial_title = startup_command.as_deref().and_then(terminal_startup_title);
         let working_directory = action
             .working_directory
             .clone()
             .or_else(|| default_working_directory(workspace, cx));
-        let terminal_task =
-            add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+        let terminal_task = add_terminal_to_active_pane(
+            workspace,
+            window,
+            cx,
+            initial_title,
+            move |project, cx| {
                 if local {
                     project.create_local_terminal(cx)
                 } else {
                     project.create_terminal_shell(working_directory, cx)
                 }
-            });
+            },
+        );
 
         let Some(startup_command) = startup_command else {
             terminal_task.detach_and_log_err(cx);

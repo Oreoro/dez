@@ -588,7 +588,9 @@ runs `tmux new-session -A -s <workspace>-<root-id>` after the native login shell
 is ready. Repositories with the same folder name therefore cannot attach to one
 another. During compatibility recovery, Dez attaches an older basename-only
 session only when its active pane is inside the current Workspace root; it never
-renames or terminates that session. **Workspace: Open in cmux** hands the active
+renames or terminates that session. Exact tmux targets are quoted before the
+command reaches Zsh, so tmux's leading `=` selector cannot be mistaken for Zsh
+executable-path expansion. **Workspace: Open in cmux** hands the active
 local Workspace to cmux without replacing or closing Dez. **Browse Running
 Sessions…** opens or refocuses Workspaces, removes
 temporary search and attention filters, refreshes all supported sources, and
@@ -597,6 +599,10 @@ intended.
 Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
 keyboard handling remain intact.
+Agent and tmux launchers assign their provider name to the native tab as soon as
+it is created. Workspaces therefore reads **Codex**, **Claude Code**, **Herdr**,
+or **Workspace tmux** instead of a stack of indistinguishable **Terminal** rows
+while process discovery catches up.
 
 Both paths edit the same Workspace and return evidence to the same Files, Git,
 diagnostics, diff, and review surfaces. Starting a terminal agent does not
