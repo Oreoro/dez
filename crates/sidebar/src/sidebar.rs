@@ -10179,6 +10179,8 @@ impl Sidebar {
                         let attachable_sessions_for_menu = attachable_sessions.clone();
                         let attach_sidebar = this_for_menu.clone();
                         let refresh_menu = weak_menu.clone();
+                        let external_source_statuses_for_menu = external_source_statuses.clone();
+                        let multiplexer_store_for_menu = multiplexer_store.clone();
                         let menu = menu
                             .separator()
                             .submenu_with_icon(
@@ -10254,7 +10256,7 @@ impl Sidebar {
                                         submenu = submenu.item(
                                             ContextMenuEntry::new(external_sessions_empty_label(
                                                 external_activity_refreshing,
-                                                &external_source_statuses,
+                                                &external_source_statuses_for_menu,
                                             ))
                                             .disabled(true),
                                         );
@@ -10306,7 +10308,8 @@ impl Sidebar {
                                             .disabled(true),
                                         )
                                     } else {
-                                        let multiplexer_store = multiplexer_store.clone();
+                                        let multiplexer_store =
+                                            multiplexer_store_for_menu.clone();
                                         let refresh_menu = refresh_menu.clone();
                                         submenu.item(
                                             ContextMenuEntry::new(
