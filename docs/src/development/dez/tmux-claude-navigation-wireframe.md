@@ -260,3 +260,7 @@ Annotations:
    remains reserved for attention, modification, and recovery signals.
    Activity lifecycle metadata stays plain supporting text rather than a
    badge-like pill.
+9. **Pane chrome exposes its state.** The adjacent `+`, tab-overflow, and split
+   controls remain native menu triggers. While open they use the same neutral
+   selected material as navigation and expose their expanded state to assistive
+   technology; no menu state is communicated through accent color alone.

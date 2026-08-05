@@ -610,6 +610,9 @@ native tool, honest ownership, inline recovery**.
 - Selected navigation uses neutral material and medium-weight type. Lifecycle
   state stays plain supporting text; accent remains reserved for attention,
   modification, and recovery.
+- Native pane-menu triggers expose whether their menu is expanded. The adjacent
+  Add, tab-overflow, and split controls use neutral selected material while
+  open; they do not become accent-colored status signals.
 - Preserve visible keyboard focus and a visual reading order that matches
   accessibility navigation.
 - Use cause plus recovery for errors: **Attach failed · Connection refused**,

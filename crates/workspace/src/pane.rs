@@ -100,6 +100,10 @@ fn pane_tab_selected_label_weight(app_name: &str) -> Option<gpui::FontWeight> {
     (app_name != "Zed").then_some(gpui::FontWeight::MEDIUM)
 }
 
+fn pane_chrome_menu_selected_style(app_name: &str) -> Option<ButtonStyle> {
+    (app_name != "Zed").then_some(ButtonStyle::Filled)
+}
+
 fn canvas_tab_bar(id: &'static str, cx: &App) -> TabBar {
     TabBar::new(id)
         .density(canvas_tab_density(cx))
@@ -4553,6 +4557,7 @@ impl Pane {
         let (overflow_control_label, overflow_menu_header) =
             pane_tab_overflow_copy(paths::APP_NAME);
         let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
+        let menu_open = self.tab_overflow_context_menu_handle.is_deployed();
 
         PopoverMenu::new("pane-tab-overflow-menu")
             .trigger_with_tooltip(
@@ -4560,7 +4565,12 @@ impl Pane {
                     .size(control_size)
                     .icon_size(icon_size)
                     .tab_index(0isize)
-                    .aria_label(overflow_control_label),
+                    .aria_label(overflow_control_label)
+                    .aria_expanded(menu_open)
+                    .when_some(
+                        pane_chrome_menu_selected_style(paths::APP_NAME),
+                        |button, style| button.selected_style(style),
+                    ),
                 Tooltip::text(overflow_control_label),
             )
             .anchor(Anchor::TopRight)
@@ -5734,6 +5744,7 @@ fn default_render_tab_bar_buttons(
     let split_enabled = can_clone || can_split_move;
     let (split_aria_label, split_tooltip) = pane_split_control_copy(paths::APP_NAME, split_enabled);
     let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
+    let split_menu_open = pane.split_item_context_menu_handle.is_deployed();
     // Ideally we would return a vec of elements here to pass directly to the [TabBar]'s
     // `end_slot`, but due to needing a view here that isn't possible.
     let right_children = h_flex()
@@ -5750,6 +5761,11 @@ fn default_render_tab_bar_buttons(
                         .icon_size(icon_size)
                         .tab_index(0isize)
                         .aria_label(split_aria_label)
+                        .aria_expanded(split_menu_open)
+                        .when_some(
+                            pane_chrome_menu_selected_style(paths::APP_NAME),
+                            |button, style| button.selected_style(style),
+                        )
                         .disabled(!split_enabled),
                     Tooltip::text(split_tooltip),
                 )
@@ -5785,6 +5801,7 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
     let (new_file, open_file, search_workspace, search_symbols) =
         pane_new_surface_menu_copy(paths::APP_NAME);
     let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
+    let menu_open = pane.new_item_context_menu_handle.is_deployed();
 
     PopoverMenu::new("pane-tab-bar-popover-menu")
         .trigger_with_tooltip(
@@ -5792,7 +5809,12 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                 .size(control_size)
                 .icon_size(icon_size)
                 .tab_index(0isize)
-                .aria_label(aria_label),
+                .aria_label(aria_label)
+                .aria_expanded(menu_open)
+                .when_some(
+                    pane_chrome_menu_selected_style(paths::APP_NAME),
+                    |button, style| button.selected_style(style),
+                ),
             Tooltip::text(tooltip),
         )
         .anchor(Anchor::TopRight)
@@ -7117,6 +7139,11 @@ mod tests {
             Some(gpui::FontWeight::MEDIUM)
         );
         assert_eq!(pane_tab_selected_label_weight("Zed"), None);
+        assert_eq!(
+            pane_chrome_menu_selected_style("Dez"),
+            Some(ButtonStyle::Filled)
+        );
+        assert_eq!(pane_chrome_menu_selected_style("Zed"), None);
     }
 
     #[test]
