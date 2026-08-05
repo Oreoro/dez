@@ -54,7 +54,7 @@ eligible, attention projection, and routes back to Files and Git review.
 | **Aider**       | `aider`                              | Start a new terminal-owned CLI session                  | Native Dez terminal                       |
 | **tmux**        | `tmux new-session -A -s <workspace>-<root-id>` | The same root-scoped command attaches when the named session exists | tmux process inside a native Dez terminal |
 | **Herdr**       | `herdr`                              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
-| **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses `cmux open <path>`      | cmux remains the external app             |
+| **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses its native macOS folder handoff, with `cmux open <path>` as a compatibility fallback | cmux remains the external app             |
 
 The Start and Continue routes are available from the pane **+**, **File**, a
 Workspace's options menu, and Command Palette. They create a normal Main Work
@@ -821,9 +821,11 @@ because its documented [CLI](https://github.com/manaflow-ai/cmux) defines a
 separate macOS workspace and terminal application. Instead, native terminal,
 Resume Existing Agent, and Built-in Agent actions lead Workspace Options. **Open
 Workspace in cmux** begins the external-work group beside discovered
-multiplexer Sessions. It invokes the documented `cmux open <path>` handoff,
-keeps Dez open, and
-then refreshes path-matched cmux activity. Existing cmux Workspaces remain
+multiplexer Sessions. It asks macOS LaunchServices to open the folder with the
+registered stable or nightly cmux application, so the secure default socket
+policy does not block the handoff. Older installations retain the documented
+`cmux open <path>` CLI as a compatibility fallback. Dez stays open and then
+refreshes path-matched cmux activity. Existing cmux Workspaces remain
 selectable beneath their associated Dez Workspace. This preserves native Dez
 editing and review while making cmux a first-class opt-in owner for users who
 want its `claude-teams`, `codex-teams`, or `omo` workflows.
@@ -928,8 +930,8 @@ preserved; unfinished endpoints become failures so their exact last-known rows
 can remain visible.
 One hung server therefore cannot hide healthy Sessions reported by another or
 extend the refresh indefinitely.
-The explicit **Open Workspace in cmux** handoff is separately bounded to eight
-seconds. A timeout leaves the Workspace unchanged and replaces the progress
+The explicit **Open Workspace in cmux** LaunchServices or compatibility-CLI
+handoff is separately bounded to eight seconds. A timeout leaves the Workspace unchanged and replaces the progress
 notice with a persistent native toast linked to the cmux API guide. If cmux is
 not installed, the same native surface offers **Get cmux** instead. Successful
 handoffs use a short confirmation and do not leave another navigation surface
@@ -1005,8 +1007,10 @@ does not take over or rewrite either application's sessions.
   available when you want Dez to create or attach to the root-scoped session
   explicitly. A basename-only session from an older Dez build remains visible
   and is reused only when its active pane still belongs to that Workspace root.
-- cmux is discovered at
+- cmux is handed a folder through its registered stable or nightly macOS bundle
+  before Dez needs its control socket. CLI compatibility and live discovery use
   `/Applications/cmux.app/Contents/Resources/bin/cmux`,
+  `/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux`,
   `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the Workspace
   in cmux first, or use **Open Workspace in cmux**; Dez leaves the Workspace
   open if the handoff fails or times out. Live rows are optional: a secure

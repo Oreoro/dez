@@ -1971,6 +1971,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   discovered external work. cmux remains an external owner and receives an
   explicit `cmux open <path>` handoff; hook setup remains a deliberate
   cmux/provider configuration action.
+- **2026-08-05: cmux path handoff is native and socket-independent.** **Open
+  Workspace in cmux** asks macOS LaunchServices to deliver the folder to the
+  registered stable or nightly cmux bundle before using `cmux open <path>` as
+  a compatibility fallback. The primary handoff therefore works with cmux's
+  secure process-only socket default; live activity discovery remains a
+  separate, optional cross-app permission.
 - **2026-08-02: The four-state native surface contract is authoritative.** Home
   launches work, the Main Work Area owns every terminal, editor, diff, browser,
   Settings, and Workspace tool surface, Workspaces supervises live activity,

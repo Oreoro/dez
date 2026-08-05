@@ -189,7 +189,8 @@ Work Area terminal. Opaque tmux identifiers such as `$0` and `$1` therefore
 reach tmux unchanged instead of being expanded by the user's login shell. A
 discovered cmux Workspace opens through `select-workspace --workspace <id>`;
 the independent **Open Workspace in cmux** path handoff uses
-`cmux open <path>`. Neither route manufactures an attachment terminal. The
+native macOS folder handoff, with `cmux open <path>` as a compatibility
+fallback. Neither route manufactures an attachment terminal. The
 external application remains authoritative, closing a Dez tab detaches rather
 than terminates, and Dez never requests a Herdr takeover automatically.
 

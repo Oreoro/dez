@@ -4511,6 +4511,8 @@ fn other_running_sessions_empty_label(
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 const CMUX_API_GUIDE_URL: &str = "https://cmux.com/docs/api";
 const CMUX_WEBSITE_URL: &str = "https://cmux.com";
+const CMUX_LAUNCH_SERVICES_PROGRAM: &str = "/usr/bin/open";
+const CMUX_APP_BUNDLE_IDS: [&str; 2] = ["com.cmuxterm.app", "com.cmuxterm.app.nightly"];
 
 struct CmuxIntegrationStatusPresentation {
     title: &'static str,
@@ -4613,12 +4615,69 @@ async fn run_bounded_cmux_command(
     }
 }
 
+fn cmux_launch_services_app_is_missing(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    message.contains("lscopyapplicationurlsforbundleidentifier() failed")
+        || message.contains("unable to find application")
+        || message.contains("could not find application")
+        || (message.contains("application") && message.contains("cannot be found"))
+}
+
+async fn open_workspace_path_in_cmux_via_launch_services(
+    path: &Path,
+    executor: &gpui::BackgroundExecutor,
+) -> Result<bool, CmuxWorkspaceHandoffError> {
+    for bundle_id in CMUX_APP_BUNDLE_IDS {
+        let mut command = util::command::new_command(CMUX_LAUNCH_SERVICES_PROGRAM);
+        command.args(["-b", bundle_id]).arg(path);
+        match run_bounded_cmux_command(&mut command, executor).await {
+            Ok(output) if output.status.success() => return Ok(true),
+            Ok(output) => {
+                let detail = format!(
+                    "{} {}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                if cmux_launch_services_app_is_missing(&detail) {
+                    continue;
+                }
+                let detail = detail.trim();
+                let detail = if detail.is_empty() {
+                    format!("macOS returned {}", output.status)
+                } else {
+                    detail.to_owned()
+                };
+
+                return Err(CmuxWorkspaceHandoffError::Failed(format!(
+                    "macOS couldn't open this Workspace in cmux: {detail}. This Workspace is still open in Dez."
+                )));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+            Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {
+                return Err(CmuxWorkspaceHandoffError::TimedOut);
+            }
+            Err(error) => {
+                return Err(CmuxWorkspaceHandoffError::Failed(format!(
+                    "Dez couldn't ask macOS to open cmux: {error}. This Workspace is still open in Dez."
+                )));
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 pub async fn open_workspace_path_in_cmux(
     path: &Path,
     executor: &gpui::BackgroundExecutor,
 ) -> Result<(), CmuxWorkspaceHandoffError> {
+    if open_workspace_path_in_cmux_via_launch_services(path, executor).await? {
+        return Ok(());
+    }
+
     for program in [
         "/Applications/cmux.app/Contents/Resources/bin/cmux",
+        "/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux",
         "/opt/homebrew/bin/cmux",
         "/usr/local/bin/cmux",
         "cmux",
@@ -4656,6 +4715,32 @@ pub async fn open_workspace_path_in_cmux(
     }
 
     Err(CmuxWorkspaceHandoffError::NotInstalled)
+}
+
+#[cfg(test)]
+mod cmux_workspace_handoff_tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_launch_services_missing_application_failures() {
+        assert!(cmux_launch_services_app_is_missing(
+            "LSCopyApplicationURLsForBundleIdentifier() failed while trying to determine the application"
+        ));
+        assert!(cmux_launch_services_app_is_missing(
+            "The application com.cmuxterm.app cannot be found"
+        ));
+        assert!(!cmux_launch_services_app_is_missing(
+            "The application could not open the selected Workspace"
+        ));
+    }
+
+    #[test]
+    fn prefers_stable_cmux_before_the_nightly_bundle() {
+        assert_eq!(
+            CMUX_APP_BUNDLE_IDS,
+            ["com.cmuxterm.app", "com.cmuxterm.app.nightly"]
+        );
+    }
 }
 
 async fn terminate_legacy_terminal_session(

@@ -248,7 +248,8 @@ TUIs inside Dez's native terminal; Dez does not replace their keyboard handling,
 colors, or full-screen layout with chat chrome. tmux owns its server sessions.
 Herdr owns its panes.
 cmux stays an external native application and receives the active path through
-its documented `cmux open <path>` command. Dez contributes Workspace context,
+the native macOS folder handoff registered by cmux, with its documented
+`cmux open <path>` command retained as a compatibility fallback. Dez contributes Workspace context,
 native tabs and splits, durable ownership for eligible Dez-created terminals,
 attention, and direct Files/Git review routes.
 
