@@ -201,3 +201,52 @@ work and never claims attachment, transfer, or migration.
 The activation-only **Layout** and bounded **Activity** slices are implemented.
 This document must not be used as evidence that temporary navigation mode or
 return recaps ship in the current application.
+
+## 25. Final cmux-first Workspace shell
+
+```text
+┌ Workspaces ───────────────┬ main.rs | Claude Code | Files | + ───────────────┐
+│ paykit                    │                                                   │
+│ main · 2 panes            │ native editor, terminal, diff, or tool surface   │
+│                           │                                                   │
+│ Layout · 4 open           │                                                   │
+│  Pane 1 · Focused         │                                                   │
+│   main.rs                 │                                                   │
+│   Claude Code             │                                                   │
+│  Pane 2                   │                                                   │
+│   Files                   │                                                   │
+│   Git Changes             │                                                   │
+│                           │                                                   │
+│ Activity · 2              │                                                   │
+│  Codex · Working · 3m     │                                                   │
+│  test · Needs attention   │                                                   │
+│                           │                                                   │
+│ [Open Workspace in cmux]  │                                                   │
+├───────────────────────────┴───────────────────────────────────────────────────┤
+│ Workspaces · paykit   main   Pane 1 of 2   2 active   Ln 14, Col 22          │
+└───────────────────────────────────────────────────────────────────────────────┘
+```
+
+Annotations:
+
+1. **cmux is preferred, not embedded.** **Open Workspace in cmux** opens the current
+   local Workspace in cmux. cmux then owns its windows, tabs, splits, browser,
+   hooks, and action registry. tmux remains an in-Dez terminal fallback and a
+   discoverable external process owner.
+2. **Native pane tabs remain authoritative.** Their order, active state, close,
+   drag, pin, overflow, and adjacent `+` stay owned by Zed's pane tab strip.
+   Chrome-like polish means clear selected shape, balanced spacing, consistent
+   glyphs, and native material—not a replacement browser-tab implementation.
+3. **The sidebar is a navigator, not an inventory dump.** Workspace identity is
+   visually strongest; **Layout** appears only with at least two open items;
+   **Activity** appears only for bounded running or actionable work. Files stay
+   in the Files tab rather than being duplicated here.
+4. **Typography follows role.** Workspace names and active destinations use the
+   interface face at medium weight. Section labels and durable metadata use a
+   smaller muted role. Terminal and editor content keep the code face.
+5. **Lumin owns one native material.** The macOS window supplies the blur.
+   Sidebar, tab bar, editor, terminal, and status line use translucent semantic
+   theme layers without nesting another blur or floating glass card.
+6. **One status line closes the hierarchy.** It reports Workspace, repository,
+   focused pane, bounded attention, and editor position. Transient handoff or
+   discovery messages remain inline with their owner.

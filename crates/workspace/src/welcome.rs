@@ -467,18 +467,18 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::SplitAlt,
-                title: "Workspace tmux",
-                meta: Some("Native terminal session"),
-                action: &OPEN_TMUX_TERMINAL,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::ArrowUpRight,
+                icon: IconName::Screen,
                 title: "Open Workspace in cmux",
-                meta: Some("External handoff"),
+                meta: Some("Preferred external app"),
                 action: &OPEN_WORKSPACE_IN_CMUX,
                 visibility_guard: SectionVisibility::LocalWorkspace,
+            },
+            SectionEntry {
+                icon: IconName::SplitAlt,
+                title: "Workspace tmux",
+                meta: Some("In-Dez fallback"),
+                action: &OPEN_TMUX_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
             },
         ],
     },
@@ -1566,11 +1566,11 @@ mod tests {
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Codex");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Claude Code");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "OpenCode");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[4].title, "Workspace tmux");
         assert_eq!(
-            DEZ_WORKSPACE_CONTENT.0.entries[5].title,
+            DEZ_WORKSPACE_CONTENT.0.entries[4].title,
             "Open Workspace in cmux"
         );
+        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[5].title, "Workspace tmux");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(true), 6);
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(false), 5);
         assert_eq!(DEZ_WORKSPACE_CONTENT.1.title, "Inspect and resume");

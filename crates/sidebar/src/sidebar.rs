@@ -8451,6 +8451,7 @@ impl Sidebar {
             .child(
                 Label::new(workspace_activity_section_title(APP_NAME))
                     .size(LabelSize::XSmall)
+                    .weight(gpui::FontWeight::MEDIUM)
                     .color(Color::Muted),
             )
             .child(div().flex_1())
@@ -8635,6 +8636,11 @@ impl Sidebar {
         let label = if highlight_positions.is_empty() {
             Label::new(label.clone())
                 .size(label_size)
+                .weight(if is_active {
+                    gpui::FontWeight::MEDIUM
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
                 .when(!is_active, |this| this.color(Color::Muted))
                 .truncate()
                 .into_any_element()
@@ -17975,6 +17981,7 @@ impl Sidebar {
                             "Other Running Sessions"
                         })
                         .size(LabelSize::Small)
+                        .weight(gpui::FontWeight::MEDIUM)
                         .truncate(),
                     )
                     .child(div().flex_1())
@@ -18695,13 +18702,20 @@ impl Sidebar {
                         .px_2()
                         .pt_1()
                         .pb_0p5()
-                        .child(Label::new(pane_label).size(LabelSize::XSmall).color(
-                            if pane_is_active {
-                                Color::Accent
-                            } else {
-                                Color::Muted
-                            },
-                        ))
+                        .child(
+                            Label::new(pane_label)
+                                .size(LabelSize::XSmall)
+                                .weight(if pane_is_active {
+                                    gpui::FontWeight::MEDIUM
+                                } else {
+                                    gpui::FontWeight::NORMAL
+                                })
+                                .color(if pane_is_active {
+                                    Color::Accent
+                                } else {
+                                    Color::Muted
+                                }),
+                        )
                         .into_any_element(),
                 );
             }
@@ -18774,6 +18788,11 @@ impl Sidebar {
                                     .child(
                                         Label::new(label)
                                             .size(LabelSize::Small)
+                                            .weight(if is_focused {
+                                                gpui::FontWeight::MEDIUM
+                                            } else {
+                                                gpui::FontWeight::NORMAL
+                                            })
                                             .truncate()
                                             .flex_1(),
                                     )
@@ -18811,6 +18830,7 @@ impl Sidebar {
             .child(
                 Label::new(workspace_tabs_section_title(APP_NAME))
                     .size(LabelSize::XSmall)
+                    .weight(gpui::FontWeight::MEDIUM)
                     .color(Color::Muted)
                     .flex_1(),
             )
@@ -18970,6 +18990,7 @@ impl Sidebar {
                         .child(
                             Label::new(session_rail_title(APP_NAME))
                                 .size(LabelSize::Small)
+                                .weight(gpui::FontWeight::MEDIUM)
                                 .flex_none()
                                 .truncate(),
                         )

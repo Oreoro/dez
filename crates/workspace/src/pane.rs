@@ -5927,6 +5927,13 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                     };
                     menu.separator()
                         .header("Sessions and Multiplexers")
+                        .when(cmux_handoff_applicable, |menu| {
+                            menu.action_with_icon(
+                                "Open Workspace in cmux",
+                                IconName::Screen,
+                                zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
+                            )
+                        })
                         .action_with_icon(
                             WORKSPACE_TMUX_LAUNCHER_LABEL,
                             IconName::SplitAlt,
@@ -5937,13 +5944,6 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                             IconName::ListTree,
                             BrowseRunningSessions.boxed_clone(),
                         )
-                        .when(cmux_handoff_applicable, |menu| {
-                            menu.action_with_icon(
-                                "Open Workspace in cmux",
-                                IconName::ArrowUpRight,
-                                zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
-                            )
-                        })
                         .separator()
                         .header("Create and Find")
                         .action_with_icon(new_file, IconName::File, NewFile.boxed_clone())
