@@ -22,6 +22,13 @@ const MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs(4);
 const HERDR_ENDPOINT_TIMEOUT: Duration = Duration::from_secs(2);
 const HERDR_SOURCE_TIMEOUT: Duration = Duration::from_secs(4);
 const HERDR_MAX_CONCURRENT_ENDPOINT_QUERIES: usize = 8;
+const CMUX_EXECUTABLE_CANDIDATES: &[&str] = &[
+    "/Applications/cmux.app/Contents/Resources/bin/cmux",
+    "/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux",
+    "/opt/homebrew/bin/cmux",
+    "/usr/local/bin/cmux",
+    "cmux",
+];
 const CMUX_WORKSPACE_LIST_ARGS: &[&str] = &["list-workspaces", "--json"];
 const CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS: &[&str] = &["workspace", "list", "--json"];
 // tmux sanitizes control characters when Dez is launched from Finder's
@@ -685,16 +692,8 @@ fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
 }
 
 async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
-    let Some((executable, current_output)) = run_first_available(
-        &[
-            "/Applications/cmux.app/Contents/Resources/bin/cmux",
-            "/opt/homebrew/bin/cmux",
-            "/usr/local/bin/cmux",
-            "cmux",
-        ],
-        CMUX_WORKSPACE_LIST_ARGS,
-    )
-    .await?
+    let Some((executable, current_output)) =
+        run_first_available(CMUX_EXECUTABLE_CANDIDATES, CMUX_WORKSPACE_LIST_ARGS).await?
     else {
         return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
@@ -1672,6 +1671,16 @@ mod tests {
 
     #[test]
     fn cmux_discovery_prefers_the_documented_cli_before_compatibility() {
+        assert_eq!(
+            CMUX_EXECUTABLE_CANDIDATES,
+            &[
+                "/Applications/cmux.app/Contents/Resources/bin/cmux",
+                "/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux",
+                "/opt/homebrew/bin/cmux",
+                "/usr/local/bin/cmux",
+                "cmux",
+            ]
+        );
         assert_eq!(CMUX_WORKSPACE_LIST_ARGS, &["list-workspaces", "--json"]);
         assert_eq!(
             CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS,
