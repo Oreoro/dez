@@ -191,8 +191,8 @@ not flatten pane ownership or conceal unsaved work.
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 Codex, Claude Code, or OpenCode. **More Agent CLIs** keeps Gemini CLI, Aider,
-and Herdr one level deeper. **Sessions and Multiplexers** keeps **Workspace
-tmux**, **Browse Running Sessions…**, and the applicable cmux handoff visible
+and Herdr one level deeper. **Sessions and Multiplexers** keeps the applicable
+cmux handoff, **Browse Running Sessions…**, and **Workspace tmux** as a fallback
 at the first menu level. The Add menu also opens the optional Built-in Agent,
 a file, Files, Git Changes, Run Task,
 Debug, Workspace search, or symbol search. Terminal and Agent routes lead;
@@ -328,7 +328,8 @@ Hierarchy follows the next useful action. Home is consistently headed
 **Continue your work**. Without a codebase, **Open Workspace** and **Clone
 Repository** are the only primary routes. Inside an active Workspace, **Start
 with a tool** offers **Open Terminal**, Codex, Claude Code, OpenCode,
-**Workspace tmux**, and the explicit **Open Workspace in cmux** handoff.
+the explicit **Open Workspace in cmux** handoff, and **Workspace tmux** as an
+in-Dez fallback.
 **Inspect and resume** keeps **Browse Running Sessions…**, **Open Files**, and
 **Review Changes** adjacent. These are native command rows on the editor
 surface, not filled dashboard cards. Home's first row identifies

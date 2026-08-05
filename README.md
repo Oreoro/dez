@@ -120,12 +120,13 @@ inventory makes those actions useful; a one-Workspace, one-item window stays
 quiet.
 
 Home is headed **Continue your work** in both states and always keeps Recent
-Workspaces available as ordinary rows. Inside an active Workspace, it uses two flat native sections. **Start with a
-tool** opens the configured default terminal, Codex, Claude Code, OpenCode, a
-Workspace tmux session, or the explicit external cmux handoff. **Inspect and
-resume** opens running Sessions, Files, or Review Changes. The configured-default
-label distinguishes the primary route from a generic terminal launcher. An
-active empty Main Work Area uses the same route with space-aware labels:
+Workspaces available as ordinary rows. Inside an active Workspace, it uses two
+flat native sections. **Start with a tool** opens the configured default
+terminal, Codex, Claude Code, OpenCode, the preferred external cmux handoff, or
+a Workspace tmux fallback. **Inspect and resume** opens running Sessions, Files,
+or Review Changes. The configured-default label distinguishes the primary route
+from a generic terminal launcher. An active empty Main Work Area uses the same
+route with space-aware labels:
 **Open Terminal**, **Browse Running Sessions**, **Find File**, and **Review Changes**.
 **New File** remains available from File, the native `+`, and keyboard
 shortcuts, but is not a primary Home or empty-state action.
@@ -319,10 +320,10 @@ machine PTYs remain excluded.
 
 The active Workspace always keeps its compact terminal launcher visible, even
 before a Session exists. That menu exposes the Default Terminal, Native Shell,
-Workspace tmux, supported agent CLIs, and cmux handoff without requiring users
-to leave Workspaces for an empty Main Work Area. Inactive expanded Workspaces
-retain one labeled **Open Terminal** row, keeping each codebase's launch target
-clear without duplicating actions.
+cmux handoff, supported agent CLIs, and the Workspace tmux fallback without
+requiring users to leave Workspaces for an empty Main Work Area. Inactive
+expanded Workspaces retain one labeled **Open Terminal** row, keeping each
+codebase's launch target clear without duplicating actions.
 
 Opening the active Workspace in cmux also has a bounded handoff. If cmux does
 not respond within eight seconds, Dez keeps the Workspace open, ends the

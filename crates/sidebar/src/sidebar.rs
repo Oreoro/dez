@@ -1228,7 +1228,7 @@ fn workspace_navigation_tab_density(
 fn workspace_open_row_metrics(density: settings::CanvasDensity) -> (ButtonSize, IconSize) {
     match density {
         settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
-        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::XSmall),
+        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::Small),
         settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
     }
 }
@@ -1388,9 +1388,15 @@ fn workspace_pane_header_label(
 }
 
 fn workspace_tab_icon_color(is_visible: bool, is_focused: bool) -> Color {
+    if is_focused || is_visible {
+        Color::Default
+    } else {
+        Color::Muted
+    }
+}
+
+fn workspace_pane_header_color(is_focused: bool) -> Color {
     if is_focused {
-        Color::Accent
-    } else if is_visible {
         Color::Default
     } else {
         Color::Muted
@@ -2761,7 +2767,7 @@ mod session_start_state_tests {
         );
         assert!(
             workspace_open_row_metrics(settings::CanvasDensity::Balanced)
-                == (ButtonSize::Medium, IconSize::XSmall)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert!(
             workspace_open_row_metrics(settings::CanvasDensity::Spacious)
@@ -2799,7 +2805,9 @@ mod session_start_state_tests {
         assert_eq!(workspace_pane_header_label(0, 1, true), None);
         assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
         assert_eq!(workspace_tab_icon_color(true, false), Color::Default);
-        assert_eq!(workspace_tab_icon_color(true, true), Color::Accent);
+        assert_eq!(workspace_tab_icon_color(true, true), Color::Default);
+        assert_eq!(workspace_pane_header_color(true), Color::Default);
+        assert_eq!(workspace_pane_header_color(false), Color::Muted);
         assert_eq!(
             session_rail_search_label("Dez"),
             "Search Workspaces and Activity"
@@ -18710,11 +18718,7 @@ impl Sidebar {
                                 } else {
                                     gpui::FontWeight::NORMAL
                                 })
-                                .color(if pane_is_active {
-                                    Color::Accent
-                                } else {
-                                    Color::Muted
-                                }),
+                                .color(workspace_pane_header_color(pane_is_active)),
                         )
                         .into_any_element(),
                 );
@@ -18732,7 +18736,7 @@ impl Sidebar {
                 let icon = if let Some(agent_thread) = item.downcast::<AgentThreadItem>() {
                     agent_thread
                         .read(cx)
-                        .workspace_navigation_icon(icon_color, cx)
+                        .workspace_navigation_icon(icon_color, row_icon_size, cx)
                 } else {
                     item.tab_icon(window, cx)
                         .unwrap_or_else(|| Icon::new(IconName::File))

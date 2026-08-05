@@ -5943,14 +5943,14 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                             )
                         })
                         .action_with_icon(
-                            WORKSPACE_TMUX_LAUNCHER_LABEL,
-                            IconName::SplitAlt,
-                            zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
-                        )
-                        .action_with_icon(
                             "Browse Running Sessions…",
                             IconName::ListTree,
                             BrowseRunningSessions.boxed_clone(),
+                        )
+                        .action_with_icon(
+                            WORKSPACE_TMUX_LAUNCHER_LABEL,
+                            IconName::SplitAlt,
+                            zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
                         )
                         .separator()
                         .header("Create and Find")

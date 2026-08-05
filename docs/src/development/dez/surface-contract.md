@@ -61,8 +61,8 @@ order, focus, close, pin, dirty, or split state.
 │  Codex · Working │  Codex                     website                │
 │  app.rs          │  Claude Code               infra                  │
 │  Terminal · Ready│  OpenCode                  tools                  │
-│  Files           │  Workspace tmux                                   │
-│  Git Changes     │  Open Workspace in cmux                           │
+│  Files           │  Open Workspace in cmux                           │
+│  Git Changes     │  Workspace tmux · fallback                        │
 │                  │                                                    │
 │ superzed         │ Inspect and resume                                │
 │ website          │  Browse Running Sessions                          │
