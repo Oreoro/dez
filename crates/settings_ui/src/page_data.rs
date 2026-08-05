@@ -286,13 +286,13 @@ fn terminal_session_init_setting_item() -> SettingsPageItem {
 
 fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
-        title: "cmux Integration".into(),
+        title: "cmux Workspace Handoff".into(),
         description: Some(
             "cmux owns its tabs, splits, browser, agent hooks, and action registry. Open Workspace in cmux works without live sharing. Enable cross-app API access only if you want cmux Workspace, port, and notification rows in Dez; Dez never changes cmux permissions or hooks."
                 .into(),
         ),
-        button_text: "Open cmux API Guide".into(),
-        icon: IconName::ArrowUpRight,
+        button_text: "Open API & Access Guide".into(),
+        icon: IconName::Screen,
         on_click: Arc::new(|_settings_window, _window, cx| {
             cx.open_url("https://cmux.com/docs/api");
         }),
@@ -11993,9 +11993,9 @@ mod tests {
         assert_eq!(
             cmux_action,
             Some((
-                "cmux Integration".into(),
-                "Open cmux API Guide".into(),
-                IconName::ArrowUpRight,
+                "cmux Workspace Handoff".into(),
+                "Open API & Access Guide".into(),
+                IconName::Screen,
             ))
         );
     }

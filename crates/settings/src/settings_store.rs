@@ -1665,6 +1665,7 @@ fn migrate_dez_generated_visual_profile(app_name: &str, content: &str) -> Option
     const GENERATED_ONE_LIGHT_PROFILE: &str = "// Lumin follows the system appearance. JetBrains Mono is used for code and\n// terminals; the bundled sans-serif face keeps interface chrome readable.";
     const GENERATED_ALL_JETBRAINS_PROFILE: &str = "// Dez starts with compact Lumin chrome and JetBrains Mono across the interface,\n// editor, terminal, prompts, and review surfaces.";
     const GENERATED_AYU_ALL_JETBRAINS_PROFILE: &str = "// Lumin follows the system appearance. JetBrains Mono is used across interface,\n// code, terminals, prompts, and review surfaces.";
+    const GENERATED_BALANCED_LUMIN_PROFILE: &str = "// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and\n// terminal text keep those native surfaces visually coherent.";
     const OLD_UI_FONT: &str = "\"ui_font_family\": \".ZedSans\"";
     const OLD_LIGHT_MODE: &str = "\"mode\": \"light\"";
     const OLD_LIGHT_THEME: &str = "\"light\": \"One Light\"";
@@ -1693,6 +1694,24 @@ fn migrate_dez_generated_visual_profile(app_name: &str, content: &str) -> Option
                 "\"font_family\": \"Lilex\"",
             )
     };
+
+    if content.contains(GENERATED_BALANCED_LUMIN_PROFILE)
+        && content.contains("\"design_system\": {\n    \"density\": \"balanced\"\n  }")
+    {
+        return Some(
+            content
+                .replacen(
+                    GENERATED_BALANCED_LUMIN_PROFILE,
+                    "// Rounded, high-contrast Lumin chrome, IBM Plex Sans interface text, and Lilex\n// code and terminal text keep those native surfaces visually coherent.",
+                    1,
+                )
+                .replacen(
+                    "\"design_system\": {\n    \"density\": \"balanced\"\n  }",
+                    "\"design_system\": {\n    \"density\": \"balanced\",\n    \"radius\": \"rounded\",\n    \"contrast\": \"high\"\n  }",
+                    1,
+                ),
+        );
+    }
 
     if content.contains(GENERATED_ALL_JETBRAINS_PROFILE)
         && content.contains("\"ui_font_family\": \"JetBrains Mono\"")
@@ -1823,6 +1842,23 @@ mod tests {
 
     #[test]
     fn migrates_only_known_generated_dez_visual_profiles() {
+        let balanced_lumin_generated = r#"// Dez settings
+//
+// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and
+// terminal text keep those native surfaces visually coherent.
+{
+  "ui_font_family": "IBM Plex Sans",
+  "design_system": {
+    "density": "balanced"
+  },
+  "ui_font_size": 17
+}"#;
+        let migrated =
+            migrate_dez_generated_visual_profile("Dez", balanced_lumin_generated).unwrap();
+        assert!(migrated.contains("\"radius\": \"rounded\""));
+        assert!(migrated.contains("\"contrast\": \"high\""));
+        assert!(migrated.contains("\"ui_font_size\": 17"));
+
         let generated = r#"// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif
 {
   "ui_font_family": ".ZedSans",

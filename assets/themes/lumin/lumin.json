@@ -52,7 +52,7 @@
         "toolbar.background": "#252B362E",
         "tab_bar.background": "#1519233D",
         "tab.inactive_background": "#00000000",
-        "tab.active_background": "#FFFFFF18",
+        "tab.active_background": "#FFFFFF20",
 
         "search.match_background": "#FFFFFF25",
         "search.active_match_background": "#FFC79950",

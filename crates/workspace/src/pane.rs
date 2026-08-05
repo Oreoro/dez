@@ -96,6 +96,10 @@ fn canvas_tab_contrast(cx: &App) -> TabContrast {
     }
 }
 
+fn pane_tab_selected_label_weight(app_name: &str) -> Option<gpui::FontWeight> {
+    (app_name != "Zed").then_some(gpui::FontWeight::MEDIUM)
+}
+
 fn canvas_tab_bar(id: &'static str, cx: &App) -> TabBar {
     TabBar::new(id)
         .density(canvas_tab_density(cx))
@@ -3525,6 +3529,10 @@ impl Pane {
             .density(canvas_tab_density(cx))
             .radius(canvas_tab_radius(cx))
             .contrast(canvas_tab_contrast(cx))
+            .when_some(
+                pane_tab_selected_label_weight(paths::APP_NAME),
+                |tab, weight| tab.selected_label_weight(weight),
+            )
             .position(if is_first_item {
                 TabPosition::First
             } else if is_last_item {
@@ -6870,6 +6878,10 @@ impl Render for DraggedTab {
             .density(canvas_tab_density(cx))
             .radius(canvas_tab_radius(cx))
             .contrast(canvas_tab_contrast(cx))
+            .when_some(
+                pane_tab_selected_label_weight(paths::APP_NAME),
+                |tab, weight| tab.selected_label_weight(weight),
+            )
             .toggle_state(self.is_active)
             .children(icon)
             .child(label)
@@ -7092,6 +7104,15 @@ mod tests {
             "Zed",
             PaneKind::Tabs
         ));
+    }
+
+    #[test]
+    fn dez_selected_tabs_use_interface_emphasis_without_changing_upstream_tabs() {
+        assert_eq!(
+            pane_tab_selected_label_weight("Dez"),
+            Some(gpui::FontWeight::MEDIUM)
+        );
+        assert_eq!(pane_tab_selected_label_weight("Zed"), None);
     }
 
     #[test]

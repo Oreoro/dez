@@ -1080,9 +1080,9 @@
   "design_system": {
     "family": "zed_canvas",
     "density": "balanced",
-    "radius": "subtle",
+    "radius": "rounded",
     "motion": "system",
-    "contrast": "standard",
+    "contrast": "high",
     "content_width": "comfortable",
     "icon_style": "outline",
     "show_labels": "contextual"

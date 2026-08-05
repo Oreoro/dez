@@ -250,3 +250,7 @@ Annotations:
 6. **One status line closes the hierarchy.** It reports Workspace, repository,
    focused pane, bounded attention, and editor position. Transient handoff or
    discovery messages remain inline with their owner.
+7. **Selected tabs use typographic emphasis.** The active native tab keeps the
+   same IBM Plex Sans interface face at medium weight, a rounded selected shape,
+   and stronger semantic contrast. Inactive tabs stay normal weight and quiet;
+   dirty, close, pin, drag, overflow, and keyboard behavior remain native.

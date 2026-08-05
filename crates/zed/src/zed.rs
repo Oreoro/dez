@@ -909,8 +909,10 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     settings.theme.icon_theme = Some(settings::IconThemeSelection::Static(
         settings::IconThemeName(Arc::from("Dez (Default)")),
     ));
-    settings.design_system.get_or_insert_default().density =
-        Some(settings::CanvasDensity::Balanced);
+    let design_system = settings.design_system.get_or_insert_default();
+    design_system.density = Some(settings::CanvasDensity::Balanced);
+    design_system.radius = Some(settings::CanvasRadius::Rounded);
+    design_system.contrast = Some(settings::CanvasContrast::High);
     let terminal = settings.terminal.get_or_insert_default();
     terminal.font_family = Some(code_font);
     terminal.line_height = Some(settings::TerminalLineHeight::Standard);
@@ -3334,6 +3336,8 @@ mod tests {
         );
         assert_eq!(settings["icon_theme"], "Dez (Default)");
         assert_eq!(settings["design_system"]["density"], "balanced");
+        assert_eq!(settings["design_system"]["radius"], "rounded");
+        assert_eq!(settings["design_system"]["contrast"], "high");
         assert_eq!(settings["terminal"]["font_family"], "Lilex");
         assert_eq!(settings["terminal"]["line_height"], "standard");
         assert_eq!(settings["terminal"]["alternate_scroll"], "on");

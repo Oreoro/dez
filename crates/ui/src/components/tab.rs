@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use gpui::{AnyElement, IntoElement, Stateful};
+use gpui::{AnyElement, FontWeight, IntoElement, Stateful};
 use smallvec::SmallVec;
 
 use crate::prelude::*;
@@ -108,6 +108,7 @@ pub struct Tab {
     density: TabDensity,
     radius: TabRadius,
     contrast: TabContrast,
+    selected_label_weight: Option<FontWeight>,
     insertion_indicator: Option<TabInsertionIndicator>,
     start_slot: Option<AnyElement>,
     end_slot: Option<AnyElement>,
@@ -127,6 +128,7 @@ impl Tab {
             density: TabDensity::default(),
             radius: TabRadius::default(),
             contrast: TabContrast::default(),
+            selected_label_weight: None,
             insertion_indicator: None,
             start_slot: None,
             end_slot: None,
@@ -156,6 +158,11 @@ impl Tab {
 
     pub fn contrast(mut self, contrast: TabContrast) -> Self {
         self.contrast = contrast;
+        self
+    }
+
+    pub fn selected_label_weight(mut self, weight: FontWeight) -> Self {
+        self.selected_label_weight = Some(weight);
         self
     }
 
@@ -213,6 +220,10 @@ impl RenderOnce for Tab {
     #[allow(refining_impl_trait)]
     fn render(self, _: &mut Window, cx: &mut App) -> Stateful<Div> {
         let insertion_indicator = self.insertion_indicator;
+        let selected_label_weight = self
+            .selected
+            .then_some(self.selected_label_weight)
+            .flatten();
         let colors = cx.theme().colors();
         let (text_color, tab_bg, tab_hover_bg, tab_active_bg) = match self.selected {
             false => (
@@ -311,6 +322,9 @@ impl RenderOnce for Tab {
                     .pr(padding_right)
                     .gap(self.density.gap(cx))
                     .text_color(text_color)
+                    .when_some(selected_label_weight, |this, weight| {
+                        this.font_weight(weight)
+                    })
                     .children(start_slot)
                     .children(self.children)
                     .children(end_slot),

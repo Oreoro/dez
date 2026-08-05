@@ -2,8 +2,8 @@
 //
 // Dez starts with one native Main Work Area for files, terminals, tools, and
 // review. Workspaces stays closed until cross-Workspace supervision is useful.
-// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and
-// terminal text keep those native surfaces visually coherent.
+// Rounded, high-contrast Lumin chrome, IBM Plex Sans interface text, and Lilex
+// code and terminal text keep those native surfaces visually coherent.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
@@ -19,7 +19,9 @@
     "dark": "Lumin Blur"
   },
   "design_system": {
-    "density": "balanced"
+    "density": "balanced",
+    "radius": "rounded",
+    "contrast": "high"
   },
   "icon_theme": "Dez (Default)",
   "project_panel": {
