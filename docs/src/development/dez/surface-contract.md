@@ -205,23 +205,23 @@ a Workspace, and Home does not mirror the notice over the Main Work Area.
 ### 7. Product-first Settings
 
 ```text
-┌ Workspaces ─────┬ Settings ─ + ──────────────────────────────────────┐
-│ dez             │ Workspaces & Terminals │ Workspaces                │
-│ Layout          │ Agents                 │ Workspaces Position  Left │
-│                 │ Appearance             │ Show on Startup       Off │
-│  Settings       │ Workspace & Privacy    │───────────────────────────│
-│  Terminal       │ Keyboard & Vim         │ Terminal Launch           │
-│  Files          │ Editor                 │ Default Terminal           │
-│                 │ Languages & Tools      │  Native Shell              │
-│                 │ Search & Files         │  Codex · Claude Code       │
-│                 │ Navigation & Layout    │  OpenCode · tmux · Custom  │
-│                 │ Workspace Tools        │ Open Workspace in cmux  ↗  │
-│                 │ Debugger               │───────────────────────────│
-│                 │                        │ Open Debugger           ▶  │
-│                 │                        │ Open debug.json         {} │
-├─────────────────┴────────────────────────┴────────────────────────────┤
-│ Workspace: dez | main | Permissions: Healthy                        │
-└──────────────────────────────────────────────────────────────────────┘
+┌ Workspaces ─────┬ Settings ─ + ─────────────────────────────────────────┐
+│ dez             │ ▣ Workspaces & Terminals │ Workspaces                 │
+│ Layout          │ ◉ Agents                 │ Workspaces Position  Left  │
+│                 │ ✦ Appearance             │ Show on Startup       Off  │
+│  Settings       │ ◇ Workspace & Privacy    │────────────────────────────│
+│  Terminal       │ ⌨ Keyboard & Vim         │ Terminal Launch            │
+│  Files          │ <> Editor                │ Default Terminal           │
+│                 │ ⚒ Languages & Tools      │  Native Shell              │
+│                 │ ⌕ Search & Files         │  Codex · Claude Code       │
+│                 │ ⫶ Navigation & Layout    │  OpenCode · tmux · Custom  │
+│                 │ ≡ Workspace Tools        │ Open Workspace in cmux  ↗  │
+│                 │ ▶ Debugger               │────────────────────────────│
+│                 │                          │ Open Debugger             ▶│
+│                 │                          │ Open debug.json           {}│
+├─────────────────┴──────────────────────────┴────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                            │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 Settings begins with the choices required to run work: Workspace behavior and
@@ -229,6 +229,14 @@ Terminal Launch, then Agents and Appearance. Privacy remains prominent before
 inherited editor customization. Native shell and TUI profiles launch inside
 Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
 an action or documentation route, never an availability toggle.
+
+Each Dez root page has one quiet semantic icon drawn from the same native icon
+set used by Home, Workspaces, tabs, and the status line. Icons supplement the
+page title and never replace it. Nested section rows remain text-only, keeping
+the root-page hierarchy scannable without turning Settings into a second tool
+rail. The navigation column follows Interface Density so full root titles do
+not clip beside their disclosure and icon. Official Zed keeps its inherited
+text-only Settings navigation and dimensions.
 
 Debugger Settings begins with two native recovery routes. **Open Debugger**
 reveals the existing Debug panel, while **Open debug.json** opens the active

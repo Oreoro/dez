@@ -2173,6 +2173,21 @@ require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'Settings action rows use outcome-specific native marks.*?Appearance recovery.*?keymap actions.*?in-app tests.*?external arrow is reserved for the cmux API guide.*?documentation handoff.*?action that changes Dez or cmux' \
     'the active Workspace contract can regress to visually conflating native Settings actions with external cmux documentation'
+require_multiline_pattern crates/ui/src/components/tree_view_item.rs \
+    'pub struct TreeViewItem \{.*?start_icon: Option<IconName>.*?pub fn start_icon\(mut self, icon: IconName\).*?when_some\(start_icon.*?Icon::new\(icon\).*?IconSize::Small' \
+    'native Settings navigation can regress to text-only rows with no reusable semantic icon slot'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'fn canvas_settings_nav_width.*?app_name == "Zed".*?SIDEBAR_WIDTH.*?CanvasDensity::Compact.*?px\(238\..*?CanvasDensity::Balanced.*?px\(250\..*?CanvasDensity::Spacious.*?px\(264\.' \
+    'Dez Settings navigation can regress to clipping semantic root identity at larger interface densities'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'fn dez_settings_nav_icon.*?app_name == "Zed".*?return None.*?"Workspaces & Terminals".*?IconName::Screen.*?"Agents".*?IconName::DezAgent.*?"Appearance".*?IconName::Sparkle.*?"Workspace & Privacy".*?IconName::Lock.*?"Keyboard & Vim".*?IconName::Keyboard.*?"Editor".*?IconName::Code.*?"Languages & Tools".*?IconName::ToolHammer.*?"Search & Files".*?IconName::FolderSearch.*?"Navigation & Layout".*?IconName::Split.*?"Workspace Tools".*?IconName::ListTree.*?"Debugger".*?IconName::Debug.*?"Version Control".*?IconName::GitBranch.*?"Network".*?IconName::Server.*?"Advanced".*?IconName::Settings' \
+    'Dez Settings root pages can regress to an unscannable flat text list or leak fork icons into official Zed'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'canvas_settings_nav_width\(paths::APP_NAME, canvas_density\).*?entry.*?is_root.*?dez_settings_nav_icon.*?item\.start_icon\(icon\).*?root_item\(entry\.is_root\)' \
+    'Dez Settings navigation can regress to decorating nested sections or stop applying root-page icons'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    'Each Dez root page has one quiet semantic icon.*?Icons supplement the[[:space:]]+page title and never replace it.*?Nested section rows remain text-only.*?navigation column follows Interface Density.*?Official Zed keeps its inherited[[:space:]]+text-only Settings navigation and dimensions' \
+    'the Settings wireframe can regress from restrained root-page icon hierarchy'
 require_multiline_pattern docs/src/development/dez/v0.2-workspace-polish.md \
     'Add menu also exposes.*?Built-in Agent row and the matching Workspace Options row open that[[:space:]]+native surface only when an authenticated default model.*?otherwise both become.*?Configure Built-in Agent….*?Settings mark.*?provider settings instead of a dead model-less surface' \
     'the active Workspace contract can regress to sending unconfigured users into a dead Built-in Agent surface'

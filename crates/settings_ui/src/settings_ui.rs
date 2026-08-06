@@ -207,6 +207,42 @@ fn canvas_settings_nav_padding(density: settings::CanvasDensity) -> Pixels {
     }
 }
 
+fn canvas_settings_nav_width(app_name: &str, density: settings::CanvasDensity) -> Pixels {
+    if app_name == "Zed" {
+        return SIDEBAR_WIDTH;
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => px(238.),
+        settings::CanvasDensity::Balanced => px(250.),
+        settings::CanvasDensity::Spacious => px(264.),
+    }
+}
+
+fn dez_settings_nav_icon(app_name: &str, page_title: &str) -> Option<IconName> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    match page_title {
+        "Workspaces & Terminals" => Some(IconName::Screen),
+        "Agents" => Some(IconName::DezAgent),
+        "Appearance" => Some(IconName::Sparkle),
+        "Workspace & Privacy" => Some(IconName::Lock),
+        "Keyboard & Vim" => Some(IconName::Keyboard),
+        "Editor" => Some(IconName::Code),
+        "Languages & Tools" => Some(IconName::ToolHammer),
+        "Search & Files" => Some(IconName::FolderSearch),
+        "Navigation & Layout" => Some(IconName::Split),
+        "Workspace Tools" => Some(IconName::ListTree),
+        "Debugger" => Some(IconName::Debug),
+        "Version Control" => Some(IconName::GitBranch),
+        "Network" => Some(IconName::Server),
+        "Advanced" => Some(IconName::Settings),
+        _ => None,
+    }
+}
+
 fn canvas_settings_radius(element: Stateful<Div>, radius: settings::CanvasRadius) -> Stateful<Div> {
     match radius {
         settings::CanvasRadius::None => element,
@@ -3443,7 +3479,7 @@ impl SettingsWindow {
                     cx,
                 );
             }))
-            .w(SIDEBAR_WIDTH)
+            .w(canvas_settings_nav_width(paths::APP_NAME, canvas_density))
             .h_full()
             .p(canvas_settings_nav_padding(canvas_density))
             .when(cfg!(target_os = "macos"), |this| this.pt_10())
@@ -3474,6 +3510,18 @@ impl SettingsWindow {
                                         TreeViewItem::new(
                                             ("settings-ui-navbar-entry", entry_index),
                                             entry.title,
+                                        )
+                                        .when_some(
+                                            entry
+                                                .is_root
+                                                .then(|| {
+                                                    dez_settings_nav_icon(
+                                                        paths::APP_NAME,
+                                                        entry.title,
+                                                    )
+                                                })
+                                                .flatten(),
+                                            |item, icon| item.start_icon(icon),
                                         )
                                         .track_focus(&entry.focus_handle)
                                         .root_item(entry.is_root)
@@ -5797,6 +5845,48 @@ fn render_icon_theme_picker(
 pub mod test {
 
     use super::*;
+
+    #[test]
+    fn dez_settings_roots_use_semantic_native_icons() {
+        let expected = [
+            ("Workspaces & Terminals", IconName::Screen),
+            ("Agents", IconName::DezAgent),
+            ("Appearance", IconName::Sparkle),
+            ("Workspace & Privacy", IconName::Lock),
+            ("Keyboard & Vim", IconName::Keyboard),
+            ("Editor", IconName::Code),
+            ("Languages & Tools", IconName::ToolHammer),
+            ("Search & Files", IconName::FolderSearch),
+            ("Navigation & Layout", IconName::Split),
+            ("Workspace Tools", IconName::ListTree),
+            ("Debugger", IconName::Debug),
+            ("Version Control", IconName::GitBranch),
+            ("Network", IconName::Server),
+            ("Advanced", IconName::Settings),
+        ];
+
+        for (page_title, icon) in expected {
+            assert_eq!(dez_settings_nav_icon("Dez", page_title), Some(icon));
+            assert_eq!(dez_settings_nav_icon("Zed", page_title), None);
+        }
+        assert_eq!(dez_settings_nav_icon("Dez", "Unknown"), None);
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Compact),
+            px(238.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Balanced),
+            px(250.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Spacious),
+            px(264.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Zed", settings::CanvasDensity::Spacious),
+            SIDEBAR_WIDTH
+        );
+    }
 
     impl SettingsWindow {
         fn navbar_entry(&self) -> usize {
