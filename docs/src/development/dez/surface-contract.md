@@ -668,6 +668,11 @@ native tool, honest ownership, inline recovery**.
 | Status bar | window | durable Workspace and editor context | visible by default | explicit preference may hide it; closed Workspaces keeps a labeled restore control |
 | Installation and access | Home plus Workspaces notice | unblock safe startup | startup preflight | install/relaunch or grant one exact folder; never background prompt loops |
 
+The Dez visual profile keeps the status line visible with active language,
+cursor position, and non-UTF-8 encoding when relevant. It leaves the active-file
+name and line-ending control off because the native tab and editor already own
+that persistent identity. Both remain explicit user preferences.
+
 ## Interaction and copy rules
 
 - Use one primary action per state. Put secondary actions in ordinary rows or

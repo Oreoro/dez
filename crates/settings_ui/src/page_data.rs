@@ -1016,7 +1016,7 @@ fn appearance_page() -> SettingsPage {
             SettingsPageItem::ActionLink(ActionLink {
                 title: "Restore Native Dez Appearance".into(),
                 description: Some(
-                    "Restore Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar. Font sizes and unrelated preferences stay unchanged."
+                    "Restore Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the focused Workspace status line. Font sizes and unrelated preferences stay unchanged."
                         .into(),
                 ),
                 button_text: "Restore Profile".into(),

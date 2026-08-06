@@ -35,8 +35,11 @@
   },
   "status_bar": {
     "experimental.show": true,
-    "show_active_file": true,
-    "line_endings_button": true
+    "show_active_file": false,
+    "active_language_button": true,
+    "cursor_position_button": true,
+    "line_endings_button": false,
+    "active_encoding_button": "non_utf8"
   },
   "markdown_preview_code_font_family": "Lilex",
   "terminal": {

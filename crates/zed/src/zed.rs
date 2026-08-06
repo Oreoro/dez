@@ -936,8 +936,11 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     tab_bar.show_tab_bar_buttons = Some(true);
     let status_bar = settings.status_bar.get_or_insert_default();
     status_bar.show = Some(true);
-    status_bar.show_active_file = Some(true);
-    status_bar.line_endings_button = Some(true);
+    status_bar.show_active_file = Some(false);
+    status_bar.active_language_button = Some(true);
+    status_bar.cursor_position_button = Some(true);
+    status_bar.line_endings_button = Some(false);
+    status_bar.active_encoding_button = Some(settings::EncodingDisplayOptions::NonUtf8);
 }
 
 struct InstallationRequiredForWorkspaceAction;
@@ -1316,7 +1319,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar.",
+                                "Restored Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the focused Workspace status line.",
                             ),
                             cx,
                         );
@@ -3358,8 +3361,11 @@ mod tests {
         assert_eq!(settings["tab_bar"]["show_nav_history_buttons"], true);
         assert_eq!(settings["tab_bar"]["show_tab_bar_buttons"], true);
         assert_eq!(settings["status_bar"]["experimental.show"], true);
-        assert_eq!(settings["status_bar"]["show_active_file"], true);
-        assert_eq!(settings["status_bar"]["line_endings_button"], true);
+        assert_eq!(settings["status_bar"]["show_active_file"], false);
+        assert_eq!(settings["status_bar"]["active_language_button"], true);
+        assert_eq!(settings["status_bar"]["cursor_position_button"], true);
+        assert_eq!(settings["status_bar"]["line_endings_button"], false);
+        assert_eq!(settings["status_bar"]["active_encoding_button"], "non_utf8");
         assert_eq!(settings["ui_font_size"], 18.0);
     }
 
