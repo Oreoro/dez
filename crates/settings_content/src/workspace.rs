@@ -164,10 +164,15 @@ pub struct WorkspaceSettingsContent {
 #[serde(rename_all = "snake_case")]
 pub enum WorkspaceStartupIntent {
     #[default]
+    #[strum(serialize = "Focus Work Area")]
     Focus,
+    #[strum(serialize = "Files")]
     Direct,
+    #[strum(serialize = "Built-in Agent")]
     Agentic,
+    #[strum(serialize = "Git Changes")]
     Review,
+    #[strum(serialize = "Debug")]
     Debug,
 }
 

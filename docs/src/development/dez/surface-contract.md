@@ -265,6 +265,11 @@ for Home to be reopened. Home assigns keyboard order after local-only actions
 are filtered, so hiding the cmux handoff for a remote Workspace never creates a
 duplicate or skipped action target.
 
+**New Workspace Starts With** names the existing native destination it will
+open: **Focus Work Area**, **Files**, **Built-in Agent**, **Git Changes**, or
+**Debug**. These are not durable product modes. The choice applies only when a
+new Workspace has a root but no restored layout or explicitly opened item.
+
 Each Dez root page has one quiet semantic icon drawn from the same native icon
 set used by Home, Workspaces, tabs, and the status line. Icons supplement the
 page title and never replace it. Nested section rows remain text-only, keeping

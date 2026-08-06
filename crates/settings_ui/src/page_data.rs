@@ -464,7 +464,7 @@ fn projects_startup_setting() -> SettingsPageItem {
 fn workspace_startup_intent_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
         title: "New Workspace Starts With",
-        description: "Choose the first native destination only when a Workspace has no restored layout or explicitly opened item. Focus keeps one empty Main Work Area; Direct opens Files; Agentic opens the Built-in Agent; Review opens Git Changes; Debug opens Debug setup.",
+        description: "Choose the first native destination only when a Workspace has no restored layout or explicitly opened item. Focus Work Area opens no tool; the other choices open their existing Workspace surface.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("startup_intent"),
@@ -12259,6 +12259,16 @@ mod tests {
         };
         assert_eq!(startup_intent.title, "New Workspace Starts With");
         assert_eq!(startup_intent.field.json_path(), Some("startup_intent"));
+        assert_eq!(
+            <settings::WorkspaceStartupIntent as strum::VariantNames>::VARIANTS,
+            [
+                "Focus Work Area",
+                "Files",
+                "Built-in Agent",
+                "Git Changes",
+                "Debug",
+            ]
+        );
     }
 
     #[test]
