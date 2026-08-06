@@ -1682,6 +1682,14 @@ fn active_workspace_terminal_destination_label(
     )
 }
 
+fn workspace_terminal_launch_uses_configured_launcher(
+    app_name: &str,
+    startup_command: Option<&str>,
+    working_directory: Option<&Path>,
+) -> bool {
+    app_name != "Zed" && startup_command.is_none() && working_directory.is_none()
+}
+
 fn workspace_new_terminal_action_persistent(
     is_active: bool,
     is_focused: bool,
@@ -1770,12 +1778,22 @@ fn workspace_navigation_label(
     format!("{primary_name} · {root_count} roots").into()
 }
 
-fn workspace_new_terminal_control_label(app_name: &str, workspace_name: &str) -> String {
-    format!("{} in {workspace_name}", terminal_launch_label(app_name))
+fn workspace_new_terminal_control_label(
+    app_name: &str,
+    workspace_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    format!(
+        "{} in {workspace_name}",
+        active_workspace_terminal_action_label(app_name, configured_command)
+    )
 }
 
-fn workspace_new_terminal_tooltip_label(app_name: &str) -> &'static str {
-    terminal_launch_label(app_name)
+fn workspace_new_terminal_tooltip_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    active_workspace_terminal_action_label(app_name, configured_command)
 }
 
 fn workspace_options_control_label(workspace_name: &str) -> String {
@@ -2683,11 +2701,15 @@ mod workspace_header_label_tests {
             "Workspace compiler, ready for a session"
         );
         assert_eq!(
-            workspace_new_terminal_control_label("Dez", "compiler"),
-            "Open Terminal in compiler"
+            workspace_new_terminal_control_label("Dez", "compiler", None),
+            "Open Terminal · Native Shell in compiler"
         );
         assert_eq!(
-            workspace_new_terminal_control_label("Zed", "compiler"),
+            workspace_new_terminal_control_label("Dez", "compiler", Some("codex --yolo")),
+            "Open Terminal · Codex in compiler"
+        );
+        assert_eq!(
+            workspace_new_terminal_control_label("Zed", "compiler", Some("codex --yolo")),
             "Start Terminal Session in compiler"
         );
         assert_eq!(
@@ -2712,7 +2734,10 @@ mod workspace_header_label_tests {
             "zed 3.0"
         );
         assert_eq!(workspace_access_root_label(Path::new("/")), "/");
-        assert_eq!(workspace_new_terminal_tooltip_label("Dez"), "Open Terminal");
+        assert_eq!(
+            workspace_new_terminal_tooltip_label("Dez", Some("claude")),
+            "Open Terminal · Claude Code"
+        );
         assert!(workspace_header_terminal_action_visible(
             "Dez", false, false, true
         ));
@@ -2722,7 +2747,30 @@ mod workspace_header_label_tests {
         assert!(!workspace_header_terminal_action_visible(
             "Zed", false, false, true
         ));
-        assert!(!workspace_new_terminal_control_label("Dez", "compiler").contains("header-group"));
+        assert!(workspace_terminal_launch_uses_configured_launcher(
+            "Dez", None, None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Zed", None, None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Dez",
+            Some("codex"),
+            None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Dez",
+            Some(""),
+            None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Dez",
+            None,
+            Some(Path::new("/Users/test/Documents/dez"))
+        ));
+        assert!(
+            !workspace_new_terminal_control_label("Dez", "compiler", None).contains("header-group")
+        );
         assert!(!workspace_options_control_label("compiler").contains("header-group"));
         assert_eq!(
             configured_terminal_launcher_label(None),
@@ -9436,6 +9484,17 @@ impl Sidebar {
             && (APP_NAME == "Dez" || (APP_NAME == "Zed" && labels_visible))
             && workspace_empty_terminal_row_visible_for_active_state(APP_NAME, is_active)
         {
+            let configured_terminal_command = AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref();
+            let terminal_action_label =
+                active_workspace_terminal_action_label(APP_NAME, configured_terminal_command);
+            let terminal_action_aria_label =
+                format!("{} in {}", terminal_action_label, workspace_name.as_ref());
+            let terminal_action_icon =
+                workspace_default_terminal_icon(APP_NAME, configured_terminal_command);
+            let terminal_tooltip_label = terminal_action_label.clone();
+
             v_flex()
                 .w_full()
                 .child(header)
@@ -9482,7 +9541,7 @@ impl Sidebar {
                                 SharedString::from(format!(
                                     "{id_prefix}empty-project-new-terminal-{ix}"
                                 )),
-                                terminal_launch_label(APP_NAME),
+                                terminal_action_label,
                             )
                             .full_width()
                             .size(workspace_control_size)
@@ -9491,28 +9550,10 @@ impl Sidebar {
                             } else {
                                 ButtonStyle::Subtle
                             })
-                            .start_icon(
-                                Icon::new(workspace_default_terminal_icon(
-                                    APP_NAME,
-                                    AgentSettings::get_global(cx)
-                                        .terminal_init_command
-                                        .as_deref(),
-                                ))
-                                .size(workspace_icon_size),
-                            )
+                            .start_icon(Icon::new(terminal_action_icon).size(workspace_icon_size))
                             .tab_index(0isize)
-                            .aria_label(SharedString::from(format!(
-                                "{} in {}",
-                                terminal_launch_label(APP_NAME),
-                                workspace_name.as_ref()
-                            )))
-                            .tooltip(move |_, cx| {
-                                Tooltip::for_action(
-                                    workspace_new_terminal_tooltip_label(APP_NAME),
-                                    &NewCenterTerminal::default(),
-                                    cx,
-                                )
-                            })
+                            .aria_label(terminal_action_aria_label)
+                            .tooltip(Tooltip::text(terminal_tooltip_label))
                             .on_click(cx.listener(
                                 move |this, _, window, cx| {
                                     this.set_group_expanded(&key_for_empty_terminal, true, cx);
@@ -9524,7 +9565,7 @@ impl Sidebar {
                                     } else {
                                         this.open_workspace_and_create_entry(
                                             &key_for_empty_terminal,
-                                            NewEntryTarget::Terminal(None),
+                                            default_new_session_target(),
                                             window,
                                             cx,
                                         );
@@ -9581,19 +9622,19 @@ impl Sidebar {
             .cloned()
             .unwrap_or_default();
         let is_menu_open = menu_handle.is_deployed();
+        let configured_terminal_command =
+            AgentSettings::get_global(cx).terminal_init_command.clone();
         let new_terminal_label = SharedString::from(workspace_new_terminal_control_label(
             APP_NAME,
             workspace_name,
+            configured_terminal_command.as_deref(),
         ));
+        let terminal_tooltip_label =
+            workspace_new_terminal_tooltip_label(APP_NAME, configured_terminal_command.as_deref());
 
         let button = IconButton::new(
             SharedString::from(format!("{id_prefix}workspace-new-session-{ix}")),
-            workspace_default_terminal_icon(
-                APP_NAME,
-                AgentSettings::get_global(cx)
-                    .terminal_init_command
-                    .as_deref(),
-            ),
+            workspace_default_terminal_icon(APP_NAME, configured_terminal_command.as_deref()),
         )
         .size(control_size)
         .selected_style(workspace_navigation_selected_style(APP_NAME))
@@ -9613,10 +9654,11 @@ impl Sidebar {
 
         if open_workspaces.is_empty() {
             let key = key.clone();
+            let terminal_tooltip_label = terminal_tooltip_label.clone();
             return button
                 .tooltip(move |_, cx| {
                     Tooltip::for_action_in(
-                        workspace_new_terminal_tooltip_label(APP_NAME),
+                        terminal_tooltip_label.clone(),
                         &NewSessionInGroup,
                         &focus_handle,
                         cx,
@@ -9648,7 +9690,7 @@ impl Sidebar {
         .with_handle(menu_handle)
         .trigger_with_tooltip(button, move |_, cx| {
             Tooltip::for_action_in(
-                workspace_new_terminal_tooltip_label(APP_NAME),
+                terminal_tooltip_label.clone(),
                 &NewSessionInGroup,
                 &focus_handle,
                 cx,
@@ -16910,15 +16952,23 @@ impl Sidebar {
         });
 
         let workspace_focus = workspace.read(cx).focus_handle(cx);
-        workspace_focus.dispatch_action(
-            &NewCenterTerminal {
-                local: false,
-                startup_command,
-                working_directory,
-            },
-            window,
-            cx,
-        );
+        if workspace_terminal_launch_uses_configured_launcher(
+            APP_NAME,
+            startup_command.as_deref(),
+            working_directory.as_deref(),
+        ) {
+            workspace_focus.dispatch_action(&zed_actions::terminal::OpenAgentTerminal, window, cx);
+        } else {
+            workspace_focus.dispatch_action(
+                &NewCenterTerminal {
+                    local: false,
+                    startup_command,
+                    working_directory,
+                },
+                window,
+                cx,
+            );
+        }
     }
 
     fn create_terminal_in_project_group(
@@ -17820,7 +17870,9 @@ impl Sidebar {
                                         ))
                                         .tooltip(|_, cx| {
                                             Tooltip::for_action(
-                                                workspace_new_terminal_tooltip_label(APP_NAME),
+                                                workspace_new_terminal_tooltip_label(
+                                                    APP_NAME, None,
+                                                ),
                                                 &NewCenterTerminal::default(),
                                                 cx,
                                             )

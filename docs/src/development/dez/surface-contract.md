@@ -268,9 +268,10 @@ an action or documentation route, never an availability toggle.
 
 Changing **Default Terminal** updates the named Home launcher without waiting
 for Home to be reopened. The empty Main Work Area, empty Workspaces Activity,
-and adjacent `+` menu use the same resolved label, icon, and configured-terminal
-action, so the primary launcher never collapses back to a generic terminal row
-or bypasses the selected destination before activation.
+Workspace terminal controls, and adjacent `+` menu use the same resolved label,
+icon, and configured-terminal action, so the primary launcher never collapses
+back to a generic terminal row or bypasses the selected destination before
+activation.
 Home assigns keyboard order after local-only actions are filtered, so hiding
 the cmux handoff for a remote Workspace never creates a
 duplicate or skipped action target.
@@ -439,8 +440,9 @@ bounded failed-source notice exposes one non-destructive **Retry**; concurrent
 refresh requests coalesce, and last-known rows remain visibly qualified. A
 last-known tmux, Herdr, or cmux row stays reachable in **Attention** until its
 source refreshes or resolves, and its row uses attention status rather than
-claiming current Running state. A truly empty list uses one primary **Open Terminal**
-action. Search recovery uses one primary **Clear Search** action, while a
+claiming current Running state. A truly empty list uses one primary configured
+**Open Terminal · Codex**, shell, tmux, provider, or custom action. Search
+recovery uses one primary **Clear Search** action, while a
 caught-up Attention scope uses a subordinate **Show All** action.
 
 **Other Running Sessions** remains absent during ordinary work when it has no
@@ -765,6 +767,9 @@ that persistent identity. Both remain explicit user preferences.
 - Name the configured result at the point of launch. Generic **Open Terminal**
   may become **Open Terminal · Codex** or the resolved equivalent when space
   permits.
+- Workspaces terminal controls dispatch that named configured result. Explicit
+  provider commands remain literal, while **Open New Shell Here** remains a
+  separate native shell and never inherits an agent launcher.
 - Keep permission scope explicit: **Workspace access required** and **Grant
   Access…** for one exact root.
 - Keep recovery in its owning surface: installation on Home, root access in
