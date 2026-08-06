@@ -184,6 +184,25 @@ fn sidebar_toggle_label(app_name: &str, open: bool) -> &'static str {
     }
 }
 
+fn sidebar_toggle_tooltip_label(
+    app_name: &str,
+    open: bool,
+    access_required: bool,
+    attention_count: usize,
+) -> SharedString {
+    let base_label = sidebar_toggle_label(app_name, open);
+    if app_name == "Zed" {
+        return base_label.into();
+    }
+
+    match (access_required, attention_count) {
+        (true, 0) => format!("{base_label} · Access required").into(),
+        (true, count) => format!("{base_label} · Access required · Attention {count}").into(),
+        (false, 0) => base_label.into(),
+        (false, count) => format!("{base_label} · Attention {count}").into(),
+    }
+}
+
 fn sidebar_toggle_accessibility_label(
     app_name: &str,
     open: bool,
@@ -457,6 +476,22 @@ mod tests {
         assert_eq!(sidebar_toggle_label("Dez", true), "Hide Workspaces");
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
+        assert_eq!(
+            sidebar_toggle_tooltip_label("Dez", false, true, 2),
+            "Open Workspaces · Access required · Attention 2"
+        );
+        assert_eq!(
+            sidebar_toggle_tooltip_label("Dez", true, true, 0),
+            "Hide Workspaces · Access required"
+        );
+        assert_eq!(
+            sidebar_toggle_tooltip_label("Dez", false, false, 2),
+            "Open Workspaces · Attention 2"
+        );
+        assert_eq!(
+            sidebar_toggle_tooltip_label("Zed", false, true, 2),
+            "Open Sessions"
+        );
         let workspace_name: SharedString = "paykit".into();
         assert_eq!(
             sidebar_toggle_accessibility_label("Dez", false, Some(&workspace_name), false, 2),
@@ -759,7 +794,8 @@ impl StatusBar {
             Color::Muted
         };
         let indicator_border = cx.theme().colors().status_bar_background;
-        let toggle_label = sidebar_toggle_label(APP_NAME, open);
+        let tooltip_label =
+            sidebar_toggle_tooltip_label(APP_NAME, open, access_required, attention_count);
         let accessibility_label = sidebar_toggle_accessibility_label(
             APP_NAME,
             open,
@@ -797,6 +833,7 @@ impl StatusBar {
                 };
 
                 if let Some(visible_label) = visible_label {
+                    let tooltip_label = tooltip_label.clone();
                     Button::new("toggle-workspace-sidebar", visible_label)
                         .truncate(true)
                         .start_icon(Icon::new(icon).size(icon_size).color(status_color))
@@ -812,12 +849,15 @@ impl StatusBar {
                         .tab_index(0isize)
                         .aria_label(accessibility_label)
                         .aria_expanded(open)
-                        .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
+                        .tooltip(move |_, cx| {
+                            Tooltip::for_action(tooltip_label.clone(), &ToggleSidebar, cx)
+                        })
                         .on_click(move |_, window, cx| {
                             toggle_workspace_sidebar(window, cx);
                         })
                         .into_any_element()
                 } else {
+                    let tooltip_label = tooltip_label.clone();
                     IconButton::new("toggle-workspace-sidebar", icon)
                         .size(control_size)
                         .icon_size(icon_size)
@@ -828,7 +868,9 @@ impl StatusBar {
                             this.indicator(Indicator::dot().color(status_color))
                                 .indicator_border_color(Some(indicator_border))
                         })
-                        .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
+                        .tooltip(move |_, cx| {
+                            Tooltip::for_action(tooltip_label.clone(), &ToggleSidebar, cx)
+                        })
                         .on_click(move |_, window, cx| {
                             toggle_workspace_sidebar(window, cx);
                         })

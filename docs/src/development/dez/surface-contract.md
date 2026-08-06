@@ -754,8 +754,10 @@ that persistent identity. Both remain explicit user preferences.
   never maintains a second identity or attention total.
 - When the active local Workspace requires folder access, the same control adds
   **Access required** at labeled widths and retains the cause in its accessible
-  name plus warning indicator at compact widths. Activating it opens the native
-  Workspaces recovery surface instead of starting another permission prompt.
+  name, native tooltip, and warning indicator at compact widths. Attention
+  remains exact in that tooltip when both states are present. Activating the
+  control opens the native Workspaces recovery surface instead of starting
+  another permission prompt.
 - Long Workspace names truncate as secondary status metadata before they can
   crowd the Workspaces recovery action or its visible attention count.
 - Top and status chrome must change size together when Compact, Balanced, or
