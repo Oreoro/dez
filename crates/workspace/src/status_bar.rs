@@ -13,6 +13,7 @@ use theme::CLIENT_SIDE_DECORATION_ROUNDING;
 use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, right_click_menu};
 
 const WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH: Pixels = px(760.0);
+const WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH: Pixels = px(960.0);
 
 /// Describes how a status-bar item can be hidden by the user.
 ///
@@ -169,12 +170,17 @@ fn sidebar_toggle_visible_label(
     workspace_name: Option<&SharedString>,
     viewport_width: Pixels,
 ) -> Option<SharedString> {
-    (app_name != "Zed" && viewport_width >= WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH).then(|| {
-        match workspace_name {
-            Some(workspace_name) => format!("Workspaces · {workspace_name}").into(),
-            None => "Workspaces".into(),
-        }
-    })
+    if app_name == "Zed" || viewport_width < WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH {
+        return None;
+    }
+
+    if viewport_width >= WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH
+        && let Some(workspace_name) = workspace_name
+    {
+        Some(format!("Workspaces · {workspace_name}").into())
+    } else {
+        Some("Workspaces".into())
+    }
 }
 
 fn toggle_workspace_sidebar(window: &mut Window, cx: &mut App) {
@@ -309,6 +315,15 @@ mod tests {
         );
         assert_eq!(
             sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(760.0)),
+            Some("Workspaces".into()),
+            "medium windows should preserve navigation identity before Workspace metadata"
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(959.0)),
+            Some("Workspaces".into())
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(960.0)),
             Some("Workspaces · paykit".into())
         );
         assert_eq!(sidebar_toggle_visible_label("Zed", None, px(1200.0)), None);

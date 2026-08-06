@@ -258,7 +258,10 @@ its tooltip and action. Compact layouts may hide secondary text, never the
 control's meaning or accessible identity. At less than 760px of window width,
 the density-scaled Workspaces mark remains the same keyboard, tooltip,
 attention, expanded-state, and accessibility target while its visible
-Workspace label yields space to editor and terminal status.
+Workspace label yields space to editor and terminal status. Medium windows show
+the stable **Workspaces** noun without the active Workspace name; wide windows
+add that name as supporting context. This collapse order removes metadata
+before navigation identity and never adds a second status row.
 
 ## Operational-state wireframe
 
