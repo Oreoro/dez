@@ -7,7 +7,8 @@ use crate::{
     },
     record_terminal_workspace_access_required, terminal_failed_to_start_guidance,
     terminal_launch_failure_is_top_anchored, terminal_launch_failure_more_label,
-    terminal_launch_failure_primary_label, terminal_workspace_access_required,
+    terminal_launch_failure_primary_label, terminal_launch_failure_title,
+    terminal_workspace_access_required,
 };
 use breadcrumbs::Breadcrumbs;
 use collections::HashMap;
@@ -1249,6 +1250,7 @@ impl Render for FailedToSpawnTerminal {
             terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
         let more_label =
             terminal_launch_failure_more_label(paths::APP_NAME, workspace_access_required);
+        let title = terminal_launch_failure_title(paths::APP_NAME, workspace_access_required);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
@@ -1276,7 +1278,7 @@ impl Render for FailedToSpawnTerminal {
         v_flex()
             .id("terminal-failed-to-start")
             .role(gpui::Role::Alert)
-            .aria_label("Terminal did not start")
+            .aria_label(title)
             .track_focus(&self.focus_handle)
             .size_full()
             .min_h_0()
@@ -1302,12 +1304,10 @@ impl Render for FailedToSpawnTerminal {
                                         .size(IconSize::Small)
                                         .color(Color::Warning),
                                 )
-                                .child(Headline::new("Terminal did not start")),
+                                .child(Headline::new(title)),
                         )
                     })
-                    .when(!is_dez, |this| {
-                        this.child(Label::new("Terminal did not start"))
-                    })
+                    .when(!is_dez, |this| this.child(Label::new(title)))
                     .child(
                         Label::new(format!(
                             "{}\n\n{}",
@@ -1359,7 +1359,7 @@ impl workspace::Item for FailedToSpawnTerminal {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        SharedString::new_static("Terminal did not start")
+        terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
     }
 }
 

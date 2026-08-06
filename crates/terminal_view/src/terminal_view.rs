@@ -586,6 +586,17 @@ pub(crate) fn terminal_launch_failure_more_label(
     }
 }
 
+pub(crate) fn terminal_launch_failure_title(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Workspace access required"
+    } else {
+        "Terminal did not start"
+    }
+}
+
 pub(crate) fn terminal_launch_failure_is_top_anchored(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -1516,6 +1527,7 @@ impl Render for FailedToSpawnTerminal {
             terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
         let more_label =
             terminal_launch_failure_more_label(paths::APP_NAME, workspace_access_required);
+        let title = terminal_launch_failure_title(paths::APP_NAME, workspace_access_required);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
@@ -1543,7 +1555,7 @@ impl Render for FailedToSpawnTerminal {
         v_flex()
             .id("terminal-failed-to-start")
             .role(gpui::Role::Alert)
-            .aria_label("Terminal did not start")
+            .aria_label(title)
             .track_focus(&self.focus_handle)
             .size_full()
             .min_h_0()
@@ -1569,12 +1581,10 @@ impl Render for FailedToSpawnTerminal {
                                         .size(IconSize::Small)
                                         .color(Color::Warning),
                                 )
-                                .child(Headline::new("Terminal did not start")),
+                                .child(Headline::new(title)),
                         )
                     })
-                    .when(!is_dez, |this| {
-                        this.child(Label::new("Terminal did not start"))
-                    })
+                    .when(!is_dez, |this| this.child(Label::new(title)))
                     .child(
                         Label::new(format!(
                             "{}\n\n{}",
@@ -1626,7 +1636,7 @@ impl workspace::Item for FailedToSpawnTerminal {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        SharedString::new_static("Terminal did not start")
+        terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
     }
 }
 
@@ -4866,6 +4876,18 @@ mod tests {
         assert_eq!(
             terminal_launch_failure_more_label("Zed", true),
             "More Terminal Settings"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Dez", true),
+            "Workspace access required"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Dez", false),
+            "Terminal did not start"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Zed", true),
+            "Terminal did not start"
         );
     }
 

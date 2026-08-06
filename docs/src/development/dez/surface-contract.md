@@ -462,8 +462,8 @@ the recovery owner instead of presenting access as a launch configuration
 problem:
 
 ```text
-┌ Terminal did not start | + | app.rs ─────────────────────────────────┐
-│ [!] Terminal did not start                                           │
+┌ Workspace access required | + | app.rs ──────────────────────────────┐
+│ [!] Workspace access required                                        │
 │   Workspace access required for ~/Documents/dez before a terminal…   │
 │                                                                      │
 │   Workspace access is required before a terminal can start. Open    │
@@ -480,8 +480,9 @@ problem:
 **Open Workspaces** focuses the existing native access owner; it does not show
 a second prompt or grant access from the terminal tab. **Grant Access…** stays
 in the active Workspace row, while the split menu retains general diagnostic
-settings. Ordinary launch failures and official Zed keep their existing
-Settings recovery.
+settings. The native tab and alert retain **Workspace access required** when
+inactive or projected through Workspaces. Ordinary launch failures and
+official Zed keep their existing title and Settings recovery.
 
 ## Review-and-recovery wireframe
 
