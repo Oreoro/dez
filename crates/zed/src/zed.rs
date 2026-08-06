@@ -16,7 +16,7 @@ pub mod visual_tests;
 pub(crate) mod windows_only_instance;
 
 use agent_settings::{UserAgentsMdState, init_user_agents_md};
-use agent_ui::AgentDiffToolbar;
+use agent_ui::{AgentDiffToolbar, AgentPanel};
 use anyhow::Context as _;
 pub use app_menus::*;
 use assets::Assets;
@@ -890,6 +890,17 @@ async fn initialize_agent_panel(
             workspace.register_action(agent_ui::InlineAssistant::inline_assist);
         }
     })?;
+
+    if APP_NAME != "Zed" {
+        let panel = AgentPanel::load(workspace_handle.clone(), cx.clone())
+            .await
+            .context("failed to load built-in Agent panel")?;
+        workspace_handle.update_in(&mut cx, |workspace, window, cx| {
+            if workspace.panel::<AgentPanel>(cx).is_none() {
+                workspace.add_panel(panel, window, cx);
+            }
+        })?;
+    }
 
     anyhow::Ok(())
 }

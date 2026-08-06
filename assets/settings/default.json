@@ -165,6 +165,10 @@
   //  4. Open the native launchpad without touching previous Workspace folders
   //         "restore_on_startup": "launchpad",
   "restore_on_startup": "launchpad",
+  // The first native destination for a new Workspace with no restored layout
+  // or explicitly opened item. May be focus, direct, agentic, review, or debug.
+  // Restored layouts and explicit file or tool opens always win.
+  "startup_intent": "focus",
   // The default behavior when opening paths from the CLI without
   // an explicit `-e` (existing window) or `-n` (new window) flag.
   //

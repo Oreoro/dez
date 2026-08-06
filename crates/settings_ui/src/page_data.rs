@@ -386,6 +386,7 @@ fn workspace_surface_setting_path_visible(app_name: &str, json_path: Option<&str
                 | "agent.flexible"
                 | "agent.default_width"
                 | "agent.default_height"
+                | "project_panel.starts_open"
         )
     )
 }
@@ -426,6 +427,23 @@ fn projects_startup_setting() -> SettingsPageItem {
             pick: |settings_content| settings_content.sidebar.as_ref()?.starts_open.as_ref(),
             write: |settings_content, value, _| {
                 settings_content.sidebar.get_or_insert_default().starts_open = value;
+            },
+        }),
+        metadata: None,
+        files: USER,
+    })
+}
+
+fn workspace_startup_intent_setting() -> SettingsPageItem {
+    SettingsPageItem::SettingItem(SettingItem {
+        title: "New Workspace Starts With",
+        description: "Choose the first native destination only when a Workspace has no restored layout or explicitly opened item. Focus keeps one empty Main Work Area; Direct opens Files; Agentic opens the Built-in Agent; Review opens Git Changes; Debug opens Debug setup.",
+        field: Box::new(SettingField {
+            organization_override: None,
+            json_path: Some("startup_intent"),
+            pick: |settings_content| settings_content.workspace.startup_intent.as_ref(),
+            write: |settings_content, value, _| {
+                settings_content.workspace.startup_intent = value;
             },
         }),
         metadata: None,
@@ -7453,6 +7471,7 @@ fn terminal_page() -> SettingsPage {
                 }),
                 sessions_side_setting(),
                 projects_startup_setting(),
+                workspace_startup_intent_setting(),
             ]
         } else {
             Vec::new()
@@ -12163,6 +12182,13 @@ mod tests {
         assert!(!sessions_side_setting_visible("Dez", "Agents"));
         assert!(sessions_side_setting_visible("Zed", "Agents"));
         assert!(!sessions_side_setting_visible("Zed", "Sessions & Terminal"));
+
+        let SettingsPageItem::SettingItem(startup_intent) = workspace_startup_intent_setting()
+        else {
+            panic!("Workspace startup intent must be a native setting row");
+        };
+        assert_eq!(startup_intent.title, "New Workspace Starts With");
+        assert_eq!(startup_intent.field.json_path(), Some("startup_intent"));
     }
 
     #[test]
@@ -12268,6 +12294,7 @@ mod tests {
         for dock_only_path in [
             "project_panel.dock",
             "project_panel.default_width",
+            "project_panel.starts_open",
             "outline_panel.dock",
             "outline_panel.default_width",
             "git_panel.dock",

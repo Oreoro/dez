@@ -2029,3 +2029,18 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   It disappears when empty; idle open content stays in **Layout**, inactive
   completed Agent Sessions stay in Agent History, and externally discovered
   work remains under the explicit **Running Sessions** disclosure.
+- **2026-08-06: New Workspace starts are intent-led, restored, and native.**
+  The user setting **New Workspace Starts With** applies only to a new
+  Workspace that has a real root, no restorable layout, and no explicitly
+  opened item. **Focus** keeps one Main Work Area and is the default;
+  **Direct**, **Agentic**, **Review**, and **Debug** select the existing Files,
+  Built-in Agent, Git Changes, or Debug owner through the same Workspace Layout
+  recipes used by explicit actions. Restored layouts and explicit file or tool
+  opens always win. The setting never creates a mode switch, starts a terminal,
+  agent, task, build, or debug session, and only an explicit **Split Work Area**
+  action may create another populated pane. Dez registers the existing
+  `AgentPanel` with its other native tool owners so **Agentic** resolves to a
+  real Built-in Agent destination instead of a named but empty layout. Loading
+  that owner does not create a terminal or start an Agent Session. The older Files-specific
+  `project_panel.starts_open` preference remains raw-settings compatibility but
+  is no longer a second graphical startup control in Dez.

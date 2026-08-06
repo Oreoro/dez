@@ -27,6 +27,7 @@
   "project_panel": {
     "starts_open": false
   },
+  "startup_intent": "focus",
   "tab_bar": {
     "show": true,
     "show_nav_history_buttons": true,

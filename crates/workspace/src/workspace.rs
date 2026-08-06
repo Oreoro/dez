@@ -551,6 +551,26 @@ fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> C
         .unwrap_or(CanvasLayoutRecipe::Full)
 }
 
+fn dez_startup_canvas_layout_recipe(
+    app_name: &str,
+    intent: settings::WorkspaceStartupIntent,
+    is_new_workspace: bool,
+    has_explicitly_opened_item: bool,
+    has_workspace_root: bool,
+) -> Option<CanvasLayoutRecipe> {
+    if app_name == "Zed" || !is_new_workspace || has_explicitly_opened_item || !has_workspace_root {
+        return None;
+    }
+
+    match intent {
+        settings::WorkspaceStartupIntent::Focus => None,
+        settings::WorkspaceStartupIntent::Direct => Some(CanvasLayoutRecipe::Full),
+        settings::WorkspaceStartupIntent::Agentic => Some(CanvasLayoutRecipe::AgentControl),
+        settings::WorkspaceStartupIntent::Review => Some(CanvasLayoutRecipe::Review),
+        settings::WorkspaceStartupIntent::Debug => Some(CanvasLayoutRecipe::Debug),
+    }
+}
+
 fn dez_layout_uses_single_work_area(recipe: CanvasLayoutRecipe) -> bool {
     matches!(
         recipe,
@@ -4098,6 +4118,7 @@ impl Workspace {
                 .as_ref()
                 .map(|_| canvas_saved_layouts_from_persisted(db.saved_canvas_layouts(workspace_id)))
                 .unwrap_or_default();
+            let is_new_workspace = serialized_workspace.is_none();
 
             let toolchains = db.toolchains(workspace_id).await?;
 
@@ -4279,6 +4300,51 @@ impl Workspace {
                 })?
                 .await
                 .unwrap_or_default();
+            let has_explicitly_opened_item = !opened_items.is_empty();
+            let startup_recipe = window
+                .update(cx, |_, _window, cx| {
+                    let workspace = workspace.read(cx);
+                    let has_workspace_root =
+                        workspace
+                            .project
+                            .read(cx)
+                            .visible_worktrees(cx)
+                            .any(|worktree| {
+                                worktree
+                                    .read(cx)
+                                    .root_entry()
+                                    .is_some_and(|entry| entry.is_dir())
+                            });
+                    dez_startup_canvas_layout_recipe(
+                        paths::APP_NAME,
+                        WorkspaceSettings::get_global(cx).startup_intent,
+                        is_new_workspace,
+                        has_explicitly_opened_item,
+                        has_workspace_root,
+                    )
+                })
+                .log_err()
+                .flatten();
+
+            if let Some(startup_recipe) = startup_recipe {
+                let panels_task = window
+                    .update(cx, |_, _window, cx| {
+                        workspace.update(cx, |workspace, _cx| workspace.take_panels_task())
+                    })
+                    .log_err()
+                    .flatten();
+                if let Some(panels_task) = panels_task {
+                    panels_task.await.log_err();
+                }
+
+                window
+                    .update(cx, |_, window, cx| {
+                        workspace.update(cx, |workspace, cx| {
+                            workspace.apply_canvas_layout_recipe(startup_recipe.id(), window, cx);
+                        });
+                    })
+                    .log_err();
+            }
 
             // Restore default dock state for empty workspaces
             // Only restore if:
@@ -17629,6 +17695,104 @@ mod tests {
         assert!(!dez_layout_uses_single_work_area(
             CanvasLayoutRecipe::CodeRunObserve
         ));
+    }
+
+    #[test]
+    fn dez_startup_intent_never_overrides_restored_or_explicit_work() {
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Focus,
+                true,
+                false,
+                true,
+            ),
+            None
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                false,
+                true,
+            ),
+            Some(CanvasLayoutRecipe::Full)
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Agentic,
+                true,
+                false,
+                true,
+            ),
+            Some(CanvasLayoutRecipe::AgentControl)
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Review,
+                true,
+                false,
+                true,
+            ),
+            Some(CanvasLayoutRecipe::Review)
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Debug,
+                true,
+                false,
+                true,
+            ),
+            Some(CanvasLayoutRecipe::Debug)
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                false,
+                false,
+                true,
+            ),
+            None,
+            "a restored Workspace keeps its saved native layout"
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                true,
+                true,
+            ),
+            None,
+            "an explicitly opened item remains the first destination"
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                false,
+                false,
+            ),
+            None,
+            "Home remains the owner when no Workspace root exists"
+        );
+        assert_eq!(
+            dez_startup_canvas_layout_recipe(
+                "Zed",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                false,
+                true,
+            ),
+            None,
+            "official Zed keeps its upstream startup behavior"
+        );
     }
 
     #[test]
