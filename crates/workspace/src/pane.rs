@@ -141,8 +141,32 @@ fn pane_new_surface_control_belongs_in_tab_strip(app_name: &str, pane_kind: Pane
     app_name != "Zed" && pane_kind == PaneKind::Tabs
 }
 
-fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
+fn pane_preserves_native_tab_strip(app_name: &str, pane_kind: PaneKind) -> bool {
     app_name != "Zed" && pane_kind == PaneKind::Tabs
+}
+
+fn pane_tab_bar_visible(app_name: &str, pane_kind: PaneKind, configured_visible: bool) -> bool {
+    configured_visible || pane_preserves_native_tab_strip(app_name, pane_kind)
+}
+
+fn pane_tab_bar_buttons_visible(
+    app_name: &str,
+    pane_kind: PaneKind,
+    configured_visible: bool,
+) -> bool {
+    configured_visible || pane_preserves_native_tab_strip(app_name, pane_kind)
+}
+
+fn pane_auto_hides_single_tab_bar(
+    app_name: &str,
+    pane_kind: PaneKind,
+    configured_auto_hide: bool,
+) -> bool {
+    configured_auto_hide && !pane_preserves_native_tab_strip(app_name, pane_kind)
+}
+
+fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
+    pane_preserves_native_tab_strip(app_name, pane_kind)
 }
 
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
@@ -4334,7 +4358,11 @@ impl Pane {
                 },
             )
             .map(|tab_bar| {
-                if self.show_tab_bar_buttons {
+                if pane_tab_bar_buttons_visible(
+                    paths::APP_NAME,
+                    self.pane_kind,
+                    self.show_tab_bar_buttons,
+                ) {
                     let render_tab_buttons = self.render_tab_bar_buttons.clone();
                     let (left_children, right_children) = render_tab_buttons(self, window, cx);
                     tab_bar
@@ -6189,17 +6217,22 @@ impl Render for Pane {
             .contribute_context(&mut key_context, cx);
 
         let should_display_tab_bar = self.should_display_tab_bar.clone();
-        let auto_hide_single_tab_bar = PaneGridSettings::get_global(cx).auto_hide_single_tab_bar;
+        let auto_hide_single_tab_bar = pane_auto_hides_single_tab_bar(
+            paths::APP_NAME,
+            self.pane_kind,
+            PaneGridSettings::get_global(cx).auto_hide_single_tab_bar,
+        );
         let active_item_forces_tab_bar = self
             .active_item()
             .is_some_and(|item| item.force_show_tab_bar(cx));
         let keeps_empty_tab_bar = pane_keeps_tab_bar_when_empty(paths::APP_NAME, self.pane_kind)
             && self.active_item().is_none();
-        let display_tab_bar = should_display_tab_bar(window, cx)
-            && (keeps_empty_tab_bar
-                || !(auto_hide_single_tab_bar
-                    && self.items_len() <= 1
-                    && !active_item_forces_tab_bar));
+        let display_tab_bar = pane_tab_bar_visible(
+            paths::APP_NAME,
+            self.pane_kind,
+            should_display_tab_bar(window, cx),
+        ) && (keeps_empty_tab_bar
+            || !(auto_hide_single_tab_bar && self.items_len() <= 1 && !active_item_forces_tab_bar));
         let Some(project) = self.project.upgrade() else {
             return div()
                 .id(("detached-pane", cx.entity_id()))
@@ -6977,6 +7010,23 @@ mod tests {
         assert!(pane_keeps_tab_bar_when_empty("Dez", PaneKind::Tabs));
         assert!(!pane_keeps_tab_bar_when_empty("Dez", PaneKind::Project));
         assert!(!pane_keeps_tab_bar_when_empty("Zed", PaneKind::Tabs));
+        assert!(pane_tab_bar_visible("Dez", PaneKind::Tabs, false));
+        assert!(pane_tab_bar_buttons_visible("Dez", PaneKind::Tabs, false));
+        assert!(!pane_auto_hides_single_tab_bar("Dez", PaneKind::Tabs, true));
+        assert!(!pane_tab_bar_visible("Dez", PaneKind::Project, false));
+        assert!(!pane_tab_bar_buttons_visible(
+            "Dez",
+            PaneKind::Project,
+            false
+        ));
+        assert!(pane_auto_hides_single_tab_bar(
+            "Dez",
+            PaneKind::Project,
+            true
+        ));
+        assert!(!pane_tab_bar_visible("Zed", PaneKind::Tabs, false));
+        assert!(!pane_tab_bar_buttons_visible("Zed", PaneKind::Tabs, false));
+        assert!(pane_auto_hides_single_tab_bar("Zed", PaneKind::Tabs, true));
         assert!(
             !pane_navigation_history_buttons_visible("Dez", false),
             "Dez should not repeat Back and Forward controls in every pane when the setting is off"

@@ -295,6 +295,13 @@ disabled outer card gap, disabled active-pane border, and unused zoom padding
 remain readable in `settings.json` for compatibility but are not presented as
 working native controls.
 
+The Main Work Area's native pane strip and adjacent Add control are product
+navigation, not optional decoration. Dez therefore keeps them visible even if
+an inherited `tab_bar.show`, `tab_bar.show_tab_bar_buttons`, or
+`pane_grid.auto_hide_single_tab_bar` value requests otherwise. The two tab-bar
+visibility rows are omitted from curated Settings, while the raw keys remain
+readable for compatibility. Official Zed continues to honor all three values.
+
 ### 8. Compact navigation
 
 ```text
@@ -771,7 +778,8 @@ that persistent identity. Both remain explicit user preferences.
   neighbor may open normally; an unloaded remote path is never reinterpreted as
   local, and a durable empty Workspace is the final fallback.
 - Native pane tabs remain the source of order, focus, dirty, close, and split
-  truth.
+  truth. Dez keeps each Main Work Area pane strip and its adjacent `+` visible;
+  inherited tab-bar visibility preferences cannot remove that navigation.
 - Agent review disclosures and decisions remain keyboard reachable, and Git
   History failure retries only the completed failed request.
 - Subagent supervision keeps state in text and opens the existing child Session.

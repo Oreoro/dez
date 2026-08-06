@@ -110,7 +110,13 @@ fn dez_curated_setting_path_visible(app_name: &str, json_path: Option<&str>) -> 
     app_name == "Zed"
         || !matches!(
             json_path,
-            Some("card_gap" | "active_pane_modifiers.border_size" | "zoomed_padding")
+            Some(
+                "card_gap"
+                    | "active_pane_modifiers.border_size"
+                    | "zoomed_padding"
+                    | "tab_bar.show"
+                    | "tab_bar.show_tab_bar_buttons"
+            )
         )
 }
 
@@ -12148,11 +12154,13 @@ mod tests {
     }
 
     #[test]
-    fn dez_curated_settings_hide_inert_product_microgeometry() {
+    fn dez_curated_settings_hide_product_inert_controls() {
         let hidden_paths = [
             "card_gap",
             "active_pane_modifiers.border_size",
             "zoomed_padding",
+            "tab_bar.show",
+            "tab_bar.show_tab_bar_buttons",
         ];
         for path in hidden_paths {
             assert!(!dez_curated_setting_path_visible("Dez", Some(path)));
