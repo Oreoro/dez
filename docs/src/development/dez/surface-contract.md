@@ -275,6 +275,14 @@ reveals the existing Debug panel, while **Open debug.json** opens the active
 Workspace configuration. Neither action starts a build or creates a parallel
 debug surface. Advanced adapter preferences remain below these actions.
 
+Settings retains the originating Workspace when its existing window is reused,
+including when a global Settings command is dispatched while Settings already
+has focus. Actions owned by a Workspace—Debugger, `debug.json`, native keymaps,
+and visual-profile recovery—remain visibly disabled with an inline explanation
+when Settings has no Workspace owner. They never appear enabled and then fail
+silently. App-wide actions such as documentation and audio testing remain
+available without a Workspace.
+
 The curated Dez pages contain only fields with native controls. Settings that
 still require structured JSON stay available through the native Settings File
 route instead of appearing as rows whose only control is **Edit in

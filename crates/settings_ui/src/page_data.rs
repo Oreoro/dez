@@ -336,6 +336,7 @@ fn cmux_integration_action_link() -> SettingsPageItem {
         ),
         button_text: "Open API & Access Guide".into(),
         icon: IconName::ArrowUpRight,
+        scope: ActionLinkScope::App,
         on_click: Arc::new(|_settings_window, _window, cx| {
             cx.open_url("https://cmux.com/docs/api");
         }),
@@ -1002,6 +1003,7 @@ fn appearance_page() -> SettingsPage {
                 ),
                 button_text: "Restore Profile".into(),
                 icon: IconName::RotateCcw,
+                scope: ActionLinkScope::Workspace,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -2038,6 +2040,7 @@ fn keymap_page() -> SettingsPage {
                 ),
                 button_text: "Open Keymap".into(),
                 icon: IconName::Keyboard,
+                scope: ActionLinkScope::Workspace,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -2064,6 +2067,7 @@ fn keymap_page() -> SettingsPage {
                 ),
                 button_text: "View Defaults".into(),
                 icon: IconName::Book,
+                scope: ActionLinkScope::Workspace,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -7269,6 +7273,7 @@ fn debugger_start_section(app_name: &str) -> Vec<SettingsPageItem> {
             ),
             button_text: "Open Debugger".into(),
             icon: IconName::Debug,
+            scope: ActionLinkScope::Workspace,
             on_click: Arc::new(|settings_window, window, cx| {
                 let Some(original_window) = settings_window.original_window else {
                     return;
@@ -7294,6 +7299,7 @@ fn debugger_start_section(app_name: &str) -> Vec<SettingsPageItem> {
             ),
             button_text: "Open debug.json".into(),
             icon: IconName::Code,
+            scope: ActionLinkScope::Workspace,
             on_click: Arc::new(|settings_window, window, cx| {
                 let Some(original_window) = settings_window.original_window else {
                     return;
@@ -8955,6 +8961,7 @@ fn collaboration_page() -> SettingsPage {
                 description: Some("Test your microphone and speaker setup".into()),
                 button_text: "Test Audio".into(),
                 icon: IconName::PlayFilled,
+                scope: ActionLinkScope::App,
                 on_click: Arc::new(|_settings_window, window, cx| {
                     open_audio_test_window(window, cx);
                 }),
@@ -12122,6 +12129,7 @@ mod tests {
                     action.title.as_ref(),
                     action.button_text.as_ref(),
                     action.icon,
+                    action.scope,
                 )),
                 _ => None,
             })
@@ -12129,11 +12137,17 @@ mod tests {
         assert_eq!(
             actions,
             vec![
-                ("Open Debugger", "Open Debugger", IconName::Debug),
+                (
+                    "Open Debugger",
+                    "Open Debugger",
+                    IconName::Debug,
+                    ActionLinkScope::Workspace,
+                ),
                 (
                     "Configure Debug Sessions",
                     "Open debug.json",
                     IconName::Code,
+                    ActionLinkScope::Workspace,
                 ),
             ]
         );

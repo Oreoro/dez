@@ -75,6 +75,8 @@ const HEADER_GROUP_TAB_INDEX: isize = 3;
 
 const CONTENT_CONTAINER_TAB_INDEX: isize = 4;
 const CONTENT_GROUP_TAB_INDEX: isize = 5;
+const WORKSPACE_ACTION_UNAVAILABLE_COPY: &str =
+    "Open Settings from a Workspace to use this action.";
 
 const SIDEBAR_WIDTH: Pixels = px(226.);
 const CONTENT_MIN_WIDTH: Pixels = px(400.);
@@ -642,7 +644,10 @@ pub fn init(cx: &mut App) {
     cx.set_global(queue);
 
     cx.on_action(|_: &OpenSettings, cx| {
-        open_settings_editor(None, None, None, cx);
+        let workspace_handle = cx
+            .active_window()
+            .and_then(|window| window.downcast::<MultiWorkspace>());
+        open_settings_editor(None, None, workspace_handle, cx);
     });
     cx.on_action(|_: &zed_actions::assistant::OpenSkillCreator, cx| {
         open_skill_creator(pages::SkillCreatorOpenMode::Form, None, cx);
@@ -1047,7 +1052,7 @@ fn open_settings_editor_with(
     if let Some(existing_window) = existing_window {
         existing_window
             .update(cx, |settings_window, window, cx| {
-                settings_window.original_window = workspace_handle;
+                settings_window.update_workspace_context(workspace_handle);
                 settings_window.fetch_files(window, cx);
 
                 window.activate_window();
@@ -1603,67 +1608,96 @@ impl SettingsPageItem {
 
                 return content.into_any_element();
             }
-            SettingsPageItem::ActionLink(action_link) => v_flex()
-                .group("setting-item")
-                .mx_6()
-                .px(row_padding_x)
-                .map(|this| {
-                    canvas_settings_item_surface(
-                        this,
-                        canvas_radius,
-                        row_background,
-                        row_border_color,
-                        row_hover_background,
-                        row_hover_border_color,
-                    )
-                })
-                .child(
-                    h_flex()
-                        .id(action_link.title.clone())
-                        .w_full()
-                        .min_w_0()
-                        .justify_between()
-                        .map(apply_padding)
-                        .child(
-                            v_flex()
-                                .relative()
-                                .w_full()
-                                .max_w_1_2()
-                                .child(Label::new(action_link.title.clone()))
-                                .when_some(
-                                    action_link.description.as_ref(),
-                                    |this, description| {
+            SettingsPageItem::ActionLink(action_link) => {
+                let action_available = action_link_available(
+                    action_link.scope,
+                    settings_window.has_live_workspace_context(cx),
+                );
+                let action_accessibility_description = if action_available {
+                    action_link.description.clone()
+                } else {
+                    Some(match action_link.description.as_ref() {
+                        Some(description) => {
+                            format!("{description} {WORKSPACE_ACTION_UNAVAILABLE_COPY}").into()
+                        }
+                        None => WORKSPACE_ACTION_UNAVAILABLE_COPY.into(),
+                    })
+                };
+
+                v_flex()
+                    .group("setting-item")
+                    .mx_6()
+                    .px(row_padding_x)
+                    .map(|this| {
+                        canvas_settings_item_surface(
+                            this,
+                            canvas_radius,
+                            row_background,
+                            row_border_color,
+                            row_hover_background,
+                            row_hover_border_color,
+                        )
+                    })
+                    .child(
+                        h_flex()
+                            .id(action_link.title.clone())
+                            .w_full()
+                            .min_w_0()
+                            .justify_between()
+                            .map(apply_padding)
+                            .child(
+                                v_flex()
+                                    .relative()
+                                    .w_full()
+                                    .max_w_1_2()
+                                    .child(Label::new(action_link.title.clone()))
+                                    .when_some(
+                                        action_link.description.as_ref(),
+                                        |this, description| {
+                                            this.child(
+                                                Label::new(description.clone())
+                                                    .size(LabelSize::Small)
+                                                    .color(Color::Muted),
+                                            )
+                                        },
+                                    )
+                                    .when(!action_available, |this| {
                                         this.child(
-                                            Label::new(description.clone())
+                                            Label::new(WORKSPACE_ACTION_UNAVAILABLE_COPY)
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         )
-                                    },
-                                ),
-                        )
-                        .child(
-                            Button::new(
-                                ("action-link".into(), action_link.title.clone()),
-                                action_link.button_text.clone(),
+                                    }),
                             )
-                            .tab_index(0_isize)
-                            .end_icon(
-                                Icon::new(action_link.icon)
-                                    .size(IconSize::Small)
-                                    .color(Color::Muted),
-                            )
-                            .style(ButtonStyle::OutlinedGhost)
-                            .size(ButtonSize::Medium)
-                            .on_click({
-                                let on_click = action_link.on_click.clone();
-                                cx.listener(move |this, _, window, cx| {
-                                    on_click(this, window, cx);
+                            .child(
+                                Button::new(
+                                    ("action-link".into(), action_link.title.clone()),
+                                    action_link.button_text.clone(),
+                                )
+                                .tab_index(0_isize)
+                                .aria_label(action_link.button_text.clone())
+                                .when_some(action_accessibility_description, |this, description| {
+                                    this.aria_description(description)
                                 })
-                            }),
-                        ),
-                )
-                .when(bottom_border, |this| this.mb_1())
-                .into_any_element(),
+                                .end_icon(
+                                    Icon::new(action_link.icon)
+                                        .size(IconSize::Small)
+                                        .color(Color::Muted),
+                                )
+                                .style(ButtonStyle::OutlinedGhost)
+                                .size(ButtonSize::Medium)
+                                .disabled(!action_available)
+                                .on_click({
+                                    let on_click = action_link.on_click.clone();
+                                    cx.listener(move |this, _, window, cx| {
+                                        on_click(this, window, cx);
+                                    })
+                                }),
+                            ),
+                    )
+                    .when(bottom_border, |this| this.mb_1())
+                    .into_any_element()
+            }
         }
     }
 }
@@ -1971,8 +2005,19 @@ struct ActionLink {
     description: Option<SharedString>,
     button_text: SharedString,
     icon: IconName,
+    scope: ActionLinkScope,
     on_click: Arc<dyn Fn(&mut SettingsWindow, &mut Window, &mut App) + Send + Sync>,
     files: FileMask,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActionLinkScope {
+    App,
+    Workspace,
+}
+
+fn action_link_available(scope: ActionLinkScope, has_workspace: bool) -> bool {
+    scope == ActionLinkScope::App || has_workspace
 }
 
 impl PartialEq for ActionLink {
@@ -2050,6 +2095,18 @@ impl SettingsUiFile {
 }
 
 impl SettingsWindow {
+    fn has_live_workspace_context(&self, cx: &App) -> bool {
+        self.original_window
+            .as_ref()
+            .is_some_and(|workspace_handle| workspace_handle.read(cx).is_ok())
+    }
+
+    fn update_workspace_context(&mut self, workspace_handle: Option<WindowHandle<MultiWorkspace>>) {
+        if let Some(workspace_handle) = workspace_handle {
+            self.original_window = Some(workspace_handle);
+        }
+    }
+
     fn new(
         original_window: Option<WindowHandle<MultiWorkspace>>,
         window: &mut Window,
@@ -5890,6 +5947,14 @@ pub mod test {
         );
     }
 
+    #[test]
+    fn workspace_settings_actions_are_not_exposed_as_inert_controls() {
+        assert!(action_link_available(ActionLinkScope::App, false));
+        assert!(action_link_available(ActionLinkScope::App, true));
+        assert!(!action_link_available(ActionLinkScope::Workspace, false));
+        assert!(action_link_available(ActionLinkScope::Workspace, true));
+    }
+
     impl SettingsWindow {
         fn navbar_entry(&self) -> usize {
             self.navbar_entry
@@ -6532,8 +6597,20 @@ pub mod test {
             );
         });
 
+        settings_window.update(cx, |settings_window, _| {
+            settings_window.update_workspace_context(None);
+            assert_eq!(
+                settings_window.original_window,
+                Some(workspace2_handle),
+                "reopening Settings without a new Workspace owner must preserve its current action target"
+            );
+        });
+        settings_window.read_with(cx, |settings_window, cx| {
+            assert!(settings_window.has_live_workspace_context(cx));
+        });
+
         settings_window.update_in(cx, |settings_window, window, cx| {
-            settings_window.original_window = Some(workspace1_handle);
+            settings_window.update_workspace_context(Some(workspace1_handle));
             settings_window.fetch_files(window, cx);
         });
 

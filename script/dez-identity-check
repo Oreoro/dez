@@ -883,6 +883,12 @@ require_multiline_pattern crates/settings_ui/src/page_data.rs \
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'SettingsPageItem::ActionLink\(action_link\).*?Button::new\(.*?action_link\.button_text\.clone\(\).*?Icon::new\(action_link\.icon\).*?struct ActionLink \{.*?button_text: SharedString,.*?icon: IconName' \
     'Settings action rows can regress to showing one misleading external-link mark for every outcome'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'WORKSPACE_ACTION_UNAVAILABLE_COPY.*?cx\.on_action\(\|_: &OpenSettings, cx\|.*?active_window\(\).*?downcast::<MultiWorkspace>\(\).*?open_settings_editor\(None, None, workspace_handle, cx\).*?fn open_settings_editor_with.*?update_workspace_context\(workspace_handle\).*?SettingsPageItem::ActionLink\(action_link\).*?has_live_workspace_context\(cx\).*?WORKSPACE_ACTION_UNAVAILABLE_COPY.*?\.disabled\(!action_available\).*?enum ActionLinkScope.*?Workspace.*?fn action_link_available.*?fn has_live_workspace_context.*?workspace_handle\.read\(cx\)\.is_ok\(\).*?fn update_workspace_context.*?if let Some\(workspace_handle\).*?self\.original_window = Some\(workspace_handle\).*?workspace_settings_actions_are_not_exposed_as_inert_controls' \
+    'Settings can regress to clearing Workspace action ownership or presenting enabled no-op recovery controls'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    'Settings retains the originating Workspace.*?global Settings command.*?Actions owned by a Workspace.*?remain visibly disabled with an inline explanation.*?never appear enabled and then fail[[:space:]]+silently.*?App-wide actions.*?remain[[:space:]]+available without a Workspace' \
+    'the native Settings contract can lose truthful Workspace-scoped action availability'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn keymap_page\(\).*?title: "Edit Keybindings".*?icon: IconName::Keyboard.*?failed to open the native keymap editor.*?title: "Default Keyboard Shortcuts".*?icon: IconName::Book.*?failed to open the default keymap.*?fn audio_settings\(\).*?title: "Test Audio".*?icon: IconName::PlayFilled' \
     'internal Settings actions can regress to external-link iconography or silently discard native navigation failures'
