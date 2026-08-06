@@ -216,6 +216,9 @@ a Workspace, and Home does not mirror the notice over the Main Work Area.
 │                 │ Search & Files         │  Codex · Claude Code       │
 │                 │ Navigation & Layout    │  OpenCode · tmux · Custom  │
 │                 │ Workspace Tools        │ Open Workspace in cmux  ↗  │
+│                 │ Debugger               │───────────────────────────│
+│                 │                        │ Open Debugger           ▶  │
+│                 │                        │ Open debug.json         {} │
 ├─────────────────┴────────────────────────┴────────────────────────────┤
 │ Workspace: dez | main | Permissions: Healthy                        │
 └──────────────────────────────────────────────────────────────────────┘
@@ -226,6 +229,11 @@ Terminal Launch, then Agents and Appearance. Privacy remains prominent before
 inherited editor customization. Native shell and TUI profiles launch inside
 Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
 an action or documentation route, never an availability toggle.
+
+Debugger Settings begins with two native recovery routes. **Open Debugger**
+reveals the existing Debug panel, while **Open debug.json** opens the active
+Workspace configuration. Neither action starts a build or creates a parallel
+debug surface. Advanced adapter preferences remain below these actions.
 
 ### 8. Compact navigation
 

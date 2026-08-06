@@ -7211,6 +7211,69 @@ fn panels_page() -> SettingsPage {
     }
 }
 
+fn debugger_start_section(app_name: &str) -> Vec<SettingsPageItem> {
+    if app_name == "Zed" {
+        return Vec::new();
+    }
+
+    vec![
+        SettingsPageItem::SectionHeader("Start & Configure"),
+        SettingsPageItem::ActionLink(ActionLink {
+            title: "Open Debugger".into(),
+            description: Some(
+                "Reveal the native Debug panel for the active Workspace. Choose a saved configuration, launch a program, or attach to a process there."
+                    .into(),
+            ),
+            button_text: "Open Debugger".into(),
+            icon: IconName::Debug,
+            on_click: Arc::new(|settings_window, window, cx| {
+                let Some(original_window) = settings_window.original_window else {
+                    return;
+                };
+                if let Err(error) =
+                    original_window.update(cx, |_multi_workspace, original_window, cx| {
+                        original_window.dispatch_action(workspace::RevealDebug.boxed_clone(), cx);
+                        original_window.activate_window();
+                    })
+                {
+                    log::error!("failed to open the native Debug panel: {error}");
+                    return;
+                }
+                window.remove_window();
+            }),
+            files: USER | PROJECT,
+        }),
+        SettingsPageItem::ActionLink(ActionLink {
+            title: "Configure Debug Sessions".into(),
+            description: Some(
+                "Open debug.json for the active Workspace to define launch and attach configurations."
+                    .into(),
+            ),
+            button_text: "Open debug.json".into(),
+            icon: IconName::Code,
+            on_click: Arc::new(|settings_window, window, cx| {
+                let Some(original_window) = settings_window.original_window else {
+                    return;
+                };
+                if let Err(error) =
+                    original_window.update(cx, |_multi_workspace, original_window, cx| {
+                        original_window.dispatch_action(
+                            zed_actions::OpenProjectDebugTasks.boxed_clone(),
+                            cx,
+                        );
+                        original_window.activate_window();
+                    })
+                {
+                    log::error!("failed to open the Workspace debug configuration: {error}");
+                    return;
+                }
+                window.remove_window();
+            }),
+            files: USER | PROJECT,
+        }),
+    ]
+}
+
 fn debugger_page() -> SettingsPage {
     fn general_section() -> [SettingsPageItem; 6] {
         [
@@ -7326,7 +7389,7 @@ fn debugger_page() -> SettingsPage {
 
     SettingsPage {
         title: "Debugger",
-        items: concat_sections![general_section()],
+        items: concat_sections![debugger_start_section(paths::APP_NAME), general_section()],
     }
 }
 
@@ -11960,6 +12023,39 @@ mod tests {
         assert!(!developer_settings_page_visible("Dez", false));
         assert!(developer_settings_page_visible("Dez", true));
         assert!(developer_settings_page_visible("Zed", false));
+    }
+
+    #[test]
+    fn dez_debugger_settings_start_with_native_workspace_routes() {
+        let section = debugger_start_section("Dez");
+        assert_eq!(
+            section.first(),
+            Some(&SettingsPageItem::SectionHeader("Start & Configure"))
+        );
+
+        let actions = section
+            .iter()
+            .filter_map(|item| match item {
+                SettingsPageItem::ActionLink(action) => Some((
+                    action.title.as_ref(),
+                    action.button_text.as_ref(),
+                    action.icon,
+                )),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actions,
+            vec![
+                ("Open Debugger", "Open Debugger", IconName::Debug),
+                (
+                    "Configure Debug Sessions",
+                    "Open debug.json",
+                    IconName::Code,
+                ),
+            ]
+        );
+        assert!(debugger_start_section("Zed").is_empty());
     }
 
     #[test]
