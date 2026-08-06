@@ -17134,16 +17134,19 @@ impl Sidebar {
             workspace.spawn_in_terminal(spawn, window, cx)
         });
         cx.spawn(async move |_, cx| {
-            let failure = match terminal_task.await {
+            let failure_before_terminal = match terminal_task.await {
                 Some(Ok(status)) if !status.success() => {
-                    Some(format!("Attach exited with {status}"))
+                    log::error!(
+                        "external terminal session attach exited in its terminal: {status}"
+                    );
+                    None
                 }
                 Some(Err(error)) => Some(format!("Could not attach: {error}")),
                 None => Some("No terminal provider was available for this Workspace".to_owned()),
                 Some(Ok(_)) => None,
             };
 
-            if let Some(failure) = failure {
+            if let Some(failure) = failure_before_terminal {
                 log::error!("external terminal session attach failed: {failure}");
                 let retry_sidebar = retry_sidebar.clone();
                 let retry_session_id = retry_session_id.clone();

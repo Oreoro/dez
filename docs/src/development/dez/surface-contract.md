@@ -132,8 +132,12 @@ refreshes discovery, and preserves the active Main Work Area tab.
 It never creates a duplicate Activity page. Recovery is inline and states both cause
 and next action. Terminal Details is a disclosure within the terminal surface, not a
 floating inspector. An attach tab names tmux or Herdr as the external owner and
-describes itself only as the attach client. Destructive legacy termination remains
-behind a native confirmation.
+describes itself only as the attach client. When an attach command reaches that tab
+and exits unsuccessfully, the terminal toolbar presents the primary **Retry Attach**
+action and keeps the failed output visible. A provider failure that occurs before a
+terminal exists remains a Workspace notification with the same explicit retry; Dez
+does not show both recoveries for one failure. Destructive legacy termination
+remains behind a native confirmation.
 
 ### 4. Review and intentional split
 

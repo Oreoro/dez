@@ -951,10 +951,13 @@ cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh Running Sessions** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
 running, and explains when no path-matched activity exists.
-Attach terminals keep the native rerun control. Failure shows an explicit
-**Retry Attach** action and refreshes discovery after completion without
-starting a duplicate attach automatically. Raw Herdr shells without structured
-agent state are labeled **Available**, not unknown.
+Attach terminals keep the native rerun control. A command that starts and then
+fails exposes **Retry Attach** in that terminal's native context toolbar, keeps
+its diagnostic output visible, and refreshes discovery after completion. A
+failure before terminal creation stays in one Workspace notification instead;
+Dez never shows both recoveries or starts a duplicate attach automatically. Raw
+Herdr shells without structured agent state are labeled **Available**, not
+unknown.
 When cmux is not discoverable, Workspace Options replaces the inapplicable
 handoff with one **Get cmux…** action; tmux and Herdr remain usable, navigation
 stays quiet, and no external Session is changed.

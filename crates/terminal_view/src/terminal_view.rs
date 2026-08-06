@@ -514,6 +514,24 @@ fn external_session_owner_from_task_id(task_id: &str) -> Option<&str> {
         .filter(|owner| !owner.is_empty())
 }
 
+fn external_session_attach_failed(task_id: &str, task_status: &TaskStatus) -> bool {
+    external_session_owner_from_task_id(task_id).is_some()
+        && matches!(task_status, TaskStatus::Completed { success: false })
+}
+
+fn terminal_external_attach_retry_label(
+    width: Pixels,
+    external_attach_failed: bool,
+) -> Option<&'static str> {
+    external_attach_failed.then_some(
+        if width >= TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH {
+            "Retry Attach"
+        } else {
+            ""
+        },
+    )
+}
+
 fn terminal_details_ownership_note_with_external_owner(
     has_persistent_owner: bool,
     host_connection_verified: bool,
@@ -3264,6 +3282,17 @@ impl TerminalView {
             changed_files,
         );
 
+        let terminal_task = terminal.task();
+        let external_owner = terminal_task
+            .and_then(|task| external_session_owner_from_task_id(&task.spawned_task.id.0));
+        let external_attach_retry_task_id = terminal_task
+            .filter(|task| external_session_attach_failed(&task.spawned_task.id.0, &task.status))
+            .map(|task| task.spawned_task.id.clone());
+        let retry_attach_visible_label = terminal_external_attach_retry_label(
+            context_width,
+            external_attach_retry_task_id.is_some(),
+        );
+
         let details_status = format!("Status · {activity_accessibility_label}");
         let details_process = terminal_details_process_summary(
             foreground_agent.map(|agent| agent.display_name),
@@ -3300,9 +3329,6 @@ impl TerminalView {
             "Review {changed_files} changed {}",
             if changed_files == 1 { "file" } else { "files" }
         );
-        let external_owner = terminal
-            .task()
-            .and_then(|task| external_session_owner_from_task_id(&task.spawned_task.id.0));
         let ownership_note = terminal_details_ownership_note_with_external_owner(
             has_persistent_owner,
             host_connection_verified,
@@ -3483,6 +3509,33 @@ impl TerminalView {
                     h_flex()
                         .flex_none()
                         .gap(terminal_context_strip_gap(density))
+                        .when_some(
+                            external_attach_retry_task_id
+                                .clone()
+                                .zip(retry_attach_visible_label),
+                            |this, (retry_task_id, visible_label)| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-retry-attach", terminal_entity_id),
+                                    visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Filled)
+                                .start_icon(Icon::new(IconName::Rerun).size(IconSize::XSmall))
+                                .tab_index(0isize)
+                                .aria_label("Retry external session attach")
+                                .tooltip(|_, cx| {
+                                    Tooltip::for_action("Retry Attach", &RerunTask, cx)
+                                })
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(
+                                        Box::new(terminal_rerun_override(&retry_task_id)),
+                                        cx,
+                                    );
+                                }),
+                            )
+                        },
+                        )
                         .when(has_workspace_files, |this| {
                             this.child(
                                 Button::new(
@@ -5133,6 +5186,27 @@ mod tests {
             Some("Herdr")
         );
         assert_eq!(external_session_owner_from_task_id("terminal:task"), None);
+        assert!(external_session_attach_failed(
+            "dez-external-session:tmux:$0",
+            &TaskStatus::Completed { success: false },
+        ));
+        assert!(!external_session_attach_failed(
+            "dez-external-session:tmux:$0",
+            &TaskStatus::Completed { success: true },
+        ));
+        assert!(!external_session_attach_failed(
+            "terminal:task",
+            &TaskStatus::Completed { success: false },
+        ));
+        assert_eq!(
+            terminal_external_attach_retry_label(px(479.), true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_attach_retry_label(px(480.), true),
+            Some("Retry Attach")
+        );
+        assert_eq!(terminal_external_attach_retry_label(px(920.), false), None);
         assert_eq!(
             terminal_details_ownership_note_with_external_owner(false, false, Some("tmux")),
             "Ownership · tmux remains external · This tab owns only the attach client."

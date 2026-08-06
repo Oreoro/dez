@@ -149,7 +149,7 @@ or a pending review. It never summarizes arbitrary PTY output.
 │                             ├─────────────────────────────────────────────────┤
 │ paykit                      │ Attach failed · tmux session ended             │
 │  Pane 1 · main.rs · Focused │ The external owner no longer reports it.       │
-│    main.rs · Files          │              [Refresh Sessions] [New Shell]    │
+│    main.rs · Files          │                 [Retry Attach] [New Shell]     │
 │  Pane 2 · Claude Code       ├─────────────────────────────────────────────────┤
 │    Claude Code · Waiting    │ preserved terminal output                      │
 │    Terminal                 │ ~/paykit %                                      │
@@ -165,7 +165,10 @@ or a pending review. It never summarizes arbitrary PTY output.
 Search replaces only the Workspaces list body, like a native choose-tree. The
 Main Work Area never moves or dims. Recovery remains a flat shelf in the owning
 terminal, with preserved output beneath it. **Open New Shell Here** is separate
-work and never claims attachment, transfer, or migration.
+work and never claims attachment, transfer, or migration. Once the attach task
+has reached the terminal, its native rerun action retries in that same tab and
+replaces a duplicate Workspace toast. If no terminal could be created, the
+Workspace notification remains the only recovery surface.
 
 ## Interaction rules
 

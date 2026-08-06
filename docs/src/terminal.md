@@ -193,6 +193,11 @@ native macOS folder handoff, with `cmux open <path>` as a compatibility
 fallback. Neither route manufactures an attachment terminal. The
 external application remains authoritative, closing a Dez tab detaches rather
 than terminates, and Dez never requests a Herdr takeover automatically.
+If an attach command starts and then exits unsuccessfully, the same terminal
+keeps its diagnostic output and exposes a keyboard-reachable **Retry Attach**
+button in the native context toolbar. That retry reuses the existing task tab.
+If Dez cannot create a terminal at all, Workspaces retains the only recovery
+notification instead. One failure never produces both controls.
 
 Dez also correlates the documented `list-notifications --json` result with the
 Workspace list. Unread notifications become **Needs Input**; the latest
