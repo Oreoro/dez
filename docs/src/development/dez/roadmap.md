@@ -8,11 +8,12 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Reach Dez v0.4 as a public-quality native IDE for developers who move between
+Prepare Dez v0.5 as a public-quality native IDE for developers who move between
 code, durable terminals, and terminal-native agents. Preserve Zed-quality
 editing and tools, make Workspaces optional supervision rather than mandatory
 navigation, and prove lifecycle, integration, visual, accessibility, and
-packaging behavior through exact artifacts.
+packaging behavior through exact artifacts. The v0.4 artifact lane remains the
+latest compiled evidence until an exact v0.5 candidate is built and audited.
 
 ## Dependency order {#dependency-order}
 
@@ -28,10 +29,33 @@ source checks
 Visual polish continues in small slices, but it must support truthful state and
 the product loop rather than outrun ownership foundations.
 
+## v0.5 active surface-readiness track {#v0-5-active-surface-readiness-track}
+
+The active source-polish and release-planning contract lives in
+[v0.5 Surface Readiness](./v0.5-surface-readiness.md). It advances the complete
+native shell, navigation, Home, Settings, terminal integrations, editor tools,
+visual system, accessibility, continuity, and release gates over the 0.4.0
+baseline. It does not claim that a v0.5 artifact exists.
+
+The v0.5 product route is:
+
+```text
+Open Workspace
+-> start or resume work in a native tab
+-> supervise bounded Activity without losing pane or tab ownership
+-> inspect Files, Search, Diagnostics, Debug, Git, and diffs
+-> review and return after restart with Workspace and process context intact
+```
+
+While builds are paused, v0.5 work advances only through reviewable source
+slices and permitted source checks. Compilation, focused regressions,
+optimized packaging, installation, runtime, visual, accessibility, signing,
+and notarization evidence remain open for the exact future candidate.
+
 ## v0.4 active readiness track {#v0-4-active-readiness-track}
 
-The active source and exact-artifact contract lives in
-[v0.4 Readiness](./v0.4-readiness.md). The [Native Surface
+The latest exact-artifact contract lives in [v0.4
+Readiness](./v0.4-readiness.md). The [Native Surface
 Contract](./surface-contract.md) defines the current interface, while
 [v0.2 Workspace Polish](./v0.2-workspace-polish.md) and [v0.1 Product
 Hardening](./v0.1-product-hardening.md) preserve the ownership and reliability

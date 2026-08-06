@@ -460,10 +460,12 @@ previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited
 geometry-only `BrowserDevelopment` recipe as a fake preview.
 
-A public v0.4 release still requires exact build, rendered, restart, crash,
-accessibility, integration, coexistence, and packaging evidence. The ordered
-release ladder and open gates are active in
-[v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md). The preserved
+A public v0.5 release still requires exact build, rendered, restart, crash,
+accessibility, integration, coexistence, and packaging evidence. The active
+source-polish and release plan is [v0.5 Surface
+Readiness](./docs/src/development/dez/v0.5-surface-readiness.md). The latest
+exact-artifact lane remains [v0.4
+Readiness](./docs/src/development/dez/v0.4-readiness.md). The preserved
 [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
 and [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
 documents remain ownership and reliability input;
@@ -476,8 +478,10 @@ runbook remains historical evidence, not the current release plan.
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
-- [v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md) — active
-  source, exact-artifact, stop-ship, and promotion contract
+- [v0.5 Surface Readiness](./docs/src/development/dez/v0.5-surface-readiness.md)
+  — active source-polish, surface, stop-ship, and release-evidence plan
+- [v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md) — latest
+  exact-artifact, stop-ship, and promotion contract
 - [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
   — preserved native Workspace shell and source-polish contract
 - [Native Surface Contract](./docs/src/development/dez/surface-contract.md) —

@@ -1269,6 +1269,7 @@ steps remain source claims until an exact newer package records runtime proof.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.5 Surface Readiness](./development/dez/v0.5-surface-readiness.md)
 - [v0.4 Readiness](./development/dez/v0.4-readiness.md)
 - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
 - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
