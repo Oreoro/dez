@@ -176,9 +176,10 @@ the existing pane tab strip; on macOS it is the top content chrome below the
 traffic lights, not a second custom title-bar row. All pane-menu marks stay on
 the shared pane control metric. Official Zed retains its inherited platform
 title-bar height and native tab metrics. Interface Density changes invalidate
-the platform title bar, pane tabs, Workspaces, and the status line together;
-the shell must not wait for a Workspace, terminal, or focus event before those
-native owners agree on the new metrics.
+the platform title bar, pane tabs, Workspaces, the Workspace-owned notification
+shelf, and the status line together; the shell must not wait for a Workspace,
+terminal, notification, or focus event before those native owners agree on the
+new metrics.
 
 ## Secondary-state wireframe
 

@@ -3890,7 +3890,7 @@ impl Workspace {
             Self::serialize_items(&this, serializable_items_rx, cx).await
         });
 
-        let subscriptions = vec![
+        let mut subscriptions = vec![
             cx.observe_window_activation(window, Self::on_window_activation_changed),
             cx.observe_window_bounds(window, move |this, window, cx| {
                 if !window.is_window_active() {
@@ -3928,6 +3928,10 @@ impl Workspace {
                 }
             }),
         ];
+        if paths::APP_NAME != "Zed" {
+            subscriptions
+                .push(cx.observe_global_in::<SettingsStore>(window, |_, _, cx| cx.notify()));
+        }
 
         cx.defer_in(window, move |this, window, cx| {
             this.update_window_title(window, cx);
