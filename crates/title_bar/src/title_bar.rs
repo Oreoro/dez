@@ -1038,7 +1038,7 @@ impl SidebarChrome {
 
         let update_version = cx.new(|cx| UpdateVersion::new(cx));
         let platform_titlebar = cx.new(|cx| {
-            let mut titlebar = PlatformTitleBar::new(id, cx);
+            let mut titlebar = PlatformTitleBar::new(id, cx).with_app_name(paths::APP_NAME);
             if let Some(mw) = multi_workspace.clone() {
                 titlebar = titlebar.with_multi_workspace(mw);
             }

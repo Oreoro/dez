@@ -154,6 +154,29 @@ A pane group exists only after the user invokes a split action. Each pane owns
 its native tab strip and adjacent `+`. Closing Workspaces preserves both panes,
 their tabs, and the focused Main Work Area item.
 
+### Native chrome density
+
+```text
+                         Compact        Balanced       Spacious
+Platform title bar      baseline       baseline + 4   baseline + 8
+Main pane tab strip     24 px          32 px          40 px
+Pane chrome target      22 px          28 px          28 px
+Status line             24 px          26 px          30 px
+
+┌ native window title / traffic-light region ─────────────────────────┐
+├ native pane tabs ─ adjacent + ─ overflow ─ split ─ zoom ────────────┤
+│ Main Work Area                                                     │
+├ Workspaces · active Workspace · repository · attention · position ┤
+└────────────────────────────────────────────────────────────────────┘
+```
+
+The platform title bar retains its native font and traffic-light sizing, then
+adds the selected density offset for Dez. The Main Work Area continues to use
+the existing pane tab strip; on macOS it is the top content chrome below the
+traffic lights, not a second custom title-bar row. All pane-menu marks stay on
+the shared pane control metric. Official Zed retains its inherited platform
+title-bar height and native tab metrics.
+
 ## Secondary-state wireframe
 
 ### 5. Install-first Home

@@ -3002,6 +3002,15 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'IconButton::new\("sidebar-toggle".*?size\(control_size\).*?icon_size\(icon_size\).*?IconButton::new\("project-pane-toggle".*?size\(control_size\).*?icon_size\(icon_size\).*?pub fn sidebar_header_control_metrics.*?CanvasDensity::Compact.*?ButtonSize::Default, IconSize::XSmall.*?CanvasDensity::Balanced.*?ButtonSize::Default, IconSize::Small.*?CanvasDensity::Spacious.*?ButtonSize::Medium, IconSize::Small' \
     'native top-bar toggles can regress to oversized or density-inconsistent marks'
+require_multiline_pattern crates/platform_title_bar/src/platform_title_bar.rs \
+    'pub struct PlatformTitleBar.*?app_name: &'"'"'static str.*?_settings_subscription: Subscription.*?cx\.observe_global::<SettingsStore>.*?app_name: "Zed".*?pub fn with_app_name.*?fn render.*?product_title_bar_height\([[:space:]]*self\.app_name,[[:space:]]*DesignSystemSettings::get_global\(cx\)\.density.*?fn product_title_bar_height.*?app_name == "Zed".*?CanvasDensity::Compact => px\(0\..*?CanvasDensity::Balanced => px\(4\..*?CanvasDensity::Spacious => px\(8\.' \
+    'Dez platform title chrome can regress to a fixed Zed height that ignores Interface Density'
+require_multiline_pattern crates/title_bar/src/title_bar.rs \
+    'PlatformTitleBar::new\(id, cx\)\.with_app_name\(paths::APP_NAME\)' \
+    'the Workspace chrome owner can stop identifying Dez to the native platform title bar'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    '### Native chrome density.*?Platform title bar[[:space:]]+baseline[[:space:]]+baseline \+ 4[[:space:]]+baseline \+ 8.*?Main pane tab strip[[:space:]]+24 px[[:space:]]+32 px[[:space:]]+40 px.*?Pane chrome target[[:space:]]+22 px[[:space:]]+28 px[[:space:]]+28 px.*?Status line[[:space:]]+24 px[[:space:]]+26 px[[:space:]]+30 px.*?not a second custom title-bar row.*?Official Zed retains its inherited platform' \
+    'the native surface contract can lose the shared top, tab, control, and status density scale'
 require_multiline_pattern crates/workspace/src/status_bar.rs \
     'fn status_bar_height.*?CanvasDensity::Compact => 24\.0.*?CanvasDensity::Balanced => 26\.0.*?CanvasDensity::Spacious => 30\.0.*?DesignSystemSettings::get_global\(cx\)\.density.*?when_some\(status_bar_height.*?\.h\(height\)\.gap_1\(\)\.px_1\(\)\.py_0\(\).*?LabelSize::Small' \
     'Dez status chrome can regress to an unbounded inherited height or typography scale'

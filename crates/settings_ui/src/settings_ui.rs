@@ -2242,7 +2242,9 @@ impl SettingsWindow {
         .detach();
 
         let title_bar = if !cfg!(target_os = "macos") {
-            Some(cx.new(|cx| PlatformTitleBar::new("settings-title-bar", cx)))
+            Some(cx.new(|cx| {
+                PlatformTitleBar::new("settings-title-bar", cx).with_app_name(paths::APP_NAME)
+            }))
         } else {
             None
         };

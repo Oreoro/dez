@@ -35,7 +35,9 @@ pub struct AudioTestWindow {
 impl AudioTestWindow {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let title_bar = if !cfg!(target_os = "macos") {
-            Some(cx.new(|cx| PlatformTitleBar::new("audio-test-title-bar", cx)))
+            Some(cx.new(|cx| {
+                PlatformTitleBar::new("audio-test-title-bar", cx).with_app_name(paths::APP_NAME)
+            }))
         } else {
             None
         };
