@@ -703,6 +703,9 @@ native tool, honest ownership, inline recovery**.
 - Keep the Workspaces recovery control subscribed to its native owner. Sidebar
   visibility, position, active Workspace identity, and attention state update
   its visible and assistive labels immediately without waiting for pane focus.
+- Activating or reselecting a Workspace header immediately re-derives the
+  active Activity destination from that Workspace. Returning focus to the Main
+  Work Area never clears its current terminal or agent projection.
 - Never introduce a Studio/Projects mode switch, custom browser tabs, a chat
   wrapper around terminal tools, floating onboarding, or an automatic split.
 - Route every empty-window entry through Home. A no-path CLI or new-window
@@ -742,6 +745,8 @@ native tool, honest ownership, inline recovery**.
   as a native tab. Once the active Workspace has at least two tabs, every open
   surface appears in Layout.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
+- Reselecting the active Workspace preserves its current Activity projection;
+  the sidebar never waits for an unrelated pane or Settings event to recover it.
 - A fresh Workspace starts in the Main Work Area without an automatic Files
   column; restored layouts and an explicit Files startup preference still win.
 - Activity excludes inactive completed history while preserving active,

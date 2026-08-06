@@ -2542,6 +2542,68 @@ async fn test_plain_workspace_shell_is_promoted_only_after_agent_evidence(cx: &m
 }
 
 #[gpui::test]
+async fn test_reselecting_active_workspace_keeps_active_terminal_projection(
+    cx: &mut TestAppContext,
+) {
+    let project = init_test_project_with_agent_panel("/my-project", cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace =
+        multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
+    let terminal_view = add_workspace_shell(&workspace, &project, cx);
+    terminal_view.update(cx, |terminal, cx| {
+        terminal.set_custom_title(Some("Codex".to_owned()), cx);
+    });
+    let terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &terminal_view, cx)
+    });
+    let group_key = workspace.read_with(cx, |workspace, cx| workspace.project_group_key(cx));
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
+    });
+
+    sidebar.update_in(cx, |sidebar, window, cx| {
+        sidebar.activate_or_open_workspace_for_group(&group_key, window, cx);
+    });
+    cx.run_until_parked();
+
+    assert_eq!(
+        multi_workspace.read_with(cx, |multi_workspace, _| {
+            multi_workspace.workspace().clone()
+        }),
+        workspace,
+        "reselecting a Workspace should keep its existing native owner active"
+    );
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
+        assert!(sidebar.contents.entries.iter().any(|entry| {
+            matches!(
+                entry,
+                ListEntry::Terminal(terminal)
+                    if terminal.metadata.terminal_id == terminal_id
+            )
+        }));
+    });
+}
+
+#[gpui::test]
 async fn test_switcher_cancel_restore_keeps_workspace_terminal_source(cx: &mut TestAppContext) {
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
     let (multi_workspace, cx) =

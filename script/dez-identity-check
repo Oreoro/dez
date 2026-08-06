@@ -3047,6 +3047,12 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'SettingsStore.*?_settings_subscription: gpui::Subscription.*?cx\.observe_global::<SettingsStore>\(\|this, cx\|.*?this\.schedule_update_entries\(false, cx\).*?cx\.notify\(\).*?_settings_subscription: settings_subscription' \
     'Workspaces can stop applying Interface Density and visibility changes until unrelated activity arrives'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn activate_or_open_workspace_for_group.*?self\.selection = None;.*?self\.active_entry = None;.*?self\.activate_workspace\(&workspace, window, cx\);.*?self\.sync_active_entry_from_active_workspace\(cx\);.*?self\.update_entries\(cx\);' \
+    'reselecting a Workspace can clear its active terminal or agent projection until unrelated activity arrives'
+require_pattern crates/sidebar/src/sidebar_tests.rs \
+    '^async fn test_reselecting_active_workspace_keeps_active_terminal_projection\($' \
+    'the Workspaces activation projection regression is missing'
 require_multiline_pattern crates/workspace/src/status_bar.rs \
     'fn render_sidebar_toggle.*?sidebar_header_control_metrics\([[:space:]]*APP_NAME,[[:space:]]*DesignSystemSettings::get_global\(cx\)\.density.*?Button::new\("toggle-workspace-sidebar", visible_label\).*?start_icon\(Icon::new\(icon\)\.size\(icon_size\).*?\.size\(control_size\).*?aria_label\(accessibility_label\)' \
     'the labeled Workspaces recovery control can regress to a fixed size that ignores status-bar density'

@@ -17270,13 +17270,15 @@ impl Sidebar {
             .upgrade()
             .and_then(|mw| mw.read(cx).last_active_workspace_for_group(key, cx))
             .or_else(|| self.workspace_for_group(key, cx));
+        self.selection = None;
+        self.active_entry = None;
         if let Some(workspace) = workspace {
             self.activate_workspace(&workspace, window, cx);
+            self.sync_active_entry_from_active_workspace(cx);
         } else {
             self.open_workspace_for_group(key, window, cx);
         }
-        self.selection = None;
-        self.active_entry = None;
+        self.update_entries(cx);
     }
 
     fn active_project_group_key(&self, cx: &App) -> Option<ProjectGroupKey> {

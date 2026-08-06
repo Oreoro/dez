@@ -15,9 +15,7 @@ use futures::future;
 use futures::{FutureExt, StreamExt};
 use git_ui::{file_diff_view::FileDiffView, multi_diff_view::MultiDiffView};
 use gpui::{App, AsyncApp, Global, TaskExt, WindowHandle};
-use onboarding::{
-    FIRST_OPEN, should_show_onboarding_on_first_open, show_onboarding_view,
-};
+use onboarding::{FIRST_OPEN, should_show_onboarding_on_first_open, show_onboarding_view};
 use recent_projects::{RemoteSettings, navigate_to_positions, open_remote_project};
 use remote::{RemoteConnectionOptions, WslConnectionOptions};
 use settings::Settings;
@@ -901,8 +899,7 @@ async fn open_workspaces(
             && matches!(kvp.read_kvp(FIRST_OPEN), Ok(None))
         {
             cx.update(|cx| show_onboarding_view(app_state, cx).detach());
-        }
-        else {
+        } else {
             cx.update(|cx| {
                 let open_options = OpenOptions {
                     env,
