@@ -726,6 +726,9 @@ that persistent identity. Both remain explicit user preferences.
   Access…** for one exact root.
 - Keep recovery in its owning surface: installation on Home, root access in
   Workspaces, terminal lifecycle in the terminal tab.
+- Keep active-Workspace access failure visible when Workspaces is closed. The
+  existing status control names **Access required** and opens Workspaces; the
+  exact root-scoped **Grant Access…** action remains owned by Workspaces.
 - Reserve the status bar for durable context. Transient progress and lengthy
   diagnostics belong to the owning surface.
 - Keep the Workspaces recovery control subscribed to its native owner. Sidebar
@@ -749,6 +752,10 @@ that persistent identity. Both remain explicit user preferences.
   the accessible name retains the full active Workspace identity and exact
   count, while the semantic indicator reinforces attention; the status bar
   never maintains a second identity or attention total.
+- When the active local Workspace requires folder access, the same control adds
+  **Access required** at labeled widths and retains the cause in its accessible
+  name plus warning indicator at compact widths. Activating it opens the native
+  Workspaces recovery surface instead of starting another permission prompt.
 - Long Workspace names truncate as secondary status metadata before they can
   crowd the Workspaces recovery action or its visible attention count.
 - Top and status chrome must change size together when Compact, Balanced, or
@@ -825,5 +832,8 @@ that persistent identity. Both remain explicit user preferences.
 - Settings starts with **Workspaces & Terminals**, **Agents**, **Appearance**,
   and **Workspace & Privacy** before inherited editor customization.
 - The status bar remains visible by default and contains no transient prose.
+- Closing Workspaces cannot conceal active-Workspace access failure; the status
+  recovery control stays named and routes back to the single **Grant Access…**
+  action.
 - No screen creates an unexplained pane, permanent inspector, custom tab bar,
   floating onboarding, or duplicated Workspace navigation.

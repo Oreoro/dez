@@ -1,6 +1,7 @@
 use crate::{
     DesignSystemSettings, Event as WorkspaceEvent, ItemHandle, MultiWorkspace, Pane, SidebarSide,
-    ToggleSidebar, Workspace, sidebar_header_control_metrics, sidebar_side_context_menu,
+    ToggleSidebar, Workspace, WorkspaceAccessState, sidebar_header_control_metrics,
+    sidebar_side_context_menu, workspace_access_state,
 };
 use gpui::{
     Anchor, AnyElement, AnyView, App, Context, Decorations, Entity, FocusHandle, Focusable,
@@ -10,7 +11,7 @@ use gpui::{
 use paths::APP_NAME;
 use project::git_store::{GitStoreEvent, RepositoryEvent};
 use settings::{Settings as _, SettingsContent, SettingsStore, update_settings_file};
-use std::{any::TypeId, sync::Arc};
+use std::{any::TypeId, path::Path, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
 use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, right_click_menu};
 
@@ -83,8 +84,28 @@ struct SidebarStatus {
     open: bool,
     side: SidebarSide,
     attention_count: usize,
+    access_required: bool,
     show_toggle: bool,
     workspace_name: Option<SharedString>,
+}
+
+fn workspace_roots_require_access<'a>(
+    is_local: bool,
+    workspace_roots: impl IntoIterator<Item = &'a Path>,
+    access_state: &WorkspaceAccessState,
+) -> bool {
+    if !is_local {
+        return false;
+    }
+    let WorkspaceAccessState::AccessRequired { roots } = access_state else {
+        return false;
+    };
+
+    workspace_roots.into_iter().any(|workspace_root| {
+        roots.iter().any(|blocked_root| {
+            blocked_root.starts_with(workspace_root) || workspace_root.starts_with(blocked_root)
+        })
+    })
 }
 
 impl SidebarStatus {
@@ -95,19 +116,26 @@ impl SidebarStatus {
             .map(|mw| {
                 let mw = mw.read(cx);
                 let enabled = mw.multi_workspace_enabled(cx);
-                let workspace_name = mw
-                    .workspace()
-                    .read(cx)
-                    .project_group_key(cx)
+                let project_group_key = mw.workspace().read(cx).project_group_key(cx);
+                let workspace_name = project_group_key
                     .path_list()
                     .ordered_paths()
                     .next()
                     .and_then(|path| path.file_name())
                     .map(|name| SharedString::from(name.to_string_lossy().into_owned()));
+                let access_required = workspace_roots_require_access(
+                    project_group_key.host().is_none(),
+                    project_group_key
+                        .path_list()
+                        .ordered_paths()
+                        .map(|path| path.as_path()),
+                    &workspace_access_state(cx),
+                );
                 Self {
                     open: mw.sidebar_open() && enabled,
                     side: mw.sidebar_side(cx),
                     attention_count: mw.sidebar_attention_count(cx),
+                    access_required,
                     show_toggle: enabled,
                     workspace_name,
                 }
@@ -160,6 +188,7 @@ fn sidebar_toggle_accessibility_label(
     app_name: &str,
     open: bool,
     workspace_name: Option<&SharedString>,
+    access_required: bool,
     attention_count: usize,
 ) -> SharedString {
     let base_label = match (app_name == "Zed", open) {
@@ -175,8 +204,13 @@ fn sidebar_toggle_accessibility_label(
             .map(|workspace_name| format!(", current Workspace {workspace_name}"))
             .unwrap_or_default()
     };
+    let access_context = if app_name != "Zed" && access_required {
+        ", Workspace access required"
+    } else {
+        ""
+    };
     if attention_count == 0 {
-        return format!("{base_label}{workspace_context}").into();
+        return format!("{base_label}{workspace_context}{access_context}").into();
     }
 
     let attention_noun = match (app_name == "Zed", attention_count == 1) {
@@ -191,7 +225,7 @@ fn sidebar_toggle_accessibility_label(
         "need"
     };
     format!(
-        "{base_label}{workspace_context}, {attention_count} {attention_noun} {attention_verb} attention"
+        "{base_label}{workspace_context}{access_context}, {attention_count} {attention_noun} {attention_verb} attention"
     )
     .into()
 }
@@ -199,6 +233,7 @@ fn sidebar_toggle_accessibility_label(
 fn sidebar_toggle_visible_label(
     app_name: &str,
     workspace_name: Option<&SharedString>,
+    access_required: bool,
     attention_count: usize,
     viewport_width: Pixels,
 ) -> Option<SharedString> {
@@ -214,6 +249,12 @@ fn sidebar_toggle_visible_label(
         format!("Workspaces · {workspace_name}")
     } else {
         "Workspaces".to_owned()
+    };
+
+    let base_label = if access_required {
+        format!("{base_label} · Access required")
+    } else {
+        base_label
     };
 
     Some(if attention_count > 0 {
@@ -373,6 +414,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn workspace_access_status_matches_only_the_owning_local_workspace() {
+        let access_state = WorkspaceAccessState::AccessRequired {
+            roots: vec![std::path::PathBuf::from("/workspace/paykit/private")].into(),
+        };
+
+        assert!(workspace_roots_require_access(
+            true,
+            [Path::new("/workspace/paykit")],
+            &access_state,
+        ));
+        let parent_access_state = WorkspaceAccessState::AccessRequired {
+            roots: vec![std::path::PathBuf::from("/workspace")].into(),
+        };
+        assert!(workspace_roots_require_access(
+            true,
+            [Path::new("/workspace/paykit")],
+            &parent_access_state,
+        ));
+        assert!(!workspace_roots_require_access(
+            true,
+            [Path::new("/workspace/infra")],
+            &access_state,
+        ));
+        assert!(!workspace_roots_require_access(
+            false,
+            [Path::new("/workspace/paykit")],
+            &access_state,
+        ));
+        assert!(!workspace_roots_require_access(
+            true,
+            [Path::new("/workspace/paykit")],
+            &WorkspaceAccessState::Available,
+        ));
+    }
+
+    #[test]
     fn dez_status_bar_names_its_workspace_scope() {
         assert_eq!(status_bar_label("Dez"), "Workspace status and navigation");
         assert_eq!(status_bar_label("Zed"), "Status bar");
@@ -382,59 +459,71 @@ mod tests {
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
         let workspace_name: SharedString = "paykit".into();
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", false, Some(&workspace_name), 2),
+            sidebar_toggle_accessibility_label("Dez", false, Some(&workspace_name), false, 2),
             "Open Workspaces, current Workspace paykit, 2 items need attention"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", true, Some(&workspace_name), 0),
+            sidebar_toggle_accessibility_label("Dez", true, Some(&workspace_name), true, 0),
+            "Hide Workspaces, current Workspace paykit, Workspace access required"
+        );
+        assert_eq!(
+            sidebar_toggle_accessibility_label("Dez", true, Some(&workspace_name), false, 0),
             "Hide Workspaces, current Workspace paykit"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", false, None, 0),
+            sidebar_toggle_accessibility_label("Dez", false, None, false, 0),
             "Open Workspaces"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Zed", true, Some(&workspace_name), 1),
+            sidebar_toggle_accessibility_label("Zed", true, Some(&workspace_name), true, 1),
             "Hide Sessions, 1 session needs attention"
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(1200.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), false, 0, px(1200.0)),
             Some("Workspaces · paykit".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(1200.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), false, 2, px(1200.0)),
             Some("Workspaces · paykit · Attention 2".into())
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), true, 2, px(1200.0)),
+            Some("Workspaces · paykit · Access required · Attention 2".into())
         );
         let long_workspace_name: SharedString = "this-is-a-very-long-workspace-name".into();
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&long_workspace_name), 2, px(1200.0)),
+            sidebar_toggle_visible_label("Dez", Some(&long_workspace_name), false, 2, px(1200.0),),
             Some("Workspaces · this-is-a-very-long-work… · Attention 2".into()),
             "secondary Workspace identity should truncate before the recovery action or attention count"
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", None, 0, px(1200.0)),
+            sidebar_toggle_visible_label("Dez", None, false, 0, px(1200.0)),
             Some("Workspaces".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(600.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), true, 2, px(600.0)),
             None,
             "compact windows should keep the native recovery action without crowding status context"
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(760.0)),
-            Some("Workspaces · Attention 2".into()),
-            "medium windows should preserve actionable attention before Workspace metadata"
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), true, 2, px(760.0)),
+            Some("Workspaces · Access required · Attention 2".into()),
+            "medium windows should preserve recovery and attention before Workspace metadata"
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(959.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), false, 0, px(959.0)),
             Some("Workspaces".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(960.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), true, 0, px(960.0)),
+            Some("Workspaces · paykit · Access required".into())
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), false, 0, px(960.0)),
             Some("Workspaces · paykit".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Zed", None, 2, px(1200.0)),
+            sidebar_toggle_visible_label("Zed", None, true, 2, px(1200.0)),
             None
         );
         assert_eq!(
@@ -659,18 +748,29 @@ impl StatusBar {
         let on_right = sidebar.side == SidebarSide::Right;
         let open = sidebar.open;
         let attention_count = sidebar.attention_count;
-        let has_notifications = attention_count > 0;
+        let access_required = APP_NAME != "Zed" && sidebar.access_required;
+        let has_attention = attention_count > 0;
+        let has_status = access_required || has_attention;
+        let status_color = if access_required {
+            Color::Warning
+        } else if has_attention {
+            Color::Accent
+        } else {
+            Color::Muted
+        };
         let indicator_border = cx.theme().colors().status_bar_background;
         let toggle_label = sidebar_toggle_label(APP_NAME, open);
         let accessibility_label = sidebar_toggle_accessibility_label(
             APP_NAME,
             open,
             sidebar.workspace_name.as_ref(),
+            access_required,
             attention_count,
         );
         let visible_label = sidebar_toggle_visible_label(
             APP_NAME,
             sidebar.workspace_name.as_ref(),
+            access_required,
             attention_count,
             viewport_width,
         );
@@ -699,18 +799,14 @@ impl StatusBar {
                 if let Some(visible_label) = visible_label {
                     Button::new("toggle-workspace-sidebar", visible_label)
                         .truncate(true)
-                        .start_icon(Icon::new(icon).size(icon_size).color(if has_notifications {
-                            Color::Accent
-                        } else {
-                            Color::Muted
-                        }))
+                        .start_icon(Icon::new(icon).size(icon_size).color(status_color))
                         .size(control_size)
                         .label_size(LabelSize::Small)
-                        .when(has_notifications, |this| {
+                        .when(has_status, |this| {
                             this.end_icon(
                                 Icon::new(IconName::Circle)
                                     .size(IconSize::XSmall)
-                                    .color(Color::Accent),
+                                    .color(status_color),
                             )
                         })
                         .tab_index(0isize)
@@ -728,8 +824,8 @@ impl StatusBar {
                         .tab_index(0isize)
                         .aria_label(accessibility_label)
                         .aria_expanded(open)
-                        .when(has_notifications, |this| {
-                            this.indicator(Indicator::dot().color(Color::Accent))
+                        .when(has_status, |this| {
+                            this.indicator(Indicator::dot().color(status_color))
                                 .indicator_border_color(Some(indicator_border))
                         })
                         .tooltip(move |_, cx| Tooltip::for_action(toggle_label, &ToggleSidebar, cx))
