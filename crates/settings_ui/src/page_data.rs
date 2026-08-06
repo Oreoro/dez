@@ -106,6 +106,14 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
     pages
 }
 
+fn dez_curated_setting_path_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed"
+        || !matches!(
+            json_path,
+            Some("card_gap" | "active_pane_modifiers.border_size" | "zoomed_padding")
+        )
+}
+
 fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage {
     if app_name == "Zed" {
         return page;
@@ -120,13 +128,26 @@ fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage 
                 pending_section_header = Some(header);
                 continue;
             }
-            SettingsPageItem::SettingItem(item) if item.field.is_settings_file_only() => continue,
+            SettingsPageItem::SettingItem(item)
+                if item.field.is_settings_file_only()
+                    || !dez_curated_setting_path_visible(app_name, item.field.json_path()) =>
+            {
+                continue;
+            }
             SettingsPageItem::DynamicItem(mut item) => {
-                if item.discriminant.field.is_settings_file_only() {
+                if item.discriminant.field.is_settings_file_only()
+                    || !dez_curated_setting_path_visible(
+                        app_name,
+                        item.discriminant.field.json_path(),
+                    )
+                {
                     continue;
                 }
                 for fields in &mut item.fields {
-                    fields.retain(|field| !field.field.is_settings_file_only());
+                    fields.retain(|field| {
+                        !field.field.is_settings_file_only()
+                            && dez_curated_setting_path_visible(app_name, field.field.json_path())
+                    });
                 }
                 SettingsPageItem::DynamicItem(item)
             }
@@ -4488,7 +4509,7 @@ fn window_and_layout_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Status Bar",
-                description: "Keep the native Workspace status bar visible for active file, diagnostics, language, line endings, and cursor position.",
+                description: "Keep the native Workspace status line available for Workspaces recovery, diagnostics, language, encoding, and cursor position.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("status_bar.experimental.show"),
@@ -12123,6 +12144,47 @@ mod tests {
                     SettingsPageItem::SectionHeader(_)
                 ]
             )));
+        }
+    }
+
+    #[test]
+    fn dez_curated_settings_hide_inert_product_microgeometry() {
+        let hidden_paths = [
+            "card_gap",
+            "active_pane_modifiers.border_size",
+            "zoomed_padding",
+        ];
+        for path in hidden_paths {
+            assert!(!dez_curated_setting_path_visible("Dez", Some(path)));
+            assert!(dez_curated_setting_path_visible("Zed", Some(path)));
+        }
+
+        for path in [
+            "centered_layout.left_padding",
+            "active_pane_modifiers.inactive_opacity",
+            "pane_split_direction_vertical",
+        ] {
+            assert!(dez_curated_setting_path_visible("Dez", Some(path)));
+        }
+
+        let page = curate_dez_settings_page("Dez", window_and_layout_page());
+        for hidden_path in hidden_paths {
+            assert!(!page.items.iter().any(|item| match item {
+                SettingsPageItem::SettingItem(item) => {
+                    item.field.json_path() == Some(hidden_path)
+                }
+                SettingsPageItem::DynamicItem(item) => {
+                    item.discriminant.field.json_path() == Some(hidden_path)
+                        || item
+                            .fields
+                            .iter()
+                            .flatten()
+                            .any(|field| field.field.json_path() == Some(hidden_path))
+                }
+                SettingsPageItem::SectionHeader(_)
+                | SettingsPageItem::SubPageLink(_)
+                | SettingsPageItem::ActionLink(_) => false,
+            }));
         }
     }
 

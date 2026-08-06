@@ -290,6 +290,10 @@ The curated Dez pages contain only fields with native controls. Settings that
 still require structured JSON stay available through the native Settings File
 route instead of appearing as rows whose only control is **Edit in
 settings.json**. Official Zed retains its complete upstream settings catalog.
+Dez also keeps product-inert microgeometry out of the curated catalog: the
+disabled outer card gap, disabled active-pane border, and unused zoom padding
+remain readable in `settings.json` for compatibility but are not presented as
+working native controls.
 
 ### 8. Compact navigation
 
