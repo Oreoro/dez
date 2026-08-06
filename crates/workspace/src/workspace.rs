@@ -3895,8 +3895,15 @@ impl Workspace {
             .root::<MultiWorkspace>()
             .flatten()
             .map(|mw| mw.downgrade());
-        let status_bar =
-            cx.new(|cx| StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx));
+        let status_bar = cx.new(|cx| {
+            StatusBar::new(
+                &center_pane.clone(),
+                weak_handle.clone(),
+                multi_workspace.clone(),
+                window,
+                cx,
+            )
+        });
 
         let session_id = app_state.session.read(cx).id().to_owned();
         if let Some(workspace_id) = workspace_id {

@@ -1,10 +1,11 @@
 use crate::{
-    DesignSystemSettings, ItemHandle, MultiWorkspace, Pane, SidebarSide, ToggleSidebar,
-    sidebar_header_control_metrics, sidebar_side_context_menu,
+    DesignSystemSettings, Event as WorkspaceEvent, ItemHandle, MultiWorkspace, Pane, SidebarSide,
+    ToggleSidebar, Workspace, sidebar_header_control_metrics, sidebar_side_context_menu,
 };
 use gpui::{
-    Anchor, AnyView, App, Context, Decorations, Entity, FocusHandle, Focusable, IntoElement,
-    ParentElement, Pixels, Render, Role, SharedString, Styled, Subscription, WeakEntity, Window,
+    Anchor, AnyElement, AnyView, App, Context, Decorations, Entity, FocusHandle, Focusable,
+    IntoElement, ParentElement, Pixels, Render, Role, SharedString, Styled, Subscription,
+    WeakEntity, Window,
 };
 use paths::APP_NAME;
 use settings::{Settings as _, SettingsContent, SettingsStore, update_settings_file};
@@ -116,9 +117,11 @@ pub struct StatusBar {
     left_items: Vec<Box<dyn StatusItemViewHandle>>,
     right_items: Vec<Box<dyn StatusItemViewHandle>>,
     active_pane: Entity<Pane>,
+    workspace: WeakEntity<Workspace>,
     multi_workspace: Option<WeakEntity<MultiWorkspace>>,
     focus_handle: FocusHandle,
     _observe_active_pane: Subscription,
+    _workspace_subscriptions: Vec<Subscription>,
     _observe_multi_workspace: Option<Subscription>,
     _settings_subscription: Subscription,
 }
@@ -183,6 +186,31 @@ fn sidebar_toggle_visible_label(
     } else {
         Some("Workspaces".into())
     }
+}
+
+fn focused_pane_status_label(
+    app_name: &str,
+    pane_index: usize,
+    pane_count: usize,
+    viewport_width: Pixels,
+) -> Option<SharedString> {
+    if app_name == "Zed"
+        || pane_count <= 1
+        || pane_index >= pane_count
+        || viewport_width < WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH
+    {
+        return None;
+    }
+
+    if viewport_width >= WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH {
+        Some(format!("Pane {} of {pane_count}", pane_index + 1).into())
+    } else {
+        Some(format!("Pane {}/{pane_count}", pane_index + 1).into())
+    }
+}
+
+fn focused_pane_accessibility_label(pane_index: usize, pane_count: usize) -> SharedString {
+    format!("Focused pane {} of {pane_count}", pane_index + 1).into()
 }
 
 fn toggle_workspace_sidebar(window: &mut Window, cx: &mut App) {
@@ -330,6 +358,29 @@ mod tests {
         );
         assert_eq!(sidebar_toggle_visible_label("Zed", None, px(1200.0)), None);
         assert_eq!(
+            focused_pane_status_label("Dez", 0, 2, px(1200.0)),
+            Some("Pane 1 of 2".into())
+        );
+        assert_eq!(
+            focused_pane_status_label("Dez", 1, 3, px(800.0)),
+            Some("Pane 2/3".into())
+        );
+        assert_eq!(
+            focused_pane_status_label("Dez", 0, 2, px(759.0)),
+            None,
+            "narrow windows should preserve the Workspaces recovery icon before pane metadata"
+        );
+        assert_eq!(
+            focused_pane_status_label("Dez", 0, 1, px(1200.0)),
+            None,
+            "single-pane identity is already implicit in the Main Work Area"
+        );
+        assert_eq!(focused_pane_status_label("Zed", 0, 2, px(1200.0)), None);
+        assert_eq!(
+            focused_pane_accessibility_label(1, 3),
+            "Focused pane 2 of 3"
+        );
+        assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Compact),
             Some(px(24.0))
         );
@@ -355,6 +406,8 @@ impl StatusBar {
         viewport_width: Pixels,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let focused_pane_status = self.render_focused_pane_status(viewport_width, cx);
+
         h_flex()
             .flex_1()
             .gap_1()
@@ -370,6 +423,7 @@ impl StatusBar {
                     )))
                 },
             )
+            .when_some(focused_pane_status, |this, status| this.child(status))
             .child(
                 h_flex()
                     .flex_1()
@@ -380,6 +434,41 @@ impl StatusBar {
                         render_hideable_item("status-bar-left", index, item.as_ref(), cx)
                     })),
             )
+    }
+
+    fn render_focused_pane_status(&self, viewport_width: Pixels, cx: &App) -> Option<AnyElement> {
+        let workspace = self.workspace.upgrade()?;
+        let workspace = workspace.read(cx);
+        let mut pane_index = None;
+        let mut pane_count = 0;
+        for pane in workspace.panes() {
+            if !pane.read(cx).is_visible() {
+                continue;
+            }
+            if pane == &self.active_pane {
+                pane_index = Some(pane_count);
+            }
+            pane_count += 1;
+        }
+        let pane_index = pane_index?;
+        let visible_label =
+            focused_pane_status_label(APP_NAME, pane_index, pane_count, viewport_width)?;
+        let accessibility_label = focused_pane_accessibility_label(pane_index, pane_count);
+
+        Some(
+            h_flex()
+                .id("focused-pane-status")
+                .role(Role::Status)
+                .aria_label(accessibility_label)
+                .flex_none()
+                .px_1()
+                .child(
+                    Label::new(visible_label)
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                )
+                .into_any_element(),
+        )
     }
 
     fn render_right_tools(
@@ -540,6 +629,26 @@ pub fn add_hide_button_entry(menu: ContextMenu, hide: HideStatusItem) -> Context
 }
 
 impl StatusBar {
+    fn observe_workspace(
+        workspace: &WeakEntity<Workspace>,
+        cx: &mut Context<Self>,
+    ) -> Vec<Subscription> {
+        let Some(workspace) = workspace.upgrade() else {
+            return Vec::new();
+        };
+        vec![
+            cx.observe(&workspace, |_, _, cx| cx.notify()),
+            cx.subscribe(&workspace, |_, _, event: &WorkspaceEvent, cx| {
+                if matches!(
+                    event,
+                    WorkspaceEvent::PaneAdded(_) | WorkspaceEvent::PaneRemoved
+                ) {
+                    cx.notify();
+                }
+            }),
+        ]
+    }
+
     fn observe_multi_workspace(
         multi_workspace: &WeakEntity<MultiWorkspace>,
         cx: &mut Context<Self>,
@@ -550,11 +659,13 @@ impl StatusBar {
 
     pub fn new(
         active_pane: &Entity<Pane>,
+        workspace: WeakEntity<Workspace>,
         multi_workspace: Option<WeakEntity<MultiWorkspace>>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
         let settings_subscription = cx.observe_global::<SettingsStore>(|_, cx| cx.notify());
+        let workspace_subscriptions = Self::observe_workspace(&workspace, cx);
         let observe_multi_workspace = multi_workspace
             .as_ref()
             .and_then(|multi_workspace| Self::observe_multi_workspace(multi_workspace, cx));
@@ -562,11 +673,13 @@ impl StatusBar {
             left_items: Default::default(),
             right_items: Default::default(),
             active_pane: active_pane.clone(),
+            workspace,
             multi_workspace,
             focus_handle: cx.focus_handle(),
             _observe_active_pane: cx.observe_in(active_pane, window, |this, _, window, cx| {
                 this.update_active_pane_item(window, cx)
             }),
+            _workspace_subscriptions: workspace_subscriptions,
             _observe_multi_workspace: observe_multi_workspace,
             _settings_subscription: settings_subscription,
         };
@@ -682,6 +795,7 @@ impl StatusBar {
         for item in self.left_items.iter().chain(&self.right_items) {
             item.set_active_pane_item(active_pane_item.as_deref(), window, cx);
         }
+        cx.notify();
     }
 
     /// Moves focus between the interactive controls within the status bar in

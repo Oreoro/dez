@@ -746,6 +746,10 @@ that persistent identity. Both remain explicit user preferences.
   labeled status-bar control.
 - Top and status chrome must change size together when Compact, Balanced, or
   Spacious density changes; individual surfaces do not invent local scales.
+- The status line derives split-pane identity from the active native Workspace.
+  It shows **Pane 1 of 2** at wide widths, contracts to **Pane 1/2** before
+  other status metadata, and disappears below the labeled navigation threshold.
+  A single Main Work Area does not repeat the implicit **Pane 1** label.
 - Pane Back, Forward, adjacent Add, overflow, split, zoom, and close controls
   share one tab-bar metric. Workspace disclosure, terminal launch, options,
   search, and Layout rows share the Workspace navigation metrics.
