@@ -119,6 +119,7 @@ pub struct StatusBar {
     multi_workspace: Option<WeakEntity<MultiWorkspace>>,
     focus_handle: FocusHandle,
     _observe_active_pane: Subscription,
+    _observe_multi_workspace: Option<Subscription>,
     _settings_subscription: Subscription,
 }
 
@@ -539,6 +540,14 @@ pub fn add_hide_button_entry(menu: ContextMenu, hide: HideStatusItem) -> Context
 }
 
 impl StatusBar {
+    fn observe_multi_workspace(
+        multi_workspace: &WeakEntity<MultiWorkspace>,
+        cx: &mut Context<Self>,
+    ) -> Option<Subscription> {
+        let multi_workspace = multi_workspace.upgrade()?;
+        Some(cx.observe(&multi_workspace, |_, _, cx| cx.notify()))
+    }
+
     pub fn new(
         active_pane: &Entity<Pane>,
         multi_workspace: Option<WeakEntity<MultiWorkspace>>,
@@ -546,6 +555,9 @@ impl StatusBar {
         cx: &mut Context<Self>,
     ) -> Self {
         let settings_subscription = cx.observe_global::<SettingsStore>(|_, cx| cx.notify());
+        let observe_multi_workspace = multi_workspace
+            .as_ref()
+            .and_then(|multi_workspace| Self::observe_multi_workspace(multi_workspace, cx));
         let mut this = Self {
             left_items: Default::default(),
             right_items: Default::default(),
@@ -555,6 +567,7 @@ impl StatusBar {
             _observe_active_pane: cx.observe_in(active_pane, window, |this, _, window, cx| {
                 this.update_active_pane_item(window, cx)
             }),
+            _observe_multi_workspace: observe_multi_workspace,
             _settings_subscription: settings_subscription,
         };
         this.update_active_pane_item(window, cx);
@@ -566,6 +579,7 @@ impl StatusBar {
         multi_workspace: WeakEntity<MultiWorkspace>,
         cx: &mut Context<Self>,
     ) {
+        self._observe_multi_workspace = Self::observe_multi_workspace(&multi_workspace, cx);
         self.multi_workspace = Some(multi_workspace);
         cx.notify();
     }

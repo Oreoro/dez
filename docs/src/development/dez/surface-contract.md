@@ -700,6 +700,9 @@ native tool, honest ownership, inline recovery**.
   Workspaces, terminal lifecycle in the terminal tab.
 - Reserve the status bar for durable context. Transient progress and lengthy
   diagnostics belong to the owning surface.
+- Keep the Workspaces recovery control subscribed to its native owner. Sidebar
+  visibility, position, active Workspace identity, and attention state update
+  its visible and assistive labels immediately without waiting for pane focus.
 - Never introduce a Studio/Projects mode switch, custom browser tabs, a chat
   wrapper around terminal tools, floating onboarding, or an automatic split.
 - Route every empty-window entry through Home. A no-path CLI or new-window

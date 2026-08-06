@@ -3038,6 +3038,9 @@ require_multiline_pattern crates/workspace/src/status_bar.rs \
 require_multiline_pattern crates/workspace/src/status_bar.rs \
     'SettingsStore.*?_settings_subscription: Subscription.*?cx\.observe_global::<SettingsStore>\(\|_, cx\| cx\.notify\(\)\).*?_settings_subscription: settings_subscription' \
     'the native status line can stop applying Interface Density changes until an unrelated pane event'
+require_multiline_pattern crates/workspace/src/status_bar.rs \
+    '_observe_multi_workspace: Option<Subscription>.*?fn observe_multi_workspace\(.*?multi_workspace\.upgrade\(\)\?.*?cx\.observe\(&multi_workspace, \|_, _, cx\| cx\.notify\(\)\).*?let observe_multi_workspace = multi_workspace.*?Self::observe_multi_workspace\(multi_workspace, cx\).*?_observe_multi_workspace: observe_multi_workspace.*?fn set_multi_workspace.*?self\._observe_multi_workspace = Self::observe_multi_workspace\(&multi_workspace, cx\).*?self\.multi_workspace = Some\(multi_workspace\)' \
+    'the Workspaces status recovery control can stop tracking sidebar visibility, identity, or attention until an unrelated status event'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'let mut subscriptions = vec!\[.*?cx\.observe_window_activation\(window, Self::on_window_activation_changed\).*?if paths::APP_NAME != "Zed" \{.*?subscriptions.*?push\(cx\.observe_global_in::<SettingsStore>\(window, \|_, _, cx\| cx\.notify\(\)\).*?_subscriptions: subscriptions' \
     'Workspace-owned notifications and canvas chrome can stop applying Interface Density changes until unrelated Workspace activity arrives'
