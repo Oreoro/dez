@@ -2041,6 +2041,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   action may create another populated pane. Dez registers the existing
   `AgentPanel` with its other native tool owners so **Agentic** resolves to a
   real Built-in Agent destination instead of a named but empty layout. Loading
-  that owner does not create a terminal or start an Agent Session. The older Files-specific
+  that owner does not create a terminal or start an Agent Session. If any
+  requested tool owner is unavailable, Dez preserves the focused Main Work Area
+  and records **Focus Work Area**, keeping the visible layout, saved state,
+  status line, and next-layout cycle truthful. The older Files-specific
   `project_panel.starts_open` preference remains raw-settings compatibility but
   is no longer a second graphical startup control in Dez.

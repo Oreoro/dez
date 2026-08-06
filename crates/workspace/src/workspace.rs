@@ -582,6 +582,17 @@ fn dez_layout_uses_single_work_area(recipe: CanvasLayoutRecipe) -> bool {
     )
 }
 
+fn dez_resolved_single_work_area_recipe(
+    requested_recipe: CanvasLayoutRecipe,
+    destination_available: bool,
+) -> CanvasLayoutRecipe {
+    if destination_available {
+        requested_recipe
+    } else {
+        CanvasLayoutRecipe::EditorFocus
+    }
+}
+
 const FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = &[
     SplitDirection::Right,
     SplitDirection::Down,
@@ -9265,10 +9276,18 @@ impl Workspace {
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
         let destination = self.consolidate_dez_main_work_area(destination, window, cx);
         self.set_active_pane(&destination, window, cx);
-        self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
+        let destination_available =
+            self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
         let destination = self.last_tabbed_pane(cx).unwrap_or(destination);
         self.focus_canvas_pane(&destination, window, cx);
-        self.finish_canvas_recipe(Some(layout_recipe), window, cx);
+        self.finish_canvas_recipe(
+            Some(dez_resolved_single_work_area_recipe(
+                layout_recipe,
+                destination_available,
+            )),
+            window,
+            cx,
+        );
     }
 
     fn consolidate_dez_main_work_area(
@@ -9499,10 +9518,10 @@ impl Workspace {
         // not expose a blank drawer or the previous tool under the new layout
         // label. Collapse the auxiliary region and preserve the user's Main
         // Work Area instead.
-        if let Some(panel_pane_kind) =
-            essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME)
-        {
-            self.set_canvas_panel_pane_visible(panel_pane_kind, false, window, cx);
+        if essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME).is_some() {
+            for panel_pane_kind in [PanelPaneKind::Project, PanelPaneKind::Agent] {
+                self.set_canvas_panel_pane_visible(panel_pane_kind, false, window, cx);
+            }
             self.center.mark_positions(cx);
         }
         false
@@ -17710,6 +17729,19 @@ mod tests {
         assert!(!dez_layout_uses_single_work_area(
             CanvasLayoutRecipe::CodeRunObserve
         ));
+        for recipe in [
+            CanvasLayoutRecipe::Full,
+            CanvasLayoutRecipe::AgentControl,
+            CanvasLayoutRecipe::Review,
+            CanvasLayoutRecipe::Debug,
+        ] {
+            assert_eq!(dez_resolved_single_work_area_recipe(recipe, true), recipe);
+            assert_eq!(
+                dez_resolved_single_work_area_recipe(recipe, false),
+                CanvasLayoutRecipe::EditorFocus,
+                "an unavailable native destination must preserve and name the focused Main Work Area"
+            );
+        }
     }
 
     #[test]

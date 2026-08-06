@@ -269,6 +269,9 @@ duplicate or skipped action target.
 open: **Focus Work Area**, **Files**, **Built-in Agent**, **Git Changes**, or
 **Debug**. These are not durable product modes. The choice applies only when a
 new Workspace has a root but no restored layout or explicitly opened item.
+If that destination's native owner is unavailable, the focused Main Work Area
+remains visible and **Focus Work Area** becomes the active saved layout. The
+status line and next-layout cycle must never claim a tool that did not open.
 
 Each Dez root page has one quiet semantic icon drawn from the same native icon
 set used by Home, Workspaces, tabs, and the status line. Icons supplement the
