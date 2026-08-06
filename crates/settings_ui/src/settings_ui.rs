@@ -514,6 +514,10 @@ struct SettingFieldRenderer {
 impl Global for SettingFieldRenderer {}
 
 impl SettingFieldRenderer {
+    fn has_registered_renderer(&self, field: &dyn AnySettingField) -> bool {
+        self.renderers.borrow().contains_key(&field.type_id())
+    }
+
     fn add_basic_renderer<T: 'static>(
         &mut self,
         render_control: impl Fn(

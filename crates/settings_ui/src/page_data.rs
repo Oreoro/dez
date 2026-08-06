@@ -11,8 +11,9 @@ use theme::SystemAppearance;
 use ui::{IconName, IntoElement};
 
 use crate::{
-    ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
-    SettingsPage, SettingsPageItem, SubPageLink, USER, active_language, all_language_names,
+    ActionLink, AnySettingField, DynamicItem, PROJECT, SettingField, SettingFieldRenderer,
+    SettingItem, SettingsFieldMetadata, SettingsPage, SettingsPageItem, SettingsUiFile,
+    SubPageLink, USER, active_language, all_language_names,
     pages::{
         open_audio_test_window, render_edit_prediction_setup_page, render_external_agents_page,
         render_llm_providers_page, render_mcp_servers_page, render_sandbox_settings_page,
@@ -97,9 +98,15 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         pages.push(developer_page(cx));
     }
     if paths::APP_NAME != "Zed" {
+        let renderer = cx.try_global::<SettingFieldRenderer>();
         pages = pages
             .into_iter()
-            .map(|page| curate_dez_settings_page(paths::APP_NAME, page))
+            .map(|page| {
+                curate_dez_settings_page_with_field_visibility(paths::APP_NAME, page, |field| {
+                    renderer.is_none_or(|renderer| renderer.has_registered_renderer(field))
+                        && field.file_set_in(SettingsUiFile::User, cx).1
+                })
+            })
             .collect();
         pages.sort_by_key(|page| dez_settings_page_priority(page.title));
     }
@@ -121,6 +128,14 @@ fn dez_curated_setting_path_visible(app_name: &str, json_path: Option<&str>) -> 
 }
 
 fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage {
+    curate_dez_settings_page_with_field_visibility(app_name, page, |_| true)
+}
+
+fn curate_dez_settings_page_with_field_visibility(
+    app_name: &str,
+    page: SettingsPage,
+    field_visible: impl Fn(&dyn AnySettingField) -> bool,
+) -> SettingsPage {
     if app_name == "Zed" {
         return page;
     }
@@ -136,7 +151,8 @@ fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage 
             }
             SettingsPageItem::SettingItem(item)
                 if item.field.is_settings_file_only()
-                    || !dez_curated_setting_path_visible(app_name, item.field.json_path()) =>
+                    || !dez_curated_setting_path_visible(app_name, item.field.json_path())
+                    || !field_visible(item.field.as_ref()) =>
             {
                 continue;
             }
@@ -146,6 +162,7 @@ fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage 
                         app_name,
                         item.discriminant.field.json_path(),
                     )
+                    || !field_visible(item.discriminant.field.as_ref())
                 {
                     continue;
                 }
@@ -153,6 +170,7 @@ fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage 
                     fields.retain(|field| {
                         !field.field.is_settings_file_only()
                             && dez_curated_setting_path_visible(app_name, field.field.json_path())
+                            && field_visible(field.field.as_ref())
                     });
                 }
                 SettingsPageItem::DynamicItem(item)
@@ -12194,6 +12212,50 @@ mod tests {
                 | SettingsPageItem::ActionLink(_) => false,
             }));
         }
+    }
+
+    #[test]
+    fn dez_curated_settings_drop_fields_without_native_controls() {
+        let retained_path = "terminal.font_size";
+        let page =
+            curate_dez_settings_page_with_field_visibility("Dez", terminal_page(), |field| {
+                field.json_path() == Some(retained_path)
+            });
+
+        let mut retained_field_count = 0;
+        for item in &page.items {
+            match item {
+                SettingsPageItem::SettingItem(item) => {
+                    retained_field_count += 1;
+                    assert_eq!(item.field.json_path(), Some(retained_path));
+                }
+                SettingsPageItem::DynamicItem(item) => {
+                    retained_field_count += 1;
+                    assert_eq!(item.discriminant.field.json_path(), Some(retained_path));
+                    assert!(
+                        item.fields
+                            .iter()
+                            .flatten()
+                            .all(|field| { field.field.json_path() == Some(retained_path) })
+                    );
+                }
+                SettingsPageItem::SectionHeader(_)
+                | SettingsPageItem::SubPageLink(_)
+                | SettingsPageItem::ActionLink(_) => {}
+            }
+        }
+        assert_eq!(retained_field_count, 1);
+        assert!(!matches!(
+            page.items.last(),
+            Some(SettingsPageItem::SectionHeader(_))
+        ));
+
+        let upstream_page =
+            curate_dez_settings_page_with_field_visibility("Zed", terminal_page(), |_| false);
+        assert!(upstream_page.items.iter().any(|item| matches!(
+            item,
+            SettingsPageItem::SettingItem(_) | SettingsPageItem::DynamicItem(_)
+        )));
     }
 
     #[test]
