@@ -746,8 +746,9 @@ that persistent identity. Both remain explicit user preferences.
   labeled status-bar control.
 - At labeled widths the Workspaces status control projects the sidebar owner's
   exact bounded attention count as **Attention 2**. At compact icon-only widths
-  the same count remains in the accessible name and the semantic indicator;
-  the status bar never maintains a second attention total.
+  the accessible name retains the full active Workspace identity and exact
+  count, while the semantic indicator reinforces attention; the status bar
+  never maintains a second identity or attention total.
 - Long Workspace names truncate as secondary status metadata before they can
   crowd the Workspaces recovery action or its visible attention count.
 - Top and status chrome must change size together when Compact, Balanced, or

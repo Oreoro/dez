@@ -159,6 +159,7 @@ fn sidebar_toggle_label(app_name: &str, open: bool) -> &'static str {
 fn sidebar_toggle_accessibility_label(
     app_name: &str,
     open: bool,
+    workspace_name: Option<&SharedString>,
     attention_count: usize,
 ) -> SharedString {
     let base_label = match (app_name == "Zed", open) {
@@ -167,8 +168,15 @@ fn sidebar_toggle_accessibility_label(
         (false, true) => "Hide Workspaces",
         (false, false) => "Open Workspaces",
     };
+    let workspace_context = if app_name == "Zed" {
+        String::new()
+    } else {
+        workspace_name
+            .map(|workspace_name| format!(", current Workspace {workspace_name}"))
+            .unwrap_or_default()
+    };
     if attention_count == 0 {
-        return base_label.into();
+        return format!("{base_label}{workspace_context}").into();
     }
 
     let attention_noun = match (app_name == "Zed", attention_count == 1) {
@@ -182,7 +190,10 @@ fn sidebar_toggle_accessibility_label(
     } else {
         "need"
     };
-    format!("{base_label}, {attention_count} {attention_noun} {attention_verb} attention").into()
+    format!(
+        "{base_label}{workspace_context}, {attention_count} {attention_noun} {attention_verb} attention"
+    )
+    .into()
 }
 
 fn sidebar_toggle_visible_label(
@@ -369,19 +380,23 @@ mod tests {
         assert_eq!(sidebar_toggle_label("Dez", true), "Hide Workspaces");
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
+        let workspace_name: SharedString = "paykit".into();
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", false, 2),
-            "Open Workspaces, 2 items need attention"
+            sidebar_toggle_accessibility_label("Dez", false, Some(&workspace_name), 2),
+            "Open Workspaces, current Workspace paykit, 2 items need attention"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", true, 0),
-            "Hide Workspaces"
+            sidebar_toggle_accessibility_label("Dez", true, Some(&workspace_name), 0),
+            "Hide Workspaces, current Workspace paykit"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Zed", true, 1),
+            sidebar_toggle_accessibility_label("Dez", false, None, 0),
+            "Open Workspaces"
+        );
+        assert_eq!(
+            sidebar_toggle_accessibility_label("Zed", true, Some(&workspace_name), 1),
             "Hide Sessions, 1 session needs attention"
         );
-        let workspace_name: SharedString = "paykit".into();
         assert_eq!(
             sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(1200.0)),
             Some("Workspaces · paykit".into())
@@ -647,8 +662,12 @@ impl StatusBar {
         let has_notifications = attention_count > 0;
         let indicator_border = cx.theme().colors().status_bar_background;
         let toggle_label = sidebar_toggle_label(APP_NAME, open);
-        let accessibility_label =
-            sidebar_toggle_accessibility_label(APP_NAME, open, attention_count);
+        let accessibility_label = sidebar_toggle_accessibility_label(
+            APP_NAME,
+            open,
+            sidebar.workspace_name.as_ref(),
+            attention_count,
+        );
         let visible_label = sidebar_toggle_visible_label(
             APP_NAME,
             sidebar.workspace_name.as_ref(),
