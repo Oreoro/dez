@@ -5892,16 +5892,22 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                     )
                 } else if !has_workspace_root {
                     menu.header("Start with a Workspace")
-                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
-                        .action(
+                        .action_with_icon(
+                            "Open Home",
+                            crate::welcome::DEZ_HOME_ICON,
+                            crate::welcome::ShowWelcome.boxed_clone(),
+                        )
+                        .action_with_icon(
                             "Open Workspace…",
+                            IconName::FolderOpen,
                             crate::OpenFolder {
                                 create_new_window: Some(false),
                             }
                             .boxed_clone(),
                         )
-                        .action(
+                        .action_with_icon(
                             "Open Recent Workspaces…",
+                            IconName::HistoryRerun,
                             zed_actions::OpenRecent::default().boxed_clone(),
                         )
                 } else {
@@ -6046,7 +6052,7 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                         .separator()
                         .action_with_icon(
                             "Home",
-                            IconName::FolderOpen,
+                            crate::welcome::DEZ_HOME_ICON,
                             crate::welcome::ShowWelcome.boxed_clone(),
                         )
                         .action_with_icon(
@@ -7059,6 +7065,7 @@ mod tests {
             )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
+        assert_eq!(crate::welcome::DEZ_HOME_ICON, IconName::Compass);
         assert_eq!(
             pane_built_in_agent_action_presentation(true),
             ("Open Built-in Agent", IconName::DezAgent)

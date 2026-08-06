@@ -401,6 +401,9 @@ The two menus are alternate anchored native menus and never appear together in
 the product. `+` follows the final visible tab and remains pinned to the tab
 viewport edge during overflow. **Switch Tab** lists only the owning pane and
 preserves active, modified, and pinned meaning in text as well as icon state.
+The Compass glyph is the stable Home identity across the Home heading, Home
+tab, and the rooted and rootless `+` menus. Folder and history glyphs remain
+reserved for opening or returning to Workspace destinations.
 
 Dez disables preview tabs by default so opening another file does not replace
 the previous file tab. Users may explicitly enable preview tabs for Zed-style

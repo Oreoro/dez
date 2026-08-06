@@ -313,8 +313,10 @@ fn welcome_forces_tab_bar(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
+pub(crate) const DEZ_HOME_ICON: IconName = IconName::Compass;
+
 fn welcome_tab_icon(app_name: &str) -> Option<IconName> {
-    (app_name != "Zed").then_some(IconName::Compass)
+    (app_name != "Zed").then_some(DEZ_HOME_ICON)
 }
 
 fn welcome_emphasizes_first_action(app_name: &str) -> bool {
@@ -1188,7 +1190,7 @@ impl Render for WelcomePage {
                                         h_flex()
                                             .gap_1()
                                             .child(
-                                                Icon::new(IconName::Compass)
+                                                Icon::new(DEZ_HOME_ICON)
                                                     .size(IconSize::XSmall)
                                                     .color(Color::Accent),
                                             )
@@ -1503,7 +1505,7 @@ mod tests {
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
         assert!(welcome_forces_tab_bar("Dez"));
         assert!(!welcome_forces_tab_bar("Zed"));
-        assert_eq!(welcome_tab_icon("Dez"), Some(IconName::Compass));
+        assert_eq!(welcome_tab_icon("Dez"), Some(DEZ_HOME_ICON));
         assert_eq!(welcome_tab_icon("Zed"), None);
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
         assert_eq!(DEZ_CONTENT.0.entries[0].meta, Some("Local folder"));
