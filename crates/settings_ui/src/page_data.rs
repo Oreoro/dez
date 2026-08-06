@@ -482,7 +482,7 @@ fn projects_startup_setting() -> SettingsPageItem {
 fn workspace_startup_intent_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
         title: "New Workspace Starts With",
-        description: "Choose the first native destination only when a Workspace has no restored layout or explicitly opened item. Focus Work Area opens no tool; the other choices open their existing Workspace surface.",
+        description: "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Focus Work Area opens no tool. If a chosen tool is unavailable, Dez keeps Focus Work Area instead.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("startup_intent"),
@@ -12320,6 +12320,10 @@ mod tests {
             panic!("Workspace startup intent must be a native setting row");
         };
         assert_eq!(startup_intent.title, "New Workspace Starts With");
+        assert_eq!(
+            startup_intent.description,
+            "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Focus Work Area opens no tool. If a chosen tool is unavailable, Dez keeps Focus Work Area instead."
+        );
         assert_eq!(startup_intent.field.json_path(), Some("startup_intent"));
         assert_eq!(
             <settings::WorkspaceStartupIntent as strum::VariantNames>::VARIANTS,
