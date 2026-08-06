@@ -8,6 +8,7 @@ use gpui::{
     WeakEntity, Window,
 };
 use paths::APP_NAME;
+use project::git_store::{GitStoreEvent, RepositoryEvent};
 use settings::{Settings as _, SettingsContent, SettingsStore, update_settings_file};
 use std::{any::TypeId, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
@@ -15,6 +16,7 @@ use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, rig
 
 const WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH: Pixels = px(760.0);
 const WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH: Pixels = px(960.0);
+const REPOSITORY_STATUS_MIN_VIEWPORT_WIDTH: Pixels = px(1200.0);
 
 /// Describes how a status-bar item can be hidden by the user.
 ///
@@ -213,6 +215,30 @@ fn focused_pane_accessibility_label(pane_index: usize, pane_count: usize) -> Sha
     format!("Focused pane {} of {pane_count}", pane_index + 1).into()
 }
 
+fn repository_status_label(
+    app_name: &str,
+    branch_label: Option<&str>,
+    changed_file_count: usize,
+    viewport_width: Pixels,
+) -> Option<SharedString> {
+    if app_name == "Zed" || viewport_width < REPOSITORY_STATUS_MIN_VIEWPORT_WIDTH {
+        return None;
+    }
+
+    match (branch_label, changed_file_count) {
+        (Some(branch), 0) => Some(branch.to_owned().into()),
+        (Some(branch), 1) => Some(format!("{branch} · 1 change").into()),
+        (Some(branch), count) => Some(format!("{branch} · {count} changes").into()),
+        (None, 0) => Some("Detached".into()),
+        (None, 1) => Some("Detached · 1 change".into()),
+        (None, count) => Some(format!("Detached · {count} changes").into()),
+    }
+}
+
+fn repository_status_accessibility_label(repository_status: &str) -> SharedString {
+    format!("Git repository: {repository_status}").into()
+}
+
 fn toggle_workspace_sidebar(window: &mut Window, cx: &mut App) {
     if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
         multi_workspace.update(cx, |multi_workspace, cx| {
@@ -381,6 +407,27 @@ mod tests {
             "Focused pane 2 of 3"
         );
         assert_eq!(
+            repository_status_label("Dez", Some("main"), 2, px(1200.0)),
+            Some("main · 2 changes".into())
+        );
+        assert_eq!(
+            repository_status_label("Dez", Some("main"), 0, px(1199.0)),
+            None,
+            "repository context should yield to Workspace and pane identity"
+        );
+        assert_eq!(
+            repository_status_label("Dez", None, 1, px(1200.0)),
+            Some("Detached · 1 change".into())
+        );
+        assert_eq!(
+            repository_status_label("Zed", Some("main"), 2, px(1200.0)),
+            None
+        );
+        assert_eq!(
+            repository_status_accessibility_label("main · 2 changes"),
+            "Git repository: main · 2 changes"
+        );
+        assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Compact),
             Some(px(24.0))
         );
@@ -406,6 +453,7 @@ impl StatusBar {
         viewport_width: Pixels,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let repository_status = self.render_repository_status(viewport_width, cx);
         let focused_pane_status = self.render_focused_pane_status(viewport_width, cx);
 
         h_flex()
@@ -423,6 +471,7 @@ impl StatusBar {
                     )))
                 },
             )
+            .when_some(repository_status, |this, status| this.child(status))
             .when_some(focused_pane_status, |this, status| this.child(status))
             .child(
                 h_flex()
@@ -434,6 +483,51 @@ impl StatusBar {
                         render_hideable_item("status-bar-left", index, item.as_ref(), cx)
                     })),
             )
+    }
+
+    fn render_repository_status(&self, viewport_width: Pixels, cx: &App) -> Option<AnyElement> {
+        let workspace = self.workspace.upgrade()?;
+        let project = workspace.read(cx).project().clone();
+        let project = project.read(cx);
+        let repository = if let Some(repository) = project.active_repository(cx) {
+            repository
+        } else if project.repositories(cx).len() == 1 {
+            project.repositories(cx).values().next()?.clone()
+        } else {
+            return None;
+        };
+        let repository = repository.read(cx);
+        let visible_label = repository_status_label(
+            APP_NAME,
+            repository.branch.as_ref().map(|branch| branch.name()),
+            repository.status_summary().count,
+            viewport_width,
+        )?;
+        let accessibility_label = repository_status_accessibility_label(visible_label.as_ref());
+
+        Some(
+            h_flex()
+                .id("repository-status")
+                .role(Role::Status)
+                .aria_label(accessibility_label)
+                .min_w_0()
+                .max_w(px(240.0))
+                .gap_0p5()
+                .px_1()
+                .overflow_hidden()
+                .child(
+                    Icon::new(IconName::GitBranch)
+                        .size(IconSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    Label::new(visible_label)
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+                .into_any_element(),
+        )
     }
 
     fn render_focused_pane_status(&self, viewport_width: Pixels, cx: &App) -> Option<AnyElement> {
@@ -636,12 +730,31 @@ impl StatusBar {
         let Some(workspace) = workspace.upgrade() else {
             return Vec::new();
         };
+        let git_store = workspace.read(cx).project().read(cx).git_store().clone();
         vec![
             cx.observe(&workspace, |_, _, cx| cx.notify()),
             cx.subscribe(&workspace, |_, _, event: &WorkspaceEvent, cx| {
                 if matches!(
                     event,
                     WorkspaceEvent::PaneAdded(_) | WorkspaceEvent::PaneRemoved
+                ) {
+                    cx.notify();
+                }
+            }),
+            cx.subscribe(&git_store, |_, _, event, cx| {
+                if matches!(
+                    event,
+                    GitStoreEvent::ActiveRepositoryChanged(_)
+                        | GitStoreEvent::RepositoryAdded
+                        | GitStoreEvent::RepositoryRemoved(_)
+                        | GitStoreEvent::RepositoryUpdated(
+                            _,
+                            RepositoryEvent::StatusesChanged
+                                | RepositoryEvent::HeadChanged
+                                | RepositoryEvent::BranchListChanged
+                                | RepositoryEvent::GitDirectoryChanged,
+                            true,
+                        )
                 ) {
                     cx.notify();
                 }

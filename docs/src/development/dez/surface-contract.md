@@ -750,6 +750,11 @@ that persistent identity. Both remain explicit user preferences.
   It shows **Pane 1 of 2** at wide widths, contracts to **Pane 1/2** before
   other status metadata, and disappears below the labeled navigation threshold.
   A single Main Work Area does not repeat the implicit **Pane 1** label.
+- The status line derives repository context from that Workspace's native Git
+  store. At 1200px and wider it shows the active branch and changed-file count
+  beside the Git branch icon; detached work remains explicit. Repository context
+  disappears first as width contracts, preserving Workspace recovery and pane
+  identity without creating another repository store.
 - Pane Back, Forward, adjacent Add, overflow, split, zoom, and close controls
   share one tab-bar metric. Workspace disclosure, terminal launch, options,
   search, and Layout rows share the Workspace navigation metrics.
