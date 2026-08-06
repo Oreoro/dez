@@ -74,6 +74,9 @@ order, focus, close, pin, dirty, or split state.
 
 Home is a launcher in a normal closeable tab. It has no hero illustration,
 provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
+Every empty-window ingress follows the same ownership rule: cold start and an
+explicit no-path new-window request both open Home in the Main Work Area. They
+never substitute a scratch file or reopen the inherited onboarding surface.
 
 ### 2. Run and active work
 
@@ -699,6 +702,8 @@ native tool, honest ownership, inline recovery**.
   diagnostics belong to the owning surface.
 - Never introduce a Studio/Projects mode switch, custom browser tabs, a chat
   wrapper around terminal tools, floating onboarding, or an automatic split.
+- Route every empty-window entry through Home. A no-path CLI or new-window
+  request must not bypass first-run policy and resurrect inherited onboarding.
 
 ## Responsive contract
 

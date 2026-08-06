@@ -387,6 +387,9 @@ require_multiline_pattern crates/onboarding/src/onboarding.rs \
 require_multiline_pattern crates/zed/src/main.rs \
     'should_show_onboarding_on_first_open\(paths::APP_NAME\).*?matches!\(kvp\.read_kvp\(FIRST_OPEN\), Ok\(None\)\).*?show_onboarding_view' \
     'first launch can regress to opening the separate onboarding surface in Dez'
+require_multiline_pattern crates/zed/src/zed/open_listener.rs \
+    'should_show_onboarding_on_first_open\(paths::APP_NAME\).*?matches!\(kvp\.read_kvp\(FIRST_OPEN\), Ok\(None\)\).*?show_onboarding_view.*?should_seed_empty_workspace_with_home\(paths::APP_NAME\).*?seed_empty_workspace_with_home\(workspace, window, cx\).*?should_seed_empty_workspace_with_blank_file.*?Editor::new_file' \
+    'a no-path new-window request can bypass Dez Home and reopen inherited onboarding or an unowned scratch file'
 reject_multiline_pattern crates/onboarding/src/onboarding.rs \
     'when\(is_dez && !compact_layout.*?\.size_8\(\).*?\.rounded_md\(\).*?Icon::new\(IconName::Settings\).*?Headline::new\("Set up Dez"\)' \
     'Dez setup can regress to wrapping its native Settings glyph in decorative web-card chrome'
