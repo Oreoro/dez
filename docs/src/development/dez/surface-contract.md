@@ -745,6 +745,9 @@ that persistent identity. Both remain explicit user preferences.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
+- Below 280px, Layout retains its open-item count and real pane headings but
+  omits nested destination rows. Pane headings announce position, focus, and
+  open-item counts; the native pane tab strip remains the destination owner.
 - Layout is omitted while the active Workspace has only one tab because the
   native tab strip already exposes that sole destination. Beginning with the
   second tab, Layout stays flat for a single-pane Workspace and reports only the

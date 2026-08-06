@@ -1393,7 +1393,7 @@ fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
 }
 
 fn workspace_layout_nested_rows_visible(rail_width: Pixels) -> bool {
-    rail_width >= MIN_WIDTH
+    rail_width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
 }
 
 fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
@@ -1428,6 +1428,50 @@ fn workspace_pane_header_label(
             label
         }
     })
+}
+
+fn workspace_pane_header_accessibility_label(
+    pane_index: usize,
+    pane_count: usize,
+    is_focused: bool,
+    tab_count: usize,
+) -> String {
+    let focus = if is_focused { ", focused" } else { "" };
+    let item_label = if tab_count == 1 {
+        "1 open item".to_owned()
+    } else {
+        format!("{tab_count} open items")
+    };
+    format!(
+        "Pane {} of {}{focus}, {item_label}",
+        pane_index + 1,
+        pane_count
+    )
+}
+
+fn workspace_layout_accessibility_label(
+    tab_count: usize,
+    pane_count: usize,
+    nested_rows_visible: bool,
+) -> String {
+    let item_label = if tab_count == 1 {
+        "1 open item".to_owned()
+    } else {
+        format!("{tab_count} open items")
+    };
+    let pane_label = if pane_count == 1 {
+        "1 pane".to_owned()
+    } else {
+        format!("{pane_count} panes")
+    };
+
+    if nested_rows_visible {
+        format!("Layout for the active Workspace, {item_label} in {pane_label}")
+    } else {
+        format!(
+            "Layout summary for the active Workspace, {item_label} in {pane_label}. Use the native pane tabs to open an item"
+        )
+    }
 }
 
 fn workspace_tab_icon_color(is_visible: bool, is_focused: bool) -> Color {
@@ -2864,6 +2908,10 @@ mod session_start_state_tests {
         assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 open");
         assert_eq!(workspace_tab_layout_label("Dez", 3, 2), "3 open · 2 panes");
         assert_eq!(workspace_tab_layout_label("Zed", 3, 1), "3 tabs");
+        assert!(!workspace_layout_nested_rows_visible(px(279.0)));
+        assert!(workspace_layout_nested_rows_visible(
+            PRIMARY_ACTION_LABELS_MIN_WIDTH
+        ));
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
         assert_eq!(
             workspace_pane_navigation_label(1, 3).as_deref(),
@@ -2878,6 +2926,22 @@ mod session_start_state_tests {
             Some("Pane 2")
         );
         assert_eq!(workspace_pane_header_label(0, 1, true), None);
+        assert_eq!(
+            workspace_pane_header_accessibility_label(0, 2, true, 3),
+            "Pane 1 of 2, focused, 3 open items"
+        );
+        assert_eq!(
+            workspace_pane_header_accessibility_label(1, 2, false, 1),
+            "Pane 2 of 2, 1 open item"
+        );
+        assert_eq!(
+            workspace_layout_accessibility_label(4, 2, true),
+            "Layout for the active Workspace, 4 open items in 2 panes"
+        );
+        assert_eq!(
+            workspace_layout_accessibility_label(4, 2, false),
+            "Layout summary for the active Workspace, 4 open items in 2 panes. Use the native pane tabs to open an item"
+        );
         assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
         assert_eq!(workspace_tab_icon_color(true, false), Color::Default);
         assert_eq!(workspace_tab_icon_color(true, true), Color::Default);
@@ -18931,12 +18995,21 @@ impl Sidebar {
 
         for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
             let pane_is_active = pane == active_pane;
+            let pane_tab_count = items.len();
 
             if let Some(pane_label) =
                 workspace_pane_header_label(pane_index, pane_count, pane_is_active)
             {
                 rows.push(
                     h_flex()
+                        .role(gpui::Role::Heading)
+                        .aria_level(3)
+                        .aria_label(workspace_pane_header_accessibility_label(
+                            pane_index,
+                            pane_count,
+                            pane_is_active,
+                            pane_tab_count,
+                        ))
                         .px_2()
                         .pt_1()
                         .pb_0p5()
@@ -19082,17 +19155,14 @@ impl Sidebar {
                     .color(Color::Muted),
             );
         let has_rows = !rows.is_empty();
-        let accessibility_label = if nested_rows_visible {
-            "Tabs and panels in the active Workspace"
-        } else {
-            "Pane layout summary for the active Workspace"
-        };
+        let accessibility_label =
+            workspace_layout_accessibility_label(tab_count, pane_count, nested_rows_visible);
 
         Some(
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label(accessibility_label)
+                .aria_label(accessibility_label.clone())
                 .flex_none()
                 .min_h_0()
                 .border_b_1()

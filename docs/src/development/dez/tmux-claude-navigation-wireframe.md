@@ -286,9 +286,11 @@ Annotations:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-At the responsive minimum, the Layout header keeps the total and real pane
-identity but omits nested tab rows; the native pane tab strip remains the
-authoritative destination list. Activity keeps current and attention-required
-rows. The titlebar keeps **Open Workspace** and the overview menu, while the
-redundant Search icon collapses into that menu. No content scrolls horizontally,
-and closing Workspaces still returns its width to the Main Work Area.
+Below 280px, the Layout header keeps the total and real pane identity but omits
+nested tab rows; the native pane tab strip remains the authoritative destination
+list. Each pane heading announces its position, focused state, and open-item
+count, so the compact summary remains useful to screen readers without restoring
+the crowded duplicate rows. Activity keeps current and attention-required rows.
+The titlebar keeps **Open Workspace** and the overview menu, while the redundant
+Search icon collapses into that menu. No content scrolls horizontally, and
+closing Workspaces still returns its width to the Main Work Area.
