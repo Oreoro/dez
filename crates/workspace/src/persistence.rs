@@ -2976,7 +2976,7 @@ mod tests {
         multi_workspace.update(cx, |multi_workspace, cx| {
             multi_workspace.open_sidebar(cx);
         });
-        cx.update(|cx| cx.shutdown());
+        cx.update(|_, cx| cx.shutdown());
 
         let state = cx.update(|_, cx| read_multi_workspace_state(window_id, cx));
         assert!(
