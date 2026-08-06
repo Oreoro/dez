@@ -748,6 +748,8 @@ that persistent identity. Both remain explicit user preferences.
   exact bounded attention count as **Attention 2**. At compact icon-only widths
   the same count remains in the accessible name and the semantic indicator;
   the status bar never maintains a second attention total.
+- Long Workspace names truncate as secondary status metadata before they can
+  crowd the Workspaces recovery action or its visible attention count.
 - Top and status chrome must change size together when Compact, Balanced, or
   Spacious density changes; individual surfaces do not invent local scales.
 - The status line derives split-pane identity from the active native Workspace.

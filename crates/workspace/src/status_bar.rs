@@ -16,6 +16,7 @@ use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, rig
 
 const WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH: Pixels = px(760.0);
 const WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH: Pixels = px(960.0);
+const WORKSPACE_STATUS_NAME_MAX_CHARACTERS: usize = 24;
 const REPOSITORY_STATUS_MIN_VIEWPORT_WIDTH: Pixels = px(1200.0);
 
 /// Describes how a status-bar item can be hidden by the user.
@@ -197,6 +198,8 @@ fn sidebar_toggle_visible_label(
     let base_label = if viewport_width >= WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH
         && let Some(workspace_name) = workspace_name
     {
+        let workspace_name =
+            util::truncate_and_trailoff(workspace_name, WORKSPACE_STATUS_NAME_MAX_CHARACTERS);
         format!("Workspaces · {workspace_name}")
     } else {
         "Workspaces".to_owned()
@@ -386,6 +389,12 @@ mod tests {
         assert_eq!(
             sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(1200.0)),
             Some("Workspaces · paykit · Attention 2".into())
+        );
+        let long_workspace_name: SharedString = "this-is-a-very-long-workspace-name".into();
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", Some(&long_workspace_name), 2, px(1200.0)),
+            Some("Workspaces · this-is-a-very-long-work… · Attention 2".into()),
+            "secondary Workspace identity should truncate before the recovery action or attention count"
         );
         assert_eq!(
             sidebar_toggle_visible_label("Dez", None, 0, px(1200.0)),
@@ -670,6 +679,7 @@ impl StatusBar {
 
                 if let Some(visible_label) = visible_label {
                     Button::new("toggle-workspace-sidebar", visible_label)
+                        .truncate(true)
                         .start_icon(Icon::new(icon).size(icon_size).color(if has_notifications {
                             Color::Accent
                         } else {
