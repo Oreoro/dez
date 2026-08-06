@@ -7,7 +7,7 @@ use gpui::{
     ParentElement, Pixels, Render, Role, SharedString, Styled, Subscription, WeakEntity, Window,
 };
 use paths::APP_NAME;
-use settings::{Settings as _, SettingsContent, update_settings_file};
+use settings::{Settings as _, SettingsContent, SettingsStore, update_settings_file};
 use std::{any::TypeId, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
 use ui::{ContextMenu, Divider, IconPosition, Indicator, Tooltip, prelude::*, right_click_menu};
@@ -119,6 +119,7 @@ pub struct StatusBar {
     multi_workspace: Option<WeakEntity<MultiWorkspace>>,
     focus_handle: FocusHandle,
     _observe_active_pane: Subscription,
+    _settings_subscription: Subscription,
 }
 
 fn status_bar_label(app_name: &str) -> &'static str {
@@ -544,6 +545,7 @@ impl StatusBar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let settings_subscription = cx.observe_global::<SettingsStore>(|_, cx| cx.notify());
         let mut this = Self {
             left_items: Default::default(),
             right_items: Default::default(),
@@ -553,6 +555,7 @@ impl StatusBar {
             _observe_active_pane: cx.observe_in(active_pane, window, |this, _, window, cx| {
                 this.update_active_pane_item(window, cx)
             }),
+            _settings_subscription: settings_subscription,
         };
         this.update_active_pane_item(window, cx);
         this

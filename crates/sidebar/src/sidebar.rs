@@ -57,7 +57,7 @@ use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
 use session::{AppSession, AppSessionEvent, DurableWorkspaceResolution, WorkspaceRestoreState};
-use settings::Settings as _;
+use settings::{Settings as _, SettingsStore};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::mem;
@@ -6062,6 +6062,7 @@ pub struct Sidebar {
     project_header_new_thread_menu_handles: HashMap<usize, PopoverMenuHandle<ContextMenu>>,
     project_header_menu_ix: Option<usize>,
     worktree_default_branches: HashMap<ProjectGroupKey, DefaultBranchCache>,
+    _settings_subscription: gpui::Subscription,
     _subscriptions: Vec<gpui::Subscription>,
     _draft_editor_observations: Vec<gpui::Subscription>,
     update_task: Option<Task<()>>,
@@ -6103,6 +6104,10 @@ impl Sidebar {
                 window,
                 cx,
             )
+        });
+        let settings_subscription = cx.observe_global::<SettingsStore>(|this, cx| {
+            this.schedule_update_entries(false, cx);
+            cx.notify();
         });
 
         cx.subscribe_in(
@@ -6320,6 +6325,7 @@ impl Sidebar {
             project_header_new_thread_menu_handles: HashMap::new(),
             project_header_menu_ix: None,
             worktree_default_branches: HashMap::new(),
+            _settings_subscription: settings_subscription,
             _subscriptions: Vec::new(),
             _draft_editor_observations: Vec::new(),
             update_task: None,
