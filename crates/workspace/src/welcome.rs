@@ -13,15 +13,15 @@ use git::Clone as GitClone;
 use gpui::WeakEntity;
 use gpui::{
     Action, App, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
-    InteractiveElement, ParentElement, Pixels, Render, Styled, Task, TaskExt, Window, actions,
-    container_query, px,
+    InteractiveElement, ParentElement, Pixels, Render, Styled, Subscription, Task, TaskExt, Window,
+    actions, container_query, px,
 };
 use menu::{SelectNext, SelectPrevious};
 use paths::APP_NAME;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use settings::{DefaultOpenBehavior, Settings};
+use settings::{DefaultOpenBehavior, Settings, SettingsStore};
 use ui::{
     ButtonLike, Callout, Divider, DividerColor, KeyBinding, Severity, Tooltip, prelude::*,
     theme_is_transparent,
@@ -520,11 +520,14 @@ struct Section {
 }
 
 impl Section {
-    fn visible_entry_count(self, local_workspace: bool) -> usize {
+    fn visible_entries(self, local_workspace: bool) -> impl Iterator<Item = &'static SectionEntry> {
         self.entries
             .iter()
-            .filter(|entry| entry.visibility_guard.is_visible(local_workspace))
-            .count()
+            .filter(move |entry| entry.visibility_guard.is_visible(local_workspace))
+    }
+
+    fn visible_entry_count(self, local_workspace: bool) -> usize {
+        self.visible_entries(local_workspace).count()
     }
 
     fn render(
@@ -543,8 +546,7 @@ impl Section {
             .gap_0p5()
             .child(SectionHeader::new(self.title))
             .children(
-                self.entries
-                    .iter()
+                self.visible_entries(local_workspace)
                     .enumerate()
                     .filter_map(|(index, entry)| {
                         entry.render(
@@ -566,6 +568,7 @@ impl Section {
 pub struct WelcomePage {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
+    _settings_subscription: Option<Subscription>,
     fallback_to_recent_projects: bool,
     recent_workspaces: Option<Vec<RecentWorkspace>>,
     recent_workspaces_load_failed: bool,
@@ -638,10 +641,13 @@ impl WelcomePage {
         if let Some(workspace) = workspace.upgrade() {
             cx.observe(&workspace, |_, _, cx| cx.notify()).detach();
         }
+        let settings_subscription =
+            (APP_NAME != "Zed").then(|| cx.observe_global::<SettingsStore>(|_, cx| cx.notify()));
 
         let mut welcome_page = WelcomePage {
             workspace,
             focus_handle,
+            _settings_subscription: settings_subscription,
             fallback_to_recent_projects,
             recent_workspaces: None,
             recent_workspaces_load_failed: false,
@@ -1599,6 +1605,45 @@ mod tests {
         assert_eq!(OPEN_WORKSPACE.create_new_window, Some(false));
         assert!(welcome_emphasizes_first_action("Dez"));
         assert!(!welcome_emphasizes_first_action("Zed"));
+    }
+
+    #[test]
+    fn dez_home_keeps_conditional_workspace_actions_in_keyboard_order() {
+        let local_actions = DEZ_WORKSPACE_CONTENT
+            .0
+            .visible_entries(true)
+            .enumerate()
+            .map(|(index, entry)| (index, entry.title))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            local_actions,
+            vec![
+                (0, "Open Terminal"),
+                (1, "Codex"),
+                (2, "Claude Code"),
+                (3, "OpenCode"),
+                (4, "Open Workspace in cmux"),
+                (5, WORKSPACE_TMUX_LAUNCHER_LABEL),
+            ]
+        );
+
+        let remote_actions = DEZ_WORKSPACE_CONTENT
+            .0
+            .visible_entries(false)
+            .enumerate()
+            .map(|(index, entry)| (index, entry.title))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            remote_actions,
+            vec![
+                (0, "Open Terminal"),
+                (1, "Codex"),
+                (2, "Claude Code"),
+                (3, "OpenCode"),
+                (4, WORKSPACE_TMUX_LAUNCHER_LABEL),
+            ],
+            "hiding the local-only cmux handoff must not leave a keyboard-order gap"
+        );
     }
 
     #[test]

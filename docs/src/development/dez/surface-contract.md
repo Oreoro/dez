@@ -257,6 +257,11 @@ inherited editor customization. Native shell and TUI profiles launch inside
 Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
 an action or documentation route, never an availability toggle.
 
+Changing **Default Terminal** updates the named Home launcher without waiting
+for Home to be reopened. Home assigns keyboard order after local-only actions
+are filtered, so hiding the cmux handoff for a remote Workspace never creates a
+duplicate or skipped action target.
+
 Each Dez root page has one quiet semantic icon drawn from the same native icon
 set used by Home, Workspaces, tabs, and the status line. Icons supplement the
 page title and never replace it. Nested section rows remain text-only, keeping
