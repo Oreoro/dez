@@ -235,6 +235,11 @@ reveals the existing Debug panel, while **Open debug.json** opens the active
 Workspace configuration. Neither action starts a build or creates a parallel
 debug surface. Advanced adapter preferences remain below these actions.
 
+The curated Dez pages contain only fields with native controls. Settings that
+still require structured JSON stay available through the native Settings File
+route instead of appearing as rows whose only control is **Edit in
+settings.json**. Official Zed retains its complete upstream settings catalog.
+
 ### 8. Compact navigation
 
 ```text

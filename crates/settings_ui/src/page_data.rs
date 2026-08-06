@@ -97,9 +97,52 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         pages.push(developer_page(cx));
     }
     if paths::APP_NAME != "Zed" {
+        pages = pages
+            .into_iter()
+            .map(|page| curate_dez_settings_page(paths::APP_NAME, page))
+            .collect();
         pages.sort_by_key(|page| dez_settings_page_priority(page.title));
     }
     pages
+}
+
+fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage {
+    if app_name == "Zed" {
+        return page;
+    }
+
+    let mut curated_items = Vec::with_capacity(page.items.len());
+    let mut pending_section_header = None;
+
+    for item in page.items.into_vec() {
+        let item = match item {
+            SettingsPageItem::SectionHeader(header) => {
+                pending_section_header = Some(header);
+                continue;
+            }
+            SettingsPageItem::SettingItem(item) if item.field.is_settings_file_only() => continue,
+            SettingsPageItem::DynamicItem(mut item) => {
+                if item.discriminant.field.is_settings_file_only() {
+                    continue;
+                }
+                for fields in &mut item.fields {
+                    fields.retain(|field| !field.field.is_settings_file_only());
+                }
+                SettingsPageItem::DynamicItem(item)
+            }
+            item => item,
+        };
+
+        if let Some(section_header) = pending_section_header.take() {
+            curated_items.push(SettingsPageItem::SectionHeader(section_header));
+        }
+        curated_items.push(item);
+    }
+
+    SettingsPage {
+        title: page.title,
+        items: curated_items.into_boxed_slice(),
+    }
 }
 
 fn dez_settings_page_priority(title: &str) -> usize {
@@ -12016,6 +12059,45 @@ mod tests {
             dez_settings_page_priority("Workspace Tools") < dez_settings_page_priority("Advanced")
         );
         assert_eq!(dez_settings_page_priority("Unknown Compatibility Page"), 14);
+    }
+
+    #[test]
+    fn dez_curated_settings_hide_settings_file_only_rows() {
+        fn contains_settings_file_only_field(page: &SettingsPage) -> bool {
+            page.items.iter().any(|item| match item {
+                SettingsPageItem::SettingItem(item) => item.field.is_settings_file_only(),
+                SettingsPageItem::DynamicItem(item) => {
+                    item.discriminant.field.is_settings_file_only()
+                        || item
+                            .fields
+                            .iter()
+                            .flatten()
+                            .any(|field| field.field.is_settings_file_only())
+                }
+                SettingsPageItem::SectionHeader(_)
+                | SettingsPageItem::SubPageLink(_)
+                | SettingsPageItem::ActionLink(_) => false,
+            })
+        }
+
+        let upstream_appearance = curate_dez_settings_page("Zed", appearance_page());
+        assert!(contains_settings_file_only_field(&upstream_appearance));
+
+        for page in [appearance_page(), terminal_page()] {
+            let page = curate_dez_settings_page("Dez", page);
+            assert!(!contains_settings_file_only_field(&page));
+            assert!(!matches!(
+                page.items.last(),
+                Some(SettingsPageItem::SectionHeader(_))
+            ));
+            assert!(page.items.windows(2).all(|items| !matches!(
+                items,
+                [
+                    SettingsPageItem::SectionHeader(_),
+                    SettingsPageItem::SectionHeader(_)
+                ]
+            )));
+        }
     }
 
     #[test]

@@ -344,6 +344,7 @@ trait AnySettingField {
     fn as_any(&self) -> &dyn Any;
     fn type_name(&self) -> &'static str;
     fn type_id(&self) -> TypeId;
+    fn is_settings_file_only(&self) -> bool;
     // Returns the file this value was set in and true, or File::Default and false to indicate it was not found in any file (missing default)
     fn file_set_in(&self, file: SettingsUiFile, cx: &App) -> (settings::SettingsFile, bool);
     fn reset_to_default_fn(
@@ -369,6 +370,10 @@ impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingFi
 
     fn type_id(&self) -> TypeId {
         TypeId::of::<T>()
+    }
+
+    fn is_settings_file_only(&self) -> bool {
+        TypeId::of::<T>() == TypeId::of::<UnimplementedSettingField>()
     }
 
     fn file_set_in(&self, file: SettingsUiFile, cx: &App) -> (settings::SettingsFile, bool) {
