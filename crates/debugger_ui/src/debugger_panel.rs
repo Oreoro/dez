@@ -36,8 +36,8 @@ use std::sync::Arc;
 use task::{DebugScenario, SharedTaskContext};
 
 use ui::{
-    ButtonLike, ContextMenu, Divider, ElevationIndex, PopoverMenu, PopoverMenuHandle, SplitButton,
-    Tab, TintColor, Tooltip, prelude::*,
+    ButtonLike, Callout, ContextMenu, Divider, ElevationIndex, PopoverMenu, PopoverMenuHandle,
+    Severity, SplitButton, Tab, TintColor, Tooltip, prelude::*,
 };
 use util::redact::redact_command;
 use util::rel_path::RelPath;
@@ -98,12 +98,43 @@ fn dez_breakpoint_empty_copy() -> (&'static str, &'static str) {
     )
 }
 
+fn missing_debug_adapter_reason(adapter: &str) -> SharedString {
+    format!("The {adapter} debug adapter is not available.").into()
+}
+
+fn missing_debug_worktree_reason() -> SharedString {
+    "No Workspace root is available for this Debug Session.".into()
+}
+
+fn debug_launch_failure_description(reason: &str) -> SharedString {
+    format!("{reason} Fix the cause, then retry. Existing Debug content stays available.").into()
+}
+
+fn debug_launch_failure_visible(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+#[derive(Clone)]
+struct DebugLaunchRequest {
+    scenario: DebugScenario,
+    task_context: SharedTaskContext,
+    active_buffer: Option<Entity<Buffer>>,
+    worktree_id: Option<WorktreeId>,
+}
+
+#[derive(Clone)]
+struct DebugLaunchFailure {
+    reason: SharedString,
+    request: DebugLaunchRequest,
+}
+
 pub struct DebugPanel {
     active_session: Option<Entity<DebugSession>>,
     project: Entity<Project>,
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
     context_menu: Option<(Entity<ContextMenu>, Point<Pixels>, Subscription)>,
+    launch_failure: Option<DebugLaunchFailure>,
     debug_scenario_scheduled_last: bool,
     pub(crate) sessions_with_children:
         IndexMap<Entity<DebugSession>, Vec<WeakEntity<DebugSession>>>,
@@ -149,6 +180,7 @@ impl DebugPanel {
                 project,
                 workspace: workspace.weak_handle(),
                 context_menu: None,
+                launch_failure: None,
                 fs: workspace.app_state().fs.clone(),
                 thread_picker_menu_handle,
                 session_picker_menu_handle,
@@ -262,6 +294,70 @@ impl DebugPanel {
         }
     }
 
+    fn record_launch_failure(
+        &mut self,
+        request: DebugLaunchRequest,
+        reason: SharedString,
+        cx: &mut Context<Self>,
+    ) {
+        self.launch_failure = Some(DebugLaunchFailure { reason, request });
+        cx.notify();
+    }
+
+    fn retry_failed_launch(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(failure) = self.launch_failure.take() else {
+            return;
+        };
+        let DebugLaunchRequest {
+            scenario,
+            task_context,
+            active_buffer,
+            worktree_id,
+        } = failure.request;
+        cx.notify();
+        self.start_session(
+            scenario,
+            task_context,
+            active_buffer,
+            worktree_id,
+            window,
+            cx,
+        );
+    }
+
+    fn render_launch_failure(
+        &self,
+        failure: DebugLaunchFailure,
+        cx: &mut Context<Self>,
+    ) -> Callout {
+        Callout::new()
+            .severity(Severity::Error)
+            .icon(IconName::XCircle)
+            .title("Debug Session failed to start")
+            .description(debug_launch_failure_description(&failure.reason))
+            .actions_slot(
+                h_flex()
+                    .gap_1()
+                    .child(
+                        Button::new("retry-debug-launch", "Retry")
+                            .style(ButtonStyle::Filled)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.retry_failed_launch(window, cx);
+                            })),
+                    )
+                    .child(
+                        Button::new("open-debug-adapter-logs", "Adapter Logs")
+                            .style(ButtonStyle::Subtle)
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(
+                                    debugger_tools::OpenDebugAdapterLogs.boxed_clone(),
+                                    cx,
+                                );
+                            }),
+                    ),
+            )
+    }
+
     pub fn start_session(
         &mut self,
         scenario: DebugScenario,
@@ -271,24 +367,28 @@ impl DebugPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        let launch_request = DebugLaunchRequest {
+            scenario: scenario.clone(),
+            task_context: task_context.clone(),
+            active_buffer: active_buffer.clone(),
+            worktree_id,
+        };
+        self.launch_failure = None;
+        cx.notify();
+
         let dap_store = self.project.read(cx).dap_store();
         let Some(adapter) = DapRegistry::global(cx).adapter(&scenario.adapter) else {
+            self.record_launch_failure(
+                launch_request,
+                missing_debug_adapter_reason(&scenario.adapter),
+                cx,
+            );
             return;
         };
         let quirks = SessionQuirks {
             compact: adapter.compact_child_session(),
             prefer_thread_name: adapter.prefer_thread_name(),
         };
-        let session = dap_store.update(cx, |dap_store, cx| {
-            dap_store.new_session(
-                Some(scenario.label.clone()),
-                DebugAdapterName(scenario.adapter.clone()),
-                task_context.clone(),
-                None,
-                quirks,
-                cx,
-            )
-        });
         let worktree = worktree_id.or_else(|| {
             active_buffer
                 .as_ref()
@@ -301,8 +401,19 @@ impl DebugPanel {
             .or_else(|| self.project.read(cx).visible_worktrees(cx).next())
         else {
             log::debug!("Could not find a worktree to spawn the debug session in");
+            self.record_launch_failure(launch_request, missing_debug_worktree_reason(), cx);
             return;
         };
+        let session = dap_store.update(cx, |dap_store, cx| {
+            dap_store.new_session(
+                Some(scenario.label.clone()),
+                DebugAdapterName(scenario.adapter.clone()),
+                task_context.clone(),
+                None,
+                quirks,
+                cx,
+            )
+        });
 
         self.debug_scenario_scheduled_last = true;
         if let Some(inventory) = self
@@ -361,17 +472,29 @@ impl DebugPanel {
 
         let boot_task = cx.spawn({
             let session = session.clone();
+            let launch_request = launch_request.clone();
 
-            async move |_, cx| {
+            async move |this, cx| {
                 if let Err(error) = task.await {
                     let redacted_error = redact_command(&format!("{error:#}"));
                     log::error!("{redacted_error}");
+                    let should_report_failure = !session.read(cx).is_terminated();
+                    if should_report_failure {
+                        let reason = redacted_error.clone().into();
+                        this.update(cx, |this, cx| {
+                            this.record_launch_failure(launch_request, reason, cx);
+                        })
+                        .log_err();
+                    }
                     session
                         .update(cx, |session, cx| {
-                            session
+                            if session
                                 .console_output(cx)
-                                .unbounded_send(format!("error: {:#}", redacted_error))
-                                .ok();
+                                .unbounded_send(format!("error: {redacted_error}"))
+                                .is_err()
+                            {
+                                log::debug!("debug console closed before launch error output");
+                            }
                             session.shutdown(cx)
                         })
                         .await;
@@ -1709,6 +1832,9 @@ impl Render for DebugPanel {
         let secondary_panel_background = debugger_panel_background(cx);
         let panel_padding = debugger_panel_padding(cx);
         let docked_to_bottom = self.position(window, cx) == DockPosition::Bottom;
+        let launch_failure = debug_launch_failure_visible(paths::APP_NAME)
+            .then(|| self.launch_failure.clone())
+            .flatten();
 
         v_flex()
             .id("debug-panel")
@@ -1885,6 +2011,9 @@ impl Render for DebugPanel {
                         v_flex()
                             .size_full()
                             .child(h_flex().children(self.top_controls_strip(window, cx)))
+                            .when_some(launch_failure.clone(), |this, failure| {
+                                this.child(self.render_launch_failure(failure, cx))
+                            })
                             .child(
                                 div()
                                     .flex_1()
@@ -2158,6 +2287,9 @@ impl Render for DebugPanel {
                         .min_w_0()
                         .bg(panel_background)
                         .child(h_flex().children(self.top_controls_strip(window, cx)))
+                        .when_some(launch_failure.clone(), |this, failure| {
+                            this.child(self.render_launch_failure(failure, cx))
+                        })
                         .child(welcome_experience);
 
                     this.child(
@@ -2272,6 +2404,20 @@ mod product_copy_tests {
                 "No breakpoints yet",
                 "Set one from an editor gutter; it will appear here before or during a Debug Session."
             )
+        );
+        assert!(debug_launch_failure_visible("Dez"));
+        assert!(!debug_launch_failure_visible("Zed"));
+        assert_eq!(
+            missing_debug_adapter_reason("CodeLLDB"),
+            "The CodeLLDB debug adapter is not available."
+        );
+        assert_eq!(
+            missing_debug_worktree_reason(),
+            "No Workspace root is available for this Debug Session."
+        );
+        assert_eq!(
+            debug_launch_failure_description("Adapter connection refused."),
+            "Adapter connection refused. Fix the cause, then retry. Existing Debug content stays available."
         );
     }
 }
