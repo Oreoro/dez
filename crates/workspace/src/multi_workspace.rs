@@ -2304,28 +2304,7 @@ impl MultiWorkspace {
     pub fn serialize(&mut self, cx: &mut Context<Self>) {
         self._serialize_task = Some(cx.spawn(async move |this, cx| {
             let Some((window_id, state)) = this
-                .read_with(cx, |this, cx| {
-                    let state = MultiWorkspaceState {
-                        active_workspace_id: this.workspace().read(cx).database_id(),
-                        project_groups: this
-                            .project_groups
-                            .iter()
-                            .map(|group| {
-                                crate::persistence::model::SerializedProjectGroup::from_group(
-                                    &group.key,
-                                    group.expanded,
-                                )
-                            })
-                            .collect::<Vec<_>>(),
-                        sidebar_open: this.sidebar_open,
-                        sidebar_state: this
-                            .sidebar
-                            .as_ref()
-                            .and_then(|s| s.serialized_state(cx))
-                            .or_else(|| this.pending_sidebar_state.clone()),
-                    };
-                    (this.window_id, state)
-                })
+                .read_with(cx, |this, cx| (this.window_id, this.persistence_state(cx)))
                 .ok()
             else {
                 return;
@@ -2333,6 +2312,28 @@ impl MultiWorkspace {
             let kvp = cx.update(|cx| db::kvp::KeyValueStore::global(cx));
             crate::persistence::write_multi_workspace_state(&kvp, window_id, state).await;
         }));
+    }
+
+    fn persistence_state(&self, cx: &App) -> MultiWorkspaceState {
+        MultiWorkspaceState {
+            active_workspace_id: self.workspace().read(cx).database_id(),
+            project_groups: self
+                .project_groups
+                .iter()
+                .map(|group| {
+                    crate::persistence::model::SerializedProjectGroup::from_group(
+                        &group.key,
+                        group.expanded,
+                    )
+                })
+                .collect::<Vec<_>>(),
+            sidebar_open: self.sidebar_open,
+            sidebar_state: self
+                .sidebar
+                .as_ref()
+                .and_then(|sidebar| sidebar.serialized_state(cx))
+                .or_else(|| self.pending_sidebar_state.clone()),
+        }
     }
 
     /// Returns the in-flight serialization task (if any) so the caller can
@@ -2343,11 +2344,13 @@ impl MultiWorkspace {
     }
 
     fn app_will_quit(&mut self, cx: &mut Context<Self>) -> impl Future<Output = ()> + use<> {
-        self.serialize(cx);
-        let mut tasks: Vec<Task<()>> = Vec::new();
-        if let Some(task) = self._serialize_task.take() {
-            tasks.push(task);
-        }
+        self._serialize_task.take();
+        let window_id = self.window_id;
+        let state = self.persistence_state(cx);
+        let kvp = db::kvp::KeyValueStore::global(cx);
+        let mut tasks = vec![cx.background_spawn(async move {
+            crate::persistence::write_multi_workspace_state(&kvp, window_id, state).await;
+        })];
         tasks.extend(std::mem::take(&mut self.pending_removal_tasks));
 
         async move {

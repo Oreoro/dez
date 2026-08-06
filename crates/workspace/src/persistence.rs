@@ -2963,6 +2963,29 @@ mod tests {
     }
 
     #[gpui::test]
+    async fn test_multi_workspace_persists_latest_state_on_quit(cx: &mut gpui::TestAppContext) {
+        crate::tests::init_test(cx);
+
+        let fs = fs::FakeFs::new(cx.executor());
+        let project = Project::test(fs, [], cx).await;
+        let (multi_workspace, cx) =
+            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project, window, cx));
+        let window_id =
+            multi_workspace.update_in(cx, |_, window, _cx| window.window_handle().window_id());
+
+        multi_workspace.update(cx, |multi_workspace, cx| {
+            multi_workspace.open_sidebar(cx);
+        });
+        cx.update(|cx| cx.shutdown());
+
+        let state = cx.update(|_, cx| read_multi_workspace_state(window_id, cx));
+        assert!(
+            state.sidebar_open,
+            "quit should persist the latest Workspace state without waiting on a new foreground task"
+        );
+    }
+
+    #[gpui::test]
     async fn test_multi_workspace_serializes_on_add_and_remove(cx: &mut gpui::TestAppContext) {
         crate::tests::init_test(cx);
 
