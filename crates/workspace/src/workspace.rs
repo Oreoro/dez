@@ -566,7 +566,7 @@ fn dez_startup_destination(
     is_new_workspace: bool,
     has_explicitly_opened_item: bool,
     has_workspace_root: bool,
-) -> Option<CanvasLayoutRecipe> {
+) -> Option<DezStartupDestination> {
     if app_name == "Zed" || !is_new_workspace || has_explicitly_opened_item || !has_workspace_root {
         return None;
     }
