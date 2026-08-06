@@ -532,6 +532,19 @@ fn terminal_external_attach_retry_label(
     )
 }
 
+fn terminal_external_attach_new_shell_label(
+    width: Pixels,
+    external_attach_failed: bool,
+) -> Option<&'static str> {
+    external_attach_failed.then_some(
+        if width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH {
+            "New Shell"
+        } else {
+            ""
+        },
+    )
+}
+
 fn terminal_details_ownership_note_with_external_owner(
     has_persistent_owner: bool,
     host_connection_verified: bool,
@@ -3292,6 +3305,10 @@ impl TerminalView {
             context_width,
             external_attach_retry_task_id.is_some(),
         );
+        let new_shell_visible_label = terminal_external_attach_new_shell_label(
+            context_width,
+            external_attach_retry_task_id.is_some(),
+        );
 
         let details_status = format!("Status · {activity_accessibility_label}");
         let details_process = terminal_details_process_summary(
@@ -3536,6 +3553,29 @@ impl TerminalView {
                             )
                         },
                         )
+                        .when_some(new_shell_visible_label, |this, visible_label| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-new-shell", terminal_entity_id),
+                                    visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .tab_index(0isize)
+                                .aria_label("Open a new native shell in this Workspace")
+                                .tooltip(|_, cx| {
+                                    Tooltip::for_action(
+                                        "Open New Shell Here",
+                                        &OpenShellTerminal,
+                                        cx,
+                                    )
+                                })
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(OpenShellTerminal.boxed_clone(), cx);
+                                }),
+                            )
+                        })
                         .when(has_workspace_files, |this| {
                             this.child(
                                 Button::new(
@@ -5207,6 +5247,18 @@ mod tests {
             Some("Retry Attach")
         );
         assert_eq!(terminal_external_attach_retry_label(px(920.), false), None);
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(719.), true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(720.), true),
+            Some("New Shell")
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(920.), false),
+            None
+        );
         assert_eq!(
             terminal_details_ownership_note_with_external_owner(false, false, Some("tmux")),
             "Ownership · tmux remains external · This tab owns only the attach client."

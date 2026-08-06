@@ -134,10 +134,12 @@ and next action. Terminal Details is a disclosure within the terminal surface, n
 floating inspector. An attach tab names tmux or Herdr as the external owner and
 describes itself only as the attach client. When an attach command reaches that tab
 and exits unsuccessfully, the terminal toolbar presents the primary **Retry Attach**
-action and keeps the failed output visible. A provider failure that occurs before a
-terminal exists remains a Workspace notification with the same explicit retry; Dez
-does not show both recoveries for one failure. Destructive legacy termination
-remains behind a native confirmation.
+action, a secondary **Open New Shell Here** action, and keeps the failed output
+visible. The new shell is explicit independent work in the same Workspace; it
+never claims to migrate the external Session. A provider failure that occurs
+before a terminal exists remains a Workspace notification with the same explicit
+retry; Dez does not show both recoveries for one failure. Destructive legacy
+termination remains behind a native confirmation.
 
 ### 4. Review and intentional split
 
