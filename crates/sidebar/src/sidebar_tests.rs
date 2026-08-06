@@ -2604,6 +2604,51 @@ async fn test_reselecting_active_workspace_keeps_active_terminal_projection(
 }
 
 #[gpui::test]
+async fn test_opening_closed_workspace_keeps_current_activity_until_activation(
+    cx: &mut TestAppContext,
+) {
+    let (_fs, project) = init_multi_project_test(&["/project-a", "/project-b"], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace =
+        multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
+    let terminal_view = add_workspace_shell(&workspace, &project, cx);
+    terminal_view.update(cx, |terminal, cx| {
+        terminal.set_custom_title(Some("Codex".to_owned()), cx);
+    });
+    let terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &terminal_view, cx)
+    });
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    let closed_workspace_key =
+        ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/project-b")]));
+    sidebar.update_in(cx, |sidebar, window, cx| {
+        sidebar.activate_or_open_workspace_for_group(&closed_workspace_key, window, cx);
+    });
+
+    assert_eq!(
+        multi_workspace.read_with(cx, |multi_workspace, _| {
+            multi_workspace.workspace().clone()
+        }),
+        workspace,
+        "the current native Workspace should remain authoritative while another opens"
+    );
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
+    });
+}
+
+#[gpui::test]
 async fn test_switcher_cancel_restore_keeps_workspace_terminal_source(cx: &mut TestAppContext) {
     let project = init_test_project_with_agent_panel("/my-project", cx).await;
     let (multi_workspace, cx) =

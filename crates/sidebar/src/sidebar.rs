@@ -17271,8 +17271,8 @@ impl Sidebar {
             .and_then(|mw| mw.read(cx).last_active_workspace_for_group(key, cx))
             .or_else(|| self.workspace_for_group(key, cx));
         self.selection = None;
-        self.active_entry = None;
         if let Some(workspace) = workspace {
+            self.active_entry = None;
             self.activate_workspace(&workspace, window, cx);
             self.sync_active_entry_from_active_workspace(cx);
         } else {
