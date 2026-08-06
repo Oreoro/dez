@@ -5863,11 +5863,12 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
             let has_workspace_root = workspace_location.is_some_and(|(_, has_root)| has_root);
             let cmux_handoff_applicable =
                 workspace_location.is_some_and(|(is_local, has_root)| is_local && has_root);
-            let default_terminal_icon = configured_terminal_launcher_icon(
-                AgentSettings::get_global(cx)
-                    .terminal_init_command
-                    .as_deref(),
-            );
+            let default_terminal_command = AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref();
+            let default_terminal_label =
+                configured_terminal_launcher_label(default_terminal_command);
+            let default_terminal_icon = configured_terminal_launcher_icon(default_terminal_command);
             let built_in_agent_ready = built_in_agent_is_ready(cx);
             let (built_in_agent_label, built_in_agent_icon) =
                 pane_built_in_agent_action_presentation(built_in_agent_ready);
@@ -5907,7 +5908,7 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                     let menu = menu
                         .submenu("Open Terminal", move |menu, _, _| {
                             menu.action_with_icon(
-                                "Default Terminal",
+                                default_terminal_label,
                                 default_terminal_icon,
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
