@@ -191,8 +191,9 @@ work and never claims attachment, transfer, or migration.
 - Audit Zed's existing chords and action namespaces before assigning a temporary
   navigation mode shortcut.
 - Define the exact trusted event fields that may feed Activity and return recaps.
-- Prototype narrow-window collapse: hide nested tab rows first, preserve Pane and
-  Activity attention identity, and never introduce horizontal scrolling.
+- Validate the implemented narrow-window collapse with long Workspace, pane,
+  and Activity names: nested Layout destinations collapse first, while pane and
+  Activity attention identity remain visible without horizontal scrolling.
 - Decide whether completed Activity rows disappear immediately, after review, or
   after a short bounded acknowledgement period.
 - Validate the hierarchy with one pane, four panes, multiple Workspaces, long
@@ -266,3 +267,28 @@ Annotations:
    controls remain native menu triggers. While open they use the same neutral
    selected material as navigation and expose their expanded state to assistive
    technology; no menu state is communicated through accent color alone.
+
+## 26. Narrow Workspace rail
+
+```text
+┌ Workspaces ─────────┬ main.rs | + ──────────────────────────────────┐
+│ paykit              │                                               │
+│ main · 2 panes      │ Main Work Area remains primary                │
+│                     │                                               │
+│ Layout · 4 open     │                                               │
+│  Pane 1 · Focused   │                                               │
+│  Pane 2             │                                               │
+│                     │                                               │
+│ Activity · 1        │                                               │
+│  test · Attention   │                                               │
+├─────────────────────┴───────────────────────────────────────────────┤
+│ Workspaces · paykit · Pane 1 of 2 · 1 attention                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+At the responsive minimum, the Layout header keeps the total and real pane
+identity but omits nested tab rows; the native pane tab strip remains the
+authoritative destination list. Activity keeps current and attention-required
+rows. The titlebar keeps **Open Workspace** and the overview menu, while the
+redundant Search icon collapses into that menu. No content scrolls horizontally,
+and closing Workspaces still returns its width to the Main Work Area.

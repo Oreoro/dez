@@ -154,6 +154,29 @@ fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows() {
 }
 
 #[test]
+fn narrow_workspace_rail_collapses_redundant_navigation_before_identity() {
+    assert!(workspace_layout_nested_rows_visible(MIN_WIDTH));
+    assert!(session_header_search_control_visible("Dez", 2, MIN_WIDTH));
+
+    assert!(
+        !workspace_layout_nested_rows_visible(RESPONSIVE_MIN_WIDTH),
+        "the native tab strip remains authoritative when the narrow rail cannot show complete rows"
+    );
+    assert!(
+        !session_header_search_control_visible("Dez", 2, RESPONSIVE_MIN_WIDTH),
+        "narrow Workspaces keeps Search in the overview menu instead of crowding the titlebar"
+    );
+    assert!(
+        !session_header_search_control_visible("Dez", 1, MIN_WIDTH),
+        "a single destination does not need a dedicated Search control"
+    );
+    assert!(
+        !session_header_search_control_visible("Zed", 4, MIN_WIDTH),
+        "official Zed retains its inherited sidebar header"
+    );
+}
+
+#[test]
 fn narrow_session_scope_uses_short_unambiguous_labels() {
     assert_eq!(
         session_scope_labels(px(200.0), 12, 3),

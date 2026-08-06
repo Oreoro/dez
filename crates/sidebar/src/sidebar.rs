@@ -1132,6 +1132,14 @@ fn session_search_control_visible(app_name: &str, session_count: usize) -> bool 
     app_name != "Zed" && session_count > 1
 }
 
+fn session_header_search_control_visible(
+    app_name: &str,
+    session_count: usize,
+    rail_width: Pixels,
+) -> bool {
+    session_search_control_visible(app_name, session_count) && rail_width >= MIN_WIDTH
+}
+
 fn session_overview_visible(
     app_name: &str,
     session_count: usize,
@@ -1382,6 +1390,10 @@ fn workspace_tabs_section_title(app_name: &str) -> &'static str {
 
 fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
     app_name != "Zed" && tab_count > 1
+}
+
+fn workspace_layout_nested_rows_visible(rail_width: Pixels) -> bool {
+    rail_width >= MIN_WIDTH
 }
 
 fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
@@ -18905,14 +18917,12 @@ impl Sidebar {
             })
             .unwrap_or_else(|| SharedString::from("Current Workspace"));
         let pane_count = pane_items.len();
+        let nested_rows_visible = workspace_layout_nested_rows_visible(self.rendered_width);
         let mut rows = Vec::with_capacity(tab_count + pane_count);
         let mut tab_position = 0;
 
         for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
             let pane_is_active = pane == active_pane;
-            let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
-            let pinned_count = pane.read(cx).pinned_count();
-            let details = workspace::tab_details(&items, window, cx);
 
             if let Some(pane_label) =
                 workspace_pane_header_label(pane_index, pane_count, pane_is_active)
@@ -18935,6 +18945,14 @@ impl Sidebar {
                         .into_any_element(),
                 );
             }
+
+            if !nested_rows_visible {
+                continue;
+            }
+
+            let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
+            let pinned_count = pane.read(cx).pinned_count();
+            let details = workspace::tab_details(&items, window, cx);
 
             for (item_index, item) in items.into_iter().enumerate() {
                 tab_position += 1;
@@ -19055,27 +19073,35 @@ impl Sidebar {
                     .size(LabelSize::XSmall)
                     .color(Color::Muted),
             );
+        let has_rows = !rows.is_empty();
+        let accessibility_label = if nested_rows_visible {
+            "Tabs and panels in the active Workspace"
+        } else {
+            "Pane layout summary for the active Workspace"
+        };
 
         Some(
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label("Tabs and panels in the active Workspace")
+                .aria_label(accessibility_label)
                 .flex_none()
                 .min_h_0()
                 .border_b_1()
                 .border_color(cx.theme().colors().border)
                 .child(section_header)
-                .child(
-                    v_flex()
-                        .id("active-workspace-tab-list")
-                        .role(gpui::Role::List)
-                        .aria_label("Tabs and panels in the active Workspace")
-                        .max_h(vh(0.28, window))
-                        .overflow_y_scroll()
-                        .p_1()
-                        .children(rows),
-                )
+                .when(has_rows, |this| {
+                    this.child(
+                        v_flex()
+                            .id("active-workspace-tab-list")
+                            .role(gpui::Role::List)
+                            .aria_label(accessibility_label)
+                            .max_h(vh(0.28, window))
+                            .overflow_y_scroll()
+                            .p_1()
+                            .children(rows),
+                    )
+                })
                 .into_any_element(),
         )
     }
@@ -19099,9 +19125,11 @@ impl Sidebar {
             || self.filter_editor.focus_handle(cx).is_focused(window);
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
         let searchable_item_count = total_item_count + self.contents.project_header_indices.len();
-        let show_search_control =
-            session_search_control_visible(paths::APP_NAME, searchable_item_count)
-                && !search_is_active;
+        let show_search_control = session_header_search_control_visible(
+            paths::APP_NAME,
+            searchable_item_count,
+            self.rendered_width,
+        ) && !search_is_active;
         let (header_control_size, header_icon_size) = workspace_navigation_control_metrics(
             APP_NAME,
             DesignSystemSettings::get_global(cx).density,
