@@ -81,7 +81,7 @@ trait StatusItemViewHandle: Send {
 struct SidebarStatus {
     open: bool,
     side: SidebarSide,
-    has_notifications: bool,
+    attention_count: usize,
     show_toggle: bool,
     workspace_name: Option<SharedString>,
 }
@@ -106,7 +106,7 @@ impl SidebarStatus {
                 Self {
                     open: mw.sidebar_open() && enabled,
                     side: mw.sidebar_side(cx),
-                    has_notifications: mw.sidebar_has_notifications(cx),
+                    attention_count: mw.sidebar_attention_count(cx),
                     show_toggle: enabled,
                     workspace_name,
                 }
@@ -158,36 +158,55 @@ fn sidebar_toggle_label(app_name: &str, open: bool) -> &'static str {
 fn sidebar_toggle_accessibility_label(
     app_name: &str,
     open: bool,
-    has_notifications: bool,
-) -> &'static str {
-    match (app_name == "Zed", open, has_notifications) {
-        (true, true, true) => "Hide Sessions, attention needed",
-        (true, true, false) => "Hide Sessions",
-        (true, false, true) => "Open Sessions, attention needed",
-        (true, false, false) => "Open Sessions",
-        (false, true, true) => "Hide Workspaces, attention needed",
-        (false, true, false) => "Hide Workspaces",
-        (false, false, true) => "Open Workspaces, attention needed",
-        (false, false, false) => "Open Workspaces",
+    attention_count: usize,
+) -> SharedString {
+    let base_label = match (app_name == "Zed", open) {
+        (true, true) => "Hide Sessions",
+        (true, false) => "Open Sessions",
+        (false, true) => "Hide Workspaces",
+        (false, false) => "Open Workspaces",
+    };
+    if attention_count == 0 {
+        return base_label.into();
     }
+
+    let attention_noun = match (app_name == "Zed", attention_count == 1) {
+        (true, true) => "session",
+        (true, false) => "sessions",
+        (false, true) => "item",
+        (false, false) => "items",
+    };
+    let attention_verb = if attention_count == 1 {
+        "needs"
+    } else {
+        "need"
+    };
+    format!("{base_label}, {attention_count} {attention_noun} {attention_verb} attention").into()
 }
 
 fn sidebar_toggle_visible_label(
     app_name: &str,
     workspace_name: Option<&SharedString>,
+    attention_count: usize,
     viewport_width: Pixels,
 ) -> Option<SharedString> {
     if app_name == "Zed" || viewport_width < WORKSPACE_STATUS_LABEL_MIN_VIEWPORT_WIDTH {
         return None;
     }
 
-    if viewport_width >= WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH
+    let base_label = if viewport_width >= WORKSPACE_STATUS_NAME_MIN_VIEWPORT_WIDTH
         && let Some(workspace_name) = workspace_name
     {
-        Some(format!("Workspaces · {workspace_name}").into())
+        format!("Workspaces · {workspace_name}")
     } else {
-        Some("Workspaces".into())
-    }
+        "Workspaces".to_owned()
+    };
+
+    Some(if attention_count > 0 {
+        format!("{base_label} · Attention {attention_count}").into()
+    } else {
+        base_label.into()
+    })
 }
 
 fn focused_pane_status_label(
@@ -348,41 +367,52 @@ mod tests {
         assert_eq!(sidebar_toggle_label("Zed", false), "Open Sessions");
         assert_eq!(sidebar_toggle_label("Zed", true), "Hide Sessions");
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", false, true),
-            "Open Workspaces, attention needed"
+            sidebar_toggle_accessibility_label("Dez", false, 2),
+            "Open Workspaces, 2 items need attention"
         );
         assert_eq!(
-            sidebar_toggle_accessibility_label("Dez", true, false),
+            sidebar_toggle_accessibility_label("Dez", true, 0),
             "Hide Workspaces"
+        );
+        assert_eq!(
+            sidebar_toggle_accessibility_label("Zed", true, 1),
+            "Hide Sessions, 1 session needs attention"
         );
         let workspace_name: SharedString = "paykit".into();
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(1200.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(1200.0)),
             Some("Workspaces · paykit".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", None, px(1200.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(1200.0)),
+            Some("Workspaces · paykit · Attention 2".into())
+        );
+        assert_eq!(
+            sidebar_toggle_visible_label("Dez", None, 0, px(1200.0)),
             Some("Workspaces".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(600.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(600.0)),
             None,
             "compact windows should keep the native recovery action without crowding status context"
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(760.0)),
-            Some("Workspaces".into()),
-            "medium windows should preserve navigation identity before Workspace metadata"
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 2, px(760.0)),
+            Some("Workspaces · Attention 2".into()),
+            "medium windows should preserve actionable attention before Workspace metadata"
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(959.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(959.0)),
             Some("Workspaces".into())
         );
         assert_eq!(
-            sidebar_toggle_visible_label("Dez", Some(&workspace_name), px(960.0)),
+            sidebar_toggle_visible_label("Dez", Some(&workspace_name), 0, px(960.0)),
             Some("Workspaces · paykit".into())
         );
-        assert_eq!(sidebar_toggle_visible_label("Zed", None, px(1200.0)), None);
+        assert_eq!(
+            sidebar_toggle_visible_label("Zed", None, 2, px(1200.0)),
+            None
+        );
         assert_eq!(
             focused_pane_status_label("Dez", 0, 2, px(1200.0)),
             Some("Pane 1 of 2".into())
@@ -604,13 +634,18 @@ impl StatusBar {
     ) -> impl IntoElement {
         let on_right = sidebar.side == SidebarSide::Right;
         let open = sidebar.open;
-        let has_notifications = sidebar.has_notifications;
+        let attention_count = sidebar.attention_count;
+        let has_notifications = attention_count > 0;
         let indicator_border = cx.theme().colors().status_bar_background;
         let toggle_label = sidebar_toggle_label(APP_NAME, open);
         let accessibility_label =
-            sidebar_toggle_accessibility_label(APP_NAME, open, has_notifications);
-        let visible_label =
-            sidebar_toggle_visible_label(APP_NAME, sidebar.workspace_name.as_ref(), viewport_width);
+            sidebar_toggle_accessibility_label(APP_NAME, open, attention_count);
+        let visible_label = sidebar_toggle_visible_label(
+            APP_NAME,
+            sidebar.workspace_name.as_ref(),
+            attention_count,
+            viewport_width,
+        );
         let (control_size, icon_size) =
             sidebar_header_control_metrics(APP_NAME, DesignSystemSettings::get_global(cx).density);
 

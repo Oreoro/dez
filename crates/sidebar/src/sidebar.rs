@@ -20193,8 +20193,15 @@ impl WorkspaceSidebar for Sidebar {
     }
 
     fn has_notifications(&self, cx: &App) -> bool {
-        WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention
-            && self.contents.has_attention
+        self.attention_count(cx) > 0
+    }
+
+    fn attention_count(&self, cx: &App) -> usize {
+        if WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention {
+            self.contents.attention_count
+        } else {
+            0
+        }
     }
 
     fn is_threads_list_view_active(&self) -> bool {

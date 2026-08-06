@@ -744,6 +744,10 @@ that persistent identity. Both remain explicit user preferences.
 - The Main Work Area keeps at least 60% of the window width.
 - Workspaces may collapse or close; its state remains reachable from the
   labeled status-bar control.
+- At labeled widths the Workspaces status control projects the sidebar owner's
+  exact bounded attention count as **Attention 2**. At compact icon-only widths
+  the same count remains in the accessible name and the semantic indicator;
+  the status bar never maintains a second attention total.
 - Top and status chrome must change size together when Compact, Balanced, or
   Spacious density changes; individual surfaces do not invent local scales.
 - The status line derives split-pane identity from the active native Workspace.

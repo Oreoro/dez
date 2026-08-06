@@ -481,6 +481,9 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     }
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>);
     fn has_notifications(&self, cx: &App) -> bool;
+    fn attention_count(&self, cx: &App) -> usize {
+        if self.has_notifications(cx) { 1 } else { 0 }
+    }
     fn side(&self, _cx: &App) -> SidebarSide;
 
     fn is_threads_list_view_active(&self) -> bool {
@@ -558,6 +561,7 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn prepare_for_focus(&self, window: &mut Window, cx: &mut App);
     fn focus_filter(&self, window: &mut Window, cx: &mut App);
     fn has_notifications(&self, cx: &App) -> bool;
+    fn attention_count(&self, cx: &App) -> usize;
     fn to_any(&self) -> AnyView;
     fn entity_id(&self) -> EntityId;
     fn toggle_thread_switcher(&self, select_last: bool, window: &mut Window, cx: &mut App);
@@ -619,6 +623,10 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
 
     fn has_notifications(&self, cx: &App) -> bool {
         self.read(cx).has_notifications(cx)
+    }
+
+    fn attention_count(&self, cx: &App) -> usize {
+        self.read(cx).attention_count(cx)
     }
 
     fn to_any(&self) -> AnyView {
@@ -887,6 +895,12 @@ impl MultiWorkspace {
         self.sidebar
             .as_ref()
             .map_or(false, |s| s.has_notifications(cx))
+    }
+
+    pub fn sidebar_attention_count(&self, cx: &App) -> usize {
+        self.sidebar
+            .as_ref()
+            .map_or(0, |sidebar| sidebar.attention_count(cx))
     }
 
     pub fn is_threads_list_view_active(&self, cx: &App) -> bool {
