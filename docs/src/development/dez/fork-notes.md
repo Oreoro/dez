@@ -2033,17 +2033,17 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   The user setting **New Workspace Starts With** applies only to a new
   Workspace that has a real root, no restorable layout, and no explicitly
   opened item. **Focus** keeps one Main Work Area and is the default;
-  **Direct**, **Agentic**, **Review**, and **Debug** select the existing Files,
-  Built-in Agent, Git Changes, or Debug owner through the same Workspace Layout
-  recipes used by explicit actions. Restored layouts and explicit file or tool
-  opens always win. The setting never creates a mode switch, starts a terminal,
-  agent, task, build, or debug session, and only an explicit **Split Work Area**
-  action may create another populated pane. Dez registers the existing
-  `AgentPanel` with its other native tool owners so **Agentic** resolves to a
-  real Built-in Agent destination instead of a named but empty layout. Loading
-  that owner does not create a terminal or start an Agent Session. If any
-  requested tool owner is unavailable, Dez preserves the focused Main Work Area
-  and records **Focus Work Area**, keeping the visible layout, saved state,
-  status line, and next-layout cycle truthful. The older Files-specific
-  `project_panel.starts_open` preference remains raw-settings compatibility but
-  is no longer a second graphical startup control in Dez.
+  **Direct**, **Agentic**, **Review**, and **Debug** select Files, the configured
+  Default Terminal, Git Changes, or Debug. Restored layouts and explicit file or
+  tool opens always win. Agentic dispatches the existing configured-terminal
+  action into the active Main Work Area without opening a split; its terminal or
+  Workspace recovery remains authoritative if launch fails. The other intents
+  never start an agent, task, build, or debug session, and only an explicit
+  **Split Work Area** action may create another populated pane. **Work Area +
+  Built-in Agent** remains an optional explicit Workspace Layout recipe backed
+  by the existing `AgentPanel`. If any requested panel owner is unavailable,
+  Dez preserves the focused Main Work Area and records **Focus Work Area**,
+  keeping the visible layout, saved state, status line, and next-layout cycle
+  truthful. The older Files-specific `project_panel.starts_open` preference
+  remains raw-settings compatibility but is no longer a second graphical
+  startup control in Dez.

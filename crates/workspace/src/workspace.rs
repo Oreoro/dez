@@ -172,7 +172,10 @@ pub use workspace_settings::{
     RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
     WorkspaceSettings, observe_accessible_mode,
 };
-use zed_actions::{OpenTelemetryLog, Spawn, feedback::FileBugReport, theme::ToggleMode};
+use zed_actions::{
+    OpenTelemetryLog, Spawn, feedback::FileBugReport, terminal::OpenAgentTerminal,
+    theme::ToggleMode,
+};
 
 pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     workspace_card_gap_for_product(paths::APP_NAME, WorkspaceSettings::get_global(cx).card_gap)
@@ -551,7 +554,13 @@ fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> C
         .unwrap_or(CanvasLayoutRecipe::Full)
 }
 
-fn dez_startup_canvas_layout_recipe(
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DezStartupDestination {
+    CanvasLayout(CanvasLayoutRecipe),
+    DefaultTerminal,
+}
+
+fn dez_startup_destination(
     app_name: &str,
     intent: settings::WorkspaceStartupIntent,
     is_new_workspace: bool,
@@ -564,10 +573,16 @@ fn dez_startup_canvas_layout_recipe(
 
     match intent {
         settings::WorkspaceStartupIntent::Focus => None,
-        settings::WorkspaceStartupIntent::Direct => Some(CanvasLayoutRecipe::Full),
-        settings::WorkspaceStartupIntent::Agentic => Some(CanvasLayoutRecipe::AgentControl),
-        settings::WorkspaceStartupIntent::Review => Some(CanvasLayoutRecipe::Review),
-        settings::WorkspaceStartupIntent::Debug => Some(CanvasLayoutRecipe::Debug),
+        settings::WorkspaceStartupIntent::Direct => Some(DezStartupDestination::CanvasLayout(
+            CanvasLayoutRecipe::Full,
+        )),
+        settings::WorkspaceStartupIntent::Agentic => Some(DezStartupDestination::DefaultTerminal),
+        settings::WorkspaceStartupIntent::Review => Some(DezStartupDestination::CanvasLayout(
+            CanvasLayoutRecipe::Review,
+        )),
+        settings::WorkspaceStartupIntent::Debug => Some(DezStartupDestination::CanvasLayout(
+            CanvasLayoutRecipe::Debug,
+        )),
     }
 }
 
@@ -4326,7 +4341,7 @@ impl Workspace {
                 .await
                 .unwrap_or_default();
             let has_explicitly_opened_item = !opened_items.is_empty();
-            let startup_recipe = window
+            let startup_destination = window
                 .update(cx, |_, _window, cx| {
                     let workspace = workspace.read(cx);
                     let has_workspace_root =
@@ -4340,7 +4355,7 @@ impl Workspace {
                                     .root_entry()
                                     .is_some_and(|entry| entry.is_dir())
                             });
-                    dez_startup_canvas_layout_recipe(
+                    dez_startup_destination(
                         paths::APP_NAME,
                         WorkspaceSettings::get_global(cx).startup_intent,
                         is_new_workspace,
@@ -4351,7 +4366,7 @@ impl Workspace {
                 .log_err()
                 .flatten();
 
-            if let Some(startup_recipe) = startup_recipe {
+            if let Some(DezStartupDestination::CanvasLayout(startup_recipe)) = startup_destination {
                 let panels_task = window
                     .update(cx, |_, _window, cx| {
                         workspace.update(cx, |workspace, _cx| workspace.take_panels_task())
@@ -4411,6 +4426,19 @@ impl Workspace {
                     });
                 })
                 .log_err();
+
+            if startup_destination == Some(DezStartupDestination::DefaultTerminal) {
+                window
+                    .update(cx, |_, window, cx| {
+                        workspace.update(cx, |workspace, cx| {
+                            let active_pane = workspace.active_pane().clone();
+                            active_pane
+                                .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+                        });
+                        window.dispatch_action(OpenAgentTerminal.boxed_clone(), cx);
+                    })
+                    .log_err();
+            }
 
             if open_mode == OpenMode::NewWindow || open_mode == OpenMode::Activate {
                 window
@@ -17754,7 +17782,7 @@ mod tests {
     #[test]
     fn dez_startup_intent_never_overrides_restored_or_explicit_work() {
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Focus,
                 true,
@@ -17764,47 +17792,53 @@ mod tests {
             None
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Direct,
                 true,
                 false,
                 true,
             ),
-            Some(CanvasLayoutRecipe::Full)
+            Some(DezStartupDestination::CanvasLayout(
+                CanvasLayoutRecipe::Full
+            ))
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Agentic,
                 true,
                 false,
                 true,
             ),
-            Some(CanvasLayoutRecipe::AgentControl)
+            Some(DezStartupDestination::DefaultTerminal)
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Review,
                 true,
                 false,
                 true,
             ),
-            Some(CanvasLayoutRecipe::Review)
+            Some(DezStartupDestination::CanvasLayout(
+                CanvasLayoutRecipe::Review
+            ))
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Debug,
                 true,
                 false,
                 true,
             ),
-            Some(CanvasLayoutRecipe::Debug)
+            Some(DezStartupDestination::CanvasLayout(
+                CanvasLayoutRecipe::Debug
+            ))
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Direct,
                 false,
@@ -17815,7 +17849,7 @@ mod tests {
             "a restored Workspace keeps its saved native layout"
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Direct,
                 true,
@@ -17826,7 +17860,7 @@ mod tests {
             "an explicitly opened item remains the first destination"
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Dez",
                 settings::WorkspaceStartupIntent::Direct,
                 true,
@@ -17837,7 +17871,7 @@ mod tests {
             "Home remains the owner when no Workspace root exists"
         );
         assert_eq!(
-            dez_startup_canvas_layout_recipe(
+            dez_startup_destination(
                 "Zed",
                 settings::WorkspaceStartupIntent::Direct,
                 true,

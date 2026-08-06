@@ -272,12 +272,15 @@ are filtered, so hiding the cmux handoff for a remote Workspace never creates a
 duplicate or skipped action target.
 
 **New Workspace Starts With** names the existing native destination it will
-open: **Focus Work Area**, **Files**, **Built-in Agent**, **Git Changes**, or
+open: **Focus Work Area**, **Files**, **Default Terminal**, **Git Changes**, or
 **Debug**. These are not durable product modes. The choice applies only when a
 new Workspace has a root but no restored layout or explicitly opened item.
-If that destination's native owner is unavailable, the focused Main Work Area
-remains visible and **Focus Work Area** becomes the active saved layout. The
-status line and next-layout cycle must never claim a tool that did not open.
+**Default Terminal** dispatches the same configured launcher used by Home and
+the adjacent `+` into the active Main Work Area without creating a split. Its
+native Terminal or Workspace recovery remains authoritative if launch fails.
+If a panel destination's native owner is unavailable, the focused Main Work
+Area remains visible and **Focus Work Area** becomes the active saved layout.
+The status line and next-layout cycle must never claim a tool that did not open.
 
 Each Dez root page has one quiet semantic icon drawn from the same native icon
 set used by Home, Workspaces, tabs, and the status line. Icons supplement the

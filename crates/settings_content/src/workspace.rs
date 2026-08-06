@@ -168,7 +168,7 @@ pub enum WorkspaceStartupIntent {
     Focus,
     #[strum(serialize = "Files")]
     Direct,
-    #[strum(serialize = "Built-in Agent")]
+    #[strum(serialize = "Default Terminal")]
     Agentic,
     #[strum(serialize = "Git Changes")]
     Review,

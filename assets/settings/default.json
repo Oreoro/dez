@@ -166,7 +166,8 @@
   //         "restore_on_startup": "launchpad",
   "restore_on_startup": "launchpad",
   // The first native destination for a new Workspace with no restored layout
-  // or explicitly opened item. May be focus, direct, agentic, review, or debug.
+  // or explicitly opened item. May be focus, direct (Files), agentic (Default
+  // Terminal), review (Git Changes), or debug.
   // Restored layouts and explicit file or tool opens always win.
   "startup_intent": "focus",
   // The default behavior when opening paths from the CLI without

@@ -482,7 +482,7 @@ fn projects_startup_setting() -> SettingsPageItem {
 fn workspace_startup_intent_setting() -> SettingsPageItem {
     SettingsPageItem::SettingItem(SettingItem {
         title: "New Workspace Starts With",
-        description: "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Focus Work Area opens no tool. If a chosen tool is unavailable, Dez keeps Focus Work Area instead.",
+        description: "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Default Terminal uses your configured launcher in the Main Work Area without creating a split. If a native tool is unavailable, Dez keeps Focus Work Area instead.",
         field: Box::new(SettingField {
             organization_override: None,
             json_path: Some("startup_intent"),
@@ -12322,7 +12322,7 @@ mod tests {
         assert_eq!(startup_intent.title, "New Workspace Starts With");
         assert_eq!(
             startup_intent.description,
-            "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Focus Work Area opens no tool. If a chosen tool is unavailable, Dez keeps Focus Work Area instead."
+            "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Default Terminal uses your configured launcher in the Main Work Area without creating a split. If a native tool is unavailable, Dez keeps Focus Work Area instead."
         );
         assert_eq!(startup_intent.field.json_path(), Some("startup_intent"));
         assert_eq!(
@@ -12330,7 +12330,7 @@ mod tests {
             [
                 "Focus Work Area",
                 "Files",
-                "Built-in Agent",
+                "Default Terminal",
                 "Git Changes",
                 "Debug",
             ]
