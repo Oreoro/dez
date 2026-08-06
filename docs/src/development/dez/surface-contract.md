@@ -473,7 +473,9 @@ and uses a keyboard-operable disclosure with an announced expanded state.
 The failure remains in its owning native tab, uses terminal material, names the
 cause, and starts no substitute process. The primary split action deep-links to
 **Workspaces & Terminals → Terminal Launch → Default Terminal**; its menu keeps
-the general Settings and raw JSON alternatives available.
+the general Settings and raw JSON alternatives available. Its native tab uses
+the warning glyph and a concise recovery tooltip, so the failure remains
+identifiable after another tab takes focus without crowding the tab label.
 
 A typed protected-folder failure keeps the same native hierarchy but changes
 the recovery owner instead of presenting access as a launch configuration
@@ -500,7 +502,7 @@ a second prompt or grant access from the terminal tab. **Grant Access…** stays
 in the active Workspace row, while the split menu retains general diagnostic
 settings. The native tab and alert retain **Workspace access required** when
 inactive or projected through Workspaces. Ordinary launch failures and
-official Zed keep their existing title and Settings recovery.
+official Zed keep their existing title, icon behavior, and Settings recovery.
 
 ## Review-and-recovery wireframe
 

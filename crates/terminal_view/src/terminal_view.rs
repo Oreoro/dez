@@ -628,6 +628,24 @@ pub(crate) fn terminal_launch_failure_title(
     }
 }
 
+pub(crate) fn terminal_launch_failure_tab_icon(app_name: &str) -> Option<IconName> {
+    (app_name != "Zed").then_some(IconName::Warning)
+}
+
+pub(crate) fn terminal_launch_failure_tab_tooltip(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> Option<SharedString> {
+    (app_name != "Zed").then(|| {
+        format!(
+            "{}. {}",
+            terminal_launch_failure_title(app_name, workspace_access_required),
+            terminal_failed_to_start_guidance(app_name, workspace_access_required),
+        )
+        .into()
+    })
+}
+
 pub(crate) fn terminal_launch_failure_is_top_anchored(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -1668,6 +1686,14 @@ impl workspace::Item for FailedToSpawnTerminal {
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
+    }
+
+    fn tab_icon(&self, _cx: &App) -> Option<Icon> {
+        terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
+    }
+
+    fn tab_tooltip_text(&self, _cx: &App) -> Option<SharedString> {
+        terminal_launch_failure_tab_tooltip(paths::APP_NAME, self.workspace_access_required)
     }
 }
 
@@ -4982,6 +5008,22 @@ mod tests {
             terminal_launch_failure_title("Zed", true),
             "Terminal did not start"
         );
+        assert_eq!(
+            terminal_launch_failure_tab_icon("Dez"),
+            Some(IconName::Warning)
+        );
+        assert_eq!(terminal_launch_failure_tab_icon("Zed"), None);
+
+        let access_tooltip = terminal_launch_failure_tab_tooltip("Dez", true)
+            .expect("Dez access failure should explain its tab state");
+        assert!(access_tooltip.contains("Workspace access required"));
+        assert!(access_tooltip.contains("Open Workspaces"));
+
+        let launch_tooltip = terminal_launch_failure_tab_tooltip("Dez", false)
+            .expect("Dez launch failure should explain its tab state");
+        assert!(launch_tooltip.contains("Terminal did not start"));
+        assert!(launch_tooltip.contains("Terminal Launch settings"));
+        assert_eq!(terminal_launch_failure_tab_tooltip("Zed", false), None);
     }
 
     #[test]

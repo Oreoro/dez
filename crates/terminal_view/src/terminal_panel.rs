@@ -7,7 +7,8 @@ use crate::{
     },
     record_terminal_workspace_access_required, terminal_failed_to_start_guidance,
     terminal_launch_failure_is_top_anchored, terminal_launch_failure_more_label,
-    terminal_launch_failure_primary_label, terminal_launch_failure_title,
+    terminal_launch_failure_primary_label, terminal_launch_failure_tab_icon,
+    terminal_launch_failure_tab_tooltip, terminal_launch_failure_title,
     terminal_workspace_access_required,
 };
 use breadcrumbs::Breadcrumbs;
@@ -1360,6 +1361,14 @@ impl workspace::Item for FailedToSpawnTerminal {
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
+    }
+
+    fn tab_icon(&self, _cx: &App) -> Option<Icon> {
+        terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
+    }
+
+    fn tab_tooltip_text(&self, _cx: &App) -> Option<SharedString> {
+        terminal_launch_failure_tab_tooltip(paths::APP_NAME, self.workspace_access_required)
     }
 }
 
