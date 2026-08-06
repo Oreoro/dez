@@ -4530,3 +4530,21 @@ Completed for the final Workspace navigation-copy source slice:
 - synchronized tests, the annotated wireframe, Fork Notes, and static identity
   guards with source-only verification. No local build, test binary, alternate
   binary, package, or app launch was performed.
+
+Completed for the installed Lumin contrast source slice:
+
+- used the installed Preview to identify a real whole-window compositing
+  failure rather than reshaping native navigation from screenshots alone;
+- retained one macOS under-window material and the existing Home, Workspace,
+  Layout, Activity, tab-strip, and status-line ownership;
+- deepened Lumin Blur's translucent structural layers so a bright desktop
+  cannot flatten the product into a middle-gray field;
+- raised muted text, placeholder, and icon roles while keeping ordinary
+  selected controls neutral and reserving the warm accent for attention;
+- extended the dark blurred-theme gate to white, blue-gray, and warm light
+  desktop samples so the installed failure mode remains covered;
+- promoted only the primary Workspace name at Compact density, leaving section
+  labels and metadata compact; and
+- retained source-only verification. A new exact-SHA Preview is still required
+  to validate the revised hierarchy in Home, Workspaces, Settings, native tabs,
+  terminal/editor content, and the status line.

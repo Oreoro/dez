@@ -1256,6 +1256,14 @@ fn workspace_running_session_label_size(app_name: &str) -> LabelSize {
     }
 }
 
+fn workspace_header_label_size(app_name: &str, density: settings::CanvasDensity) -> LabelSize {
+    if app_name != "Zed" || density != settings::CanvasDensity::Compact {
+        LabelSize::Small
+    } else {
+        LabelSize::XSmall
+    }
+}
+
 fn session_rail_accessibility_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Sessions"
@@ -2815,6 +2823,18 @@ mod session_start_state_tests {
         assert_eq!(
             workspace_running_session_label_size("Zed"),
             LabelSize::XSmall
+        );
+        assert_eq!(
+            workspace_header_label_size("Dez", settings::CanvasDensity::Compact),
+            LabelSize::Small
+        );
+        assert_eq!(
+            workspace_header_label_size("Zed", settings::CanvasDensity::Compact),
+            LabelSize::XSmall
+        );
+        assert_eq!(
+            workspace_header_label_size("Zed", settings::CanvasDensity::Balanced),
+            LabelSize::Small
         );
         assert_eq!(
             session_rail_accessibility_label("Dez"),
@@ -8697,26 +8717,17 @@ impl Sidebar {
             workspace_navigation_control_metrics(APP_NAME, design_system.density);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
-        let (header_height, header_padding_left, header_padding_right, header_gap, label_size) =
+        let (header_height, header_padding_left, header_padding_right, header_gap) =
             match design_system.density {
-                settings::CanvasDensity::Compact => {
-                    (px(28.0), px(6.0), px(4.0), px(4.0), LabelSize::XSmall)
+                settings::CanvasDensity::Compact => (px(28.0), px(6.0), px(4.0), px(4.0)),
+                settings::CanvasDensity::Balanced => {
+                    (Tab::content_height(cx), px(8.0), px(6.0), px(4.0))
                 }
-                settings::CanvasDensity::Balanced => (
-                    Tab::content_height(cx),
-                    px(8.0),
-                    px(6.0),
-                    px(4.0),
-                    LabelSize::Small,
-                ),
-                settings::CanvasDensity::Spacious => (
-                    Tab::container_height(cx),
-                    px(10.0),
-                    px(8.0),
-                    px(6.0),
-                    LabelSize::Small,
-                ),
+                settings::CanvasDensity::Spacious => {
+                    (Tab::container_height(cx), px(10.0), px(8.0), px(6.0))
+                }
             };
+        let label_size = workspace_header_label_size(APP_NAME, design_system.density);
         let header_height = if APP_NAME == "Zed" {
             header_height
         } else {

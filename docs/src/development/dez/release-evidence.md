@@ -2584,3 +2584,36 @@ Herdr attach/Retry, both cmux handoff routes, and durable terminal ownership
 across a restart. Until those checks pass—and a Stable artifact is Developer ID
 signed and notarized—this remains a Preview candidate rather than a v0.4 Stable
 release.
+
+## 2026-08-06: installed Lumin contrast correction
+
+Installed Preview `v0.4.0+preview.123` at source
+`2b3a66243a52b9888e6735e25275ee4a831fe768` preserved the intended native
+ownership: Home and Settings remained ordinary tabs or windows, Workspaces
+projected Layout and Activity, the native tab strip kept the adjacent Add
+control, and the status line remained visible. It also exposed a shared visual
+defect that source-only opacity checks had not caught. Against the active macOS
+desktop material, the Main Work Area, Workspaces, and Settings composited to a
+middle gray while muted labels and metadata nearly disappeared.
+
+The follow-up source keeps one native under-window material and no nested blur
+surfaces. It deepens the translucent dark structural layers, raises muted and
+placeholder text and icon roles, preserves neutral selection, and promotes the
+primary Workspace name to the small interface role even at Compact density.
+Section labels and metadata remain compact so hierarchy comes from type role,
+not extra chrome. The source theme gate now includes white, blue-gray, and warm
+light desktop backdrops for the dark blurred variant instead of validating it
+only over dark samples.
+
+No local build or test binary was run for this correction. The next exact-SHA
+Preview must prove the revised Lumin Blur hierarchy across Home, Workspaces,
+Settings, native tabs, terminal/editor content, and the status line before this
+entry can be treated as installed-runtime validation.
+
+GitHub Actions run
+[`31080153666`](https://github.com/Oreoro/dez/actions/runs/31080153666)
+for the preceding quit-persistence source stopped before tests or packaging
+because its new GPUI test called `VisualTestContext::update` with the
+one-argument `TestAppContext` closure shape. The follow-up source corrects that
+test-harness arity only; the background-queue persistence implementation is
+unchanged. The failed run produced no application artifact.
