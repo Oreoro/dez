@@ -267,11 +267,13 @@ Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
 an action or documentation route, never an availability toggle.
 
 Changing **Default Terminal** updates the named Home launcher without waiting
-for Home to be reopened. The empty Main Work Area and adjacent `+` menu use the
-same resolved label and icon, so the primary launcher never collapses back to a
-generic terminal row before activation. Home assigns keyboard order after
-local-only actions are filtered, so hiding the cmux handoff for a remote
-Workspace never creates a duplicate or skipped action target.
+for Home to be reopened. The empty Main Work Area, empty Workspaces Activity,
+and adjacent `+` menu use the same resolved label, icon, and configured-terminal
+action, so the primary launcher never collapses back to a generic terminal row
+or bypasses the selected destination before activation.
+Home assigns keyboard order after local-only actions are filtered, so hiding
+the cmux handoff for a remote Workspace never creates a
+duplicate or skipped action target.
 
 **New Workspace Starts With** names the existing native destination it will
 open: **Focus Work Area**, **Files**, **Default Terminal**, **Git Changes**, or
@@ -371,6 +373,9 @@ The tab strip remains visible but contains no invented placeholder tab. Its
 adjacent `+` is available immediately. The one primary action names the
 resolved configured destination—Native Shell, tmux Session, a recognized
 provider, or Custom Command—while the provider glyph reinforces that identity.
+The matching empty Workspaces Activity action uses that same named destination
+and opens it in the active Main Work Area; it never falls back to a generic
+shell action.
 
 ### 10. Add and switch tabs
 

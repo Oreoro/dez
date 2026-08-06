@@ -1657,12 +1657,29 @@ fn session_start_state_copy(
     }
 }
 
-fn active_workspace_terminal_destination_label(app_name: &str) -> &'static str {
+fn active_workspace_terminal_action_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
     if app_name == "Zed" {
-        "Start Terminal Session in Main Work Area of Active Workspace"
+        terminal_launch_label(app_name).to_owned()
     } else {
-        "Open Terminal in Main Work Area of Active Workspace"
+        let configured_label = configured_terminal_launcher_label(configured_command);
+        let destination = configured_label
+            .strip_prefix("Default · ")
+            .unwrap_or(configured_label.as_str());
+        format!("Open Terminal · {destination}")
     }
+}
+
+fn active_workspace_terminal_destination_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    format!(
+        "{} in Main Work Area of Active Workspace",
+        active_workspace_terminal_action_label(app_name, configured_command)
+    )
 }
 
 fn workspace_new_terminal_action_persistent(
@@ -3029,15 +3046,31 @@ mod session_start_state_tests {
             "the true-empty Sessions state should have one project-scoped next step"
         );
         assert_eq!(
-            active_workspace_terminal_destination_label("Dez"),
-            "Open Terminal in Main Work Area of Active Workspace"
+            active_workspace_terminal_action_label("Dez", None),
+            "Open Terminal · Native Shell"
+        );
+        assert_eq!(
+            active_workspace_terminal_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            active_workspace_terminal_action_label("Dez", Some("tmux")),
+            "Open Terminal · tmux Session"
+        );
+        assert_eq!(
+            active_workspace_terminal_action_label("Dez", Some("my-agent --resume")),
+            "Open Terminal · Custom Command"
+        );
+        assert_eq!(
+            active_workspace_terminal_destination_label("Dez", Some("claude")),
+            "Open Terminal · Claude Code in Main Work Area of Active Workspace"
         );
         assert_eq!(
             session_start_state_copy("Zed").3,
             Some("Open Scratch Terminal")
         );
         assert_eq!(
-            active_workspace_terminal_destination_label("Zed"),
+            active_workspace_terminal_destination_label("Zed", Some("codex --yolo")),
             "Start Terminal Session in Main Work Area of Active Workspace"
         );
         assert_eq!(
@@ -17513,6 +17546,22 @@ impl Sidebar {
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let (icon, title, description) =
             session_empty_state_copy(APP_NAME, has_query, is_restoring);
+        let configured_terminal_command = AgentSettings::get_global(cx)
+            .terminal_init_command
+            .as_deref();
+        let terminal_action_label =
+            active_workspace_terminal_action_label(APP_NAME, configured_terminal_command);
+        let terminal_tooltip_label = terminal_action_label.clone();
+        let terminal_action_aria_label =
+            active_workspace_terminal_destination_label(APP_NAME, configured_terminal_command);
+        let terminal_action_icon =
+            workspace_default_terminal_icon(APP_NAME, configured_terminal_command);
+        let terminal_action = if APP_NAME == "Zed" {
+            NewCenterTerminal::default().boxed_clone()
+        } else {
+            zed_actions::terminal::OpenAgentTerminal.boxed_clone()
+        };
+        let terminal_tooltip_action = terminal_action.boxed_clone();
 
         v_flex()
             .id("sidebar-no-results")
@@ -17574,25 +17623,22 @@ impl Sidebar {
                     })
                     .when(!has_query && !is_restoring, |this| {
                         this.child(
-                            Button::new("no-results-new-terminal", terminal_launch_label(APP_NAME))
+                            Button::new("no-results-new-terminal", terminal_action_label)
                                 .full_width()
                                 .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
-                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .start_icon(Icon::new(terminal_action_icon).size(IconSize::XSmall))
                                 .tab_index(0isize)
-                                .aria_label(active_workspace_terminal_destination_label(APP_NAME))
-                                .tooltip(|_, cx| {
+                                .aria_label(terminal_action_aria_label)
+                                .tooltip(move |_, cx| {
                                     Tooltip::for_action(
-                                        workspace_new_terminal_tooltip_label(APP_NAME),
-                                        &NewCenterTerminal::default(),
+                                        terminal_tooltip_label.clone(),
+                                        &*terminal_tooltip_action,
                                         cx,
                                     )
                                 })
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        NewCenterTerminal::default().boxed_clone(),
-                                        cx,
-                                    );
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(&*terminal_action, cx);
                                 }),
                         )
                     }),
@@ -17770,7 +17816,7 @@ impl Sidebar {
                                         )
                                         .tab_index(0isize)
                                         .aria_label(active_workspace_terminal_destination_label(
-                                            APP_NAME,
+                                            APP_NAME, None,
                                         ))
                                         .tooltip(|_, cx| {
                                             Tooltip::for_action(
