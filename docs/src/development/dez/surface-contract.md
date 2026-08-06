@@ -457,6 +457,32 @@ cause, and starts no substitute process. The primary split action deep-links to
 **Workspaces & Terminals → Terminal Launch → Default Terminal**; its menu keeps
 the general Settings and raw JSON alternatives available.
 
+A typed protected-folder failure keeps the same native hierarchy but changes
+the recovery owner instead of presenting access as a launch configuration
+problem:
+
+```text
+┌ Terminal did not start | + | app.rs ─────────────────────────────────┐
+│ [!] Terminal did not start                                           │
+│   Workspace access required for ~/Documents/dez before a terminal…   │
+│                                                                      │
+│   Workspace access is required before a terminal can start. Open    │
+│   Workspaces, then grant access to the blocked folder.               │
+│                                                                      │
+│   [Open Workspaces ▾]                                                │
+│      Open Settings                                                   │
+│      Edit settings.json                                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Access required                │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Open Workspaces** focuses the existing native access owner; it does not show
+a second prompt or grant access from the terminal tab. **Grant Access…** stays
+in the active Workspace row, while the split menu retains general diagnostic
+settings. Ordinary launch failures and official Zed keep their existing
+Settings recovery.
+
 ## Review-and-recovery wireframe
 
 ### 13. Agent change review

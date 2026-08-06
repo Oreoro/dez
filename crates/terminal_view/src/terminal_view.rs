@@ -113,10 +113,14 @@ const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
 
 struct InstallationRequiredForTerminal;
 
-fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
-    if let Some(access_required) =
-        error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
-    {
+pub(crate) fn terminal_workspace_access_required(
+    error: &anyhow::Error,
+) -> Option<&project::terminals::TerminalWorkspaceAccessRequired> {
+    error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
+}
+
+pub(crate) fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
+    if let Some(access_required) = terminal_workspace_access_required(error) {
         workspace::mark_workspace_access_required(access_required.path().to_path_buf(), cx);
     }
 }
@@ -545,19 +549,40 @@ fn terminal_unavailable_description(reason: Option<&str>) -> String {
     )
 }
 
-pub(crate) fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
+pub(crate) fn terminal_failed_to_start_guidance(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Workspace access is required before a terminal can start. Open Workspaces, then grant access to the blocked folder."
+    } else if app_name == "Zed" {
         "No terminal process was started. Review terminal settings, then use New Terminal to try again."
     } else {
         "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
     }
 }
 
-pub(crate) fn terminal_launch_failure_settings_label(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
+pub(crate) fn terminal_launch_failure_primary_label(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Open Workspaces"
+    } else if app_name == "Zed" {
         "Edit Settings"
     } else {
         "Edit Terminal Settings"
+    }
+}
+
+pub(crate) fn terminal_launch_failure_more_label(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "More Terminal Recovery Options"
+    } else {
+        "More Terminal Settings"
     }
 }
 
@@ -1387,10 +1412,13 @@ where
                 Ok(terminal.downgrade())
             }
             Err(error) => {
+                let workspace_access_required =
+                    terminal_workspace_access_required(&error).is_some();
                 record_terminal_workspace_access_required(&error, cx);
                 let pane = workspace.active_pane().clone();
                 let failed_to_spawn = Box::new(cx.new(|cx| FailedToSpawnTerminal {
                     error: error.to_string(),
+                    workspace_access_required,
                     focus_handle: cx.focus_handle(),
                 }));
                 workspace.add_item(pane, failed_to_spawn, None, true, true, window, cx);
@@ -1470,6 +1498,7 @@ async fn wait_for_terminals_tasks(
 
 struct FailedToSpawnTerminal {
     error: String,
+    workspace_access_required: bool,
     focus_handle: FocusHandle,
 }
 
@@ -1482,14 +1511,18 @@ impl Focusable for FailedToSpawnTerminal {
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
-        let settings_label = terminal_launch_failure_settings_label(paths::APP_NAME);
+        let workspace_access_required = is_dez && self.workspace_access_required;
+        let primary_label =
+            terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
+        let more_label =
+            terminal_launch_failure_more_label(paths::APP_NAME, workspace_access_required);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
                     .icon_size(IconSize::XSmall)
                     .tab_index(0isize)
-                    .aria_label("More Terminal Settings")
-                    .tooltip(Tooltip::text("More Terminal Settings")),
+                    .aria_label(more_label)
+                    .tooltip(Tooltip::text(more_label)),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, |context_menu, _, _| {
@@ -1546,20 +1579,26 @@ impl Render for FailedToSpawnTerminal {
                         Label::new(format!(
                             "{}\n\n{}",
                             self.error,
-                            terminal_failed_to_start_guidance(paths::APP_NAME),
+                            terminal_failed_to_start_guidance(
+                                paths::APP_NAME,
+                                workspace_access_required,
+                            ),
                         ))
                         .size(LabelSize::Small)
                         .color(Color::Muted)
                         .mb_4(),
                     )
                     .child(SplitButton::new(
-                        ButtonLike::new("open-settings-ui")
-                            .child(Label::new(settings_label).size(LabelSize::Small))
+                        ButtonLike::new("terminal-launch-recovery")
+                            .child(Label::new(primary_label).size(LabelSize::Small))
                             .tab_index(0isize)
-                            .aria_label("Edit Terminal Settings")
-                            .tooltip(Tooltip::text("Edit Terminal Settings"))
+                            .aria_label(primary_label)
+                            .tooltip(Tooltip::text(primary_label))
                             .on_click(move |_, window, cx| {
-                                if is_dez {
+                                if workspace_access_required {
+                                    window
+                                        .dispatch_action(workspace::FocusSidebar.boxed_clone(), cx);
+                                } else if is_dez {
                                     window.dispatch_action(
                                         zed_actions::OpenSettingsAt {
                                             path: "agent.terminal_launcher".to_owned(),
@@ -4801,16 +4840,32 @@ mod tests {
         assert!(terminal_launch_failure_is_top_anchored("Dez"));
         assert!(!terminal_launch_failure_is_top_anchored("Zed"));
         assert_eq!(
-            terminal_failed_to_start_guidance("Dez"),
+            terminal_failed_to_start_guidance("Dez", false),
             "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
         );
         assert_eq!(
-            terminal_launch_failure_settings_label("Dez"),
+            terminal_launch_failure_primary_label("Dez", false),
             "Edit Terminal Settings"
         );
         assert_eq!(
-            terminal_launch_failure_settings_label("Zed"),
+            terminal_launch_failure_primary_label("Zed", true),
             "Edit Settings"
+        );
+        assert_eq!(
+            terminal_failed_to_start_guidance("Dez", true),
+            "Workspace access is required before a terminal can start. Open Workspaces, then grant access to the blocked folder."
+        );
+        assert_eq!(
+            terminal_launch_failure_primary_label("Dez", true),
+            "Open Workspaces"
+        );
+        assert_eq!(
+            terminal_launch_failure_more_label("Dez", true),
+            "More Terminal Recovery Options"
+        );
+        assert_eq!(
+            terminal_launch_failure_more_label("Zed", true),
+            "More Terminal Settings"
         );
     }
 
