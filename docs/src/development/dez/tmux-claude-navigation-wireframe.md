@@ -256,7 +256,7 @@ Annotations:
    same IBM Plex Sans interface face at medium weight, a rounded selected shape,
    and stronger semantic contrast. Inactive tabs stay normal weight and quiet;
    dirty, close, pin, drag, overflow, and keyboard behavior remain native.
-8. **Navigation icons share one density scale.** Balanced Workspaces rows use
+8. **Navigation icons share one density scale.** Spacious Workspaces rows use
    the same small icon role as title-bar and status controls. Focus uses the
    selected row, medium-weight label, and explicit “Focused” text; accent color
    remains reserved for attention, modification, and recovery signals.

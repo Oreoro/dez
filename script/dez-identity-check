@@ -253,8 +253,8 @@ require_multiline_pattern crates/diagnostics/src/toolbar_controls.rs \
     'IconButton::new\("inline_assist", ui::assistant_icon_for_app\(paths::APP_NAME\)\).*?aria_label\("Inline Assist"\)' \
     'the diagnostics Inline Assist icon can lose its neutral product identity or accessible name'
 require_multiline_pattern assets/settings/default.json \
-    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "balanced".*?"radius": "rounded".*?"contrast": "high"' \
-    'the Dez default appearance no longer follows the Lumin pair with balanced product density'
+    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "high"' \
+    'the Dez default appearance no longer follows the Lumin pair with spacious product density'
 require_pattern assets/settings/default.json \
     '^  "buffer_font_family": "Lilex",$' \
     'the editor no longer defaults to the bundled Lilex coding face'
@@ -265,7 +265,7 @@ require_multiline_pattern assets/settings/default.json \
     '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "Lilex",$' \
     'the terminal no longer shares the polished Lilex coding profile'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"ui_font_family": "IBM Plex Sans".*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "balanced".*?"radius": "rounded".*?"contrast": "high".*?"terminal": \{.*?"font_family": "Lilex".*?"font_size": 14' \
+    '"ui_font_family": "IBM Plex Sans".*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "high".*?"terminal": \{.*?"font_family": "Lilex".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
 require_pattern assets/settings/initial_user_settings.json \
     'Workspaces stays closed until cross-Workspace supervision is useful' \
@@ -427,7 +427,7 @@ require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Balanced.*?CanvasRadius::Rounded.*?CanvasContrast::High.*?terminal.*?font_family = Some\(code_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
+    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview_code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Spacious.*?CanvasRadius::Rounded.*?CanvasContrast::High.*?terminal.*?font_family = Some\(code_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(true\).*?status_bar\.line_endings_button = Some\(true\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_tab_selected_label_weight.*?app_name != "Zed".*?FontWeight::MEDIUM.*?\.when_some\([[:space:]]*pane_tab_selected_label_weight\(paths::APP_NAME\).*?selected_label_weight.*?fn dez_selected_tabs_use_interface_emphasis_without_changing_upstream_tabs.*?pane_tab_selected_label_weight\("Dez"\).*?FontWeight::MEDIUM.*?pane_tab_selected_label_weight\("Zed"\), None' \
@@ -442,11 +442,23 @@ require_multiline_pattern crates/ui/src/components/tab.rs \
     'TabContrast::High, true.*?tab_active_background.*?blend\(colors\.text\.opacity\(0\.06\)\).*?self\.selected && self\.radius == TabRadius::Subtle.*?rounded_t_sm.*?self\.selected && self\.radius == TabRadius::Rounded.*?rounded_t_md.*?self\.selected && self\.radius != TabRadius::None.*?border_t_1' \
     'high-contrast rounded tabs can regress to accent-painted selection or lose their native top edge'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar\..*?Failed to restore the Dez visual profile' \
+    'RestoreVisualProfile.*?APP_NAME == "Zed".*?update_settings_file_with_completion.*?restore_dez_visual_profile.*?completion\.await\?\?.*?Restored Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar\..*?Failed to restore the Dez visual profile' \
     'visual-profile recovery can affect official Zed, report before persistence, or fail silently'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?balanced.*?tab_bar.*?show_nav_history_buttons.*?show_tab_bar_buttons.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
+    'fn dez_visual_profile_restores_identity_without_resetting_font_size.*?ui_font_size = Some\(18\.0\.into\(\)\).*?restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?Lumin Light.*?Lumin Blur.*?Dez \(Default\).*?design_system.*?density.*?spacious.*?tab_bar.*?show_nav_history_buttons.*?show_tab_bar_buttons.*?status_bar.*?experimental\.show.*?show_active_file.*?line_endings_button.*?ui_font_size.*?18\.0' \
     'the scoped visual-profile mutation is no longer covered against size resets'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'add_basic_renderer::<settings::CanvasDensity>\(render_dropdown\).*?add_basic_renderer::<settings::CanvasRadius>\(render_dropdown\).*?add_basic_renderer::<settings::CanvasContrast>\(render_dropdown\)' \
+    'native Interface Chrome settings can regress to unresolved renderers'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'fn dez_interface_chrome_section\(app_name: &str\).*?app_name == "Zed".*?SectionHeader\("Interface Chrome"\).*?"Interface Density".*?design_system\.density.*?"Corner Style".*?design_system\.radius.*?"Surface Contrast".*?design_system\.contrast.*?dez_interface_chrome_section\(paths::APP_NAME\).*?fn dez_appearance_exposes_only_native_interface_chrome_controls.*?design_system\.density.*?design_system\.radius.*?design_system\.contrast' \
+    'Dez Appearance can regress to hiding, duplicating, or failing to cover its native chrome controls'
+require_multiline_pattern crates/ui/src/components/button/toggle_button.rs \
+    'let accessibility_label = label\.clone\(\);.*?ButtonLike::new.*?aria_label\(accessibility_label\)' \
+    'segmented controls can regress to unlabeled accessibility buttons'
+require_multiline_pattern crates/debugger_ui/src/new_process_modal.rs \
+    'impl NewProcessMode.*?Self::Task => IconName::PlayOutlined.*?Self::Debug => IconName::Debug.*?Self::Attach => IconName::Attach.*?Self::Launch => IconName::Terminal.*?ToggleButtonWithIcon::new.*?NewProcessMode::Task\.icon\(\).*?ToggleButtonWithIcon::new.*?NewProcessMode::Debug\.icon\(\).*?ToggleButtonWithIcon::new.*?NewProcessMode::Attach\.icon\(\).*?ToggleButtonWithIcon::new.*?NewProcessMode::Launch\.icon\(\).*?fn debugger_modes_have_distinct_semantic_icons' \
+    'the native Debugger mode picker can regress to ambiguous, untested text-only controls'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'APP_NAME != "Zed".*?Restore Dez Visual Profile.*?zed_actions::dez::RestoreVisualProfile' \
     'the visual-profile recovery action can disappear from the Dez Settings menu'
@@ -3154,7 +3166,7 @@ reject_pattern crates/workspace/src/history_manager.rs \
     'recent_project_workspaces\(fs\.as_ref\(\)\)' \
     'launch history can regress to triggering protected-folder access prompts'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'fn welcome_summary.*?"Start a terminal or agent in this Workspace, then inspect the code and verify the diff\.".*?"Open a Workspace, run an agent, and review changes in one place\.".*?fn welcome_title.*?"Continue your work".*?let page_title = welcome_title\(APP_NAME, has_workspace\);.*?let page_summary = welcome_summary\(APP_NAME, has_workspace\);.*?Headline::new\(page_title\).*?when\(!installation_required.*?Label::new\(page_summary\)' \
+    'fn welcome_summary.*?"Start a terminal or agent in this Workspace, then inspect the code and verify the diff\.".*?"Open a Workspace, run an agent, and review changes in one place\.".*?fn welcome_title.*?has_workspace.*?"Continue in this Workspace".*?"Start a Workspace".*?let page_title = welcome_title\(APP_NAME, has_workspace\);.*?let page_summary = welcome_summary\(APP_NAME, has_workspace\);.*?Headline::new\(page_title\).*?when\(!installation_required.*?Label::new\(page_summary\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_identity_label.*?app_name != "Zed".*?then_some\("Dez"\).*?when_some\(welcome_identity_label\(APP_NAME\).*?Icon::new\(IconName::Compass\).*?Label::new\(identity\).*?welcome_identity_label\("Dez"\), Some\("Dez"\).*?welcome_identity_label\("Zed"\), None' \

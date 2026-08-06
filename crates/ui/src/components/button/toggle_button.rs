@@ -295,10 +295,12 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> RenderOnce
                         selected,
                         tooltip,
                     } = button.into_configuration();
+                    let accessibility_label = label.clone();
 
                     let entry_index = row_index * COLS + col_index;
 
                     ButtonLike::new((group_name.clone(), entry_index))
+                        .aria_label(accessibility_label)
                         .when(!self.auto_width, |this| this.full_width())
                         .rounding(Some(
                             ToggleButtonPosition {

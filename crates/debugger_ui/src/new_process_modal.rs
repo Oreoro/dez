@@ -24,7 +24,7 @@ use project::{DebugScenarioContext, Project, TaskContexts, TaskSourceKind, task_
 use task::{DebugScenario, RevealTarget, SharedTaskContext, VariableName, ZedDebugConfig};
 use ui::{
     ContextMenu, DropdownMenu, IconWithIndicator, Indicator, KeyBinding, ListItem, ListItemSpacing,
-    Switch, SwitchLabelPosition, ToggleButtonGroup, ToggleButtonSimple, ToggleState, Tooltip,
+    Switch, SwitchLabelPosition, ToggleButtonGroup, ToggleButtonWithIcon, ToggleState, Tooltip,
     prelude::*,
 };
 use ui_input::InputField;
@@ -536,12 +536,23 @@ impl NewProcessModal {
 
 static SELECT_DEBUGGER_LABEL: SharedString = SharedString::new_static("Select Debugger");
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum NewProcessMode {
     Task,
     Launch,
     Attach,
     Debug,
+}
+
+impl NewProcessMode {
+    fn icon(self) -> IconName {
+        match self {
+            Self::Task => IconName::PlayOutlined,
+            Self::Debug => IconName::Debug,
+            Self::Attach => IconName::Attach,
+            Self::Launch => IconName::Terminal,
+        }
+    }
 }
 
 impl std::fmt::Display for NewProcessMode {
@@ -635,8 +646,9 @@ impl Render for NewProcessModal {
                     ToggleButtonGroup::single_row(
                         "debugger-mode-buttons",
                         [
-                            ToggleButtonSimple::new(
+                            ToggleButtonWithIcon::new(
                                 NewProcessMode::Task.to_string(),
+                                NewProcessMode::Task.icon(),
                                 cx.listener(|this, _, window, cx| {
                                     this.mode = NewProcessMode::Task;
                                     this.mode_focus_handle(cx).focus(window, cx);
@@ -651,8 +663,9 @@ impl Render for NewProcessModal {
                                     cx,
                                 )
                             }),
-                            ToggleButtonSimple::new(
+                            ToggleButtonWithIcon::new(
                                 NewProcessMode::Debug.to_string(),
+                                NewProcessMode::Debug.icon(),
                                 cx.listener(|this, _, window, cx| {
                                     this.mode = NewProcessMode::Debug;
                                     this.mode_focus_handle(cx).focus(window, cx);
@@ -667,8 +680,9 @@ impl Render for NewProcessModal {
                                     cx,
                                 )
                             }),
-                            ToggleButtonSimple::new(
+                            ToggleButtonWithIcon::new(
                                 NewProcessMode::Attach.to_string(),
+                                NewProcessMode::Attach.icon(),
                                 cx.listener(|this, _, window, cx| {
                                     this.mode = NewProcessMode::Attach;
 
@@ -692,8 +706,9 @@ impl Render for NewProcessModal {
                                     cx,
                                 )
                             }),
-                            ToggleButtonSimple::new(
+                            ToggleButtonWithIcon::new(
                                 NewProcessMode::Launch.to_string(),
+                                NewProcessMode::Launch.icon(),
                                 cx.listener(|this, _, window, cx| {
                                     this.mode = NewProcessMode::Launch;
                                     this.mode_focus_handle(cx).focus(window, cx);
@@ -1668,5 +1683,18 @@ impl NewProcessModal {
                 })
                 .collect()
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn debugger_modes_have_distinct_semantic_icons() {
+        assert_eq!(NewProcessMode::Task.icon(), IconName::PlayOutlined);
+        assert_eq!(NewProcessMode::Debug.icon(), IconName::Debug);
+        assert_eq!(NewProcessMode::Attach.icon(), IconName::Attach);
+        assert_eq!(NewProcessMode::Launch.icon(), IconName::Terminal);
     }
 }

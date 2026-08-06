@@ -1079,7 +1079,7 @@
   // Settings for the Dez design system.
   "design_system": {
     "family": "zed_canvas",
-    "density": "balanced",
+    "density": "spacious",
     "radius": "rounded",
     "motion": "system",
     "contrast": "high",

@@ -882,6 +882,67 @@ fn general_page(cx: &App) -> SettingsPage {
     }
 }
 
+fn dez_interface_chrome_section(app_name: &str) -> Vec<SettingsPageItem> {
+    if app_name == "Zed" {
+        return Vec::new();
+    }
+
+    vec![
+        SettingsPageItem::SectionHeader("Interface Chrome"),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Interface Density",
+            description: "Size native title-bar controls, tabs, Workspaces rows, Settings spacing, and the status line together.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("design_system.density"),
+                pick: |settings_content| settings_content.design_system.as_ref()?.density.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .design_system
+                        .get_or_insert_default()
+                        .density = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Corner Style",
+            description: "Choose square, subtle, or rounded treatment for native Dez surfaces.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("design_system.radius"),
+                pick: |settings_content| settings_content.design_system.as_ref()?.radius.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .design_system
+                        .get_or_insert_default()
+                        .radius = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Surface Contrast",
+            description: "Set the separation between native navigation, content, and selected surfaces.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("design_system.contrast"),
+                pick: |settings_content| settings_content.design_system.as_ref()?.contrast.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .design_system
+                        .get_or_insert_default()
+                        .contrast = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+    ]
+}
+
 fn appearance_page() -> SettingsPage {
     fn dez_visual_profile_section() -> Vec<SettingsPageItem> {
         if paths::APP_NAME == "Zed" {
@@ -893,7 +954,7 @@ fn appearance_page() -> SettingsPage {
             SettingsPageItem::ActionLink(ActionLink {
                 title: "Restore Native Dez Appearance".into(),
                 description: Some(
-                    "Restore Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar. Font sizes and unrelated preferences stay unchanged."
+                    "Restore Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar. Font sizes and unrelated preferences stay unchanged."
                         .into(),
                 ),
                 button_text: "Restore Profile".into(),
@@ -1903,6 +1964,7 @@ fn appearance_page() -> SettingsPage {
     }
 
     let items: Box<[SettingsPageItem]> = concat_sections!(
+        dez_interface_chrome_section(paths::APP_NAME),
         dez_visual_profile_section(),
         theme_section(),
         buffer_font_section(),
@@ -12076,6 +12138,29 @@ mod tests {
         assert_eq!(
             agent_session_setting_copy("Zed", "External Agents", "ACP Agents"),
             "External Agents"
+        );
+    }
+
+    #[test]
+    fn dez_appearance_exposes_only_native_interface_chrome_controls() {
+        assert!(dez_interface_chrome_section("Zed").is_empty());
+
+        let section = dez_interface_chrome_section("Dez");
+        let setting_paths = section
+            .iter()
+            .filter_map(|item| match item {
+                SettingsPageItem::SettingItem(item) => item.field.json_path(),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            setting_paths,
+            [
+                "design_system.density",
+                "design_system.radius",
+                "design_system.contrast",
+            ]
         );
     }
 

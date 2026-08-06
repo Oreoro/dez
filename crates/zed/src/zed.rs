@@ -910,7 +910,7 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
         settings::IconThemeName(Arc::from("Dez (Default)")),
     ));
     let design_system = settings.design_system.get_or_insert_default();
-    design_system.density = Some(settings::CanvasDensity::Balanced);
+    design_system.density = Some(settings::CanvasDensity::Spacious);
     design_system.radius = Some(settings::CanvasRadius::Rounded);
     design_system.contrast = Some(settings::CanvasContrast::High);
     let terminal = settings.terminal.get_or_insert_default();
@@ -1305,7 +1305,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar.",
+                                "Restored Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar.",
                             ),
                             cx,
                         );
@@ -3335,7 +3335,7 @@ mod tests {
             })
         );
         assert_eq!(settings["icon_theme"], "Dez (Default)");
-        assert_eq!(settings["design_system"]["density"], "balanced");
+        assert_eq!(settings["design_system"]["density"], "spacious");
         assert_eq!(settings["design_system"]["radius"], "rounded");
         assert_eq!(settings["design_system"]["contrast"], "high");
         assert_eq!(settings["terminal"]["font_family"], "Lilex");

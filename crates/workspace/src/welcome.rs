@@ -291,11 +291,13 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     }
 }
 
-fn welcome_title(app_name: &str, _has_workspace: bool) -> &'static str {
+fn welcome_title(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Terminal-native development"
+    } else if has_workspace {
+        "Continue in this Workspace"
     } else {
-        "Continue your work"
+        "Start a Workspace"
     }
 }
 
@@ -1486,8 +1488,8 @@ mod tests {
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
-        assert_eq!(welcome_title("Dez", false), "Continue your work");
-        assert_eq!(welcome_title("Dez", true), "Continue your work");
+        assert_eq!(welcome_title("Dez", false), "Start a Workspace");
+        assert_eq!(welcome_title("Dez", true), "Continue in this Workspace");
         assert_eq!(welcome_identity_label("Dez"), Some("Dez"));
         assert_eq!(welcome_identity_label("Zed"), None);
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");

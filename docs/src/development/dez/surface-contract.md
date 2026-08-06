@@ -53,7 +53,7 @@ order, focus, close, pin, dirty, or split state.
 
 ```text
 ┌ Workspaces ──────┬ Home ─ + ─────────────────────────────────────────┐
-│ dez  main        │ Continue your work                                │
+│ dez  main        │ Continue in this Workspace                        │
 │ 3 agents · 2 ports│ Run a tool, supervise its work, then review it.   │
 │                  │                                                    │
 │ Layout           │ Start with a tool          Recent Workspaces      │
@@ -160,7 +160,7 @@ their tabs, and the focused Main Work Area item.
 
 ```text
 ┌ Workspaces ─────────┬ Home ─ + ──────────────────────────────────────┐
-│                    │ Continue your work                              │
+│                    │ Start a Workspace                               │
 │ No Workspaces yet  │                                                 │
 │ Install Dez to get │ ┌ Install Dez to continue ────────────────────┐ │
 │ started.           │ │ Install in Applications and relaunch before│ │

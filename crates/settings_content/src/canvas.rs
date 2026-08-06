@@ -472,7 +472,7 @@ pub struct DesignSystemSettingsContent {
     pub family: Option<String>,
     /// Overall UI density profile.
     ///
-    /// Default: balanced in Dez's bundled settings.
+    /// Default: spacious in Dez's bundled settings.
     pub density: Option<CanvasDensity>,
     /// Global radius treatment for Dez surfaces.
     ///
