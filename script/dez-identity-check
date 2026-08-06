@@ -726,6 +726,12 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
 require_multiline_pattern crates/zed/src/zed.rs \
     'use agent_ui::\{AgentDiffToolbar, AgentPanel\}.*?async fn initialize_agent_panel.*?AgentPanel::load\(workspace_handle\.clone\(\), cx\.clone\(\)\).*?failed to load built-in Agent panel.*?workspace\.panel::<AgentPanel>\(cx\)\.is_none\(\).*?workspace\.add_panel\(panel, window, cx\)' \
     'Agentic Workspace startup can regress to a named layout without a registered native Built-in Agent owner'
+require_multiline_pattern crates/workspace/src/workspace.rs \
+    'pub trait DebuggerProvider.*?fn open_panel.*?self\.set_active_pane\(&destination, window, cx\).*?recipe == CanvasLayoutRecipe::Debug.*?self\.debugger_provider\.clone\(\).*?debugger_provider\.open_panel\(self, window, cx\).*?return true' \
+    'Debug Workspace startup can regress to a named layout without opening its native Debug owner in the Main Work Area'
+require_multiline_pattern crates/debugger_ui/src/debugger_panel.rs \
+    'impl workspace::DebuggerProvider for DebuggerProvider.*?fn open_panel.*?DebugPanel::open\(self\.0\.clone\(\), workspace, window, cx\)' \
+    'the Workspace Debug destination can regress to a synthetic surface instead of the existing native Debug panel'
 require_multiline_pattern docs/src/development/dez/v0.4-readiness.md \
     '^# Dez v0\.4 readiness.*?active source and exact-artifact.*?0\.4\.0.*?signed or notarized.*?## Product promise.*?open a Workspace.*?Codex, Claude Code, OpenCode, tmux, Herdr.*?## v0\.4 surface contract.*?Home.*?Workspaces.*?Main Work Area.*?Top Bar and Status Bar.*?Terminal Details.*?Settings.*?Identity.*?## Terminal and integration contract.*?claude --continue.*?Legacy.*?Access[[:space:]]+blocked.*?## Reliability and access gates.*?Install and Relaunch.*?GPUI entity.*?## Release ladder.*?Do not compile Dez locally.*?GitHub Actions.*?Developer ID.*?notarization.*?## Stop-ship defects.*?NO RENDERER.*?## Completion evidence' \
     'the v0.4 lane can regress without its product, surface, ownership, reliability, exact-artifact, and stop-ship gates'

@@ -2085,6 +2085,13 @@ pub trait TerminalProvider {
 }
 
 pub trait DebuggerProvider {
+    fn open_panel(
+        &self,
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    );
+
     // `active_buffer` is used to resolve build task's name against language-specific tasks.
     fn start_session(
         &self,
@@ -9257,6 +9264,7 @@ impl Workspace {
             .last_tabbed_pane(cx)
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
         let destination = self.consolidate_dez_main_work_area(destination, window, cx);
+        self.set_active_pane(&destination, window, cx);
         self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
         let destination = self.last_tabbed_pane(cx).unwrap_or(destination);
         self.focus_canvas_pane(&destination, window, cx);
@@ -9476,6 +9484,13 @@ impl Workspace {
             .activate_panel_item_for_key(panel_key, false, window, cx)
             .is_some()
         {
+            return true;
+        }
+
+        if recipe == CanvasLayoutRecipe::Debug
+            && let Some(debugger_provider) = self.debugger_provider.clone()
+        {
+            debugger_provider.open_panel(self, window, cx);
             return true;
         }
 

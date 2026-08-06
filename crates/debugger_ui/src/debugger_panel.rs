@@ -2330,6 +2330,15 @@ impl Render for DebugPanel {
 struct DebuggerProvider(Entity<DebugPanel>);
 
 impl workspace::DebuggerProvider for DebuggerProvider {
+    fn open_panel(
+        &self,
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        DebugPanel::open(self.0.clone(), workspace, window, cx);
+    }
+
     fn start_session(
         &self,
         definition: DebugScenario,
