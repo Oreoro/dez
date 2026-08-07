@@ -7,7 +7,8 @@ pub mod terminal_scrollbar;
 use agent_settings::{AgentSettings, detect_terminal_agent_command};
 pub use agent_settings::{
     WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
-    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
+    configured_terminal_launcher_destination_label, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label, terminal_agent_icon,
 };
 use anyhow::{Result, anyhow};
 use collections::HashMap;
@@ -550,6 +551,28 @@ fn terminal_external_attach_new_shell_label(
             ""
         },
     )
+}
+
+fn terminal_context_open_action_label(app_name: &str, configured_command: Option<&str>) -> String {
+    if app_name == "Zed" {
+        "Open Terminal".to_owned()
+    } else {
+        configured_terminal_launcher_action_label(configured_command)
+    }
+}
+
+fn terminal_unavailable_fresh_action_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    if app_name == "Zed" {
+        "Start Fresh Terminal".to_owned()
+    } else {
+        format!(
+            "Start Fresh Terminal · {}",
+            configured_terminal_launcher_destination_label(configured_command)
+        )
+    }
 }
 
 fn terminal_details_ownership_note_with_external_owner(
@@ -2220,6 +2243,12 @@ impl TerminalView {
         };
         let close_label = terminal_close_label(is_hosted);
         let terminate_label = terminal_terminate_label(paths::APP_NAME);
+        let terminal_context_open_label = terminal_context_open_action_label(
+            paths::APP_NAME,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        );
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
@@ -2231,8 +2260,11 @@ impl TerminalView {
                             )
                             .separator()
                     } else {
-                        menu.action("Open Terminal", Box::new(NewCenterTerminal::default()))
-                            .separator()
+                        menu.action(
+                            terminal_context_open_label.clone(),
+                            Box::new(NewCenterTerminal::default()),
+                        )
+                        .separator()
                     }
                 })
                 .when(has_selection, |menu| {
@@ -3720,6 +3752,15 @@ impl Render for TerminalView {
         };
         let unavailable_description =
             terminal_unavailable_description(self.session_unavailable_reason.as_deref());
+        let fresh_terminal_label = terminal_unavailable_fresh_action_label(
+            paths::APP_NAME,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        );
+        let fresh_terminal_accessibility_label =
+            format!("{fresh_terminal_label} in Main Work Area");
+        let fresh_terminal_tooltip_label = fresh_terminal_accessibility_label.clone();
         let session_context_strip = self.render_session_context_strip(cx);
         let terminal_container_background = if terminal_container_reuses_terminal_material(
             paths::APP_NAME,
@@ -3772,27 +3813,24 @@ impl Render for TerminalView {
                         )
                         .child(
                             h_flex().w_full().flex_wrap().gap_2().child(
-                                Button::new(
-                                    "new-terminal-from-unavailable",
-                                    "Start Fresh Terminal",
-                                )
-                                .style(ButtonStyle::Filled)
-                                .start_icon(Icon::new(IconName::Terminal))
-                                .tab_index(0isize)
-                                .aria_label("Start Fresh Terminal in Main Work Area")
-                                .tooltip(|_, cx| {
-                                    Tooltip::for_action(
-                                        "Start Fresh Terminal in Main Work Area",
-                                        &NewCenterTerminal::default(),
-                                        cx,
-                                    )
-                                })
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        NewCenterTerminal::default().boxed_clone(),
-                                        cx,
-                                    );
-                                }),
+                                Button::new("new-terminal-from-unavailable", fresh_terminal_label)
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(IconName::Terminal))
+                                    .tab_index(0isize)
+                                    .aria_label(fresh_terminal_accessibility_label)
+                                    .tooltip(move |_, cx| {
+                                        Tooltip::for_action(
+                                            fresh_terminal_tooltip_label.clone(),
+                                            &NewCenterTerminal::default(),
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            NewCenterTerminal::default().boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
                             ),
                         ),
                 )
@@ -5313,6 +5351,26 @@ mod tests {
         assert_eq!(
             terminal_external_attach_new_shell_label(px(920.), false),
             None
+        );
+        assert_eq!(
+            terminal_context_open_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            terminal_context_open_action_label("Zed", Some("codex --yolo")),
+            "Open Terminal"
+        );
+        assert_eq!(
+            terminal_unavailable_fresh_action_label("Dez", Some("claude")),
+            "Start Fresh Terminal · Claude Code"
+        );
+        assert_eq!(
+            terminal_unavailable_fresh_action_label("Dez", Some("tmux")),
+            "Start Fresh Terminal · tmux Session"
+        );
+        assert_eq!(
+            terminal_unavailable_fresh_action_label("Zed", Some("tmux")),
+            "Start Fresh Terminal"
         );
         assert_eq!(
             terminal_details_ownership_note_with_external_owner(false, false, Some("tmux")),

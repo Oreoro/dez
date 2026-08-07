@@ -620,8 +620,10 @@ a new one.
 
 Unavailable and legacy records preserve evidence without claiming process
 death, liveness, ownership transfer, or migration. A fresh shell is explicitly
-separate computation. Terminal Details stays inline, and **Terminate legacy
-session…** remains a context-menu action behind native confirmation.
+separate computation. Its native action names the configured destination before
+launch, just like the terminal context menu and the other Workspace launch
+surfaces. Terminal Details stays inline, and **Terminate legacy session…**
+remains a context-menu action behind native confirmation.
 
 ## Native-tool wireframe
 
