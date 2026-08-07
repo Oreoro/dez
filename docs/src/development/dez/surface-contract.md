@@ -722,6 +722,14 @@ assistive navigation. Dez calls the filtered result **stack frames from this
 Workspace**; official Zed retains its upstream Project wording. The label
 reverses to **Show all stack frames** while the filter is active.
 
+Running Debug controls follow the same selected-row rule. Dez keeps **Restart
+Stack Frame** visible and keyboard reachable on the selected frame while other
+rows retain the quiet hover affordance. Breakpoint enable, removal, log,
+condition, and hit-condition controls, plus **Remove Watch**, expose their
+action names and enter the keyboard order. An unavailable breakpoint action
+names why it cannot run instead of relying on a disabled glyph alone. Official
+Zed retains its inherited stack-frame hover presentation.
+
 A missing adapter or Workspace root fails before a Debug Session record is
 created. Adapter boot failures keep the exact launch request for **Retry** and
 render one native error callout above the existing Debug content. Starting a

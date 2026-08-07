@@ -1340,6 +1340,8 @@ impl VariableList {
                         SharedString::from(format!("watcher-{}-remove-button", watcher.expression)),
                         IconName::Close,
                     )
+                    .tab_index(0isize)
+                    .aria_label("Remove Watch")
                     .on_click({
                         move |_, window, cx| {
                             weak.update(cx, |variable_list, cx| {

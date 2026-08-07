@@ -2065,3 +2065,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Dez. Other rows retain the quiet pointer-hover affordance, and official Zed
   retains its inherited presentation and copy. The action removes only the
   history entry; it does not delete a task definition or stop running work.
+- **2026-08-07: Running Debug controls share one accessibility rule.** The
+  selected stack frame keeps **Restart Stack Frame** visible and keyboard
+  reachable in Dez; breakpoint toggle, removal, log, condition, hit-condition,
+  and watch-removal actions enter the keyboard order and expose their names.
+  Unsupported breakpoint actions state why they are unavailable rather than
+  relying on a disabled glyph. Official Zed retains its inherited stack-frame
+  hover presentation, and all state remains owned by native Debug lists.

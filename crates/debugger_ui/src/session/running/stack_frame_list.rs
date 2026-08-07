@@ -63,6 +63,10 @@ fn stack_frame_filter_action_label(app_name: &str, filter: StackFrameFilter) -> 
     }
 }
 
+fn stack_frame_restart_is_persistently_visible(app_name: &str, selected: bool) -> bool {
+    app_name != "Zed" && selected
+}
+
 impl From<StackFrameFilter> for String {
     fn from(filter: StackFrameFilter) -> Self {
         match filter {
@@ -611,6 +615,8 @@ impl StackFrameList {
         let restart_hover_background = debugger_row_hover_background(cx);
         let restart_hover_border_color =
             debugger_row_hover_border_color(restart_background, false, cx);
+        let restart_is_persistently_visible =
+            stack_frame_restart_is_persistently_visible(paths::APP_NAME, is_selected_frame);
 
         debugger_row_surface(h_flex().justify_between().w_full(), is_selected_frame, cx)
             .group("")
@@ -642,7 +648,9 @@ impl StackFrameList {
                     this.child(
                         h_flex()
                             .id(("restart-stack-frame", stack_frame.id))
-                            .visible_on_hover("")
+                            .when(!restart_is_persistently_visible, |this| {
+                                this.visible_on_hover("")
+                            })
                             .absolute()
                             .right_2()
                             .overflow_hidden()
@@ -662,6 +670,10 @@ impl StackFrameList {
                                     IconName::RotateCcw,
                                 )
                                 .icon_size(IconSize::Small)
+                                .aria_label("Restart Stack Frame")
+                                .when(restart_is_persistently_visible, |button| {
+                                    button.tab_index(0isize)
+                                })
                                 .on_click(cx.listener({
                                     let stack_frame_id = stack_frame.id;
                                     move |this, _, _window, cx| {
@@ -991,5 +1003,12 @@ mod product_copy_tests {
             stack_frame_filter_action_label("Zed", StackFrameFilter::All),
             "Show stack frames from your project"
         );
+    }
+
+    #[test]
+    fn dez_keeps_restart_visible_on_the_selected_stack_frame() {
+        assert!(stack_frame_restart_is_persistently_visible("Dez", true));
+        assert!(!stack_frame_restart_is_persistently_visible("Dez", false));
+        assert!(!stack_frame_restart_is_persistently_visible("Zed", true));
     }
 }

@@ -50,6 +50,28 @@ pub(crate) enum SelectedBreakpointKind {
     Exception,
     Data,
 }
+
+fn breakpoint_toggle_action_label(
+    selection_kind: Option<(SelectedBreakpointKind, bool)>,
+) -> &'static str {
+    match selection_kind {
+        Some((_, true)) => "Disable Breakpoint",
+        Some((_, false)) => "Enable Breakpoint",
+        None => "Select a breakpoint to enable or disable",
+    }
+}
+
+fn breakpoint_remove_action_label(
+    selection_kind: Option<(SelectedBreakpointKind, bool)>,
+) -> &'static str {
+    match selection_kind.map(|(kind, _)| kind) {
+        Some(SelectedBreakpointKind::Source) => "Remove Breakpoint",
+        Some(SelectedBreakpointKind::Exception) => "Exception breakpoint removal is unavailable",
+        Some(SelectedBreakpointKind::Data) => "Data breakpoint removal is unavailable",
+        None => "Select a source breakpoint to remove",
+    }
+}
+
 pub(crate) struct BreakpointList {
     workspace: WeakEntity<Workspace>,
     breakpoint_store: Entity<BreakpointStore>,
@@ -587,13 +609,17 @@ impl BreakpointList {
     pub(crate) fn render_control_strip(&self) -> AnyElement {
         let selection_kind = self.selection_kind();
         let focus_handle = self.focus_handle.clone();
+        let toggle_action_label = breakpoint_toggle_action_label(selection_kind);
+        let remove_action_label = breakpoint_remove_action_label(selection_kind);
 
         let remove_breakpoint_tooltip = selection_kind.map(|(kind, _)| match kind {
             SelectedBreakpointKind::Source => "Remove breakpoint from a breakpoint list",
             SelectedBreakpointKind::Exception => {
                 "Exception Breakpoints cannot be removed from the breakpoint list"
             }
-            SelectedBreakpointKind::Data => "Remove data breakpoint from a breakpoint list",
+            SelectedBreakpointKind::Data => {
+                "Data Breakpoints cannot be removed from the breakpoint list"
+            }
         });
 
         let toggle_label = selection_kind.map(|(_, is_enabled)| {
@@ -614,6 +640,8 @@ impl BreakpointList {
                     IconName::DebugDisabledBreakpoint,
                 )
                 .icon_size(IconSize::Small)
+                .tab_index(0isize)
+                .aria_label(toggle_action_label)
                 .when_some(toggle_label, |this, (label, meta)| {
                     this.tooltip({
                         let focus_handle = focus_handle.clone();
@@ -640,6 +668,8 @@ impl BreakpointList {
             .child(
                 IconButton::new("remove-breakpoint-breakpoint-list", IconName::Trash)
                     .icon_size(IconSize::Small)
+                    .tab_index(0isize)
+                    .aria_label(remove_action_label)
                     .when_some(remove_breakpoint_tooltip, |this, tooltip| {
                         this.tooltip({
                             let focus_handle = focus_handle.clone();
@@ -1438,6 +1468,8 @@ impl RenderOnce for BreakpointOptionsStrip {
                             IconName::Notepad,
                         )
                         .shape(ui::IconButtonShape::Square)
+                        .tab_index(0isize)
+                        .aria_label("Set Log Message")
                         .style(style_for_toggle(ActiveBreakpointStripMode::Log, has_logs))
                         .icon_size(IconSize::Small)
                         .icon_color(color_for_toggle(has_logs))
@@ -1471,6 +1503,8 @@ impl RenderOnce for BreakpointOptionsStrip {
                                 IconName::SplitAlt,
                             )
                             .shape(ui::IconButtonShape::Square)
+                            .tab_index(0isize)
+                            .aria_label("Set Condition")
                             .style(style_for_toggle(
                                 ActiveBreakpointStripMode::Condition,
                                 has_condition,
@@ -1510,6 +1544,8 @@ impl RenderOnce for BreakpointOptionsStrip {
                             has_hit_condition,
                         ))
                         .shape(ui::IconButtonShape::Square)
+                        .tab_index(0isize)
+                        .aria_label("Set Hit Condition")
                         .icon_size(IconSize::Small)
                         .icon_color(color_for_toggle(has_hit_condition))
                         .when(has_hit_condition, |this| this.indicator(Indicator::dot().color(Color::Info)))
@@ -1527,5 +1563,44 @@ impl RenderOnce for BreakpointOptionsStrip {
                     ))
 
             })
+    }
+}
+
+#[cfg(test)]
+mod product_accessibility_tests {
+    use super::{
+        SelectedBreakpointKind, breakpoint_remove_action_label, breakpoint_toggle_action_label,
+    };
+
+    #[test]
+    fn breakpoint_controls_name_actions_and_disabled_reasons() {
+        assert_eq!(
+            breakpoint_toggle_action_label(Some((SelectedBreakpointKind::Source, true))),
+            "Disable Breakpoint"
+        );
+        assert_eq!(
+            breakpoint_toggle_action_label(Some((SelectedBreakpointKind::Source, false))),
+            "Enable Breakpoint"
+        );
+        assert_eq!(
+            breakpoint_toggle_action_label(None),
+            "Select a breakpoint to enable or disable"
+        );
+        assert_eq!(
+            breakpoint_remove_action_label(Some((SelectedBreakpointKind::Source, true))),
+            "Remove Breakpoint"
+        );
+        assert_eq!(
+            breakpoint_remove_action_label(Some((SelectedBreakpointKind::Exception, true))),
+            "Exception breakpoint removal is unavailable"
+        );
+        assert_eq!(
+            breakpoint_remove_action_label(Some((SelectedBreakpointKind::Data, true))),
+            "Data breakpoint removal is unavailable"
+        );
+        assert_eq!(
+            breakpoint_remove_action_label(None),
+            "Select a source breakpoint to remove"
+        );
     }
 }
