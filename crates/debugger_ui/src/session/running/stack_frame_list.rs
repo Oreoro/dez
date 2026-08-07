@@ -55,6 +55,14 @@ impl StackFrameFilter {
     }
 }
 
+fn stack_frame_filter_action_label(app_name: &str, filter: StackFrameFilter) -> &'static str {
+    match filter {
+        StackFrameFilter::All if app_name == "Zed" => "Show stack frames from your project",
+        StackFrameFilter::All => "Show stack frames from this Workspace",
+        StackFrameFilter::OnlyUserFrames => "Show all stack frames",
+    }
+}
+
 impl From<StackFrameFilter> for String {
     fn from(filter: StackFrameFilter) -> Self {
         match filter {
@@ -902,10 +910,7 @@ impl StackFrameList {
     }
 
     pub(crate) fn render_control_strip(&self) -> AnyElement {
-        let tooltip_title = match self.list_filter {
-            StackFrameFilter::All => "Show stack frames from your project",
-            StackFrameFilter::OnlyUserFrames => "Show all stack frames",
-        };
+        let action_label = stack_frame_filter_action_label(paths::APP_NAME, self.list_filter);
 
         h_flex()
             .child(
@@ -913,8 +918,10 @@ impl StackFrameList {
                     "filter-by-visible-worktree-stack-frame-list",
                     IconName::Filter,
                 )
+                .tab_index(0isize)
+                .aria_label(action_label)
                 .tooltip(move |_window, cx| {
-                    Tooltip::for_action(tooltip_title, &ToggleUserFrames, cx)
+                    Tooltip::for_action(action_label, &ToggleUserFrames, cx)
                 })
                 .toggle_state(self.list_filter == StackFrameFilter::OnlyUserFrames)
                 .icon_size(IconSize::Small)
@@ -965,3 +972,24 @@ impl Focusable for StackFrameList {
 }
 
 impl EventEmitter<StackFrameListEvent> for StackFrameList {}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::{StackFrameFilter, stack_frame_filter_action_label};
+
+    #[test]
+    fn dez_names_and_reverses_the_workspace_stack_frame_filter() {
+        assert_eq!(
+            stack_frame_filter_action_label("Dez", StackFrameFilter::All),
+            "Show stack frames from this Workspace"
+        );
+        assert_eq!(
+            stack_frame_filter_action_label("Dez", StackFrameFilter::OnlyUserFrames),
+            "Show all stack frames"
+        );
+        assert_eq!(
+            stack_frame_filter_action_label("Zed", StackFrameFilter::All),
+            "Show stack frames from your project"
+        );
+    }
+}

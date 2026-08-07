@@ -710,6 +710,12 @@ breakpoint guidance points back to the editor. Failures preserve the adapter
 reason and expose Retry and logs inline; they never open an overlay or create a
 second Debug navigation system.
 
+The stack-frame filter remains an icon-only native Debug control, but it is in
+the keyboard tab order and exposes the same action name to its tooltip and
+assistive navigation. Dez calls the filtered result **stack frames from this
+Workspace**; official Zed retains its upstream Project wording. The label
+reverses to **Show all stack frames** while the filter is active.
+
 A missing adapter or Workspace root fails before a Debug Session record is
 created. Adapter boot failures keep the exact launch request for **Retry** and
 render one native error callout above the existing Debug content. Starting a

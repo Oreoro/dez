@@ -2053,3 +2053,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   use Workspace language in Dez. The Git model keeps its upstream project and
   worktree types internally, and official Zed retains its public Project copy;
   this is product vocabulary alignment rather than a second Git abstraction.
+- **2026-08-07: Debug filtering is named and keyboard reachable.** The existing
+  stack-frame filter remains owned by the native Debug surface, enters the
+  keyboard tab order, and shares one action label across tooltip and assistive
+  navigation. Dez names Workspace scope while official Zed retains Project
+  copy; filtering state remains explicit through the inverse **Show all stack
+  frames** action rather than icon color alone.
