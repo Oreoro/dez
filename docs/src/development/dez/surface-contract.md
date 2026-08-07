@@ -252,7 +252,10 @@ Workspaces supplies a quiet explanation rather than a duplicate button.
 Permission recovery belongs to the affected Workspace root. One aggregated
 notice names the exact folder and gates Git, search, LSP, agents, and terminals
 behind the same preflight. Selecting **Grant Access…** never opens or replaces
-a Workspace, and Home does not mirror the notice over the Main Work Area.
+a Workspace, and Home does not mirror the notice over the Main Work Area. The
+native action names that exact root to assistive navigation when one folder is
+blocked. When several roots are blocked, it announces **one of N blocked
+Workspace folders** and the picker grants one exact root at a time.
 
 ### 7. Product-first Settings
 

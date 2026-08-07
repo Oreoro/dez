@@ -1851,6 +1851,30 @@ fn workspace_access_root_label(root: &Path) -> String {
         .unwrap_or_else(|| root.display().to_string())
 }
 
+fn workspace_access_grant_accessibility_label(root_labels: &[String]) -> String {
+    match root_labels {
+        [] => "Grant Workspace Folder Access".to_owned(),
+        [root_label] => format!("Grant Access to Workspace Folder: {root_label}"),
+        root_labels => format!(
+            "Grant Access to One of {} Blocked Workspace Folders",
+            root_labels.len()
+        ),
+    }
+}
+
+fn workspace_access_grant_tooltip(root_labels: &[String]) -> String {
+    match root_labels {
+        [] => "Grant access without opening or replacing a Workspace".to_owned(),
+        [root_label] => {
+            format!("Grant access to “{root_label}” without opening or replacing the Workspace")
+        }
+        root_labels => format!(
+            "Choose one of {} exact blocked Workspace folders; Dez keeps the current layout",
+            root_labels.len()
+        ),
+    }
+}
+
 fn project_header_primary_action_activates_workspace(app_name: &str) -> bool {
     app_name != "Zed"
 }
@@ -2807,6 +2831,32 @@ mod workspace_header_label_tests {
             "zed 3.0"
         );
         assert_eq!(workspace_access_root_label(Path::new("/")), "/");
+        assert_eq!(
+            workspace_access_grant_accessibility_label(&["zed 3.0".to_owned()]),
+            "Grant Access to Workspace Folder: zed 3.0"
+        );
+        assert_eq!(
+            workspace_access_grant_accessibility_label(&[]),
+            "Grant Workspace Folder Access"
+        );
+        assert_eq!(
+            workspace_access_grant_tooltip(&[]),
+            "Grant access without opening or replacing a Workspace"
+        );
+        assert_eq!(
+            workspace_access_grant_tooltip(&["zed 3.0".to_owned()]),
+            "Grant access to “zed 3.0” without opening or replacing the Workspace"
+        );
+        assert_eq!(
+            workspace_access_grant_accessibility_label(
+                &["zed 3.0".to_owned(), "ideas".to_owned(),]
+            ),
+            "Grant Access to One of 2 Blocked Workspace Folders"
+        );
+        assert_eq!(
+            workspace_access_grant_tooltip(&["zed 3.0".to_owned(), "ideas".to_owned()]),
+            "Choose one of 2 exact blocked Workspace folders; Dez keeps the current layout"
+        );
         assert_eq!(
             workspace_new_terminal_tooltip_label("Dez", Some("claude")),
             "Open Terminal · Claude Code"
@@ -18830,6 +18880,8 @@ impl Sidebar {
                 root_labels.len()
             )
         };
+        let grant_accessibility_label = workspace_access_grant_accessibility_label(&root_labels);
+        let grant_tooltip = workspace_access_grant_tooltip(&root_labels);
 
         Some(
             Callout::new()
@@ -18842,10 +18894,8 @@ impl Sidebar {
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Filled)
                         .tab_index(0isize)
-                        .aria_label("Grant Access to a Blocked Workspace Folder")
-                        .tooltip(Tooltip::text(
-                            "Grant access without opening or replacing a Workspace",
-                        ))
+                        .aria_label(grant_accessibility_label)
+                        .tooltip(Tooltip::text(grant_tooltip))
                         .on_click(|_, window, cx| {
                             window.dispatch_action(
                                 zed_actions::dez::GrantWorkspaceAccess.boxed_clone(),
