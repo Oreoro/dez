@@ -1750,6 +1750,21 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/project/src/git_store.rs \
     'pub fn reset_failed_graph_data.*?data\.fetch_task\.is_ready\(\) && data\.error\.is_some\(\).*?initial_graph_data\.remove\(&key\).*?can_retry' \
     'Git History retry can regress to discarding in-flight or healthy graph state'
+require_multiline_pattern crates/git_ui/src/git_ui.rs \
+    'fn git_workspace_copy.*?app_name == "Zed".*?project_copy.*?workspace_copy.*?fn dez_names_the_workspace_as_the_public_git_owner.*?"Open File in Workspace".*?"Open File in Project"' \
+    'Dez Git surfaces can regress to exposing the internal Project owner'
+require_multiline_pattern crates/git_ui/src/commit_view.rs \
+    'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"Open File in Project",[[:space:]]*"Open File in Workspace"' \
+    'the commit-file action can regress to Project language in Dez'
+require_multiline_pattern crates/git_ui/src/git_panel.rs \
+    'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"You do not have write access to this project",[[:space:]]*"You do not have write access to this Workspace"' \
+    'the Git write-access failure can regress to Project language in Dez'
+require_multiline_pattern crates/git_ui/src/worktree_picker.rs \
+    'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"Worktree creation is not supported in collaborative projects",[[:space:]]*"Worktree creation is not supported in shared Workspaces".*?"Requires a Git repository in this Workspace".*?"Cannot create a named worktree in a Workspace with multiple repositories"' \
+    'Git worktree eligibility can regress to mixed Project and Workspace ownership'
+require_multiline_pattern crates/git_ui/src/clone.rs \
+    'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"Add repo to project",[[:space:]]*"Add Repository to Workspace".*?git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"Open repo in new project",[[:space:]]*"Open Repository in New Workspace"' \
+    'Git clone destinations can regress to Project language in Dez'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_row_actions_visible.*?\(is_hovered \|\| is_focused\) && !is_renaming.*?pointer_and_keyboard_selection_reveal_the_same_row_actions' \
     'Session Rail row controls can regress to pointer-hover-only discovery'

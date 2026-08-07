@@ -141,7 +141,11 @@ impl Addon for CommitDiffAddon {
         menu.when_some(file_to_open, |menu, file| {
             let commit_view = self.commit_view.clone();
             menu.entry(
-                "Open File in Project",
+                crate::git_workspace_copy(
+                    paths::APP_NAME,
+                    "Open File in Project",
+                    "Open File in Workspace",
+                ),
                 Some(Box::new(OpenFileAtHead)),
                 move |window, cx| {
                     commit_view

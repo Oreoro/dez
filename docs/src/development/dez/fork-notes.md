@@ -2048,3 +2048,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   truthful. The older Files-specific `project_panel.starts_open` preference
   remains raw-settings compatibility but is no longer a second graphical
   startup control in Dez.
+- **2026-08-07: Git names the native Workspace owner.** Commit-file context
+  actions, write-access failures, clone destinations, and worktree eligibility
+  use Workspace language in Dez. The Git model keeps its upstream project and
+  worktree types internally, and official Zed retains its public Project copy;
+  this is product vocabulary alignment rather than a second Git abstraction.

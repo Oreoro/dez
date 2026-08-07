@@ -800,6 +800,10 @@ that persistent identity. Both remain explicit user preferences.
   accessibility navigation.
 - Use cause plus recovery for errors: **Attach failed · Connection refused**,
   then **Retry Attach** or **Open new shell here**.
+- Keep the public Git owner consistent with the rest of Dez. Commit-file
+  actions, write-access failures, clone destinations, and worktree eligibility
+  name the **Workspace**; internal project and worktree types do not leak into
+  the native Git workflow. Official Zed retains its upstream Project copy.
 - Name the configured result at the point of launch. Generic **Open Terminal**
   may become **Open Terminal · Codex** or the resolved equivalent when space
   permits.
