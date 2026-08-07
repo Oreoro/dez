@@ -6,7 +6,10 @@ use std::str::FromStr;
 use ui::{ContextMenu, DropdownMenu, DropdownStyle, FluentBuilder, IconPosition, IntoElement};
 use util::ResultExt;
 
-use crate::{SettingField, SettingsFieldMetadata, SettingsUiFile, update_settings_file};
+use crate::{
+    SettingField, SettingsFieldMetadata, SettingsUiFile, persistent_settings_popover_handle,
+    update_settings_file,
+};
 
 pub(crate) const SYSTEM_DEFAULT: &str = "System Default";
 
@@ -37,6 +40,7 @@ pub(crate) fn render_audio_device_dropdown<F>(
 where
     F: Fn(Option<DeviceId>, &mut Window, &mut App) + Clone + 'static,
 {
+    let dropdown_id = dropdown_id.into();
     audio::ensure_devices_initialized(cx);
     let devices = cx.global::<AvailableAudioDevices>().0.clone();
     let current_device = get_current_device(current_device_id.as_ref(), is_input, &devices);
@@ -82,20 +86,22 @@ where
         }
     });
 
-    DropdownMenu::new(
-        dropdown_id,
-        current_device
-            .map(|info| info.desc.name().to_string())
-            .unwrap_or(SYSTEM_DEFAULT.to_string()),
-        menu,
-    )
-    .style(DropdownStyle::Outlined)
-    .full_width(true)
-    .when_some(aria_label, |this, label| this.aria_label(label))
-    .when_some(aria_description, |this, description| {
-        this.aria_description(description)
-    })
-    .into_any_element()
+    let current_device_label = current_device
+        .map(|info| info.desc.name().to_string())
+        .unwrap_or(SYSTEM_DEFAULT.to_string());
+    let popover_handle =
+        persistent_settings_popover_handle::<ContextMenu>(dropdown_id.clone(), window, cx);
+
+    DropdownMenu::new(dropdown_id, current_device_label.clone(), menu)
+        .style(DropdownStyle::Outlined)
+        .full_width(true)
+        .aria_value(current_device_label)
+        .handle(popover_handle)
+        .when_some(aria_label, |this, label| this.aria_label(label))
+        .when_some(aria_description, |this, description| {
+            this.aria_description(description)
+        })
+        .into_any_element()
 }
 
 fn render_settings_audio_device_dropdown<T: AsRef<Option<String>> + From<Option<String>> + Send>(

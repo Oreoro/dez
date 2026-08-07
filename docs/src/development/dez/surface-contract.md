@@ -348,6 +348,8 @@ dropdowns follow the same contract and mark the currently selected Confirm,
 Allow, or Deny policy in their native menus. Curated enum rows—including
 terminal launcher, new-Workspace intent, and appearance choices—share a stable
 dropdown owner instead of rebuilding open state per render.
+Audio-device, edit-prediction-provider, and provider reasoning-effort menus use
+the same owner-scoped state and announce their selected values.
 Dez also keeps product-inert microgeometry out of the curated catalog: the
 disabled outer card gap, disabled active-pane border, and unused zoom padding
 remain readable in `settings.json` for compatibility but are not presented as

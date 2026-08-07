@@ -423,6 +423,15 @@ require_multiline_pattern crates/settings_ui/src/components/ollama_model_picker.
 require_multiline_pattern crates/settings_ui/src/components/dropdown.rs \
     'let popover_handle = window.*?use_keyed_state\(.*?enum-variant-dropdown-handle.*?id\.clone\(\).*?PopoverMenuHandle::<ContextMenu>::default\(\).*?dropdown.*?handle\(popover_handle\).*?aria_label.*?aria_description' \
     'curated enum Settings controls can regress to transient dropdown owners that conceal their expanded state'
+require_multiline_pattern crates/settings_ui/src/pages/audio_input_output_setup.rs \
+    'let dropdown_id = dropdown_id\.into\(\).*?let current_device_label.*?persistent_settings_popover_handle::<ContextMenu>\(dropdown_id\.clone\(\).*?DropdownMenu::new\(dropdown_id, current_device_label\.clone\(\), menu\).*?aria_value\(current_device_label\).*?handle\(popover_handle\)' \
+    'Audio device Settings can regress to transient dropdown ownership or conceal the selected device'
+require_multiline_pattern crates/settings_ui/src/pages/edit_prediction_provider_setup.rs \
+    'fn render_provider_dropdown.*?persistent_settings_popover_handle::<ContextMenu>\(.*?edit_predictions\.provider.*?DropdownMenu::new\("provider-dropdown", current_provider_name, menu\).*?aria_label\("Edit prediction provider"\).*?aria_value\(current_provider_name\).*?handle\(popover_handle\)' \
+    'Edit prediction Settings can regress to transient dropdown ownership or conceal the selected provider'
+require_multiline_pattern crates/settings_ui/src/pages/llm_providers_page.rs \
+    'fn render_reasoning_effort_selector.*?persistent_settings_popover_handle::<ContextMenu>\(.*?agent\.llm_provider\.model\.\{index\}\.reasoning_effort.*?reasoning-effort-selector-\{index\}.*?aria_label\("Default reasoning effort"\).*?aria_value\(selected\.label\(\)\).*?handle\(popover_handle\)' \
+    'provider reasoning-effort Settings can regress to transient dropdown ownership or conceal the selected effort'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'trait AnySettingField.*?fn is_settings_file_only\(&self\) -> bool;.*?impl<T: PartialEq.*?fn is_settings_file_only\(&self\) -> bool \{.*?TypeId::of::<T>\(\) == TypeId::of::<UnimplementedSettingField>\(\)' \
     'the native Settings catalog can lose its explicit settings-file-only field classification'

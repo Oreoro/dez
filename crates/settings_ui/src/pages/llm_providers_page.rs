@@ -989,6 +989,11 @@ fn render_reasoning_effort_selector(
         }
         menu
     });
+    let popover_handle = persistent_settings_popover_handle::<ContextMenu>(
+        format!("agent.llm_provider.model.{index}.reasoning_effort"),
+        window,
+        cx,
+    );
 
     v_flex()
         .gap_1()
@@ -1002,7 +1007,9 @@ fn render_reasoning_effort_selector(
             .style(DropdownStyle::Outlined)
             .trigger_size(ButtonSize::Compact)
             .full_width(true)
-            .aria_label("Default reasoning effort"),
+            .aria_label("Default reasoning effort")
+            .aria_value(selected.label())
+            .handle(popover_handle),
         )
 }
 

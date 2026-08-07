@@ -23,6 +23,7 @@ const OPEN_AI_COMPATIBLE_MODEL_PLACEHOLDER: &str = "qwen2.5-coder:3b-base";
 use crate::{
     SettingField, SettingItem, SettingsFieldMetadata, SettingsPageItem, SettingsWindow, USER,
     components::{SettingsInputField, SettingsSectionHeader},
+    persistent_settings_popover_handle,
 };
 
 pub(crate) fn render_edit_prediction_setup_page(
@@ -144,6 +145,8 @@ fn render_provider_dropdown(window: &mut Window, cx: &mut App) -> AnyElement {
         }
         menu
     });
+    let popover_handle =
+        persistent_settings_popover_handle::<ContextMenu>("edit_predictions.provider", window, cx);
 
     v_flex()
         .id("provider-selector")
@@ -171,7 +174,10 @@ fn render_provider_dropdown(window: &mut Window, cx: &mut App) -> AnyElement {
                 .child(
                     DropdownMenu::new("provider-dropdown", current_provider_name, menu)
                         .tab_index(0)
-                        .style(DropdownStyle::Outlined),
+                        .style(DropdownStyle::Outlined)
+                        .aria_label("Edit prediction provider")
+                        .aria_value(current_provider_name)
+                        .handle(popover_handle),
                 ),
         )
         .into_any_element()
