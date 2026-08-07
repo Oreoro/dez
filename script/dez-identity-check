@@ -3312,8 +3312,14 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn workspace_tools_menu_label.*?"Toggle Workspace Tools".*?fn workspace_tools_are_grouped.*?app_name != "Zed".*?fn developer_surface_menu_label.*?if app_name != "Zed".*?dez_label' \
     'the Dez View menu can regress to implementation-flavored Project Tab and Panel labels'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'fn view_zoom_targets_interface.*?app_name != "Zed".*?if view_zoom_targets_interface\(APP_NAME\).*?"Zoom In".*?IncreaseUiFontSize.*?"Zoom Out".*?DecreaseUiFontSize.*?"Reset Zoom".*?ResetUiFontSize.*?else.*?"Zoom In".*?IncreaseBufferFontSize.*?"Zoom Out".*?DecreaseBufferFontSize.*?"Reset Zoom".*?ResetBufferFontSize.*?fn dez_view_zoom_targets_the_whole_interface_without_changing_zed.*?view_zoom_targets_interface\("Dez"\).*?!view_zoom_targets_interface\("Zed"\)' \
+    'Dez View zoom can regress to resizing only editor buffers or leak interface zoom into official Zed'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'developer_surface_menu_label\([[:space:]]*APP_NAME,[[:space:]]*panels_as_pane_tabs,[[:space:]]*"Built-in Agent".*?if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Workspaces", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?MenuItem::action\(project_surface_label.*?MenuItem::action\(outline_surface_label.*?MenuItem::action\(git_surface_label.*?MenuItem::action\(debugger_surface_label.*?MenuItem::action\(agent_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
     'the Dez View menu can regress to splitting contextual Workspace Tools into unrelated top-level panels'
+require_multiline_pattern crates/zed/src/zed/app_menus.rs \
+    'Menu::new\("Language Tools"\).*?"Workspace Symbols…".*?workspace::ToggleProjectSymbols.*?"Workspace Diagnostics".*?diagnostics::Deploy.*?"Language Servers".*?language_tools::lsp_button::ToggleMenu.*?"Restart Language Server for Current File".*?editor::actions::RestartLanguageServer.*?"Language Server Logs".*?language_tools::lsp_log_view::OpenLanguageServerLogs' \
+    'native Workspace language intelligence and LSP recovery can disappear from the Dez View menu'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'Menu::new\("Navigate Workspaces"\).*?"Focus Workspaces", workspace::FocusSidebar.*?"Search Workspaces and Activity…".*?zed_actions::sidebar::FocusSidebarFilter.*?"Previous Workspace", workspace::PreviousProject.*?"Next Workspace", workspace::NextProject' \
     'cross-Workspace focus, search, and cycling can disappear from the native View menu'

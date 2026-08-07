@@ -210,6 +210,20 @@ shelf, and the status line together; the shell must not wait for a Workspace,
 terminal, notification, or focus event before those native owners agree on the
 new metrics.
 
+Dez treats **Zoom In**, **Zoom Out**, and **Reset Zoom** as whole-interface
+controls. They change the shared UI scale used by the title bar, native pane
+tabs, Workspaces, Settings, menus, and the status line; editor- and
+terminal-font sizing remain separate explicit actions. The View menu and the
+default keyboard shortcuts must dispatch the same interface actions. Official
+Zed retains its inherited buffer-zoom View menu.
+
+The native View menu keeps language intelligence discoverable without adding a
+second tool rail. **Language Tools** routes to the existing Workspace Symbols,
+Workspace Diagnostics, Language Servers status menu, current-file language
+server restart, and Language Server Logs owners. These are navigation and
+recovery actions over Zed's existing LSP implementation, not a parallel Dez
+language-service layer.
+
 ## Secondary-state wireframe
 
 ### 5. Install-first Home

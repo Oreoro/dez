@@ -48,6 +48,10 @@ fn workspace_tools_are_grouped(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
+fn view_zoom_targets_interface(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 fn developer_surface_menu_label(
     app_name: &str,
     panels_as_pane_tabs: bool,
@@ -103,25 +107,47 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             .as_deref(),
     );
 
-    let mut view_items = vec![
-        MenuItem::action(
-            "Zoom In",
-            zed_actions::IncreaseBufferFontSize { persist: false },
-        ),
-        MenuItem::action(
-            "Zoom Out",
-            zed_actions::DecreaseBufferFontSize { persist: false },
-        ),
-        MenuItem::action(
-            "Reset Zoom",
-            zed_actions::ResetBufferFontSize { persist: false },
-        ),
-        MenuItem::action(
-            "Reset All Zoom",
-            zed_actions::ResetAllZoom { persist: false },
-        ),
-        MenuItem::separator(),
-    ];
+    let mut view_items = if view_zoom_targets_interface(APP_NAME) {
+        vec![
+            MenuItem::action(
+                "Zoom In",
+                zed_actions::IncreaseUiFontSize { persist: false },
+            ),
+            MenuItem::action(
+                "Zoom Out",
+                zed_actions::DecreaseUiFontSize { persist: false },
+            ),
+            MenuItem::action(
+                "Reset Zoom",
+                zed_actions::ResetUiFontSize { persist: false },
+            ),
+            MenuItem::action(
+                "Reset All Zoom",
+                zed_actions::ResetAllZoom { persist: false },
+            ),
+            MenuItem::separator(),
+        ]
+    } else {
+        vec![
+            MenuItem::action(
+                "Zoom In",
+                zed_actions::IncreaseBufferFontSize { persist: false },
+            ),
+            MenuItem::action(
+                "Zoom Out",
+                zed_actions::DecreaseBufferFontSize { persist: false },
+            ),
+            MenuItem::action(
+                "Reset Zoom",
+                zed_actions::ResetBufferFontSize { persist: false },
+            ),
+            MenuItem::action(
+                "Reset All Zoom",
+                zed_actions::ResetAllZoom { persist: false },
+            ),
+            MenuItem::separator(),
+        ]
+    };
 
     let editor_layout_menu = || {
         MenuItem::submenu(Menu {
@@ -157,10 +183,24 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::separator(),
                 MenuItem::action(agent_surface_label, assistant::ToggleFocus),
             ])),
+            MenuItem::submenu(Menu::new("Language Tools").items([
+                MenuItem::action("Workspace Symbols…", workspace::ToggleProjectSymbols),
+                MenuItem::action("Workspace Diagnostics", diagnostics::Deploy),
+                MenuItem::action(
+                    "Language Servers",
+                    language_tools::lsp_button::ToggleMenu,
+                ),
+                MenuItem::action(
+                    "Restart Language Server for Current File",
+                    editor::actions::RestartLanguageServer,
+                ),
+                MenuItem::action(
+                    "Language Server Logs",
+                    language_tools::lsp_log_view::OpenLanguageServerLogs,
+                ),
+            ])),
             MenuItem::separator(),
             editor_layout_menu(),
-            MenuItem::separator(),
-            MenuItem::action("Diagnostics", diagnostics::Deploy),
             MenuItem::separator(),
         ]);
     } else {
@@ -627,13 +667,19 @@ mod tests {
     use super::{
         configured_terminal_launcher_label, developer_surface_menu_label,
         open_workspace_menu_label, product_menu_label, terminal_panel_surface_visible,
-        workspace_tools_are_grouped, workspace_tools_menu_label,
+        view_zoom_targets_interface, workspace_tools_are_grouped, workspace_tools_menu_label,
     };
 
     #[test]
     fn terminal_panel_is_an_official_zed_compatibility_surface() {
         assert!(!terminal_panel_surface_visible("Dez"));
         assert!(terminal_panel_surface_visible("Zed"));
+    }
+
+    #[test]
+    fn dez_view_zoom_targets_the_whole_interface_without_changing_zed() {
+        assert!(view_zoom_targets_interface("Dez"));
+        assert!(!view_zoom_targets_interface("Zed"));
     }
 
     #[test]
