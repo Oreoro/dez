@@ -9759,6 +9759,7 @@ impl Sidebar {
 
         let this = cx.weak_entity();
         let key = key.clone();
+        let button = button.aria_expanded(is_menu_open);
 
         PopoverMenu::new(SharedString::from(format!(
             "{id_prefix}workspace-new-session-menu-{ix}"

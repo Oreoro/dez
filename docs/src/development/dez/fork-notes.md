@@ -2111,3 +2111,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   addition to its Workspace-specific name, tooltip, keyboard target, and
   persistent active/focused presentation. Menu ownership and visible layout
   remain unchanged.
+- **2026-08-07: The Workspace terminal picker reports its menu state.** When a
+  Workspace group has multiple open destinations, its configured-terminal
+  trigger now exposes expanded or collapsed state. A group with no open
+  Workspace keeps the same direct launch action and does not announce a menu;
+  terminal launch ownership and visible layout remain unchanged.
