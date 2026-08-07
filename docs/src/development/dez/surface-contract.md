@@ -312,8 +312,11 @@ debug surface. Advanced adapter preferences remain below these actions.
 
 Settings retains the originating Workspace when its existing window is reused,
 including when a global Settings command is dispatched while Settings already
-has focus. Window-owned actions such as native keymaps and visual-profile
-recovery remain available from Home while that originating window exists.
+has focus. It observes that window's `MultiWorkspace` owner, so switching the
+active Workspace immediately re-evaluates root-scoped actions and their
+assistive descriptions without waiting for a Settings or project event.
+Window-owned actions such as native keymaps and visual-profile recovery remain
+available from Home while that originating window exists.
 Root-owned actions—Debugger and `debug.json`—remain visibly disabled with an
 inline explanation until that window owns a real Workspace root. They never
 appear enabled and then fail silently. App-wide actions such as documentation

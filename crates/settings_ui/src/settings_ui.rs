@@ -1060,7 +1060,7 @@ fn open_settings_editor_with(
     if let Some(existing_window) = existing_window {
         existing_window
             .update(cx, |settings_window, window, cx| {
-                settings_window.update_workspace_context(workspace_handle);
+                settings_window.update_workspace_context(workspace_handle, cx);
                 settings_window.fetch_files(window, cx);
 
                 window.activate_window();
@@ -1155,6 +1155,7 @@ fn active_language_mut() -> Option<std::sync::RwLockWriteGuard<'static, Option<S
 pub struct SettingsWindow {
     title_bar: Option<Entity<PlatformTitleBar>>,
     original_window: Option<WindowHandle<MultiWorkspace>>,
+    workspace_context_subscription: Option<Subscription>,
     files: Vec<(SettingsUiFile, FocusHandle)>,
     worktree_root_dirs: HashMap<WorktreeId, String>,
     current_file: SettingsUiFile,
@@ -2148,10 +2149,26 @@ impl SettingsWindow {
         project.worktrees(cx).next().is_some()
     }
 
-    fn update_workspace_context(&mut self, workspace_handle: Option<WindowHandle<MultiWorkspace>>) {
-        if let Some(workspace_handle) = workspace_handle {
-            self.original_window = Some(workspace_handle);
+    fn update_workspace_context(
+        &mut self,
+        workspace_handle: Option<WindowHandle<MultiWorkspace>>,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(workspace_handle) = workspace_handle else {
+            return;
+        };
+        if self.original_window == Some(workspace_handle)
+            && self.workspace_context_subscription.is_some()
+        {
+            return;
         }
+
+        self.original_window = Some(workspace_handle);
+        self.workspace_context_subscription = workspace_handle
+            .entity(cx)
+            .ok()
+            .map(|multi_workspace| cx.observe(&multi_workspace, |_, _, cx| cx.notify()));
+        cx.notify();
     }
 
     fn new(
@@ -2358,7 +2375,8 @@ impl SettingsWindow {
 
         let mut this = Self {
             title_bar,
-            original_window,
+            original_window: None,
+            workspace_context_subscription: None,
 
             worktree_root_dirs: HashMap::default(),
             files: vec![],
@@ -2413,6 +2431,7 @@ impl SettingsWindow {
             skill_creator_page: None,
         };
 
+        this.update_workspace_context(original_window, cx);
         this.fetch_files(window, cx);
         this.build_ui(window, cx);
         this.build_search_index();
@@ -6105,6 +6124,7 @@ pub mod test {
             Self {
                 title_bar: None,
                 original_window: None,
+                workspace_context_subscription: None,
                 worktree_root_dirs: HashMap::default(),
                 files: Vec::default(),
                 current_file: SettingsUiFile::User,
@@ -6244,6 +6264,7 @@ pub mod test {
         let mut settings_window = SettingsWindow {
             title_bar: None,
             original_window: None,
+            workspace_context_subscription: None,
             worktree_root_dirs: HashMap::default(),
             files: Vec::default(),
             current_file: crate::SettingsUiFile::User,
@@ -6732,8 +6753,8 @@ pub mod test {
             );
         });
 
-        settings_window.update(cx, |settings_window, _| {
-            settings_window.update_workspace_context(None);
+        settings_window.update(cx, |settings_window, cx| {
+            settings_window.update_workspace_context(None, cx);
             assert_eq!(
                 settings_window.original_window,
                 Some(workspace2_handle),
@@ -6746,7 +6767,7 @@ pub mod test {
         });
 
         settings_window.update_in(cx, |settings_window, window, cx| {
-            settings_window.update_workspace_context(Some(workspace1_handle));
+            settings_window.update_workspace_context(Some(workspace1_handle), cx);
             settings_window.fetch_files(window, cx);
         });
 
@@ -6766,6 +6787,52 @@ pub mod test {
                 "reusing Settings from another window must replace, not merge, project scope"
             );
         });
+
+        let settings_entity = settings_window
+            .root(cx)
+            .expect("Settings window should keep its root view");
+        let notify_count = Rc::new(RefCell::new(0usize));
+        let _notify_subscription = cx.update(|cx| {
+            let notify_count = notify_count.clone();
+            cx.observe(&settings_entity, move |_, _| {
+                *notify_count.borrow_mut() += 1;
+            })
+        });
+        cx.run_until_parked();
+
+        workspace1_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("originating Workspace window should remain available");
+        cx.run_until_parked();
+        assert!(
+            *notify_count.borrow() > 0,
+            "Settings must invalidate when its originating MultiWorkspace changes"
+        );
+
+        settings_window.update(cx, |settings_window, cx| {
+            settings_window.update_workspace_context(Some(workspace2_handle), cx);
+        });
+        cx.run_until_parked();
+        let notify_count_after_retarget = *notify_count.borrow();
+
+        workspace1_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("previous Workspace window should remain available");
+        cx.run_until_parked();
+        assert_eq!(
+            *notify_count.borrow(),
+            notify_count_after_retarget,
+            "Settings must stop observing a previous Workspace owner"
+        );
+
+        workspace2_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("new Workspace window should remain available");
+        cx.run_until_parked();
+        assert!(
+            *notify_count.borrow() > notify_count_after_retarget,
+            "Settings must observe its replacement Workspace owner"
+        );
     }
 
     #[gpui::test]
