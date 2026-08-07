@@ -765,6 +765,9 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::CanvasDensity>(render_dropdown)
         .add_basic_renderer::<settings::CanvasRadius>(render_dropdown)
         .add_basic_renderer::<settings::CanvasContrast>(render_dropdown)
+        .add_basic_renderer::<settings::WorkspaceStartupIntent>(
+            render_workspace_startup_intent_dropdown,
+        )
         .add_basic_renderer::<settings::CurrentLineHighlight>(render_dropdown)
         .add_basic_renderer::<settings::ShowWhitespaceSetting>(render_dropdown)
         .add_basic_renderer::<settings::SoftWrap>(render_dropdown)
@@ -5461,7 +5464,43 @@ fn render_terminal_launcher_dropdown(
         metadata,
         title,
         description,
-        Some(terminal_launcher_icon),
+        Some(Rc::new(terminal_launcher_icon)),
+        cx,
+    )
+}
+
+fn workspace_startup_intent_icon(
+    intent: settings::WorkspaceStartupIntent,
+    terminal_launcher: settings::TerminalLauncher,
+) -> IconName {
+    match intent {
+        settings::WorkspaceStartupIntent::Focus => IconName::Maximize,
+        settings::WorkspaceStartupIntent::Direct => IconName::FolderOpen,
+        settings::WorkspaceStartupIntent::Agentic => terminal_launcher_icon(terminal_launcher),
+        settings::WorkspaceStartupIntent::Review => IconName::GitBranch,
+        settings::WorkspaceStartupIntent::Debug => IconName::Debug,
+    }
+}
+
+fn render_workspace_startup_intent_dropdown(
+    field: SettingField<settings::WorkspaceStartupIntent>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    let terminal_launcher = AgentSettings::get_global(cx).terminal_launcher;
+    let icon_for_value: Rc<dyn Fn(settings::WorkspaceStartupIntent) -> IconName> =
+        Rc::new(move |intent| workspace_startup_intent_icon(intent, terminal_launcher));
+    render_dropdown_with_optional_icons(
+        field,
+        file,
+        metadata,
+        title,
+        description,
+        Some(icon_for_value),
         cx,
     )
 }
@@ -5472,7 +5511,7 @@ fn render_dropdown_with_optional_icons<T>(
     metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    icon_for_value: Option<fn(T) -> IconName>,
+    icon_for_value: Option<Rc<dyn Fn(T) -> IconName>>,
     cx: &mut App,
 ) -> AnyElement
 where
@@ -5508,7 +5547,7 @@ where
     })
     .aria_label(title)
     .when_some(icon_for_value, |this, icon_for_value| {
-        this.icon_for_value(icon_for_value)
+        this.icon_for_value(move |value| icon_for_value(value))
     })
     .when(!description.is_empty(), |this| {
         this.aria_description(description)
@@ -5948,6 +5987,36 @@ pub mod test {
         assert_eq!(
             canvas_settings_nav_width("Zed", settings::CanvasDensity::Spacious),
             SIDEBAR_WIDTH
+        );
+    }
+
+    #[test]
+    fn workspace_startup_intents_use_native_destination_icons() {
+        use settings::WorkspaceStartupIntent::{Agentic, Debug, Direct, Focus, Review};
+
+        assert_eq!(
+            workspace_startup_intent_icon(Focus, settings::TerminalLauncher::NativeShell),
+            IconName::Maximize
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Direct, settings::TerminalLauncher::NativeShell),
+            IconName::FolderOpen
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Agentic, settings::TerminalLauncher::Codex),
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Agentic, settings::TerminalLauncher::Tmux),
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Review, settings::TerminalLauncher::NativeShell),
+            IconName::GitBranch
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Debug, settings::TerminalLauncher::NativeShell),
+            IconName::Debug
         );
     }
 

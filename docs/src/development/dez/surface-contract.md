@@ -286,6 +286,9 @@ native Terminal or Workspace recovery remains authoritative if launch fails.
 If a panel destination's native owner is unavailable, the focused Main Work
 Area remains visible and **Focus Work Area** becomes the active saved layout.
 The status line and next-layout cycle must never claim a tool that did not open.
+The native dropdown pairs each destination with its existing semantic icon;
+Default Terminal resolves the configured provider glyph instead of presenting
+a generic terminal identity.
 
 Each Dez root page has one quiet semantic icon drawn from the same native icon
 set used by Home, Workspaces, tabs, and the status line. Icons supplement the
