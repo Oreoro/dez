@@ -681,7 +681,9 @@ A Task owns its native terminal output tab and appears in Workspaces only as
 live activity. The task picker says **Run**, not spawn, in Dez. While inventory
 loads it reports that state; an empty inventory explains that typed input can
 run once; and an unmatched non-empty query offers the same honest one-shot
-command path instead of a dead **No matches** message.
+command path instead of a dead **No matches** message. When the picker targets
+the center reveal location, Dez names that destination **Main Work Area**;
+official Zed retains its inherited central-pane wording.
 
 ### 19. Debug without a dead end
 

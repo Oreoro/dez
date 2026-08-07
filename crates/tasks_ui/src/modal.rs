@@ -96,6 +96,14 @@ fn task_run_action_label(
     }
 }
 
+fn task_picker_placeholder(app_name: &str, targets_center_pane: bool) -> &'static str {
+    match (app_name == "Zed", targets_center_pane) {
+        (true, true) => "Find a task, or run a command in the central pane",
+        (false, true) => "Find a task, or run a command in the Main Work Area",
+        (_, false) => "Find a task, or run a command",
+    }
+}
+
 impl TasksModalDelegate {
     fn new(
         task_store: Entity<TaskStore>,
@@ -103,14 +111,16 @@ impl TasksModalDelegate {
         task_overrides: Option<TaskOverrides>,
         workspace: WeakEntity<Workspace>,
     ) -> Self {
-        let placeholder_text = if let Some(TaskOverrides {
-            reveal_target: Some(RevealTarget::Center),
-        }) = &task_overrides
-        {
-            Arc::from("Find a task, or run a command in the central pane")
-        } else {
-            Arc::from("Find a task, or run a command")
-        };
+        let targets_center_pane = matches!(
+            task_overrides.as_ref(),
+            Some(TaskOverrides {
+                reveal_target: Some(RevealTarget::Center),
+            })
+        );
+        let placeholder_text = Arc::from(task_picker_placeholder(
+            paths::APP_NAME,
+            targets_center_pane,
+        ));
         Self {
             task_store,
             workspace,
@@ -855,6 +865,22 @@ mod tests {
             "Spawn Oneshot"
         );
         assert_eq!(task_run_action_label("Zed", false, false, false), "Spawn");
+    }
+
+    #[test]
+    fn dez_task_picker_names_the_main_work_area_destination() {
+        assert_eq!(
+            task_picker_placeholder("Dez", true),
+            "Find a task, or run a command in the Main Work Area"
+        );
+        assert_eq!(
+            task_picker_placeholder("Dez", false),
+            "Find a task, or run a command"
+        );
+        assert_eq!(
+            task_picker_placeholder("Zed", true),
+            "Find a task, or run a command in the central pane"
+        );
     }
 
     #[gpui::test]

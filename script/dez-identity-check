@@ -3621,8 +3621,8 @@ require_multiline_pattern crates/diagnostics/src/toolbar_controls.rs \
     'IconButton::new\("toggle_search".*?tab_index\(0isize\).*?aria_label\("Search Diagnostics"\).*?IconButton::new\("stop-updating".*?aria_label\("Stop Diagnostics Update"\).*?IconButton::new\("refresh-diagnostics".*?aria_label\("Refresh Diagnostics"\).*?IconButton::new\("toggle-warnings".*?aria_label\(warning_tooltip\)' \
     'the diagnostics toolbar can regress to mouse-only or unnamed icon actions'
 require_multiline_pattern crates/tasks_ui/src/modal.rs \
-    'fn task_no_matches_copy.*?"Loading Workspace tasks…".*?"No saved tasks\. Type a command above to run it once\.".*?"No matching task\. Press Enter to run this command once\.".*?fn task_run_action_label.*?"Run Command".*?"Run Task".*?fn no_matches_text.*?task_no_matches_copy\([[:space:]]*paths::APP_NAME' \
-    'the Dez Task picker can regress to a dead No matches state or generic spawn language'
+    'fn task_no_matches_copy.*?"Loading Workspace tasks…".*?"No saved tasks\. Type a command above to run it once\.".*?"No matching task\. Press Enter to run this command once\.".*?fn task_run_action_label.*?"Run Command".*?"Run Task".*?fn task_picker_placeholder.*?"Find a task, or run a command in the central pane".*?"Find a task, or run a command in the Main Work Area".*?task_picker_placeholder\([[:space:]]*paths::APP_NAME.*?fn no_matches_text.*?task_no_matches_copy\([[:space:]]*paths::APP_NAME' \
+    'the Dez Task picker can regress to a dead No matches state, generic spawn language, or inherited central-pane copy'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
     '### 17\. Find, inspect, and diagnose.*?### 18\. Run work where it belongs.*?### 19\. Debug without a dead end.*?### 20\. Resume and hand off honestly.*?one sidebar, many Workspaces, many panes, any[[:space:]]+native tool, honest ownership, inline recovery' \
     'the final native-tool and external-ownership wireframe contract is missing'
