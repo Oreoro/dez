@@ -57,7 +57,7 @@ order, focus, close, pin, dirty, or split state.
 │ 3 agents · 2 ports│ Run a tool, supervise its work, then review it.   │
 │                  │                                                    │
 │ Layout           │ Start with a tool          Recent Workspaces      │
-│  Home            │  Open Terminal · Default   superzed               │
+│  Home            │  Open Terminal · Codex     superzed               │
 │  Codex · Working │  Codex                     website                │
 │  app.rs          │  Claude Code               infra                  │
 │  Terminal · Ready│  OpenCode                  tools                  │
@@ -273,12 +273,12 @@ inherited editor customization. Native shell and TUI profiles launch inside
 Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
 an action or documentation route, never an availability toggle.
 
-Changing **Default Terminal** updates the named Home launcher without waiting
-for Home to be reopened. The empty Main Work Area, empty Workspaces Activity,
-Workspace terminal controls, and adjacent `+` menu use the same resolved label,
-icon, and configured-terminal action, so the primary launcher never collapses
-back to a generic terminal row or bypasses the selected destination before
-activation.
+Changing **Default Terminal** updates the visible Home action label without
+waiting for Home to be reopened. Home, the empty Main Work Area, empty
+Workspaces Activity, Workspace terminal controls, and the adjacent `+` menu use
+the same resolved action label, icon, and configured-terminal action, so the
+primary launcher never collapses back to a generic terminal row or bypasses the
+selected destination before activation.
 Home assigns keyboard order after local-only actions are filtered, so hiding
 the cmux handoff for a remote Workspace never creates a
 duplicate or skipped action target.

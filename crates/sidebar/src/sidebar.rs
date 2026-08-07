@@ -78,8 +78,8 @@ use terminal::{
     },
 };
 use terminal_view::{
-    TerminalView, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label, terminal_agent_icon,
+    TerminalView, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
 };
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
@@ -1664,11 +1664,7 @@ fn active_workspace_terminal_action_label(
     if app_name == "Zed" {
         terminal_launch_label(app_name).to_owned()
     } else {
-        let configured_label = configured_terminal_launcher_label(configured_command);
-        let destination = configured_label
-            .strip_prefix("Default · ")
-            .unwrap_or(configured_label.as_str());
-        format!("Open Terminal · {destination}")
+        configured_terminal_launcher_action_label(configured_command)
     }
 }
 

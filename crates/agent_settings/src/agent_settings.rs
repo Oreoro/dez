@@ -330,14 +330,27 @@ pub fn configured_terminal_launcher_icon(command: Option<&str>) -> IconName {
 
 pub const WORKSPACE_TMUX_LAUNCHER_LABEL: &str = "Workspace tmux · fallback";
 
-pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
-    let launcher = match configured_terminal_launcher(command) {
+fn configured_terminal_launcher_destination_label(command: Option<&str>) -> &'static str {
+    match configured_terminal_launcher(command) {
         ConfiguredTerminalLauncher::NativeShell => "Native Shell",
         ConfiguredTerminalLauncher::Tmux => "tmux Session",
         ConfiguredTerminalLauncher::Agent(kind) => kind.display_name(),
         ConfiguredTerminalLauncher::CustomCommand => "Custom Command",
-    };
-    format!("Default · {launcher}")
+    }
+}
+
+pub fn configured_terminal_launcher_label(command: Option<&str>) -> String {
+    format!(
+        "Default · {}",
+        configured_terminal_launcher_destination_label(command)
+    )
+}
+
+pub fn configured_terminal_launcher_action_label(command: Option<&str>) -> String {
+    format!(
+        "Open Terminal · {}",
+        configured_terminal_launcher_destination_label(command)
+    )
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -1313,6 +1326,38 @@ mod tests {
         assert_eq!(
             configured_terminal_launcher_label(Some("my-agent")),
             "Default · Custom Command"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(None),
+            "Open Terminal · Native Shell"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("env CODEX_HOME=/tmp codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("/opt/homebrew/bin/claude --continue")),
+            "Open Terminal · Claude Code"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("opencode --continue")),
+            "Open Terminal · OpenCode"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("exec aider")),
+            "Open Terminal · Aider"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("HERDR_PORT=7777 herdr")),
+            "Open Terminal · Herdr"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("/opt/homebrew/bin/tmux")),
+            "Open Terminal · tmux Session"
+        );
+        assert_eq!(
+            configured_terminal_launcher_action_label(Some("my-agent")),
+            "Open Terminal · Custom Command"
         );
 
         assert_eq!(configured_terminal_launcher_icon(None), IconName::Terminal);

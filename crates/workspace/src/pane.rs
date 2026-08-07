@@ -23,7 +23,8 @@ use crate::{
 };
 use agent_settings::{
     AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, built_in_agent_is_ready,
-    configured_terminal_launcher_icon, configured_terminal_launcher_label,
+    configured_terminal_launcher_action_label, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label,
 };
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -181,11 +182,7 @@ fn empty_main_work_area_terminal_action_label(
         return "Start Terminal Session".into();
     }
 
-    let configured_label = configured_terminal_launcher_label(configured_command);
-    let destination = configured_label
-        .strip_prefix("Default · ")
-        .unwrap_or(&configured_label);
-    format!("Open Terminal · {destination}").into()
+    configured_terminal_launcher_action_label(configured_command).into()
 }
 
 fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind) -> bool {

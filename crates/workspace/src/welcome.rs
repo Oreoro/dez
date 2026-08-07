@@ -6,8 +6,8 @@ use crate::{
     persistence::WorkspaceDb,
 };
 use agent_settings::{
-    AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label,
+    AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
+    configured_terminal_launcher_icon,
 };
 use git::Clone as GitClone;
 use gpui::WeakEntity;
@@ -235,13 +235,14 @@ impl SectionEntry {
         focus: &FocusHandle,
         primary: bool,
         show_meta: bool,
+        label_override: Option<SharedString>,
         meta_override: Option<SharedString>,
         icon_override: Option<IconName>,
         local_workspace: bool,
     ) -> Option<impl IntoElement> {
         self.visibility_guard.is_visible(local_workspace).then(|| {
             let button = SectionButton::new(
-                self.title,
+                label_override.unwrap_or_else(|| SharedString::new_static(self.title)),
                 icon_override.unwrap_or(self.icon),
                 self.action,
                 button_index,
@@ -323,13 +324,13 @@ fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
-fn welcome_terminal_action_meta(
+fn welcome_terminal_action_label(
     app_name: &str,
     has_workspace: bool,
     configured_command: Option<&str>,
 ) -> Option<String> {
     (app_name != "Zed" && has_workspace)
-        .then(|| configured_terminal_launcher_label(configured_command))
+        .then(|| configured_terminal_launcher_action_label(configured_command))
 }
 
 fn welcome_terminal_action_icon(
@@ -538,6 +539,7 @@ impl Section {
         focus: &FocusHandle,
         emphasize_first: bool,
         show_meta: bool,
+        first_entry_label_override: Option<SharedString>,
         first_entry_meta_override: Option<SharedString>,
         first_entry_icon_override: Option<IconName>,
         local_workspace: bool,
@@ -556,6 +558,9 @@ impl Section {
                             focus,
                             emphasize_first && index == 0,
                             show_meta,
+                            (index == 0)
+                                .then(|| first_entry_label_override.clone())
+                                .flatten(),
                             (index == 0)
                                 .then(|| first_entry_meta_override.clone())
                                 .flatten(),
@@ -974,6 +979,7 @@ impl Render for WelcomePage {
                     true,
                     None,
                     None,
+                    None,
                     local_workspace,
                 )
                 .into_any_element()
@@ -1037,7 +1043,7 @@ impl Render for WelcomePage {
             Some(crate::WorkspaceStartupState::Ready) | None => None,
         };
         let section_focus_handle = self.focus_handle.clone();
-        let first_entry_meta_override = welcome_terminal_action_meta(
+        let first_entry_label_override = welcome_terminal_action_label(
             APP_NAME,
             has_workspace,
             AgentSettings::get_global(cx)
@@ -1097,7 +1103,8 @@ impl Render for WelcomePage {
                                     &section_focus_handle,
                                     welcome_emphasizes_first_action(APP_NAME),
                                     true,
-                                    first_entry_meta_override.clone(),
+                                    first_entry_label_override.clone(),
+                                    None,
                                     first_entry_icon_override,
                                     local_workspace,
                                 )),
@@ -1128,7 +1135,8 @@ impl Render for WelcomePage {
                             &section_focus_handle,
                             welcome_emphasizes_first_action(APP_NAME),
                             !compact_spacing,
-                            first_entry_meta_override.clone(),
+                            first_entry_label_override.clone(),
+                            None,
                             first_entry_icon_override,
                             local_workspace,
                         ))
@@ -1522,31 +1530,31 @@ mod tests {
             Some("Default terminal")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, None).as_deref(),
-            Some("Default · Native Shell")
+            welcome_terminal_action_label("Dez", true, None).as_deref(),
+            Some("Open Terminal · Native Shell")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("codex --yolo")).as_deref(),
-            Some("Default · Codex")
+            welcome_terminal_action_label("Dez", true, Some("codex --yolo")).as_deref(),
+            Some("Open Terminal · Codex")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("aider")).as_deref(),
-            Some("Default · Aider")
+            welcome_terminal_action_label("Dez", true, Some("aider")).as_deref(),
+            Some("Open Terminal · Aider")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("tmux")).as_deref(),
-            Some("Default · tmux Session")
+            welcome_terminal_action_label("Dez", true, Some("tmux")).as_deref(),
+            Some("Open Terminal · tmux Session")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("my-agent")).as_deref(),
-            Some("Default · Custom Command")
+            welcome_terminal_action_label("Dez", true, Some("my-agent")).as_deref(),
+            Some("Open Terminal · Custom Command")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", false, Some("codex")),
+            welcome_terminal_action_label("Dez", false, Some("codex")),
             None
         );
         assert_eq!(
-            welcome_terminal_action_meta("Zed", true, Some("codex")),
+            welcome_terminal_action_label("Zed", true, Some("codex")),
             None
         );
         assert_eq!(
