@@ -223,6 +223,13 @@ terminal-font sizing remain separate explicit actions. The View menu and the
 default keyboard shortcuts must dispatch the same interface actions. Official
 Zed retains its inherited buffer-zoom View menu.
 
+Status-line responsive breakpoints use interface-scaled width in Dez. Zooming
+the whole interface in therefore collapses repository, pane, and secondary
+Workspace text before it can crowd native actions; zooming out restores that
+context when equivalent space is available. Tooltips and accessible names keep
+the complete state at every scale. Official Zed keeps its inherited physical
+viewport breakpoints.
+
 The native View menu keeps language intelligence discoverable without adding a
 second tool rail. **Language Tools** routes to the existing Workspace Symbols,
 Workspace Diagnostics, Language Servers status menu, current-file language

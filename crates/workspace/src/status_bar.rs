@@ -180,6 +180,18 @@ fn status_bar_height(
     })
 }
 
+fn status_bar_responsive_viewport_width(
+    app_name: &str,
+    viewport_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        viewport_width
+    } else {
+        viewport_width * interface_scale.max(f32::EPSILON).recip()
+    }
+}
+
 fn sidebar_toggle_label(app_name: &str, open: bool) -> &'static str {
     match (app_name == "Zed", open) {
         (true, true) => "Hide Sessions",
@@ -354,12 +366,17 @@ impl Focusable for StatusBar {
 impl Render for StatusBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar = SidebarStatus::query(&self.multi_workspace, cx);
+        let interface_scale = crate::interface_scale(cx);
         let status_bar_height = status_bar_height(
             APP_NAME,
             DesignSystemSettings::get_global(cx).density,
-            crate::interface_scale(cx),
+            interface_scale,
         );
-        let viewport_width = window.viewport_size().width;
+        let viewport_width = status_bar_responsive_viewport_width(
+            APP_NAME,
+            window.viewport_size().width,
+            interface_scale,
+        );
 
         h_flex()
             .id("status-bar")
@@ -632,6 +649,21 @@ mod tests {
         assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Spacious, 1.5),
             Some(px(45.0))
+        );
+        assert_eq!(
+            status_bar_responsive_viewport_width("Dez", px(1200.0), 1.5),
+            px(800.0),
+            "whole-interface zoom must collapse secondary status text before native actions"
+        );
+        assert_eq!(
+            status_bar_responsive_viewport_width("Dez", px(570.0), 0.75),
+            px(760.0),
+            "zooming out may reveal metadata when equivalent status width is available"
+        );
+        assert_eq!(
+            status_bar_responsive_viewport_width("Zed", px(1200.0), 1.5),
+            px(1200.0),
+            "official Zed keeps its inherited physical viewport breakpoints"
         );
     }
 }
