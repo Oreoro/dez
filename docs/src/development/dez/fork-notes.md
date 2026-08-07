@@ -2100,3 +2100,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   navigation while retaining the same status, process, path, Git, ownership,
   and clipboard content. Terminal output and external process ownership remain
   unchanged.
+- **2026-08-07: Unavailable terminals expose their recovery heading.** The
+  existing alert region now also exposes its visible **Terminal unavailable**
+  title as a level-one heading. Its exact reason and explicit fresh-shell
+  action remain inline; Dez does not add an overlay, replace the process, or
+  claim that saved computation migrated.

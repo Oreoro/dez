@@ -3105,8 +3105,8 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'assistant_enabled = false|AddSelectionToThread|InlineAssist::default' \
     'the terminal context menu retains permanently disabled Agent actions'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Open a new shell only when you want separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.id\("terminal-unavailable-state"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal unavailable"\).*?Headline::new\("Terminal unavailable"\).*?Label::new\(unavailable_description\).*?unavailable_new_shell_label' \
-    'unavailable terminal recovery can regress to internal Host jargon'
+    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Open a new shell only when you want separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.id\("terminal-unavailable-state"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal unavailable"\).*?\.role\(gpui::Role::Heading\).*?\.aria_level\(1\).*?\.aria_label\("Terminal unavailable"\).*?Headline::new\("Terminal unavailable"\).*?Label::new\(unavailable_description\).*?unavailable_new_shell_label' \
+    'unavailable terminal recovery can regress to internal Host jargon or lose its navigable heading'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     '\.id\("terminal-unavailable-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
     'unavailable terminal recovery can clip its explanation or action in a short Main Work Area'

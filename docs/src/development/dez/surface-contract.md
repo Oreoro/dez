@@ -632,10 +632,12 @@ a new one.
 
 Unavailable and legacy records preserve evidence without claiming process
 death, liveness, ownership transfer, or migration. A fresh shell is explicitly
-separate computation. **Open New Shell Here** starts an independent native
-shell and never inherits the configured agent or tmux launcher. Terminal
-Details stays inline, and **Terminate legacy session…** remains a context-menu
-action behind native confirmation.
+separate computation. The unavailable terminal remains one alert region whose
+visible title is also its level-one heading, so recovery is both announced and
+navigable without an overlay. **Open New Shell Here** starts an independent
+native shell and never inherits the configured agent or tmux launcher.
+Terminal Details stays inline, and **Terminate legacy session…** remains a
+context-menu action behind native confirmation.
 
 The terminal context menu dispatches the same configured-terminal action as
 Home, Workspaces, and the adjacent `+`. In particular, a named tmux destination

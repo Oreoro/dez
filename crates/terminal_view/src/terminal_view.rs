@@ -3792,6 +3792,9 @@ impl Render for TerminalView {
                                 )
                                 .child(
                                     h_flex()
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label("Terminal unavailable")
                                         .gap_2()
                                         .child(
                                             Icon::new(IconName::Warning)
