@@ -141,6 +141,13 @@ before a terminal exists remains a Workspace notification with the same explicit
 retry; Dez does not show both recoveries for one failure. Destructive legacy
 termination remains behind a native confirmation.
 
+**Workspace tmux · fallback** resolves the executable through the same known
+Homebrew and shell `PATH` locations as running-session discovery, then runs its
+root-scoped attach policy through `/bin/sh`. This keeps the action independent
+of the GUI process `PATH` and of the user's interactive shell syntax. If tmux is
+not installed, the terminal says so and returns to the native shell; Dez does
+not leave a fake Session row or replace the Workspace.
+
 ### 4. Review and intentional split
 
 ```text

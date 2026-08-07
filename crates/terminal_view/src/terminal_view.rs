@@ -216,15 +216,22 @@ mod startup_command_tests {
     fn tmux_startup_preserves_only_a_matching_legacy_workspace_session() {
         let command = tmux_startup_command_for_workspace(Some(Path::new("/workspace/Dez 3.0")));
 
-        assert!(command.contains("tmux has-session"));
+        assert!(command.starts_with("/bin/sh -c '"));
+        assert!(command.contains("/opt/homebrew/bin/tmux"));
+        assert!(command.contains("/usr/local/bin/tmux"));
+        assert!(command.contains("command -v tmux"));
+        assert!(command.contains("\"$dez_tmux_bin\" has-session"));
+        assert!(command.contains("Dez: tmux is not installed"));
         assert!(command.contains("#{pane_current_path}"));
         assert!(command.contains("\"$PWD\"|\"$PWD\"/*"));
-        assert!(command.contains("attach-session -t '=Dez-3-0'"));
+        assert!(command.contains("attach-session -t \"=Dez-3-0\""));
         assert!(command.contains("new-session -A -s Dez-3-0-"));
-        assert_eq!(
-            tmux_startup_command_for_workspace(None),
-            "exec tmux new-session -A -s dez"
-        );
+        assert_eq!(command.matches('\'').count(), 2);
+
+        let rootless_command = tmux_startup_command_for_workspace(None);
+        assert!(rootless_command.starts_with("/bin/sh -c '"));
+        assert!(rootless_command.contains("\"$dez_tmux_bin\" new-session -A -s dez"));
+        assert_eq!(rootless_command.matches('\'').count(), 2);
     }
 }
 
@@ -1223,19 +1230,25 @@ pub fn tmux_session_name_from_workspace_root(root: Option<&Path>) -> String {
     format!("{legacy_name}-{hash:010x}")
 }
 
+const TMUX_EXECUTABLE_RESOLUTION: &str = "if [ -x /opt/homebrew/bin/tmux ]; then dez_tmux_bin=/opt/homebrew/bin/tmux; elif [ -x /usr/local/bin/tmux ]; then dez_tmux_bin=/usr/local/bin/tmux; elif command -v tmux >/dev/null 2>&1; then dez_tmux_bin=tmux; else printf \"%s\\n\" \"Dez: tmux is not installed. Install tmux or choose another Default Terminal.\"; exit 127; fi;";
+
 pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
     let legacy_name = tmux_session_name_from_workspace_label(
         root.and_then(Path::file_name)
             .and_then(|name| name.to_str()),
     );
     let session_name = tmux_session_name_from_workspace_root(root);
-    if session_name == legacy_name {
-        return format!("exec tmux new-session -A -s {session_name}");
-    }
+    let script = if session_name == legacy_name {
+        format!(
+            "{TMUX_EXECUTABLE_RESOLUTION} exec \"$dez_tmux_bin\" new-session -A -s {session_name}"
+        )
+    } else {
+        format!(
+            "{TMUX_EXECUTABLE_RESOLUTION} if \"$dez_tmux_bin\" has-session -t \"={session_name}\" 2>/dev/null; then exec \"$dez_tmux_bin\" attach-session -t \"={session_name}\"; elif \"$dez_tmux_bin\" has-session -t \"={legacy_name}\" 2>/dev/null; then dez_tmux_cwd=$(\"$dez_tmux_bin\" display-message -p -t \"={legacy_name}\" \"#{{pane_current_path}}\" 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec \"$dez_tmux_bin\" attach-session -t \"={legacy_name}\" ;; *) exec \"$dez_tmux_bin\" new-session -A -s {session_name} ;; esac; else exec \"$dez_tmux_bin\" new-session -A -s {session_name}; fi"
+        )
+    };
 
-    format!(
-        "if tmux has-session -t '={session_name}' 2>/dev/null; then exec tmux attach-session -t '={session_name}'; elif tmux has-session -t '={legacy_name}' 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t '={legacy_name}' '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t '={legacy_name}' ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
-    )
+    format!("/bin/sh -c '{script}'")
 }
 
 fn open_tmux_terminal(
