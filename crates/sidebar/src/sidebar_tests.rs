@@ -2353,11 +2353,11 @@ fn session_rail_default_creation_is_terminal_first() {
 fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", false, false, 0),
-        "Workspace dez, ready for a session"
+        "Workspace dez, ready to start work"
     );
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", true, true, 2),
-        "Workspace dez, running work, 2 sessions need attention"
+        "Workspace dez, running work, 2 items need attention"
     );
 }
 

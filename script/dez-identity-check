@@ -1061,7 +1061,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_start_state_visible.*?!has_open_projects.*?session_count == 0.*?!has_query.*?!attention_only.*?!is_restoring.*?fn terminal_launch_label.*?app_name == "Zed".*?"Start Terminal Session".*?"Open Terminal".*?fn session_start_state_copy.*?Some\("Open Scratch Terminal"\).*?"No Workspace is open".*?"Open a folder or repository\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\.".*?"Open Workspace…".*?None.*?fn render_empty_state.*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?Label::new\(title\).*?Button::new\("start-open", open_workspace_label\).*?\.style\(ButtonStyle::Filled\).*?tab_index\(0isize\).*?OpenFolder \{.*?create_new_window: Some\(false\).*?\.when_some\(scratch_terminal_label.*?Button::new\("start-terminal", scratch_terminal_label\)' \
     'the empty Sessions region can regress to a pathless Dez terminal branch or the wrong project-scoped next step'
 require_multiline_pattern crates/sidebar/src/sidebar_tests.rs \
-    'session_overview_visible\("Dez", 0, 0, false\).*?session_overview_visible\("Dez", 1, 0, false\).*?No Workspace is open.*?Open a folder or repository\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\..*?Workspace dez, ready for a session.*?Workspace dez, running work, 2 sessions need attention' \
+    'session_overview_visible\("Dez", 0, 0, false\).*?session_overview_visible\("Dez", 1, 0, false\).*?No Workspace is open.*?Open a folder or repository\. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area\..*?Workspace dez, ready to start work.*?Workspace dez, running work, 2 items need attention' \
     'sidebar regression coverage can fall behind the native Workspaces visibility API or restore Project terminology'
 require_multiline_pattern crates/agent_ui/src/agent_thread_item.rs \
     'impl Render for AgentThreadItem.*?\.id\(\("agent-thread-item", self\.conversation_view\.entity_id\(\)\)\).*?\.role\(gpui::Role::Region\).*?\.aria_label\(if paths::APP_NAME == "Zed".*?"Agent thread".*?"Agent Session".*?\.track_focus\(&self\.focus_handle\)' \
@@ -2131,9 +2131,9 @@ reject_multiline_pattern crates/sidebar/src/sidebar.rs \
 require_pattern crates/sidebar/src/sidebar.rs \
     '"Remove Workspace from Window"' \
     'the Workspace removal action does not state its scope'
-require_pattern crates/sidebar/src/sidebar.rs \
-    'workspace_header_accessibility_label\(' \
-    'Workspace group state is absent from the Session Rail accessibility tree'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn workspace_header_accessibility_label.*?app_name == "Dez".*?ready to start work.*?workspace_attention_summary\(app_name, attention_count\).*?fn workspace_attention_summary.*?app_name == "Dez".*?"item".*?"items".*?"session".*?"sessions".*?workspace_attention_summary\([[:space:]]*APP_NAME,[[:space:]]*attention_thread_count.*?Tooltip::text\(tooltip_text\)' \
+    'Workspace header accessibility or collapsed attention copy can regress to calling heterogeneous Activity rows Sessions'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn project_header_primary_action_activates_workspace.*?app_name != "Zed".*?project-disclosure-.*?toggle_collapse\(&key_for_disclosure.*?if project_header_primary_action_activates_workspace\(APP_NAME\).*?activate_or_open_workspace_for_group' \
     'Workspace rows can regress to folding on primary navigation instead of using a separate disclosure control'

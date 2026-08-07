@@ -1724,7 +1724,7 @@ fn workspace_options_action_persistent(
 }
 
 fn workspace_header_accessibility_label(
-    _app_name: &str,
+    app_name: &str,
     workspace_name: &str,
     has_sessions: bool,
     has_running_sessions: bool,
@@ -1733,17 +1733,39 @@ fn workspace_header_accessibility_label(
     let noun = "Workspace";
     let mut label = format!("{noun} {workspace_name}");
     if !has_sessions {
-        label.push_str(", ready for a session");
+        if app_name == "Dez" {
+            label.push_str(", ready to start work");
+        } else {
+            label.push_str(", ready for a session");
+        }
     }
     if has_running_sessions {
         label.push_str(", running work");
     }
-    if attention_count == 1 {
-        label.push_str(", 1 session needs attention");
-    } else if attention_count > 1 {
-        label.push_str(&format!(", {attention_count} sessions need attention"));
+    if let Some(attention_summary) = workspace_attention_summary(app_name, attention_count) {
+        label.push_str(", ");
+        label.push_str(&attention_summary);
     }
     label
+}
+
+fn workspace_attention_summary(app_name: &str, attention_count: usize) -> Option<String> {
+    let noun = if app_name == "Dez" {
+        if attention_count == 1 {
+            "item"
+        } else {
+            "items"
+        }
+    } else if attention_count == 1 {
+        "session"
+    } else {
+        "sessions"
+    };
+    match attention_count {
+        0 => None,
+        1 => Some(format!("1 {noun} needs attention")),
+        _ => Some(format!("{attention_count} {noun} need attention")),
+    }
 }
 
 fn workspace_running_sessions_disclosure_accessibility_label(
@@ -2682,10 +2704,10 @@ mod workspace_header_label_tests {
         assert_eq!(
             workspace_header_accessibility_with_metadata(
                 "Dez",
-                "Workspace app, ready for a session".to_owned(),
+                "Workspace app, ready to start work".to_owned(),
                 Some("main · 1 change")
             ),
-            "Workspace app, ready for a session. Git: main · 1 change."
+            "Workspace app, ready to start work. Git: main · 1 change."
         );
         assert_eq!(
             workspace_header_accessibility_with_metadata(
@@ -2713,11 +2735,27 @@ mod workspace_header_label_tests {
         ));
         assert_eq!(
             workspace_header_accessibility_label("Dez", "compiler", false, false, 0),
-            "Workspace compiler, ready for a session"
+            "Workspace compiler, ready to start work"
         );
         assert_eq!(
             workspace_header_accessibility_label("Zed", "compiler", false, false, 0),
             "Workspace compiler, ready for a session"
+        );
+        assert_eq!(
+            workspace_header_accessibility_label("Dez", "compiler", true, true, 2),
+            "Workspace compiler, running work, 2 items need attention"
+        );
+        assert_eq!(
+            workspace_header_accessibility_label("Zed", "compiler", true, true, 2),
+            "Workspace compiler, running work, 2 sessions need attention"
+        );
+        assert_eq!(
+            workspace_attention_summary("Dez", 1).as_deref(),
+            Some("1 item needs attention")
+        );
+        assert_eq!(
+            workspace_attention_summary("Zed", 1).as_deref(),
+            Some("1 session needs attention")
         );
         assert_eq!(
             workspace_running_sessions_disclosure_accessibility_label(false, 1, 0),
@@ -9187,10 +9225,10 @@ impl Sidebar {
                             },
                         )
                         .when(show_agent_attention && attention_thread_count > 0, |this| {
-                            let tooltip_text = if attention_thread_count == 1 {
-                                "1 session needs attention".to_string()
-                            } else {
-                                format!("{attention_thread_count} sessions need attention")
+                            let Some(tooltip_text) =
+                                workspace_attention_summary(APP_NAME, attention_thread_count)
+                            else {
+                                return this;
                             };
                             this.child(
                                 div()

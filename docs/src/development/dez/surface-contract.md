@@ -776,6 +776,10 @@ that persistent identity. Both remain explicit user preferences.
   Dez status bar scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
+- Keep heterogeneous Workspace attention generic and truthful. Workspace
+  headers announce **items need attention** because Activity may contain an
+  agent, terminal, task, tmux, Herdr, or cmux destination; Session wording is
+  reserved for surfaces that actually contain only Sessions.
 - Selected navigation uses neutral material and medium-weight type. Lifecycle
   state stays plain supporting text; accent remains reserved for attention,
   modification, and recovery. Lumin's blurred, opaque, and light variants apply
@@ -882,6 +886,8 @@ that persistent identity. Both remain explicit user preferences.
 - Activity shows at most five top-level rows before native expansion, reserves
   one row for Running Sessions when present, and prioritizes the current and
   attention-required managed destinations in that preview.
+- Workspace headers announce an empty Workspace as **ready to start work** and
+  count heterogeneous Activity attention as items rather than Sessions.
 - Empty Workspaces and search states expose one visually primary recovery;
   caught-up scope changes remain subordinate.
 - Removing the active Workspace group activates the nearest healthy retained
