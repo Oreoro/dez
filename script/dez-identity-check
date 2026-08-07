@@ -575,6 +575,9 @@ require_multiline_pattern assets/themes/lumin/lumin.json \
 require_multiline_pattern assets/themes/lumin/lumin.json \
     '"name": "Lumin Blur".*?"border\.selected": "#FFFFFF66".*?"element\.selected": "#FFFFFF24".*?"ghost_element\.selected": "#FFFFFF24".*?"name": "Lumin".*?"border\.selected": "#FFFFFF66".*?"element\.selected": "#303030".*?"ghost_element\.selected": "#FFFFFF24".*?"name": "Lumin Light".*?"border\.selected": "#00000066".*?"element\.selected": "#0000002A".*?"ghost_element\.selected": "#00000022"' \
     'Lumin can regress to using the warm attention accent for ordinary selected controls'
+require_multiline_pattern assets/themes/lumin/lumin.json \
+    '"name": "Lumin Blur".*?"namespace": \{.*?"color": "#A8D4FFFF".*?"punctuation\.markup": \{.*?"color": "#E0A1ABFF".*?"selector": \{.*?"color": "#FAD075FF".*?"selector\.pseudo": \{.*?"color": "#BDB5FFFF".*?"diff\.plus": \{.*?"color": "#99FFE4FF".*?"diff\.minus": \{.*?"color": "#FF9E9EFF".*?"name": "Lumin".*?"namespace": \{.*?"color": "#87C3FFFF".*?"punctuation\.markup": \{.*?"color": "#C1808AFF".*?"selector\.pseudo": \{.*?"color": "#AAA0FAFF".*?"diff\.minus": \{.*?"color": "#FF8080FF".*?"name": "Lumin Light".*?"namespace": \{.*?"color": "#365F9DFF".*?"punctuation\.markup": \{.*?"color": "#A05060FF".*?"selector": \{.*?"color": "#7A6500FF".*?"selector\.pseudo": \{.*?"color": "#6956BFFF".*?"diff\.plus": \{.*?"color": "#006B56FF".*?"diff\.minus": \{.*?"color": "#B62525FF"' \
+    'a Lumin appearance can lose native namespace, selector, markup, or inline-diff syntax roles'
 require_multiline_pattern crates/gpui_macos/src/window.rs \
     'fn blurred_view_init_with_frame.*?NSVisualEffectMaterial::UnderWindowBackground.*?NSVisualEffectBlendingMode::BehindWindow.*?NSVisualEffectState::FollowsWindowActiveState' \
     'the macOS Lumin backdrop can regress to a selected-control material or ignore window activation'

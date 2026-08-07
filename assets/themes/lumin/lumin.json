@@ -289,6 +289,11 @@
             "font_style": null,
             "font_weight": null
           },
+          "namespace": {
+            "color": "#A8D4FFFF",
+            "font_style": null,
+            "font_weight": null
+          },
           "number": {
             "color": "#EBC88DFF",
             "font_style": null,
@@ -339,8 +344,23 @@
             "font_style": null,
             "font_weight": null
           },
+          "punctuation.markup": {
+            "color": "#E0A1ABFF",
+            "font_style": null,
+            "font_weight": null
+          },
           "punctuation.special": {
             "color": "#D6D6DDFF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "selector": {
+            "color": "#FAD075FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "selector.pseudo": {
+            "color": "#BDB5FFFF",
             "font_style": null,
             "font_weight": null
           },
@@ -426,6 +446,16 @@
           },
           "variant": {
             "color": "#EFB080FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "diff.plus": {
+            "color": "#99FFE4FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "diff.minus": {
+            "color": "#FF9E9EFF",
             "font_style": null,
             "font_weight": null
           }
@@ -718,6 +748,11 @@
             "font_style": null,
             "font_weight": null
           },
+          "namespace": {
+            "color": "#87C3FFFF",
+            "font_style": null,
+            "font_weight": null
+          },
           "number": {
             "color": "#EBC88DFF",
             "font_style": null,
@@ -768,8 +803,23 @@
             "font_style": null,
             "font_weight": null
           },
+          "punctuation.markup": {
+            "color": "#C1808AFF",
+            "font_style": null,
+            "font_weight": null
+          },
           "punctuation.special": {
             "color": "#D6D6DDFF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "selector": {
+            "color": "#FAD075FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "selector.pseudo": {
+            "color": "#AAA0FAFF",
             "font_style": null,
             "font_weight": null
           },
@@ -855,6 +905,16 @@
           },
           "variant": {
             "color": "#EFB080FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "diff.plus": {
+            "color": "#99FFE4FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "diff.minus": {
+            "color": "#FF8080FF",
             "font_style": null,
             "font_weight": null
           }
@@ -1146,6 +1206,11 @@
             "font_style": null,
             "font_weight": null
           },
+          "namespace": {
+            "color": "#365F9DFF",
+            "font_style": null,
+            "font_weight": null
+          },
           "number": {
             "color": "#8A6400FF",
             "font_style": null,
@@ -1196,8 +1261,23 @@
             "font_style": null,
             "font_weight": null
           },
+          "punctuation.markup": {
+            "color": "#A05060FF",
+            "font_style": null,
+            "font_weight": null
+          },
           "punctuation.special": {
             "color": "#555555FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "selector": {
+            "color": "#7A6500FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "selector.pseudo": {
+            "color": "#6956BFFF",
             "font_style": null,
             "font_weight": null
           },
@@ -1283,6 +1363,16 @@
           },
           "variant": {
             "color": "#98420CFF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "diff.plus": {
+            "color": "#006B56FF",
+            "font_style": null,
+            "font_weight": null
+          },
+          "diff.minus": {
+            "color": "#B62525FF",
             "font_style": null,
             "font_weight": null
           }

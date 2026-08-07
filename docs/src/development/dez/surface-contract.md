@@ -857,6 +857,13 @@ cursor position, and non-UTF-8 encoding when relevant. It leaves the active-file
 name and line-ending control off because the native tab and editor already own
 that persistent identity. Both remain explicit user preferences.
 
+Lumin Blur, Lumin, and Lumin Light define the complete native syntax-role set
+used by the bundled editor themes. Namespaces, markup punctuation, selectors,
+pseudo-selectors, and inline diff additions and deletions keep distinct semantic
+color in every appearance instead of silently falling back to ordinary editor
+text. Syntax color never substitutes for active-language or language-server
+status; those remain explicit native status-line controls.
+
 ## Interaction and copy rules
 
 - Use one primary action per state. Put secondary actions in ordinary rows or
