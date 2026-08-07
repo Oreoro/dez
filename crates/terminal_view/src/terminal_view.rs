@@ -2262,7 +2262,7 @@ impl TerminalView {
                     } else {
                         menu.action(
                             terminal_context_open_label.clone(),
-                            Box::new(NewCenterTerminal::default()),
+                            Box::new(OpenAgentTerminal),
                         )
                         .separator()
                     }

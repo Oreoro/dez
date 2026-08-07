@@ -625,6 +625,11 @@ launch, just like the terminal context menu and the other Workspace launch
 surfaces. Terminal Details stays inline, and **Terminate legacy session…**
 remains a context-menu action behind native confirmation.
 
+The terminal context menu dispatches the same configured-terminal action as
+Home, Workspaces, and the adjacent `+`. In particular, a named tmux destination
+uses the root-scoped Workspace tmux policy rather than starting a raw `tmux`
+command through the generic center-terminal path.
+
 ## Native-tool wireframe
 
 ### 17. Find, inspect, and diagnose

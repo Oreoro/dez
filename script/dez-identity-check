@@ -2994,7 +2994,7 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'impl Item for TerminalView.*?fn force_show_tab_bar\(&self\) -> bool \{[[:space:]]*true' \
     'a single terminal can regress to an unanchored shell canvas without visible Surface identity'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_context_open_action_label.*?app_name == "Zed".*?"Open Terminal"\.to_owned\(\).*?configured_terminal_launcher_action_label\(configured_command\).*?fn terminal_unavailable_fresh_action_label.*?"Start Fresh Terminal"\.to_owned\(\).*?configured_terminal_launcher_destination_label\(configured_command\).*?let terminal_context_open_label = terminal_context_open_action_label.*?menu\.action\([[:space:]]*terminal_context_open_label\.clone\(\).*?let fresh_terminal_label = terminal_unavailable_fresh_action_label.*?format!\("\{fresh_terminal_label\} in Main Work Area"\).*?"new-terminal-from-unavailable".*?fresh_terminal_label.*?\.aria_label\(fresh_terminal_accessibility_label\).*?fresh_terminal_tooltip_label\.clone\(\).*?NewCenterTerminal::default' \
+    'fn terminal_context_open_action_label.*?app_name == "Zed".*?"Open Terminal"\.to_owned\(\).*?configured_terminal_launcher_action_label\(configured_command\).*?fn terminal_unavailable_fresh_action_label.*?"Start Fresh Terminal"\.to_owned\(\).*?configured_terminal_launcher_destination_label\(configured_command\).*?let terminal_context_open_label = terminal_context_open_action_label.*?menu\.action\([[:space:]]*terminal_context_open_label\.clone\(\),[[:space:]]*Box::new\(OpenAgentTerminal\).*?let fresh_terminal_label = terminal_unavailable_fresh_action_label.*?format!\("\{fresh_terminal_label\} in Main Work Area"\).*?"new-terminal-from-unavailable".*?fresh_terminal_label.*?\.aria_label\(fresh_terminal_accessibility_label\).*?fresh_terminal_tooltip_label\.clone\(\).*?NewCenterTerminal::default' \
     'the unavailable-terminal recovery action can regress to an ambiguous or unnamed destination'
 require_pattern crates/terminal_view/src/terminal_view.rs \
     'Working directory: \{working_directory\}' \
@@ -3042,7 +3042,7 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'terminal\.pid_getter\(\)\?' \
     'durable terminal tab tooltips still disappear when no local PID exists'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?terminal_context_open_label\.clone\(\).*?NewCenterTerminal::default' \
+    'if paths::APP_NAME == "Zed".*?"New Center Terminal".*?else \{.*?terminal_context_open_label\.clone\(\).*?Box::new\(OpenAgentTerminal\)' \
     'the terminal context menu can regress from the single center-terminal model'
 reject_pattern crates/terminal_view/src/terminal_view.rs \
     '"New Terminal Panel"' \
