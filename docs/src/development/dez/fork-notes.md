@@ -2095,3 +2095,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   **Activity** owners are level two, and real split-pane groups remain level
   three. Disclosure controls keep their button and expansion semantics, so the
   change adds no new navigation surface and does not duplicate pane-tab state.
+- **2026-08-07: Terminal Details reports disclosure state.** The existing
+  inline terminal trigger now exposes expanded or collapsed state to assistive
+  navigation while retaining the same status, process, path, Git, ownership,
+  and clipboard content. Terminal output and external process ownership remain
+  unchanged.

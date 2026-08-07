@@ -3424,6 +3424,7 @@ impl TerminalView {
         .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
         .tab_index(0isize)
         .aria_label(details_accessibility_label)
+        .aria_expanded(self.show_terminal_details)
         .tooltip(Tooltip::text(details_accessibility_label))
         .on_click(cx.listener(|this, _, _, cx| {
             this.show_terminal_details = !this.show_terminal_details;

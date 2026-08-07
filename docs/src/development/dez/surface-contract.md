@@ -953,8 +953,9 @@ that persistent identity. Both remain explicit user preferences.
 - Agent review disclosures and decisions remain keyboard reachable, and Git
   History failure retries only the completed failed request.
 - Subagent supervision keeps state in text and opens the existing child Session.
-- Terminal Details expands inline, summarizes Status, Agent or Process, Path,
-  Git, and Ownership, and never obscures or re-renders terminal output.
+- Terminal Details expands inline, exposes its expanded or collapsed state to
+  assistive navigation, summarizes Status, Agent or Process, Path, Git, and
+  Ownership, and never obscures or re-renders terminal output.
 - Provider and subagent glyphs use the shared icon family; lifecycle remains
   readable without color.
 - Empty, loading, permission, attach-failure, disconnected-host, and legacy
