@@ -291,6 +291,12 @@ require_multiline_pattern crates/zed/src/zed.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn resolve_terminal_startup_command.*?app_name != "Zed".*?AgentSettings::get_global\(cx\)\.terminal_init_command\.clone\(\).*?start_init_command_startup_handshake.*?TERMINAL_STARTUP_COMMAND_TIMEOUT.*?write_init_command_after_startup' \
     'native agent launchers can regress to bypassing the configured shell or startup handshake'
+require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
+    'fn terminal_startup_command_submission.*?app_name == "Zed".*?detect_terminal_agent_command.*?dez_terminal_startup_status=\$\?.*?-ne 130.*?Review the output above.*?This shell remains interactive.*?/bin/sh -c.*?fn terminal_startup_command_input.*?terminal_startup_command_submission.*?dez_keeps_agent_startup_failures_inside_the_interactive_terminal' \
+    'recognized terminal agents can regress to an inert-looking failed startup, a replaced PTY, or changed official Zed command submission'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    'If the native shell starts but a recognized terminal agent.*?its own output remains the[[:space:]]+authoritative diagnosis.*?shell is still interactive.*?does not replace the terminal with a[[:space:]]+failure card.*?ordinary zero exit and an interactive interrupt.*?Official Zed keeps its inherited command submission behavior' \
+    'the surface contract can regress from native terminal-agent output and honest in-shell recovery'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn terminal_launcher_for_content.*?terminal_launcher.*?TerminalLauncher::from_legacy_command.*?fn terminal_launcher_variant.*?TerminalLauncher::VARIANTS.*?fn terminal_launcher_variant_index.*?fn terminal_session_init_setting_item.*?paths::APP_NAME == "Zed".*?DynamicItem.*?title: "Default Terminal".*?Choose what Open Terminal and Ctrl\+` start in each Workspace.*?json_path: Some\("agent\.terminal_launcher"\).*?terminal_launcher = value.*?CustomCommand.*?terminal_session_init_command_setting_item' \
     'Settings can regress from the guided native Default Terminal chooser to a raw-command-only workflow'

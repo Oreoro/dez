@@ -135,8 +135,28 @@ fn resolve_terminal_startup_command(
         .filter(|command| !command.trim().is_empty())
 }
 
-fn terminal_startup_command_input(command: String) -> Vec<u8> {
-    let mut input = command.into_bytes();
+fn terminal_startup_command_submission(command: String, app_name: &str) -> String {
+    if app_name == "Zed" || detect_terminal_agent_command(&command).is_none() {
+        return command;
+    }
+
+    #[cfg(unix)]
+    {
+        let script = format!(
+            "{command}\ndez_terminal_startup_status=$?\nif [ \"$dez_terminal_startup_status\" -ne 0 ] && [ \"$dez_terminal_startup_status\" -ne 130 ]; then\n  printf '\\n[Dez: startup command exited with status %s. Review the output above. This shell remains interactive; fix the tool configuration, then retry.]\\n' \"$dez_terminal_startup_status\"\nfi"
+        );
+        let quoted_script = script.replace('\'', "'\"'\"'");
+        format!("/bin/sh -c '{quoted_script}'")
+    }
+
+    #[cfg(not(unix))]
+    {
+        command
+    }
+}
+
+fn terminal_startup_command_input(command: String, app_name: &str) -> Vec<u8> {
+    let mut input = terminal_startup_command_submission(command, app_name).into_bytes();
     input.push(b'\x0d');
     input
 }
@@ -181,7 +201,7 @@ mod startup_command_tests {
     #[test]
     fn terminal_agent_commands_submit_once_after_shell_startup() {
         assert_eq!(
-            terminal_startup_command_input("opencode".to_owned()),
+            terminal_startup_command_input("opencode".to_owned(), "Zed"),
             b"opencode\r"
         );
         assert_eq!(
@@ -193,6 +213,35 @@ mod startup_command_tests {
             Some(WORKSPACE_TMUX_LAUNCHER_LABEL)
         );
         assert_eq!(terminal_startup_title("echo ready"), None);
+    }
+
+    #[test]
+    fn dez_keeps_agent_startup_failures_inside_the_interactive_terminal() {
+        let submission = terminal_startup_command_submission("codex".to_owned(), "Dez");
+
+        #[cfg(unix)]
+        {
+            assert!(submission.starts_with("/bin/sh -c 'codex\n"));
+            assert!(submission.contains("dez_terminal_startup_status=$?"));
+            assert!(submission.contains("-ne 130"));
+            assert!(submission.contains("Review the output above"));
+            assert!(submission.contains("This shell remains interactive"));
+        }
+
+        #[cfg(not(unix))]
+        assert_eq!(submission, "codex");
+
+        assert_eq!(
+            terminal_startup_command_submission("echo ready".to_owned(), "Dez"),
+            "echo ready"
+        );
+        assert_eq!(
+            terminal_startup_command_submission(
+                "exec tmux new-session -A -s dez".to_owned(),
+                "Dez",
+            ),
+            "exec tmux new-session -A -s dez"
+        );
     }
 
     #[test]
@@ -1884,7 +1933,7 @@ impl TerminalView {
                 .await?
                 .upgrade()
                 .ok_or_else(|| anyhow!("terminal closed before its startup command ran"))?;
-            let input = terminal_startup_command_input(startup_command);
+            let input = terminal_startup_command_input(startup_command, paths::APP_NAME);
             let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty());
 
             if !is_pty {

@@ -602,6 +602,15 @@ settings. The native tab and alert retain **Workspace access required** when
 inactive or projected through Workspaces. Ordinary launch failures and
 official Zed keep their existing title, icon behavior, and Settings recovery.
 
+If the native shell starts but a recognized terminal agent such as Codex,
+Claude Code, OpenCode, or Herdr exits non-zero, its own output remains the
+authoritative diagnosis. Dez appends one concise line to that same terminal:
+the startup command exited, the shell is still interactive, and the user can
+fix the tool configuration and retry. It does not replace the terminal with a
+failure card, infer agent state from transcript text, or start a substitute
+process. An ordinary zero exit and an interactive interrupt do not add the
+recovery line. Official Zed keeps its inherited command submission behavior.
+
 ## Review-and-recovery wireframe
 
 ### 13. Agent change review
