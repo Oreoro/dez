@@ -4539,6 +4539,26 @@ mod external_multiplexer_project_group_tests {
     }
 
     #[test]
+    fn external_discovery_recovery_names_the_failed_owners() {
+        assert_eq!(
+            external_activity_retry_accessibility_label(&["Herdr"]),
+            "Retry Herdr Discovery"
+        );
+        assert_eq!(
+            external_activity_retry_tooltip(&["Herdr"]),
+            "Check Herdr again without changing its sessions"
+        );
+        assert_eq!(
+            external_activity_retry_accessibility_label(&["tmux", "Herdr", "cmux"]),
+            "Retry External Terminal Discovery for tmux, Herdr, cmux"
+        );
+        assert_eq!(
+            external_activity_retry_tooltip(&["tmux", "Herdr", "cmux"]),
+            "Check tmux, Herdr, cmux again without changing their sessions"
+        );
+    }
+
+    #[test]
     fn external_attach_executes_the_multiplexer_without_shell_expansion() {
         let spawn = external_session_attach_spawn(
             "tmux",
@@ -4769,6 +4789,32 @@ fn external_activity_issue_description(issue: &MultiplexerSourceIssue) -> String
         issue.kind.display_name(),
         issue.summary.trim_end_matches(&['.', '!', '?'][..])
     )
+}
+
+fn external_activity_retry_accessibility_label(source_names: &[&str]) -> String {
+    match source_names {
+        [] => "Retry External Terminal Discovery".to_owned(),
+        [source_name] => format!("Retry {source_name} Discovery"),
+        source_names => format!(
+            "Retry External Terminal Discovery for {}",
+            source_names.join(", ")
+        ),
+    }
+}
+
+fn external_activity_retry_tooltip(source_names: &[&str]) -> String {
+    match source_names {
+        [] => {
+            "Check external terminal integrations again without changing their sessions".to_owned()
+        }
+        [source_name] => {
+            format!("Check {source_name} again without changing its sessions")
+        }
+        source_names => format!(
+            "Check {} again without changing their sessions",
+            source_names.join(", ")
+        ),
+    }
 }
 
 fn external_sessions_empty_label(
@@ -18919,11 +18965,17 @@ impl Sidebar {
         } else {
             format!("{} terminal integrations unavailable", issues.len())
         };
+        let source_names = issues
+            .iter()
+            .map(|issue| issue.kind.display_name())
+            .collect::<Vec<_>>();
         let description = issues
             .iter()
             .map(external_activity_issue_description)
             .collect::<Vec<_>>()
             .join(" ");
+        let retry_accessibility_label = external_activity_retry_accessibility_label(&source_names);
+        let retry_tooltip = external_activity_retry_tooltip(&source_names);
         let retry_store = store.clone();
 
         Some(
@@ -18937,10 +18989,8 @@ impl Sidebar {
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Filled)
                         .tab_index(0isize)
-                        .aria_label("Retry External Terminal Discovery")
-                        .tooltip(Tooltip::text(
-                            "Check tmux, Herdr, and cmux again without changing their sessions",
-                        ))
+                        .aria_label(retry_accessibility_label)
+                        .tooltip(Tooltip::text(retry_tooltip))
                         .on_click(move |_, _window, cx| {
                             retry_store.update(cx, |store, cx| store.refresh(cx));
                         }),

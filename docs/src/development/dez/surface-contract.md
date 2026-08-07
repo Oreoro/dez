@@ -149,6 +149,10 @@ Retry and fresh-shell controls include the external owner and target Workspace
 in their accessible names. The fresh-shell description also repeats that tmux
 or Herdr remains external, so compact icon-only recovery does not obscure
 ownership.
+The Workspaces discovery notice follows the same rule: its compact **Retry**
+action names the failed external owner when one integration is unavailable and
+enumerates every affected owner when several sources fail. Refresh never
+changes or terminates external sessions.
 
 **Workspace tmux · fallback** resolves the executable through the same known
 Homebrew and shell `PATH` locations as running-session discovery, then runs its
