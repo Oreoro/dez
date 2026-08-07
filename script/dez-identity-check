@@ -3122,6 +3122,9 @@ require_multiline_pattern crates/workspace/src/pane.rs \
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn empty_main_work_area_shows_orientation.*?app_name == "Zed" \|\| is_active_pane.*?fn render_empty_project_state.*?active_pane\(\)\.entity_id\(\) == cx\.entity_id\(\).*?let show_orientation.*?empty_main_work_area_shows_orientation\(paths::APP_NAME, is_active_pane\).*?"Main Work Area".*?"Start a terminal or resume running work\. Files and Git review open as tabs here\.".*?"Empty pane".*?"Open or move a tab here\.".*?aria_label\(format!\("\{title\}\. \{description\}"\)\).*?max_w\(px\(520\.\)\).*?\.gap_3\(\).*?when\(is_dez.*?IconName::Tab.*?Label::new\(title\)\.size\(LabelSize::Small\)' \
     'empty Main Work Areas can regress to repeated onboarding, vague copy, or stale accessibility text'
+require_multiline_pattern crates/workspace/src/pane.rs \
+    'fn render_empty_project_state.*?"Main Work Area".*?"Empty pane".*?id\("empty-main-work-area-heading"\).*?role\(gpui::Role::Heading\).*?aria_level\(1\).*?aria_label\(title\).*?Label::new\(title\)' \
+    'the empty Main Work Area can regress to a visual-only pane owner before its launch actions'
 reject_pattern crates/workspace/src/pane.rs \
     'empty-project-route|workflow_route' \
     'the operational empty Main Work Area regained a duplicate workflow diagram'

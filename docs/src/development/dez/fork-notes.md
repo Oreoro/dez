@@ -2085,3 +2085,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   groups are level two. Home remains a concise closeable tab with the same
   actions and responsive layout; the change does not add onboarding or a
   competing navigation model.
+- **2026-08-07: Empty work areas announce their native pane owner.** The active
+  operational start region exposes **Main Work Area** as its level-one heading;
+  inactive empty splits expose **Empty pane**. Existing terminal, running
+  Session, file, and review actions remain unchanged and continue to dispatch
+  through the pane's native Workspace owner.

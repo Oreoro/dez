@@ -1143,6 +1143,10 @@ impl Pane {
                             .when(is_dez, |this| {
                                 this.child(
                                     h_flex()
+                                        .id("empty-main-work-area-heading")
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label(title)
                                         .gap_2()
                                         .child(
                                             Icon::new(IconName::Tab)

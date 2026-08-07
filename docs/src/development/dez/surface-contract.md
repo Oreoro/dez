@@ -400,6 +400,9 @@ provider, or Custom Command—while the provider glyph reinforces that identity.
 The matching empty Workspaces Activity action uses that same named destination
 and opens it in the active Main Work Area; it never falls back to a generic
 shell action.
+The visible **Main Work Area** or **Empty pane** identity is the level-one
+heading for this pane-owned region, so assistive navigation names the exact
+native target before its terminal, running-session, file, and review actions.
 
 ### 10. Add and switch tabs
 
