@@ -904,6 +904,10 @@ that persistent identity. Both remain explicit user preferences.
 - Below 280px, Layout retains its open-item count and real pane headings but
   omits nested destination rows. Pane headings announce position, focus, and
   open-item counts; the native pane tab strip remains the destination owner.
+- The assistive hierarchy matches the visible Workspace model: **Workspaces**
+  is a level-one heading, **Layout** and **Activity** are level two, and real
+  split-pane groups are level three. Activity expansion remains a named button
+  within its section heading rather than becoming a second navigation owner.
 - Layout is omitted while the active Workspace has only one tab because the
   native tab strip already exposes that sole destination. Beginning with the
   second tab, Layout stays flat for a single-pane Workspace and reports only the

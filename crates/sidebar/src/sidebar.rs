@@ -171,6 +171,9 @@ const RESPONSIVE_MIN_WIDTH: Pixels = px(200.0);
 const SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0.30;
 const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
 const WORKSPACE_ACTIVITY_PREVIEW_LIMIT: usize = 5;
+const WORKSPACES_NAVIGATION_HEADING_LEVEL: usize = 1;
+const WORKSPACE_SECTION_HEADING_LEVEL: usize = 2;
+const WORKSPACE_PANE_HEADING_LEVEL: usize = 3;
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
@@ -8838,6 +8841,8 @@ impl Sidebar {
             DesignSystemSettings::get_global(cx).density,
         );
         let content = h_flex()
+            .role(gpui::Role::Heading)
+            .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
             .min_w_0()
             .gap_1()
@@ -19175,7 +19180,7 @@ impl Sidebar {
                 rows.push(
                     h_flex()
                         .role(gpui::Role::Heading)
-                        .aria_level(3)
+                        .aria_level(WORKSPACE_PANE_HEADING_LEVEL)
                         .aria_label(workspace_pane_header_accessibility_label(
                             pane_index,
                             pane_count,
@@ -19309,6 +19314,8 @@ impl Sidebar {
             }
         }
         let section_header = h_flex()
+            .role(gpui::Role::Heading)
+            .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
             .min_w_0()
             .px_3()
@@ -19482,11 +19489,17 @@ impl Sidebar {
                         .flex_1()
                         .gap_1()
                         .child(
-                            Label::new(session_rail_title(APP_NAME))
-                                .size(LabelSize::Small)
-                                .weight(gpui::FontWeight::MEDIUM)
+                            div()
+                                .role(gpui::Role::Heading)
+                                .aria_level(WORKSPACES_NAVIGATION_HEADING_LEVEL)
                                 .flex_none()
-                                .truncate(),
+                                .child(
+                                    Label::new(session_rail_title(APP_NAME))
+                                        .size(LabelSize::Small)
+                                        .weight(gpui::FontWeight::MEDIUM)
+                                        .flex_none()
+                                        .truncate(),
+                                ),
                         )
                         .when_some(header_status_label, |this, header_status_label| {
                             this.child(

@@ -2164,6 +2164,9 @@ require_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     '\.role\(gpui::Role::List\).*?\.aria_label\(if APP_NAME == "Zed" \{.*?"Workspace Sessions".*?\} else \{.*?"Workspaces and Activity"' \
     'Session rows are not contained by a named accessible list'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'const WORKSPACES_NAVIGATION_HEADING_LEVEL: usize = 1;.*?const WORKSPACE_SECTION_HEADING_LEVEL: usize = 2;.*?const WORKSPACE_PANE_HEADING_LEVEL: usize = 3;.*?fn render_workspace_activity_heading.*?role\(gpui::Role::Heading\).*?aria_level\(WORKSPACE_SECTION_HEADING_LEVEL\).*?fn render_active_workspace_tabs.*?aria_level\(WORKSPACE_PANE_HEADING_LEVEL\).*?let section_header = h_flex\(\).*?role\(gpui::Role::Heading\).*?aria_level\(WORKSPACE_SECTION_HEADING_LEVEL\).*?fn render_sidebar_header.*?aria_level\(WORKSPACES_NAVIGATION_HEADING_LEVEL\)' \
+    'Workspaces can regress from its level-one navigation owner, level-two Layout and Activity sections, or level-three pane hierarchy'
 require_pattern crates/ui/src/components/ai/thread_item.rs \
     '\.when\(self\.focused, \|s\| s\.aria_active_descendant\(\)\)' \
     'keyboard-selected Session rows do not report active-descendant focus'
@@ -2471,7 +2474,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn session_header_search_control_visible.*?session_search_control_visible\(app_name, session_count\).*?rail_width >= MIN_WIDTH.*?fn workspace_layout_nested_rows_visible.*?rail_width >= PRIMARY_ACTION_LABELS_MIN_WIDTH.*?workspace_layout_nested_rows_visible\(px\(279\.0\)\).*?PRIMARY_ACTION_LABELS_MIN_WIDTH.*?let nested_rows_visible = workspace_layout_nested_rows_visible\(self\.rendered_width\).*?if !nested_rows_visible.*?continue.*?when\(has_rows.*?active-workspace-tab-list.*?session_header_search_control_visible\([[:space:]]*paths::APP_NAME.*?self\.rendered_width' \
     'narrow Workspaces can regress to crowding the header or duplicating every native tab when the Main Work Area needs the width'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_pane_header_accessibility_label.*?Pane \{\} of \{\}\{focus\}, \{item_label\}.*?fn workspace_layout_accessibility_label.*?Layout summary for the active Workspace.*?Use the native pane tabs to open an item.*?role\(gpui::Role::Heading\).*?aria_level\(3\).*?workspace_pane_header_accessibility_label.*?workspace_layout_accessibility_label\(tab_count, pane_count, nested_rows_visible\)' \
+    'fn workspace_pane_header_accessibility_label.*?Pane \{\} of \{\}\{focus\}, \{item_label\}.*?fn workspace_layout_accessibility_label.*?Layout summary for the active Workspace.*?Use the native pane tabs to open an item.*?role\(gpui::Role::Heading\).*?aria_level\(WORKSPACE_PANE_HEADING_LEVEL\).*?workspace_pane_header_accessibility_label.*?workspace_layout_accessibility_label\(tab_count, pane_count, nested_rows_visible\)' \
     'compact Workspace Layout can regress to hiding pane ownership or open-item context from assistive technology'
 require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
     'Below 280px.*?omits.*?nested tab rows.*?native pane tab strip.*?authoritative destination.*?screen readers' \

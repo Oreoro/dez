@@ -2090,3 +2090,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   inactive empty splits expose **Empty pane**. Existing terminal, running
   Session, file, and review actions remain unchanged and continue to dispatch
   through the pane's native Workspace owner.
+- **2026-08-07: Workspaces exposes its visible hierarchy to assistive
+  navigation.** The native sidebar title is level one, nested **Layout** and
+  **Activity** owners are level two, and real split-pane groups remain level
+  three. Disclosure controls keep their button and expansion semantics, so the
+  change adds no new navigation surface and does not duplicate pane-tab state.
