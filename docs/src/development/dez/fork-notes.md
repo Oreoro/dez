@@ -2072,3 +2072,10 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   Unsupported breakpoint actions state why they are unavailable rather than
   relying on a disabled glyph. Official Zed retains its inherited stack-frame
   hover presentation, and all state remains owned by native Debug lists.
+- **2026-08-07: Settings content announces its selected owner.** Each Dez root
+  page exposes its full visible title as a level-one accessible heading and
+  names the content group from that destination, such as **Workspaces &
+  Terminals Settings** or **Debugger Settings**. Navigation, visual hierarchy,
+  keyboard focus, and assistive context therefore agree without introducing a
+  second Settings surface. Official Zed retains its generic inherited content
+  label.

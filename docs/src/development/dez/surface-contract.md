@@ -304,6 +304,10 @@ the root-page hierarchy scannable without turning Settings into a second tool
 rail. The navigation column follows Interface Density so full root titles do
 not clip beside their disclosure and icon. Official Zed keeps its inherited
 text-only Settings navigation and dimensions.
+The selected root title is also the page's level-one accessible heading, and
+the content group announces that exact owner—for example, **Workspaces &
+Terminals Settings**—instead of exposing every destination as an
+indistinguishable generic Settings region.
 
 Debugger Settings begins with two native recovery routes. **Open Debugger**
 reveals the existing Debug panel, while **Open debug.json** opens the active

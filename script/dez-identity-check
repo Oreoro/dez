@@ -2312,6 +2312,9 @@ require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'fn dez_settings_nav_icon.*?app_name == "Zed".*?return None.*?"Workspaces & Terminals".*?IconName::Screen.*?"Agents".*?IconName::DezAgent.*?"Appearance".*?IconName::Sparkle.*?"Workspace & Privacy".*?IconName::Lock.*?"Keyboard & Vim".*?IconName::Keyboard.*?"Editor".*?IconName::Code.*?"Languages & Tools".*?IconName::ToolHammer.*?"Search & Files".*?IconName::FolderSearch.*?"Navigation & Layout".*?IconName::Split.*?"Workspace Tools".*?IconName::ListTree.*?"Debugger".*?IconName::Debug.*?"Version Control".*?IconName::GitBranch.*?"Network".*?IconName::Server.*?"Advanced".*?IconName::Settings' \
     'Dez Settings root pages can regress to an unscannable flat text list or leak fork icons into official Zed'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'fn settings_content_accessibility_label.*?app_name == "Zed".*?Settings Content.*?format!\("\{page_title\} Settings"\).*?role\(Role::Group\).*?aria_label\(settings_content_accessibility_label.*?role\(Role::Heading\).*?aria_level\(1\).*?aria_label\(title\).*?settings_content_accessibility_label\("Dez", "Workspaces & Terminals"\).*?Workspaces & Terminals Settings' \
+    'Dez Settings can regress to generic content ownership or a visual-only page title'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'canvas_settings_nav_width\(paths::APP_NAME, canvas_density\).*?entry.*?is_root.*?dez_settings_nav_icon.*?item\.start_icon\(icon\).*?root_item\(entry\.is_root\)' \
     'Dez Settings navigation can regress to decorating nested sections or stop applying root-page icons'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \

@@ -246,6 +246,14 @@ fn dez_settings_nav_icon(app_name: &str, page_title: &str) -> Option<IconName> {
     }
 }
 
+fn settings_content_accessibility_label(app_name: &str, page_title: &str) -> SharedString {
+    if app_name == "Zed" {
+        return "Settings Content".into();
+    }
+
+    format!("{page_title} Settings").into()
+}
+
 fn canvas_settings_radius(element: Stateful<Div>, radius: settings::CanvasRadius) -> Stateful<Div> {
     match radius {
         settings::CanvasRadius::None => element,
@@ -4003,10 +4011,14 @@ impl SettingsWindow {
         cx: &mut Context<SettingsWindow>,
     ) -> impl IntoElement {
         let current_page_index = self.current_page_index();
+        let current_page_title = self.current_page().title;
         let mut page_content = v_flex()
             .id("settings-ui-page")
             .role(Role::Group)
-            .aria_label("Settings Content")
+            .aria_label(settings_content_accessibility_label(
+                paths::APP_NAME,
+                current_page_title,
+            ))
             .size_full();
 
         let has_active_search = !self.search_bar.read(cx).is_empty(cx);
@@ -4037,7 +4049,14 @@ impl SettingsWindow {
                             .when(this.sub_page_stack.is_empty(), |this| {
                                 this.when_some(root_nav_label, |this, title| {
                                     this.child(
-                                        Label::new(title).size(LabelSize::Large).mt_2().mb_3(),
+                                        div()
+                                            .id(("settings-page-heading", current_page_index))
+                                            .role(Role::Heading)
+                                            .aria_level(1)
+                                            .aria_label(title)
+                                            .mt_2()
+                                            .mb_3()
+                                            .child(Label::new(title).size(LabelSize::Large)),
                                     )
                                 })
                             })
@@ -6046,6 +6065,14 @@ pub mod test {
         assert_eq!(
             canvas_settings_nav_width("Zed", settings::CanvasDensity::Spacious),
             SIDEBAR_WIDTH
+        );
+        assert_eq!(
+            settings_content_accessibility_label("Dez", "Workspaces & Terminals"),
+            "Workspaces & Terminals Settings"
+        );
+        assert_eq!(
+            settings_content_accessibility_label("Zed", "Workspaces & Terminals"),
+            "Settings Content"
         );
     }
 
