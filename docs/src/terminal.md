@@ -395,9 +395,9 @@ warning names the concrete failure and confirms that Dez did not start a
 replacement shell. The inactive grid contains no synthetic output or fake
 cursor.
 
-Choose **Start Fresh Terminal** only when you want separate computation in the
-Main Work Area. It does not reconnect, replay, or replace the unavailable
-Session.
+Choose **Open New Shell Here** only when you want an independent native shell
+in the Main Work Area. It does not inherit the configured agent launcher and
+does not reconnect, replay, or replace the unavailable Session.
 
 ## Configuring the Shell
 

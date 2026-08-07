@@ -7,8 +7,7 @@ pub mod terminal_scrollbar;
 use agent_settings::{AgentSettings, detect_terminal_agent_command};
 pub use agent_settings::{
     WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
-    configured_terminal_launcher_destination_label, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label, terminal_agent_icon,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
 };
 use anyhow::{Result, anyhow};
 use collections::HashMap;
@@ -561,17 +560,11 @@ fn terminal_context_open_action_label(app_name: &str, configured_command: Option
     }
 }
 
-fn terminal_unavailable_fresh_action_label(
-    app_name: &str,
-    configured_command: Option<&str>,
-) -> String {
+fn terminal_unavailable_new_shell_label(app_name: &str) -> &'static str {
     if app_name == "Zed" {
-        "Start Fresh Terminal".to_owned()
+        "Start Fresh Terminal"
     } else {
-        format!(
-            "Start Fresh Terminal · {}",
-            configured_terminal_launcher_destination_label(configured_command)
-        )
+        "Open New Shell Here"
     }
 }
 
@@ -606,7 +599,7 @@ fn terminal_unavailable_description(reason: Option<&str>) -> String {
     let reason =
         reason.unwrap_or("The saved terminal process is no longer available on this Dez host.");
     format!(
-        "{reason} Dez did not start a replacement shell. Start fresh only when you want a separate computation."
+        "{reason} Dez did not start a replacement shell. Open a new shell only when you want separate computation."
     )
 }
 
@@ -3752,15 +3745,16 @@ impl Render for TerminalView {
         };
         let unavailable_description =
             terminal_unavailable_description(self.session_unavailable_reason.as_deref());
-        let fresh_terminal_label = terminal_unavailable_fresh_action_label(
-            paths::APP_NAME,
-            AgentSettings::get_global(cx)
-                .terminal_init_command
-                .as_deref(),
-        );
-        let fresh_terminal_accessibility_label =
-            format!("{fresh_terminal_label} in Main Work Area");
-        let fresh_terminal_tooltip_label = fresh_terminal_accessibility_label.clone();
+        let unavailable_new_shell_label = terminal_unavailable_new_shell_label(paths::APP_NAME);
+        let unavailable_new_shell_accessibility_label =
+            format!("{unavailable_new_shell_label} in Main Work Area");
+        let unavailable_new_shell_action: Box<dyn gpui::Action> = if paths::APP_NAME == "Zed" {
+            NewCenterTerminal::default().boxed_clone()
+        } else {
+            OpenShellTerminal.boxed_clone()
+        };
+        let unavailable_new_shell_tooltip_action = unavailable_new_shell_action.boxed_clone();
+        let unavailable_new_shell_tooltip_label = unavailable_new_shell_accessibility_label.clone();
         let session_context_strip = self.render_session_context_strip(cx);
         let terminal_container_background = if terminal_container_reuses_terminal_material(
             paths::APP_NAME,
@@ -3813,24 +3807,24 @@ impl Render for TerminalView {
                         )
                         .child(
                             h_flex().w_full().flex_wrap().gap_2().child(
-                                Button::new("new-terminal-from-unavailable", fresh_terminal_label)
-                                    .style(ButtonStyle::Filled)
-                                    .start_icon(Icon::new(IconName::Terminal))
-                                    .tab_index(0isize)
-                                    .aria_label(fresh_terminal_accessibility_label)
-                                    .tooltip(move |_, cx| {
-                                        Tooltip::for_action(
-                                            fresh_terminal_tooltip_label.clone(),
-                                            &NewCenterTerminal::default(),
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            NewCenterTerminal::default().boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
+                                Button::new(
+                                    "new-terminal-from-unavailable",
+                                    unavailable_new_shell_label,
+                                )
+                                .style(ButtonStyle::Filled)
+                                .start_icon(Icon::new(IconName::Terminal))
+                                .tab_index(0isize)
+                                .aria_label(unavailable_new_shell_accessibility_label)
+                                .tooltip(move |_, cx| {
+                                    Tooltip::for_action(
+                                        unavailable_new_shell_tooltip_label.clone(),
+                                        &*unavailable_new_shell_tooltip_action,
+                                        cx,
+                                    )
+                                })
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(&*unavailable_new_shell_action, cx);
+                                }),
                             ),
                         ),
                 )
@@ -5361,15 +5355,11 @@ mod tests {
             "Open Terminal"
         );
         assert_eq!(
-            terminal_unavailable_fresh_action_label("Dez", Some("claude")),
-            "Start Fresh Terminal · Claude Code"
+            terminal_unavailable_new_shell_label("Dez"),
+            "Open New Shell Here"
         );
         assert_eq!(
-            terminal_unavailable_fresh_action_label("Dez", Some("tmux")),
-            "Start Fresh Terminal · tmux Session"
-        );
-        assert_eq!(
-            terminal_unavailable_fresh_action_label("Zed", Some("tmux")),
+            terminal_unavailable_new_shell_label("Zed"),
             "Start Fresh Terminal"
         );
         assert_eq!(

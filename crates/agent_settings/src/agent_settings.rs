@@ -330,7 +330,7 @@ pub fn configured_terminal_launcher_icon(command: Option<&str>) -> IconName {
 
 pub const WORKSPACE_TMUX_LAUNCHER_LABEL: &str = "Workspace tmux · fallback";
 
-pub fn configured_terminal_launcher_destination_label(command: Option<&str>) -> &'static str {
+fn configured_terminal_launcher_destination_label(command: Option<&str>) -> &'static str {
     match configured_terminal_launcher(command) {
         ConfiguredTerminalLauncher::NativeShell => "Native Shell",
         ConfiguredTerminalLauncher::Tmux => "tmux Session",
@@ -1359,17 +1359,6 @@ mod tests {
             configured_terminal_launcher_action_label(Some("my-agent")),
             "Open Terminal · Custom Command"
         );
-        assert_eq!(
-            configured_terminal_launcher_destination_label(Some(
-                "env CODEX_HOME=/tmp codex --yolo"
-            )),
-            "Codex"
-        );
-        assert_eq!(
-            configured_terminal_launcher_destination_label(Some("/opt/homebrew/bin/tmux")),
-            "tmux Session"
-        );
-
         assert_eq!(configured_terminal_launcher_icon(None), IconName::Terminal);
         assert_eq!(
             configured_terminal_launcher_icon(Some("env CODEX_HOME=/tmp codex --yolo")),

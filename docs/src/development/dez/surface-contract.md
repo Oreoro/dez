@@ -620,10 +620,10 @@ a new one.
 
 Unavailable and legacy records preserve evidence without claiming process
 death, liveness, ownership transfer, or migration. A fresh shell is explicitly
-separate computation. Its native action names the configured destination before
-launch, just like the terminal context menu and the other Workspace launch
-surfaces. Terminal Details stays inline, and **Terminate legacy session…**
-remains a context-menu action behind native confirmation.
+separate computation. **Open New Shell Here** starts an independent native
+shell and never inherits the configured agent or tmux launcher. Terminal
+Details stays inline, and **Terminate legacy session…** remains a context-menu
+action behind native confirmation.
 
 The terminal context menu dispatches the same configured-terminal action as
 Home, Workspaces, and the adjacent `+`. In particular, a named tmux destination

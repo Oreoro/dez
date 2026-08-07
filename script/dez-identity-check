@@ -2994,8 +2994,8 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'impl Item for TerminalView.*?fn force_show_tab_bar\(&self\) -> bool \{[[:space:]]*true' \
     'a single terminal can regress to an unanchored shell canvas without visible Surface identity'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_context_open_action_label.*?app_name == "Zed".*?"Open Terminal"\.to_owned\(\).*?configured_terminal_launcher_action_label\(configured_command\).*?fn terminal_unavailable_fresh_action_label.*?"Start Fresh Terminal"\.to_owned\(\).*?configured_terminal_launcher_destination_label\(configured_command\).*?let terminal_context_open_label = terminal_context_open_action_label.*?menu\.action\([[:space:]]*terminal_context_open_label\.clone\(\),[[:space:]]*Box::new\(OpenAgentTerminal\).*?let fresh_terminal_label = terminal_unavailable_fresh_action_label.*?format!\("\{fresh_terminal_label\} in Main Work Area"\).*?"new-terminal-from-unavailable".*?fresh_terminal_label.*?\.aria_label\(fresh_terminal_accessibility_label\).*?fresh_terminal_tooltip_label\.clone\(\).*?NewCenterTerminal::default' \
-    'the unavailable-terminal recovery action can regress to an ambiguous or unnamed destination'
+    'fn terminal_context_open_action_label.*?app_name == "Zed".*?"Open Terminal"\.to_owned\(\).*?configured_terminal_launcher_action_label\(configured_command\).*?fn terminal_unavailable_new_shell_label.*?"Start Fresh Terminal".*?"Open New Shell Here".*?let terminal_context_open_label = terminal_context_open_action_label.*?menu\.action\([[:space:]]*terminal_context_open_label\.clone\(\),[[:space:]]*Box::new\(OpenAgentTerminal\).*?let unavailable_new_shell_label = terminal_unavailable_new_shell_label.*?format!\("\{unavailable_new_shell_label\} in Main Work Area"\).*?OpenShellTerminal\.boxed_clone\(\).*?"new-terminal-from-unavailable".*?unavailable_new_shell_label.*?\.aria_label\(unavailable_new_shell_accessibility_label\).*?unavailable_new_shell_tooltip_action.*?window\.dispatch_action\(&\*unavailable_new_shell_action' \
+    'unavailable-terminal recovery can regress to inheriting the configured agent or tmux launcher'
 require_pattern crates/terminal_view/src/terminal_view.rs \
     'Working directory: \{working_directory\}' \
     'the terminal tab tooltip can regress to mislabeling the working directory as a folder'
@@ -3054,7 +3054,7 @@ require_multiline_pattern docs/src/terminal.md \
     '## Unavailable Terminals.*?preserves the original.*?Terminal unavailable.*?no synthetic output.*?fake[[:space:]]+cursor' \
     'the public terminal guide can regress to duplicate fake recovery output or imply that fresh computation reconnects'
 require_multiline_pattern docs/src/terminal.md \
-    'Start Fresh Terminal.*?separate computation in the.*?Main Work Area.*?does not reconnect, replay, or replace' \
+    'Open New Shell Here.*?independent native shell.*?Main Work Area.*?does not inherit the configured agent launcher.*?does not reconnect, replay, or replace' \
     'the public terminal guide can regress to implying that fresh computation reconnects an unavailable Session'
 require_multiline_pattern docs/src/terminal.md \
     'GUI groups every frame-safe chunk.*?one queue item.*?queue admission is all-or-nothing.*?aggregate.*?byte cap.*?prefix delivered.*?does not replay it.*?Herdr registry discovery and endpoint queries share one source-wide deadline.*?individual deadline.*?refresh cycle indefinitely.*?Retry requested while a[[:space:]]+scan is active queues one immediate follow-up scan' \
@@ -3069,7 +3069,7 @@ reject_pattern crates/terminal_view/src/terminal_view.rs \
     'assistant_enabled = false|AddSelectionToThread|InlineAssist::default' \
     'the terminal context menu retains permanently disabled Agent actions'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
-    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Start fresh only when you want a separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.id\("terminal-unavailable-state"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal unavailable"\).*?Headline::new\("Terminal unavailable"\).*?Label::new\(unavailable_description\).*?"Start Fresh Terminal"' \
+    'fn terminal_unavailable_description.*?Dez did not start a replacement shell.*?Open a new shell only when you want separate computation.*?if self\.session_unavailable \{[[:space:]]*return false;.*?\.id\("terminal-unavailable-state"\).*?\.role\(gpui::Role::Alert\).*?\.aria_label\("Terminal unavailable"\).*?Headline::new\("Terminal unavailable"\).*?Label::new\(unavailable_description\).*?unavailable_new_shell_label' \
     'unavailable terminal recovery can regress to internal Host jargon'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     '\.id\("terminal-unavailable-state"\).*?\.size_full\(\).*?\.min_h_0\(\).*?\.overflow_y_scroll\(\).*?\.pt_10\(\).*?\.pb_8\(\)' \
