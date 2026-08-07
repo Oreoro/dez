@@ -176,6 +176,18 @@ const WORKSPACES_NAVIGATION_HEADING_LEVEL: usize = 1;
 const WORKSPACE_SECTION_HEADING_LEVEL: usize = 2;
 const WORKSPACE_PANE_HEADING_LEVEL: usize = 3;
 
+fn workspace_navigation_responsive_width(
+    app_name: &str,
+    physical_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        physical_width
+    } else {
+        physical_width * interface_scale.max(f32::EPSILON).recip()
+    }
+}
+
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
     visibility: settings::CanvasVisibility,
@@ -3033,6 +3045,23 @@ mod workspace_header_label_tests {
         assert_eq!(
             workspace_header_height("Zed", settings::CanvasDensity::Spacious, px(35.0), 1.5),
             px(35.0)
+        );
+    }
+
+    #[test]
+    fn dez_workspace_breakpoints_follow_whole_interface_zoom() {
+        let zoomed_in_width = workspace_navigation_responsive_width("Dez", px(300.0), 1.5);
+        assert_eq!(zoomed_in_width, px(200.0));
+        assert!(!workspace_layout_nested_rows_visible(zoomed_in_width));
+
+        let zoomed_out_width = workspace_navigation_responsive_width("Dez", px(210.0), 0.75);
+        assert_eq!(zoomed_out_width, px(280.0));
+        assert!(workspace_layout_nested_rows_visible(zoomed_out_width));
+
+        assert_eq!(
+            workspace_navigation_responsive_width("Zed", px(300.0), 1.5),
+            px(300.0),
+            "official Zed keeps its inherited physical-width breakpoints"
         );
     }
 }
@@ -6331,7 +6360,7 @@ fn create_worktree_in_workspace(
 pub struct Sidebar {
     multi_workspace: WeakEntity<MultiWorkspace>,
     width: Pixels,
-    rendered_width: Pixels,
+    responsive_projection_width: Pixels,
     focus_handle: FocusHandle,
     filter_editor: Entity<Editor>,
     thread_rename_editor: Entity<Editor>,
@@ -6628,7 +6657,7 @@ impl Sidebar {
         Self {
             multi_workspace: multi_workspace.downgrade(),
             width: DEFAULT_WIDTH,
-            rendered_width: DEFAULT_WIDTH,
+            responsive_projection_width: DEFAULT_WIDTH,
             focus_handle,
             filter_editor,
             thread_rename_editor,
@@ -15490,7 +15519,7 @@ impl Sidebar {
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let rail_width = self.rendered_width;
+        let rail_width = self.responsive_projection_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible_for_product(APP_NAME, rail_width);
@@ -16038,7 +16067,7 @@ impl Sidebar {
         let has_changes = changed_files > 0;
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let rail_width = self.rendered_width;
+        let rail_width = self.responsive_projection_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible_for_product(APP_NAME, rail_width);
@@ -17964,7 +17993,7 @@ impl Sidebar {
             || self.session_search_open
             || self.filter_editor.focus_handle(cx).is_focused(window);
         let is_restoring = self.workspace_restore_status_is_visible(cx);
-        let narrow_scope_controls = self.rendered_width < MIN_WIDTH;
+        let narrow_scope_controls = self.responsive_projection_width < MIN_WIDTH;
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
         let status_label = session_overview_status_label_with_observed_terminals(
             APP_NAME,
@@ -17976,7 +18005,7 @@ impl Sidebar {
             is_restoring,
         );
         let (all_scope_label, attention_scope_label) = session_scope_labels(
-            self.rendered_width,
+            self.responsive_projection_width,
             total_item_count,
             self.contents.attention_count,
         );
@@ -18329,15 +18358,17 @@ impl Sidebar {
                 1 => "1 session".to_owned(),
                 count => format!("{count} sessions"),
             })
-        } else if self.rendered_width < RESPONSIVE_MIN_WIDTH {
+        } else if self.responsive_projection_width < RESPONSIVE_MIN_WIDTH {
             Some(format!("{attachable_count} · {observed_count}"))
         } else {
             Some(format!(
                 "{attachable_count} attachable · {observed_count} observed"
             ))
         };
-        let supplemental_metadata_visible =
-            session_rail_supplemental_metadata_visible_for_product(APP_NAME, self.rendered_width);
+        let supplemental_metadata_visible = session_rail_supplemental_metadata_visible_for_product(
+            APP_NAME,
+            self.responsive_projection_width,
+        );
         let design_system = DesignSystemSettings::get_global(cx);
         let (navigation_control_size, navigation_icon_size) =
             workspace_navigation_control_metrics(APP_NAME, design_system.density);
@@ -19296,7 +19327,8 @@ impl Sidebar {
             })
             .unwrap_or_else(|| SharedString::from("Current Workspace"));
         let pane_count = pane_items.len();
-        let nested_rows_visible = workspace_layout_nested_rows_visible(self.rendered_width);
+        let nested_rows_visible =
+            workspace_layout_nested_rows_visible(self.responsive_projection_width);
         let mut rows = Vec::with_capacity(tab_count + pane_count);
         let mut tab_position = 0;
 
@@ -19515,7 +19547,7 @@ impl Sidebar {
         let show_search_control = session_header_search_control_visible(
             paths::APP_NAME,
             searchable_item_count,
-            self.rendered_width,
+            self.responsive_projection_width,
         ) && !search_is_active;
         let (header_control_size, header_icon_size) = workspace_navigation_control_metrics(
             APP_NAME,
@@ -20083,7 +20115,7 @@ impl Sidebar {
             "Show Agent History"
         };
         let on_right = self.side(cx) == SidebarSide::Right;
-        let rail_width = self.rendered_width;
+        let rail_width = self.responsive_projection_width;
         let agent_tools_visible_label = session_rail_agent_tools_utility_label(rail_width);
         let history_visible_label = session_rail_agent_history_utility_label(rail_width);
 
@@ -20689,7 +20721,8 @@ impl Render for Sidebar {
         let rail_width = session_rail_settings
             .responsive_width(self.width, window.viewport_size().width)
             .min(session_rail_max_width(APP_NAME));
-        self.rendered_width = rail_width;
+        self.responsive_projection_width =
+            workspace_navigation_responsive_width(APP_NAME, rail_width, interface_scale(cx));
 
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);

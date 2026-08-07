@@ -966,6 +966,12 @@ status; those remain explicit native status-line controls.
   crowd the Workspaces recovery action or its visible attention count.
 - Top and status chrome must change size together when Compact, Balanced, or
   Spacious density changes; individual surfaces do not invent local scales.
+- Workspaces evaluates its compact, balanced, and detailed projections in
+  interface-scaled width. Whole-interface zoom may collapse nested Layout
+  destinations and secondary row metadata sooner, or reveal them when more
+  effective width is available, but it never changes the rail's saved physical
+  width, native resize bounds, or ownership. Official Zed retains its inherited
+  physical-width breakpoints.
 - The status line derives split-pane identity from the active native Workspace.
   It shows **Pane 1 of 2** at wide widths, contracts to **Pane 1/2** before
   other status metadata, and disappears below the labeled navigation threshold.
