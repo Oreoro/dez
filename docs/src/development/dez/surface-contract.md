@@ -339,10 +339,11 @@ Before a Dez page enters navigation, search, or keyboard focus order, page
 curation verifies that each field has both a registered renderer and a resolved
 default. A defensive settings-file fallback may remain in shared rendering
 code, but it is not a curated Dez control.
-Native model, font, theme, and icon-theme pickers retain a field-scoped popover
-handle across renders. Their existing combobox triggers report the live
-expanded state and accept assistive Expand and Collapse actions; the picker
-does not create a second Settings surface or a separate value owner.
+Native Settings popovers retain an owner-scoped handle across renders. Model,
+font, theme, and icon-theme pickers plus Add Provider, Add Agent, and Add Server
+triggers report the live expanded state and accept assistive Expand and Collapse
+actions. They do not create a second Settings surface or a separate value
+owner.
 Dez also keeps product-inert microgeometry out of the curated catalog: the
 disabled outer card gap, disabled active-pane border, and unused zoom padding
 remain readable in `settings.json` for compatibility but are not presented as

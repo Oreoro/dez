@@ -403,8 +403,17 @@ require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'field_renderer\.ok_or\("NO RENDERER"\).*?if cfg!\(debug_assertions\) && !found.*?Err\("NO DEFAULT"\).*?Err\(_\) if paths::APP_NAME != "Zed".*?Button::new\("open-unsupported-setting", "Edit in settings\.json"\).*?open_current_settings_file.*?Err\(warning\).*?Button::new\("error-warning", warning\)' \
     'a missing Dez Settings renderer or default can regress to exposing an internal diagnostic without an actionable native fallback'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
-    'fn wire_picker_trigger_a11y.*?let expanded = handle\.is_deployed\(\).*?\.aria_expanded\(expanded\).*?Action::Expand.*?show_handle\.show.*?Action::Collapse.*?hide_handle\.hide.*?fn persistent_picker_handle.*?use_keyed_state.*?settings-picker-handle.*?field\.json_path\.unwrap_or\("agent\.default_model"\).*?persistent_picker_handle.*?field\.json_path\.unwrap_or\("appearance\.font_family"\).*?persistent_picker_handle.*?field\.json_path\.unwrap_or\("appearance\.theme"\).*?persistent_picker_handle.*?field\.json_path\.unwrap_or\("appearance\.icon_theme"\)' \
+    'fn wire_settings_popover_trigger_a11y.*?let expanded = handle\.is_deployed\(\).*?\.aria_expanded\(expanded\).*?Action::Expand.*?show_handle\.show.*?Action::Collapse.*?hide_handle\.hide.*?fn persistent_settings_popover_handle.*?use_keyed_state.*?settings-popover-handle.*?field\.json_path\.unwrap_or\("agent\.default_model"\).*?persistent_settings_popover_handle.*?field\.json_path\.unwrap_or\("appearance\.font_family"\).*?persistent_settings_popover_handle.*?field\.json_path\.unwrap_or\("appearance\.theme"\).*?persistent_settings_popover_handle.*?field\.json_path\.unwrap_or\("appearance\.icon_theme"\)' \
     'native Settings pickers can regress to recreating their handles and hiding live expanded state from assistive technology'
+require_multiline_pattern crates/settings_ui/src/pages/llm_providers_page.rs \
+    'persistent_settings_popover_handle::<ContextMenu>.*?agent\.llm_providers\.add.*?with_handle\(popover_handle\.clone\(\)\).*?wire_settings_popover_trigger_a11y.*?Add Provider.*?popover_handle' \
+    'the Built-in Agent provider menu can regress to hiding its expanded state from assistive technology'
+require_multiline_pattern crates/settings_ui/src/pages/external_agents_page.rs \
+    'persistent_settings_popover_handle::<ContextMenu>.*?agent\.external_agents\.add.*?with_handle\(popover_handle\.clone\(\)\).*?wire_settings_popover_trigger_a11y.*?Add Agent.*?popover_handle' \
+    'the ACP Agent menu can regress to hiding its expanded state from assistive technology'
+require_multiline_pattern crates/settings_ui/src/pages/mcp_servers_page.rs \
+    'persistent_settings_popover_handle::<ContextMenu>.*?agent\.mcp_servers\.add.*?with_handle\(popover_handle\.clone\(\)\).*?wire_settings_popover_trigger_a11y.*?Add Server.*?popover_handle' \
+    'the Built-in Agent MCP menu can regress to hiding its expanded state from assistive technology'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'trait AnySettingField.*?fn is_settings_file_only\(&self\) -> bool;.*?impl<T: PartialEq.*?fn is_settings_file_only\(&self\) -> bool \{.*?TypeId::of::<T>\(\) == TypeId::of::<UnimplementedSettingField>\(\)' \
     'the native Settings catalog can lose its explicit settings-file-only field classification'

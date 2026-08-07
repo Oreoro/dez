@@ -18,7 +18,10 @@ use util::ResultExt as _;
 
 use zed_actions::ExtensionCategoryFilter;
 
-use crate::{PROJECT, SettingField, SettingItem, SettingsPageItem, SettingsWindow, USER};
+use crate::{
+    PROJECT, SettingField, SettingItem, SettingsPageItem, SettingsWindow, USER,
+    persistent_settings_popover_handle, wire_settings_popover_trigger_a11y,
+};
 
 fn mcp_servers_page_copy(app_name: &str) -> (&'static str, &'static str) {
     if app_name == "Zed" {
@@ -568,9 +571,12 @@ pub(crate) fn render_add_server_popover(
         gpui::transparent_black()
     };
     let settings_window = cx.entity().downgrade();
+    let popover_handle =
+        persistent_settings_popover_handle::<ContextMenu>("agent.mcp_servers.add", window, cx);
 
     let popover = PopoverMenu::new("add-mcp-server-popover")
-        .trigger(
+        .with_handle(popover_handle.clone())
+        .trigger(wire_settings_popover_trigger_a11y(
             Button::new("add-mcp-server", "Add Server")
                 .style(ButtonStyle::Outlined)
                 .track_focus(&focus_handle)
@@ -580,7 +586,8 @@ pub(crate) fn render_add_server_popover(
                         .color(Color::Muted),
                 )
                 .label_size(LabelSize::Small),
-        )
+            popover_handle,
+        ))
         .anchor(gpui::Anchor::TopRight)
         .menu({
             move |window, cx| {

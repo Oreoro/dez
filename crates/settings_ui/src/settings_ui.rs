@@ -5649,10 +5649,10 @@ fn render_picker_trigger_button(id: SharedString, label: SharedString) -> Button
         )
 }
 
-/// Wires the Expand/Collapse accessibility actions on a picker trigger button to
-/// the popover handle, so assistive technology can open and close the picker
+/// Wires the Expand/Collapse accessibility actions on a popover trigger button to
+/// the popover handle, so assistive technology can open and close the popover
 /// (used by UIA on Windows and AX on macOS; Linux/AT-SPI uses the click action).
-fn wire_picker_trigger_a11y<M: gpui::ManagedView>(
+pub(crate) fn wire_settings_popover_trigger_a11y<M: gpui::ManagedView>(
     button: Button,
     handle: ui::PopoverMenuHandle<M>,
 ) -> Button {
@@ -5669,14 +5669,14 @@ fn wire_picker_trigger_a11y<M: gpui::ManagedView>(
         })
 }
 
-fn persistent_picker_handle<M: gpui::ManagedView>(
-    field_path: &'static str,
+pub(crate) fn persistent_settings_popover_handle<M: gpui::ManagedView>(
+    owner_id: &'static str,
     window: &mut Window,
     cx: &mut App,
 ) -> ui::PopoverMenuHandle<M> {
     window
         .use_keyed_state(
-            (gpui::ElementId::from("settings-picker-handle"), field_path),
+            (gpui::ElementId::from("settings-popover-handle"), owner_id),
             cx,
             |_, _| ui::PopoverMenuHandle::default(),
         )
@@ -5724,13 +5724,13 @@ fn render_subagent_model_picker(
         (None, None) => default_option_label,
     };
 
-    let handle = persistent_picker_handle::<LanguageModelSelector>(
+    let handle = persistent_settings_popover_handle::<LanguageModelSelector>(
         field.json_path.unwrap_or("agent.default_model"),
         window,
         cx,
     );
     let model_picker = PopoverMenu::new("language-model-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button(
                 "language_model_picker_trigger".into(),
                 current_label.clone(),
@@ -5874,13 +5874,13 @@ fn render_font_picker(
         .cloned()
         .map_or_else(|| SharedString::default(), |value| value.into_gpui());
 
-    let handle = persistent_picker_handle(
+    let handle = persistent_settings_popover_handle(
         field.json_path.unwrap_or("appearance.font_family"),
         window,
         cx,
     );
     PopoverMenu::new("font-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button(
                 "font_family_picker_trigger".into(),
                 current_value.clone(),
@@ -5939,10 +5939,13 @@ fn render_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
-    let handle =
-        persistent_picker_handle(field.json_path.unwrap_or("appearance.theme"), window, cx);
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.theme"),
+        window,
+        cx,
+    );
     PopoverMenu::new("theme-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button("theme_picker_trigger".into(), current_value.clone())
                 .aria_label(title)
                 .when(!description.is_empty(), |this| {
@@ -6001,13 +6004,13 @@ fn render_icon_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
-    let handle = persistent_picker_handle(
+    let handle = persistent_settings_popover_handle(
         field.json_path.unwrap_or("appearance.icon_theme"),
         window,
         cx,
     );
     PopoverMenu::new("icon-theme-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button("icon_theme_picker_trigger".into(), current_value.clone())
                 .aria_label(title)
                 .when(!description.is_empty(), |this| {

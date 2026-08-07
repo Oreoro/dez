@@ -18,8 +18,10 @@ use ui::{
 };
 use util::ResultExt as _;
 
-use crate::SettingsWindow;
 use crate::components::SettingsInputField;
+use crate::{
+    SettingsWindow, persistent_settings_popover_handle, wire_settings_popover_trigger_a11y,
+};
 
 pub(crate) fn render_llm_providers_page(
     settings_window: &SettingsWindow,
@@ -72,7 +74,7 @@ impl CompatibleProviderKind {
 
 pub(crate) fn render_add_llm_provider_popover(
     settings_window: &SettingsWindow,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut Context<SettingsWindow>,
 ) -> impl IntoElement {
     let focus_handle = settings_window
@@ -82,9 +84,12 @@ pub(crate) fn render_add_llm_provider_popover(
         .tab_stop(true);
 
     let settings_window = cx.entity().downgrade();
+    let popover_handle =
+        persistent_settings_popover_handle::<ContextMenu>("agent.llm_providers.add", window, cx);
 
     PopoverMenu::new("add-llm-provider-popover")
-        .trigger(
+        .with_handle(popover_handle.clone())
+        .trigger(wire_settings_popover_trigger_a11y(
             Button::new("add-llm-provider", "Add Provider")
                 .style(ButtonStyle::Outlined)
                 .track_focus(&focus_handle)
@@ -94,7 +99,8 @@ pub(crate) fn render_add_llm_provider_popover(
                         .size(IconSize::Small)
                         .color(Color::Muted),
                 ),
-        )
+            popover_handle,
+        ))
         .anchor(gpui::Anchor::TopRight)
         .offset(gpui::Point {
             x: px(0.0),
