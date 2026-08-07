@@ -145,6 +145,10 @@ never claims to migrate the external Session. A provider failure that occurs
 before a terminal exists remains a Workspace notification with the same explicit
 retry; Dez does not show both recoveries for one failure. Destructive legacy
 termination remains behind a native confirmation.
+Retry and fresh-shell controls include the external owner and target Workspace
+in their accessible names. The fresh-shell description also repeats that tmux
+or Herdr remains external, so compact icon-only recovery does not obscure
+ownership.
 
 **Workspace tmux · fallback** resolves the executable through the same known
 Homebrew and shell `PATH` locations as running-session discovery, then runs its

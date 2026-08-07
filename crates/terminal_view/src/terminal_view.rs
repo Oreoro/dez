@@ -552,6 +552,22 @@ fn terminal_external_attach_new_shell_label(
     )
 }
 
+fn terminal_external_attach_retry_accessibility_label(
+    external_owner: &str,
+    workspace_label: &str,
+) -> String {
+    format!("Retry {external_owner} attach in Workspace {workspace_label}")
+}
+
+fn terminal_external_attach_new_shell_accessibility_label(
+    external_owner: &str,
+    workspace_label: &str,
+) -> String {
+    format!(
+        "Open a new native shell in Workspace {workspace_label}; {external_owner} remains external"
+    )
+}
+
 fn terminal_context_open_action_label(app_name: &str, configured_command: Option<&str>) -> String {
     if app_name == "Zed" {
         "Open Terminal".to_owned()
@@ -3373,6 +3389,15 @@ impl TerminalView {
             context_width,
             external_attach_retry_task_id.is_some(),
         );
+        let external_owner_label = external_owner.unwrap_or("external session");
+        let retry_attach_accessibility_label = terminal_external_attach_retry_accessibility_label(
+            external_owner_label,
+            &workspace_label,
+        );
+        let new_shell_accessibility_label = terminal_external_attach_new_shell_accessibility_label(
+            external_owner_label,
+            &workspace_label,
+        );
 
         let details_status = format!("Status · {activity_accessibility_label}");
         let details_process = terminal_details_process_summary(
@@ -3596,29 +3621,34 @@ impl TerminalView {
                                 .clone()
                                 .zip(retry_attach_visible_label),
                             |this, (retry_task_id, visible_label)| {
-                            this.child(
-                                Button::new(
-                                    ("terminal-context-retry-attach", terminal_entity_id),
-                                    visible_label,
+                                let accessibility_label =
+                                    retry_attach_accessibility_label.clone();
+                                let tooltip_label = accessibility_label.clone();
+                                this.child(
+                                    Button::new(
+                                        ("terminal-context-retry-attach", terminal_entity_id),
+                                        visible_label,
+                                    )
+                                    .size(ButtonSize::Compact)
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(IconName::Rerun).size(IconSize::XSmall))
+                                    .tab_index(0isize)
+                                    .aria_label(accessibility_label)
+                                    .tooltip(move |_, cx| {
+                                        Tooltip::for_action(tooltip_label.clone(), &RerunTask, cx)
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        window.dispatch_action(
+                                            Box::new(terminal_rerun_override(&retry_task_id)),
+                                            cx,
+                                        );
+                                    }),
                                 )
-                                .size(ButtonSize::Compact)
-                                .style(ButtonStyle::Filled)
-                                .start_icon(Icon::new(IconName::Rerun).size(IconSize::XSmall))
-                                .tab_index(0isize)
-                                .aria_label("Retry external session attach")
-                                .tooltip(|_, cx| {
-                                    Tooltip::for_action("Retry Attach", &RerunTask, cx)
-                                })
-                                .on_click(move |_, window, cx| {
-                                    window.dispatch_action(
-                                        Box::new(terminal_rerun_override(&retry_task_id)),
-                                        cx,
-                                    );
-                                }),
-                            )
-                        },
+                            },
                         )
                         .when_some(new_shell_visible_label, |this, visible_label| {
+                            let accessibility_label = new_shell_accessibility_label.clone();
+                            let tooltip_label = accessibility_label.clone();
                             this.child(
                                 Button::new(
                                     ("terminal-context-new-shell", terminal_entity_id),
@@ -3628,10 +3658,10 @@ impl TerminalView {
                                 .style(ButtonStyle::Subtle)
                                 .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
                                 .tab_index(0isize)
-                                .aria_label("Open a new native shell in this Workspace")
-                                .tooltip(|_, cx| {
+                                .aria_label(accessibility_label)
+                                .tooltip(move |_, cx| {
                                     Tooltip::for_action(
-                                        "Open New Shell Here",
+                                        tooltip_label.clone(),
                                         &OpenShellTerminal,
                                         cx,
                                     )
@@ -5349,6 +5379,14 @@ mod tests {
         assert_eq!(
             terminal_external_attach_new_shell_label(px(920.), false),
             None
+        );
+        assert_eq!(
+            terminal_external_attach_retry_accessibility_label("tmux", "paykit"),
+            "Retry tmux attach in Workspace paykit"
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_accessibility_label("Herdr", "paykit"),
+            "Open a new native shell in Workspace paykit; Herdr remains external"
         );
         assert_eq!(
             terminal_context_open_action_label("Dez", Some("codex --yolo")),
