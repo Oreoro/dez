@@ -655,8 +655,15 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let image_info = cx.new(|_cx| ImageInfo::new(workspace));
 
         let lsp_button_menu_handle = PopoverMenuHandle::default();
-        let lsp_button =
-            cx.new(|cx| LspButton::new(workspace, lsp_button_menu_handle.clone(), window, cx));
+        let lsp_button = cx.new(|cx| {
+            LspButton::new(
+                workspace,
+                lsp_button_menu_handle.clone(),
+                APP_NAME != "Zed",
+                window,
+                cx,
+            )
+        });
         workspace.register_action({
             move |_, _: &lsp_button::ToggleMenu, window, cx| {
                 lsp_button_menu_handle.toggle(window, cx);

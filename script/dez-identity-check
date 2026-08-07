@@ -3335,6 +3335,12 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'Menu::new\("Language Tools"\).*?"Workspace Symbols…".*?workspace::ToggleProjectSymbols.*?"Workspace Diagnostics".*?diagnostics::Deploy.*?"Language Servers".*?language_tools::lsp_button::ToggleMenu.*?"Restart Language Server for Current File".*?editor::actions::RestartLanguageServer.*?"Language Server Logs".*?language_tools::lsp_log_view::OpenLanguageServerLogs' \
     'native Workspace language intelligence and LSP recovery can disappear from the Dez View menu'
+require_multiline_pattern crates/language_tools/src/lsp_button.rs \
+    'fn lsp_button_visible.*?show_before_server_starts && has_active_editor.*?fn language_server_status_description.*?"No language servers active".*?show_before_server_starts.*?ContextMenuEntry::new\("No language servers active"\).*?"Language Server Logs".*?OpenLanguageServerLogs.*?lsp_button_visible\([[:space:]]*show_before_server_starts.*?aria_label\(accessible_name\).*?fn dez_language_server_control_stays_reachable_before_a_server_starts.*?fn official_zed_keeps_its_inherited_language_server_visibility.*?fn empty_language_server_state_is_named_truthfully' \
+    'the native Dez language-server status control can disappear before startup, claim false health, lose Logs recovery, or leak its visibility policy into official Zed'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'LspButton::new\([[:space:]]*workspace,[[:space:]]*lsp_button_menu_handle\.clone\(\),[[:space:]]*APP_NAME != "Zed"' \
+    'the Dez pre-start language-server status policy can leak into official Zed or disappear from native status registration'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'Menu::new\("Navigate Workspaces"\).*?"Focus Workspaces", workspace::FocusSidebar.*?"Search Workspaces and Activity…".*?zed_actions::sidebar::FocusSidebarFilter.*?"Previous Workspace", workspace::PreviousProject.*?"Next Workspace", workspace::NextProject' \
     'cross-Workspace focus, search, and cycling can disappear from the native View menu'

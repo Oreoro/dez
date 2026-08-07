@@ -38,6 +38,42 @@ actions!(
     ]
 );
 
+fn lsp_button_visible(
+    show_before_server_starts: bool,
+    is_restricted: bool,
+    has_active_editor: bool,
+    has_language_servers: bool,
+    menu_ready: bool,
+) -> bool {
+    if is_restricted {
+        return true;
+    }
+
+    menu_ready && (has_language_servers || (show_before_server_starts && has_active_editor))
+}
+
+fn language_server_status_description(
+    is_restricted: bool,
+    has_errors: bool,
+    has_warnings: bool,
+    has_other_notifications: bool,
+    has_language_servers: bool,
+) -> &'static str {
+    if is_restricted {
+        "Restricted Mode"
+    } else if has_errors {
+        "Server with errors"
+    } else if has_warnings {
+        "Server with warnings"
+    } else if has_other_notifications {
+        "Server with notifications"
+    } else if !has_language_servers {
+        "No language servers active"
+    } else {
+        "All Servers Operational"
+    }
+}
+
 pub struct LspButton {
     server_state: Entity<LanguageServerState>,
     popover_menu_handle: PopoverMenuHandle<ContextMenu>,
@@ -51,6 +87,7 @@ struct LanguageServerState {
     workspace: WeakEntity<Workspace>,
     lsp_store: WeakEntity<LspStore>,
     active_editor: Option<ActiveEditor>,
+    show_before_server_starts: bool,
     language_servers: LanguageServers,
     process_memory_cache: Rc<RefCell<ProcessMemoryCache>>,
 }
@@ -62,6 +99,7 @@ impl std::fmt::Debug for LanguageServerState {
             .field("workspace", &self.workspace)
             .field("lsp_store", &self.lsp_store)
             .field("active_editor", &self.active_editor)
+            .field("show_before_server_starts", &self.show_before_server_starts)
             .field("language_servers", &self.language_servers)
             .finish_non_exhaustive()
     }
@@ -258,6 +296,16 @@ impl LanguageServerState {
                     window.dispatch_action(ToggleWorktreeSecurity.boxed_clone(), cx);
                 },
             );
+        }
+
+        let has_server_items = self.items.iter().any(|item| item.server_info().is_some());
+        if self.show_before_server_starts && !is_restricted && !has_server_items {
+            menu = menu
+                .item(ContextMenuEntry::new("No language servers active").disabled(true))
+                .action(
+                    "Language Server Logs",
+                    lsp_log_view::OpenLanguageServerLogs.boxed_clone(),
+                );
         }
 
         let server_metadata = self
@@ -837,6 +885,7 @@ impl LspButton {
     pub fn new(
         workspace: &Workspace,
         popover_menu_handle: PopoverMenuHandle<ContextMenu>,
+        show_before_server_starts: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -873,6 +922,7 @@ impl LspButton {
             items: Vec::new(),
             lsp_store: lsp_store.downgrade(),
             active_editor: None,
+            show_before_server_starts,
             language_servers,
             process_memory_cache: Rc::new(RefCell::new(ProcessMemoryCache::new())),
         });
@@ -1332,9 +1382,21 @@ impl Render for LspButton {
             })
             .unwrap_or(false);
 
-        if !is_restricted
-            && (self.server_state.read(cx).language_servers.is_empty() || self.lsp_menu.is_none())
-        {
+        let (has_active_editor, has_language_servers, show_before_server_starts) = {
+            let state = self.server_state.read(cx);
+            (
+                state.active_editor.is_some(),
+                !state.language_servers.is_empty(),
+                state.show_before_server_starts,
+            )
+        };
+        if !lsp_button_visible(
+            show_before_server_starts,
+            is_restricted,
+            has_active_editor,
+            has_language_servers,
+            self.lsp_menu.is_some(),
+        ) {
             return div().hidden();
         }
 
@@ -1364,29 +1426,25 @@ impl Render for LspButton {
             }
         }
 
-        let (indicator, description) = if is_restricted {
-            (
-                Some(Indicator::dot().color(Color::Warning)),
-                "Restricted Mode",
-            )
+        let indicator = if is_restricted {
+            Some(Indicator::dot().color(Color::Warning))
         } else if has_errors {
-            (
-                Some(Indicator::dot().color(Color::Error)),
-                "Server with errors",
-            )
+            Some(Indicator::dot().color(Color::Error))
         } else if has_warnings {
-            (
-                Some(Indicator::dot().color(Color::Warning)),
-                "Server with warnings",
-            )
+            Some(Indicator::dot().color(Color::Warning))
         } else if has_other_notifications {
-            (
-                Some(Indicator::dot().color(Color::Modified)),
-                "Server with notifications",
-            )
+            Some(Indicator::dot().color(Color::Modified))
         } else {
-            (None, "All Servers Operational")
+            None
         };
+        let description = language_server_status_description(
+            is_restricted,
+            has_errors,
+            has_warnings,
+            has_other_notifications,
+            has_language_servers,
+        );
+        let accessible_name = format!("Language Servers · {description}");
 
         let lsp_button = cx.weak_entity();
 
@@ -1415,7 +1473,7 @@ impl Render for LspButton {
                         .when_some(indicator, IconButton::indicator)
                         .icon_size(IconSize::Small)
                         .tab_index(0isize)
-                        .aria_label("Language Servers")
+                        .aria_label(accessible_name)
                         .when(is_restricted, |s| s.icon_color(Color::Warning))
                         .indicator_border_color(Some(cx.theme().colors().status_bar_background)),
                     move |_window, cx| {
@@ -1453,6 +1511,31 @@ mod tests {
                 .collect(),
             worktree: None,
         }
+    }
+
+    #[test]
+    fn dez_language_server_control_stays_reachable_before_a_server_starts() {
+        assert!(lsp_button_visible(true, false, true, false, true));
+        assert!(!lsp_button_visible(true, false, false, false, true));
+        assert!(!lsp_button_visible(true, false, true, false, false));
+    }
+
+    #[test]
+    fn official_zed_keeps_its_inherited_language_server_visibility() {
+        assert!(!lsp_button_visible(false, false, true, false, true));
+        assert!(lsp_button_visible(false, false, true, true, true));
+    }
+
+    #[test]
+    fn empty_language_server_state_is_named_truthfully() {
+        assert_eq!(
+            language_server_status_description(false, false, false, false, false),
+            "No language servers active"
+        );
+        assert_eq!(
+            language_server_status_description(false, false, false, false, true),
+            "All Servers Operational"
+        );
     }
 
     /// `remove_server` evicts the id from `health_statuses` so a restarted

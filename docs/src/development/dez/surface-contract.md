@@ -230,6 +230,14 @@ server restart, and Language Server Logs owners. These are navigation and
 recovery actions over Zed's existing LSP implementation, not a parallel Dez
 language-service layer.
 
+While a code editor is active, Dez keeps the native Language Servers status
+control reachable even before a server has started. Its tooltip and assistive
+state say that no language servers are active, and its existing popover offers
+Language Server Logs instead of pretending that every server is operational.
+Restricted, starting, warning, and error states retain their native priority.
+Non-editor surfaces do not gain a second language-tool control, and official
+Zed retains its inherited status-control visibility policy.
+
 ## Secondary-state wireframe
 
 ### 5. Install-first Home
