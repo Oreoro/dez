@@ -77,6 +77,11 @@ provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
 Every empty-window ingress follows the same ownership rule: cold start and an
 explicit no-path new-window request both open Home in the Main Work Area. They
 never substitute a scratch file or reopen the inherited onboarding surface.
+Its state-aware title—**Start a Workspace** or **Continue in this Workspace**—is
+the level-one accessible heading. **Start with a tool**, **Inspect and resume**,
+and **Recent Workspaces** remain visible level-two headings, so keyboard and
+assistive navigation follows the same concise action hierarchy without adding
+an onboarding surface.
 
 ### 2. Run and active work
 

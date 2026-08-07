@@ -61,12 +61,17 @@ impl SectionHeader {
 
 impl RenderOnce for SectionHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let accessibility_title = self.title.clone();
         let title: SharedString = if APP_NAME == "Zed" {
             self.title.to_ascii_uppercase().into()
         } else {
             self.title
         };
         h_flex()
+            .id(("home-section-heading", accessibility_title.clone()))
+            .role(gpui::Role::Heading)
+            .aria_level(2)
+            .aria_label(accessibility_title)
             .w_full()
             .min_w_0()
             .px_1()
@@ -1212,6 +1217,10 @@ impl Render for WelcomePage {
                                 })
                                 .child(
                                     div()
+                                        .id("dez-home-heading")
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label(page_title)
                                         .font_weight(FontWeight::MEDIUM)
                                         .child(Headline::new(page_title).size(HeadlineSize::Large)),
                                 )

@@ -2079,3 +2079,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   keyboard focus, and assistive context therefore agree without introducing a
   second Settings surface. Official Zed retains its generic inherited content
   label.
+- **2026-08-07: Home exposes its action hierarchy to assistive navigation.**
+  **Start a Workspace** and **Continue in this Workspace** are level-one
+  headings, while the existing launch, inspect, resume, and recent-Workspace
+  groups are level two. Home remains a concise closeable tab with the same
+  actions and responsive layout; the change does not add onboarding or a
+  competing navigation model.
