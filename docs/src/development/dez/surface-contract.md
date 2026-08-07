@@ -468,6 +468,10 @@ stay open long enough to report **Checking…**, **All running sessions belong t
 open Workspaces**, **No running sessions**, or **Discovery needs attention**.
 It omits a decorative zero count, exposes **Retry** only for failed discovery,
 and uses a keyboard-operable disclosure with an announced expanded state.
+The disclosure announces **Show all** or **Show fewer** plus a listed count; it
+does not call last-known recovery rows live or running. Each row's accessible
+name retains the same authoritative state, working directory, and bounded port
+metadata visible in the row and its tooltip.
 
 ### 12. Terminal launch failure
 

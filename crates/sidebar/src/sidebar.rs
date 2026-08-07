@@ -1751,16 +1751,35 @@ fn workspace_running_sessions_disclosure_accessibility_label(
     session_count: usize,
     attention_count: usize,
 ) -> String {
-    let action = if expanded { "Hide" } else { "Show" };
+    let action = if expanded { "Show fewer" } else { "Show all" };
     let mut label = if session_count == 1 {
-        format!("{action} running multiplexer sessions. 1 running session")
+        format!("{action} Running Sessions. 1 session listed")
     } else {
-        format!("{action} running multiplexer sessions. {session_count} running sessions")
+        format!("{action} Running Sessions. {session_count} sessions listed")
     };
     if attention_count == 1 {
         label.push_str(". 1 needs attention");
     } else if attention_count > 1 {
         label.push_str(&format!(". {attention_count} need attention"));
+    }
+    label
+}
+
+fn external_multiplexer_accessibility_label(
+    action_label: &str,
+    state_label: &str,
+    working_directory: Option<&Path>,
+    port_label: Option<&str>,
+) -> String {
+    let mut label = format!("{action_label} Status: {state_label}.");
+    if let Some(working_directory) = working_directory {
+        label.push_str(&format!(
+            " Working directory: {}.",
+            working_directory.display()
+        ));
+    }
+    if let Some(port_label) = port_label {
+        label.push_str(&format!(" Listening ports: {port_label}."));
     }
     label
 }
@@ -2699,6 +2718,23 @@ mod workspace_header_label_tests {
         assert_eq!(
             workspace_header_accessibility_label("Zed", "compiler", false, false, 0),
             "Workspace compiler, ready for a session"
+        );
+        assert_eq!(
+            workspace_running_sessions_disclosure_accessibility_label(false, 1, 0),
+            "Show all Running Sessions. 1 session listed"
+        );
+        assert_eq!(
+            workspace_running_sessions_disclosure_accessibility_label(true, 3, 2),
+            "Show fewer Running Sessions. 3 sessions listed. 2 need attention"
+        );
+        assert_eq!(
+            external_multiplexer_accessibility_label(
+                "Refresh tmux before opening this last-known session.",
+                "Available · last known",
+                Some(Path::new("/workspace/compiler")),
+                Some(":3000, :5173"),
+            ),
+            "Refresh tmux before opening this last-known session. Status: Available · last known. Working directory: /workspace/compiler. Listening ports: :3000, :5173."
         );
         assert_eq!(
             workspace_new_terminal_control_label("Dez", "compiler", None),
@@ -9294,12 +9330,13 @@ impl Sidebar {
                                 tooltip_label.push_str("\nListening ports: ");
                                 tooltip_label.push_str(port_label);
                             }
-                            let accessibility_label =
-                                if let Some(port_label) = port_detail_label.as_deref() {
-                                    format!("{action_label} Listening ports: {port_label}.")
-                                } else {
-                                    action_label.clone()
-                                };
+                            let state_label = session.state_label();
+                            let accessibility_label = external_multiplexer_accessibility_label(
+                                &action_label,
+                                &state_label,
+                                session.working_directory.as_deref(),
+                                port_detail_label.as_deref(),
+                            );
                             ButtonLike::new(ElementId::from(format!(
                                 "workspace-external-session-{}",
                                 session.id
