@@ -26,6 +26,17 @@ const GIT_BLAME_AVATAR_SIZE: Rems = rems(1.);
 
 pub struct GitBlameRenderer;
 
+fn inline_blame_summary(summary: &str) -> String {
+    summary
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or_default()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 fn format_blame_text(blame_entry: &BlameEntry, cx: &App) -> String {
     let relative_timestamp = blame_entry_relative_timestamp(blame_entry);
     let author = blame_entry.author.as_deref().unwrap_or_default();
@@ -36,7 +47,12 @@ fn format_blame_text(blame_entry: &BlameEntry, cx: &App) -> String {
 
     match blame_entry.summary.as_ref() {
         Some(summary) if summary_enabled => {
-            format!("{author}, {relative_timestamp} - {summary}")
+            let summary = inline_blame_summary(summary);
+            if summary.is_empty() {
+                format!("{author}, {relative_timestamp}")
+            } else {
+                format!("{author}, {relative_timestamp} - {summary}")
+            }
         }
         _ => format!("{author}, {relative_timestamp}"),
     }
@@ -270,11 +286,22 @@ impl BlameRenderer for GitBlameRenderer {
             h_flex()
                 .id("inline-blame")
                 .w_full()
+                .min_w_0()
+                .overflow_hidden()
                 .font(style.font())
                 .text_color(cx.theme().status().hint)
                 .line_height(style.line_height)
-                .child(Icon::new(IconName::FileGit).color(Color::Hint))
-                .child(text)
+                .child(
+                    div()
+                        .flex_none()
+                        .child(Icon::new(IconName::FileGit).color(Color::Hint)),
+                )
+                .child(
+                    div()
+                        .min_w_0()
+                        .overflow_hidden()
+                        .child(Label::new(text).truncate()),
+                )
                 .gap_2()
                 .into_any(),
         )
@@ -552,5 +579,23 @@ fn blame_entry_relative_timestamp(blame_entry: &BlameEntry) -> String {
             )
         }
         Err(_) => "Error parsing date".to_string(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::inline_blame_summary;
+
+    #[test]
+    fn inline_blame_uses_one_normalized_summary_line() {
+        assert_eq!(
+            inline_blame_summary("  Fix   responsive navigation  \n\nDetailed explanation"),
+            "Fix responsive navigation"
+        );
+        assert_eq!(
+            inline_blame_summary("\r\n  Keep contributor context  \r\nMore detail"),
+            "Keep contributor context"
+        );
+        assert_eq!(inline_blame_summary(" \n\t\n"), "");
     }
 }

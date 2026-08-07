@@ -816,6 +816,12 @@ live process. cmux owns its tabs, splits, browser, hooks, and action registry;
 Dez provides an explicit Workspace handoff. Ordinary URLs open in the system
 browser rather than a fake embedded browser surface.
 
+Inline Git attribution is compact navigation context, not a second commit
+viewer. It normalizes contributor summaries to one visible line and truncates
+inside the editor or status-line width. Author, relative time, icon, and focus
+remain readable; the native blame popover and commit view retain the complete
+message and metadata.
+
 The final shell contract is: **one sidebar, many Workspaces, many panes, any
 native tool, honest ownership, inline recovery**.
 
