@@ -249,6 +249,17 @@ impl ExternalMultiplexerSession {
             mode,
         }
     }
+
+    pub fn takeover_command(&self) -> Option<ExternalSessionCommand> {
+        if self.kind != MultiplexerKind::Herdr || self.discovery_stale {
+            return None;
+        }
+
+        let mut command = self.open_command();
+        command.args.push("--takeover".to_owned());
+        command.label = format!("Take Control of {}", self.title);
+        Some(command)
+    }
 }
 
 struct GlobalMultiplexerSessionStore(Entity<MultiplexerSessionStore>);
@@ -1966,6 +1977,7 @@ mod tests {
             sessions[0].open_command().args,
             ["attach-session", "-t", "$1"]
         );
+        assert!(sessions[0].takeover_command().is_none());
     }
 
     #[test]
@@ -2039,6 +2051,24 @@ mod tests {
             sessions[0].open_command().args,
             ["--session", "team", "agent", "attach", "pane-1"]
         );
+        let takeover = sessions[0]
+            .takeover_command()
+            .expect("a current Herdr pane should support explicit takeover");
+        assert_eq!(
+            takeover.args,
+            [
+                "--session",
+                "team",
+                "agent",
+                "attach",
+                "pane-1",
+                "--takeover"
+            ]
+        );
+        assert_eq!(takeover.label, "Take Control of Fix parser");
+        let mut stale_session = sessions[0].clone();
+        stale_session.discovery_stale = true;
+        assert!(stale_session.takeover_command().is_none());
     }
 
     #[test]
@@ -2069,6 +2099,13 @@ mod tests {
         );
         assert_eq!(sessions[0].state, MultiplexerSessionState::Available);
         assert_eq!(sessions[0].working_directory, Some("/tmp/compiler".into()));
+        assert_eq!(
+            sessions[0]
+                .takeover_command()
+                .expect("a current Herdr terminal should support explicit takeover")
+                .args,
+            ["terminal", "attach", "terminal-1", "--takeover"]
+        );
     }
 
     #[test]

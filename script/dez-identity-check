@@ -1222,9 +1222,12 @@ require_multiline_pattern crates/title_bar/src/title_bar.rs \
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let native_header_utilities = \(paths::APP_NAME != "Zed"\).*?sidebar_chrome\.update.*?render_native_sidebar_header_utilities.*?when_some\(native_header_utilities' \
     'the native Workspaces header can regress to dropping its compact safety and multiplexer controls'
-reject_pattern crates/agent_ui/src/multiplexer_session_store.rs \
-    '"--takeover"' \
-    'Dez can regress to seizing a Herdr pane without an explicit user decision'
+require_multiline_pattern crates/agent_ui/src/multiplexer_session_store.rs \
+    'pub fn open_command\(&self\).*?MultiplexerKind::Herdr.*?"agent"\.to_owned\(\), "attach"\.to_owned\(\).*?"terminal"\.to_owned\(\),[[:space:]]*"attach"\.to_owned\(\).*?pub fn takeover_command\(&self\).*?self\.kind != MultiplexerKind::Herdr \|\| self\.discovery_stale.*?command\.args\.push\("--takeover"\.to_owned\(\)\).*?command\.label = format!\("Take Control of \{\}".*?open_command\(\)\.args.*?\["--session", "team", "agent", "attach", "pane-1"\].*?takeover_command\(\).*?"pane-1",[[:space:]]*"--takeover".*?"Take Control of Fix parser"' \
+    'Dez can regress to seizing a Herdr pane automatically, offering takeover for stale rows, or hiding the ownership transfer in an ordinary attach'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'submenu_with_icon\([[:space:]]*"Open Running Session…".*?let takeover_session = session[[:space:]]*\.takeover_command\(\)[[:space:]]*\.is_some\(\).*?open_external_multiplexer_session\([[:space:]]*attach_session\.clone\(\).*?"Take Control of \{\} in Dez · Herdr".*?take_control_of_external_multiplexer_session.*?fn take_control_of_external_multiplexer_session.*?open_external_multiplexer_session_in_workspace\(session, None, true.*?let open = if takeover \{.*?takeover_command\(\).*?unwrap_or_else\(\|\| session\.open_command\(\)\).*?open_workspace_and_attach_external_session\(session, takeover.*?retry_external_multiplexer_session\([[:space:]]*&retry_session_id,[[:space:]]*takeover' \
+    'explicit Herdr takeover can regress to a hidden, pointer-only, non-retryable, or ownership-ambiguous action'
 reject_pattern crates/sidebar/src/sidebar.rs \
     'sidebar-start-route|Dez workflow route' \
     'the true-empty Sessions state regressed to permanent onboarding chrome'

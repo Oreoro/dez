@@ -145,6 +145,12 @@ never claims to migrate the external Session. A provider failure that occurs
 before a terminal exists remains a Workspace notification with the same explicit
 retry; Dez does not show both recoveries for one failure. Destructive legacy
 termination remains behind a native confirmation.
+Normal Herdr attachment never requests input ownership. **Open Running Session…**
+adds a separate **Take Control of _pane_ in Dez · Herdr** action only for a
+current Herdr pane. That deliberate action runs Herdr's documented `--takeover`
+path; ordinary row activation, discovery, retry, restore, and startup never add
+it. The label names both the pane and ownership transfer before execution, and
+the resulting attach client remains an ordinary native terminal tab.
 Retry and fresh-shell controls include the external owner and target Workspace
 in their accessible names. The fresh-shell description also repeats that tmux
 or Herdr remains external, so compact icon-only recovery does not obscure

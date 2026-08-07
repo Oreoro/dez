@@ -10676,7 +10676,13 @@ impl Sidebar {
                                                     );
                                                     let icon =
                                                         external_multiplexer_icon(&session);
+                                                    let attach_session = session.clone();
+                                                    let takeover_session = session
+                                                        .takeover_command()
+                                                        .is_some()
+                                                        .then(|| session.clone());
                                                     let attach_sidebar = attach_sidebar.clone();
+                                                    let takeover_sidebar = attach_sidebar.clone();
                                                     sessions = sessions.item(
                                                         ContextMenuEntry::new(label)
                                                             .icon(icon)
@@ -10684,7 +10690,7 @@ impl Sidebar {
                                                                 attach_sidebar
                                                                     .update(cx, |sidebar, cx| {
                                                                         sidebar.open_external_multiplexer_session(
-                                                                            session.clone(),
+                                                                            attach_session.clone(),
                                                                             window,
                                                                             cx,
                                                                         );
@@ -10692,6 +10698,31 @@ impl Sidebar {
                                                                     .log_err();
                                                             }),
                                                     );
+                                                    if let Some(takeover_session) = takeover_session
+                                                    {
+                                                        let takeover_label = format!(
+                                                            "Take Control of {} in Dez · Herdr",
+                                                            takeover_session.title
+                                                        );
+                                                        sessions = sessions.item(
+                                                            ContextMenuEntry::new(takeover_label)
+                                                                .icon(IconName::Inception)
+                                                                .handler(move |window, cx| {
+                                                                    takeover_sidebar
+                                                                        .update(
+                                                                            cx,
+                                                                            |sidebar, cx| {
+                                                                                sidebar.take_control_of_external_multiplexer_session(
+                                                                                    takeover_session.clone(),
+                                                                                    window,
+                                                                                    cx,
+                                                                                );
+                                                                            },
+                                                                        )
+                                                                        .log_err();
+                                                                }),
+                                                        );
+                                                    }
                                                 }
                                                 sessions
                                             },
@@ -17295,13 +17326,23 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.open_external_multiplexer_session_in_workspace(session, None, window, cx);
+        self.open_external_multiplexer_session_in_workspace(session, None, false, window, cx);
+    }
+
+    fn take_control_of_external_multiplexer_session(
+        &mut self,
+        session: ExternalMultiplexerSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_external_multiplexer_session_in_workspace(session, None, true, window, cx);
     }
 
     fn open_external_multiplexer_session_in_workspace(
         &mut self,
         session: ExternalMultiplexerSession,
         preferred_workspace: Option<Entity<Workspace>>,
+        takeover: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -17309,7 +17350,13 @@ impl Sidebar {
             return;
         };
 
-        let open = session.open_command();
+        let open = if takeover {
+            session
+                .takeover_command()
+                .unwrap_or_else(|| session.open_command())
+        } else {
+            session.open_command()
+        };
         let target_workspace = preferred_workspace.or_else(|| {
             let multi_workspace = multi_workspace.read(cx);
             let project_group_keys = multi_workspace.project_group_keys().to_vec();
@@ -17329,7 +17376,7 @@ impl Sidebar {
             session.working_directory.is_some(),
             target_workspace.is_some(),
         ) {
-            self.open_workspace_and_attach_external_session(session, window, cx);
+            self.open_workspace_and_attach_external_session(session, takeover, window, cx);
             return;
         }
         let target_workspace =
@@ -17481,6 +17528,7 @@ impl Sidebar {
                                         .update(cx, |sidebar, cx| {
                                             sidebar.retry_external_multiplexer_session(
                                                 &retry_session_id,
+                                                takeover,
                                                 window,
                                                 cx,
                                             );
@@ -17503,6 +17551,7 @@ impl Sidebar {
     fn open_workspace_and_attach_external_session(
         &mut self,
         session: ExternalMultiplexerSession,
+        takeover: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -17541,6 +17590,7 @@ impl Sidebar {
                         this.open_external_multiplexer_session_in_workspace(
                             session,
                             Some(workspace),
+                            takeover,
                             window,
                             cx,
                         );
@@ -17576,6 +17626,7 @@ impl Sidebar {
     fn retry_external_multiplexer_session(
         &mut self,
         session_id: &str,
+        takeover: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -17588,7 +17639,9 @@ impl Sidebar {
                 .cloned()
         });
         if let Some(session) = current_session {
-            self.open_external_multiplexer_session(session, window, cx);
+            self.open_external_multiplexer_session_in_workspace(
+                session, None, takeover, window, cx,
+            );
             return;
         }
 
