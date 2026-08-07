@@ -75,8 +75,9 @@ const HEADER_GROUP_TAB_INDEX: isize = 3;
 
 const CONTENT_CONTAINER_TAB_INDEX: isize = 4;
 const CONTENT_GROUP_TAB_INDEX: isize = 5;
-const WORKSPACE_ACTION_UNAVAILABLE_COPY: &str =
-    "Open Settings from a Workspace to use this action.";
+const WINDOW_ACTION_UNAVAILABLE_COPY: &str =
+    "Reopen Settings from a Dez window to use this action.";
+const WORKSPACE_ACTION_UNAVAILABLE_COPY: &str = "Open a Workspace to use this action.";
 
 const SIDEBAR_WIDTH: Pixels = px(226.);
 const CONTENT_MIN_WIDTH: Pixels = px(400.);
@@ -1616,18 +1617,27 @@ impl SettingsPageItem {
                 return content.into_any_element();
             }
             SettingsPageItem::ActionLink(action_link) => {
-                let action_available = action_link_available(
-                    action_link.scope,
-                    settings_window.has_live_workspace_context(cx),
-                );
+                let has_window = settings_window.has_live_window_context(cx);
+                let has_workspace_root = settings_window.has_workspace_root_context(cx);
+                let action_available =
+                    action_link_available(action_link.scope, has_window, has_workspace_root);
+                let unavailable_copy = if action_available {
+                    None
+                } else {
+                    action_link_unavailable_copy(action_link.scope)
+                };
                 let action_accessibility_description = if action_available {
                     action_link.description.clone()
                 } else {
                     Some(match action_link.description.as_ref() {
-                        Some(description) => {
-                            format!("{description} {WORKSPACE_ACTION_UNAVAILABLE_COPY}").into()
-                        }
-                        None => WORKSPACE_ACTION_UNAVAILABLE_COPY.into(),
+                        Some(description) => format!(
+                            "{description} {}",
+                            unavailable_copy.unwrap_or(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                        )
+                        .into(),
+                        None => unavailable_copy
+                            .unwrap_or(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                            .into(),
                     })
                 };
 
@@ -1668,9 +1678,9 @@ impl SettingsPageItem {
                                             )
                                         },
                                     )
-                                    .when(!action_available, |this| {
+                                    .when_some(unavailable_copy, |this, unavailable_copy| {
                                         this.child(
-                                            Label::new(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                                            Label::new(unavailable_copy)
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         )
@@ -2020,11 +2030,28 @@ struct ActionLink {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ActionLinkScope {
     App,
-    Workspace,
+    Window,
+    WorkspaceRoot,
 }
 
-fn action_link_available(scope: ActionLinkScope, has_workspace: bool) -> bool {
-    scope == ActionLinkScope::App || has_workspace
+fn action_link_available(
+    scope: ActionLinkScope,
+    has_window: bool,
+    has_workspace_root: bool,
+) -> bool {
+    match scope {
+        ActionLinkScope::App => true,
+        ActionLinkScope::Window => has_window,
+        ActionLinkScope::WorkspaceRoot => has_workspace_root,
+    }
+}
+
+fn action_link_unavailable_copy(scope: ActionLinkScope) -> Option<&'static str> {
+    match scope {
+        ActionLinkScope::App => None,
+        ActionLinkScope::Window => Some(WINDOW_ACTION_UNAVAILABLE_COPY),
+        ActionLinkScope::WorkspaceRoot => Some(WORKSPACE_ACTION_UNAVAILABLE_COPY),
+    }
 }
 
 impl PartialEq for ActionLink {
@@ -2102,10 +2129,23 @@ impl SettingsUiFile {
 }
 
 impl SettingsWindow {
-    fn has_live_workspace_context(&self, cx: &App) -> bool {
+    fn has_live_window_context(&self, cx: &App) -> bool {
         self.original_window
             .as_ref()
             .is_some_and(|workspace_handle| workspace_handle.read(cx).is_ok())
+    }
+
+    fn has_workspace_root_context(&self, cx: &App) -> bool {
+        let Some(workspace_handle) = self.original_window.as_ref() else {
+            return false;
+        };
+        let Ok(multi_workspace) = workspace_handle.read(cx) else {
+            return false;
+        };
+        let workspace = multi_workspace.workspace().clone();
+        let project = workspace.read(cx).project().clone();
+        let project = project.read(cx);
+        project.worktrees(cx).next().is_some()
     }
 
     fn update_workspace_context(&mut self, workspace_handle: Option<WindowHandle<MultiWorkspace>>) {
@@ -6022,10 +6062,32 @@ pub mod test {
 
     #[test]
     fn workspace_settings_actions_are_not_exposed_as_inert_controls() {
-        assert!(action_link_available(ActionLinkScope::App, false));
-        assert!(action_link_available(ActionLinkScope::App, true));
-        assert!(!action_link_available(ActionLinkScope::Workspace, false));
-        assert!(action_link_available(ActionLinkScope::Workspace, true));
+        assert!(action_link_available(ActionLinkScope::App, false, false));
+        assert!(action_link_available(ActionLinkScope::App, true, false));
+        assert!(!action_link_available(
+            ActionLinkScope::Window,
+            false,
+            false
+        ));
+        assert!(action_link_available(ActionLinkScope::Window, true, false));
+        assert!(!action_link_available(
+            ActionLinkScope::WorkspaceRoot,
+            true,
+            false
+        ));
+        assert!(action_link_available(
+            ActionLinkScope::WorkspaceRoot,
+            true,
+            true
+        ));
+        assert_eq!(
+            action_link_unavailable_copy(ActionLinkScope::Window),
+            Some(WINDOW_ACTION_UNAVAILABLE_COPY)
+        );
+        assert_eq!(
+            action_link_unavailable_copy(ActionLinkScope::WorkspaceRoot),
+            Some(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+        );
     }
 
     impl SettingsWindow {
@@ -6679,7 +6741,8 @@ pub mod test {
             );
         });
         settings_window.read_with(cx, |settings_window, cx| {
-            assert!(settings_window.has_live_workspace_context(cx));
+            assert!(settings_window.has_live_window_context(cx));
+            assert!(settings_window.has_workspace_root_context(cx));
         });
 
         settings_window.update_in(cx, |settings_window, window, cx| {

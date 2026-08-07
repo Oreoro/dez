@@ -1066,7 +1066,7 @@ fn appearance_page() -> SettingsPage {
                 ),
                 button_text: "Restore Profile".into(),
                 icon: IconName::RotateCcw,
-                scope: ActionLinkScope::Workspace,
+                scope: ActionLinkScope::Window,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -2103,7 +2103,7 @@ fn keymap_page() -> SettingsPage {
                 ),
                 button_text: "Open Keymap".into(),
                 icon: IconName::Keyboard,
-                scope: ActionLinkScope::Workspace,
+                scope: ActionLinkScope::Window,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -2130,7 +2130,7 @@ fn keymap_page() -> SettingsPage {
                 ),
                 button_text: "View Defaults".into(),
                 icon: IconName::Book,
-                scope: ActionLinkScope::Workspace,
+                scope: ActionLinkScope::Window,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -7336,7 +7336,7 @@ fn debugger_start_section(app_name: &str) -> Vec<SettingsPageItem> {
             ),
             button_text: "Open Debugger".into(),
             icon: IconName::Debug,
-            scope: ActionLinkScope::Workspace,
+            scope: ActionLinkScope::WorkspaceRoot,
             on_click: Arc::new(|settings_window, window, cx| {
                 let Some(original_window) = settings_window.original_window else {
                     return;
@@ -7362,7 +7362,7 @@ fn debugger_start_section(app_name: &str) -> Vec<SettingsPageItem> {
             ),
             button_text: "Open debug.json".into(),
             icon: IconName::Code,
-            scope: ActionLinkScope::Workspace,
+            scope: ActionLinkScope::WorkspaceRoot,
             on_click: Arc::new(|settings_window, window, cx| {
                 let Some(original_window) = settings_window.original_window else {
                     return;
@@ -12292,13 +12292,13 @@ mod tests {
                     "Open Debugger",
                     "Open Debugger",
                     IconName::Debug,
-                    ActionLinkScope::Workspace,
+                    ActionLinkScope::WorkspaceRoot,
                 ),
                 (
                     "Configure Debug Sessions",
                     "Open debug.json",
                     IconName::Code,
-                    ActionLinkScope::Workspace,
+                    ActionLinkScope::WorkspaceRoot,
                 ),
             ]
         );
