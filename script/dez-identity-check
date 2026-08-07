@@ -414,6 +414,9 @@ require_multiline_pattern crates/settings_ui/src/pages/external_agents_page.rs \
 require_multiline_pattern crates/settings_ui/src/pages/mcp_servers_page.rs \
     'persistent_settings_popover_handle::<ContextMenu>.*?agent\.mcp_servers\.add.*?with_handle\(popover_handle\.clone\(\)\).*?wire_settings_popover_trigger_a11y.*?Add Server.*?popover_handle' \
     'the Built-in Agent MCP menu can regress to hiding its expanded state from assistive technology'
+require_multiline_pattern crates/settings_ui/src/pages/tool_permissions_setup.rs \
+    'fn render_global_default_mode_section.*?toggleable_entry\(.*?Confirm.*?current_mode == ToolPermissionMode::Confirm.*?agent\.tool_permissions\.global_default.*?DropdownMenu::new\("global-default-mode".*?aria_label\("Default permission"\).*?aria_value\(mode_label\).*?handle\(popover_handle\).*?fn render_default_mode_section.*?toggleable_entry\(.*?Confirm.*?current_mode == ToolPermissionMode::Confirm.*?agent\.tool_permissions\.\{tool_id\}\.default.*?DropdownMenu::new\(format!\("default-mode-\{tool_id\}"\).*?aria_label\("Default action"\).*?aria_value\(mode_label\).*?handle\(popover_handle\)' \
+    'Tool Permission policy menus can regress to transient handles, hidden expanded state, or no selected value'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'trait AnySettingField.*?fn is_settings_file_only\(&self\) -> bool;.*?impl<T: PartialEq.*?fn is_settings_file_only\(&self\) -> bool \{.*?TypeId::of::<T>\(\) == TypeId::of::<UnimplementedSettingField>\(\)' \
     'the native Settings catalog can lose its explicit settings-file-only field classification'

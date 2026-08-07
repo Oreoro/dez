@@ -5670,10 +5670,11 @@ pub(crate) fn wire_settings_popover_trigger_a11y<M: gpui::ManagedView>(
 }
 
 pub(crate) fn persistent_settings_popover_handle<M: gpui::ManagedView>(
-    owner_id: &'static str,
+    owner_id: impl Into<gpui::ElementId>,
     window: &mut Window,
     cx: &mut App,
 ) -> ui::PopoverMenuHandle<M> {
+    let owner_id = owner_id.into();
     window
         .use_keyed_state(
             (gpui::ElementId::from("settings-popover-handle"), owner_id),
