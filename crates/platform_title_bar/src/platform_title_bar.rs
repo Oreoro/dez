@@ -197,6 +197,7 @@ impl Render for PlatformTitleBar {
             self.app_name,
             DesignSystemSettings::get_global(cx).density,
             platform_title_bar_height(window),
+            workspace::interface_scale(cx),
         );
         let titlebar_color = self.title_bar_color(window, cx);
         let close_action = Box::new(workspace::CloseWindow);
@@ -344,17 +345,19 @@ fn product_title_bar_height(
     app_name: &str,
     density: settings::CanvasDensity,
     platform_height: Pixels,
+    interface_scale: f32,
 ) -> Pixels {
     if app_name == "Zed" {
         return platform_height;
     }
 
-    platform_height
+    let density_height = platform_height
         + match density {
             settings::CanvasDensity::Compact => px(0.),
             settings::CanvasDensity::Balanced => px(4.),
             settings::CanvasDensity::Spacious => px(8.),
-        }
+        };
+    px(density_height.as_f32() * interface_scale).max(platform_height)
 }
 
 impl ParentElement for PlatformTitleBar {
@@ -373,19 +376,57 @@ mod tests {
         let platform_height = px(34.);
 
         assert_eq!(
-            product_title_bar_height("Dez", settings::CanvasDensity::Compact, platform_height),
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Compact,
+                platform_height,
+                1.0,
+            ),
             px(34.)
         );
         assert_eq!(
-            product_title_bar_height("Dez", settings::CanvasDensity::Balanced, platform_height),
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Balanced,
+                platform_height,
+                1.0,
+            ),
             px(38.)
         );
         assert_eq!(
-            product_title_bar_height("Dez", settings::CanvasDensity::Spacious, platform_height),
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Spacious,
+                platform_height,
+                1.0,
+            ),
             px(42.)
         );
         assert_eq!(
-            product_title_bar_height("Zed", settings::CanvasDensity::Spacious, platform_height),
+            product_title_bar_height(
+                "Zed",
+                settings::CanvasDensity::Spacious,
+                platform_height,
+                1.5,
+            ),
+            platform_height
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Balanced,
+                platform_height,
+                1.5,
+            ),
+            px(57.)
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Compact,
+                platform_height,
+                0.5,
+            ),
             platform_height
         );
     }

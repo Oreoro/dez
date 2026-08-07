@@ -165,13 +165,18 @@ fn status_bar_label(app_name: &str) -> &'static str {
     }
 }
 
-fn status_bar_height(app_name: &str, density: settings::CanvasDensity) -> Option<Pixels> {
+fn status_bar_height(
+    app_name: &str,
+    density: settings::CanvasDensity,
+    interface_scale: f32,
+) -> Option<Pixels> {
     (app_name != "Zed").then(|| {
-        px(match density {
+        let base_height = match density {
             settings::CanvasDensity::Compact => 24.0,
             settings::CanvasDensity::Balanced => 26.0,
             settings::CanvasDensity::Spacious => 30.0,
-        })
+        };
+        px(base_height * interface_scale)
     })
 }
 
@@ -349,8 +354,11 @@ impl Focusable for StatusBar {
 impl Render for StatusBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let sidebar = SidebarStatus::query(&self.multi_workspace, cx);
-        let status_bar_height =
-            status_bar_height(APP_NAME, DesignSystemSettings::get_global(cx).density);
+        let status_bar_height = status_bar_height(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+            crate::interface_scale(cx),
+        );
         let viewport_width = window.viewport_size().width;
 
         h_flex()
@@ -606,20 +614,24 @@ mod tests {
             "Git repository: main · 2 changes"
         );
         assert_eq!(
-            status_bar_height("Dez", settings::CanvasDensity::Compact),
+            status_bar_height("Dez", settings::CanvasDensity::Compact, 1.0),
             Some(px(24.0))
         );
         assert_eq!(
-            status_bar_height("Dez", settings::CanvasDensity::Balanced),
+            status_bar_height("Dez", settings::CanvasDensity::Balanced, 1.0),
             Some(px(26.0))
         );
         assert_eq!(
-            status_bar_height("Dez", settings::CanvasDensity::Spacious),
+            status_bar_height("Dez", settings::CanvasDensity::Spacious, 1.0),
             Some(px(30.0))
         );
         assert_eq!(
-            status_bar_height("Zed", settings::CanvasDensity::Balanced),
+            status_bar_height("Zed", settings::CanvasDensity::Balanced, 1.5),
             None
+        );
+        assert_eq!(
+            status_bar_height("Dez", settings::CanvasDensity::Spacious, 1.5),
+            Some(px(45.0))
         );
     }
 }

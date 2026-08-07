@@ -102,6 +102,7 @@ use workspace::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
     },
+    interface_scale,
     notifications::NotificationId,
     render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
 };
@@ -1273,6 +1274,24 @@ fn workspace_header_label_size(app_name: &str, density: settings::CanvasDensity)
     } else {
         LabelSize::XSmall
     }
+}
+
+fn workspace_header_height(
+    app_name: &str,
+    density: settings::CanvasDensity,
+    inherited_height: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        return inherited_height;
+    }
+
+    let base_height = match density {
+        settings::CanvasDensity::Compact => 36.0,
+        settings::CanvasDensity::Balanced => 40.0,
+        settings::CanvasDensity::Spacious => 44.0,
+    };
+    px(base_height * interface_scale)
 }
 
 fn session_rail_accessibility_label(app_name: &str) -> &'static str {
@@ -3002,6 +3021,18 @@ mod workspace_header_label_tests {
         assert_eq!(
             workspace_navigation_tab_density("Zed", settings::CanvasDensity::Compact),
             TabDensity::Balanced
+        );
+        assert_eq!(
+            workspace_header_height("Dez", settings::CanvasDensity::Compact, px(28.0), 1.0),
+            px(36.0)
+        );
+        assert_eq!(
+            workspace_header_height("Dez", settings::CanvasDensity::Spacious, px(35.0), 1.5),
+            px(66.0)
+        );
+        assert_eq!(
+            workspace_header_height("Zed", settings::CanvasDensity::Spacious, px(35.0), 1.5),
+            px(35.0)
         );
     }
 }
@@ -9062,15 +9093,12 @@ impl Sidebar {
                 }
             };
         let label_size = workspace_header_label_size(APP_NAME, design_system.density);
-        let header_height = if APP_NAME == "Zed" {
-            header_height
-        } else {
-            match design_system.density {
-                settings::CanvasDensity::Compact => px(36.0),
-                settings::CanvasDensity::Balanced => px(40.0),
-                settings::CanvasDensity::Spacious => px(44.0),
-            }
-        };
+        let header_height = workspace_header_height(
+            APP_NAME,
+            design_system.density,
+            header_height,
+            interface_scale(cx),
+        );
 
         let id_prefix = if is_sticky { "sticky-" } else { "" };
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));

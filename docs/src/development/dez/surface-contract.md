@@ -210,6 +210,12 @@ shelf, and the status line together; the shell must not wait for a Workspace,
 terminal, notification, or focus event before those native owners agree on the
 new metrics.
 
+The table records the 14 px interface-font baseline. Dez derives title-bar,
+Workspaces header, and status-line heights from one interface scale, so UI zoom
+grows or shrinks those owners together. The platform title bar never shrinks
+below the native traffic-light requirement. Role-specific bars remain
+deliberately different heights; their scale and density progression are shared.
+
 Dez treats **Zoom In**, **Zoom Out**, and **Reset Zoom** as whole-interface
 controls. They change the shared UI scale used by the title bar, native pane
 tabs, Workspaces, Settings, menus, and the status line; editor- and

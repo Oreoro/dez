@@ -177,8 +177,30 @@ use zed_actions::{
     theme::ToggleMode,
 };
 
+const DEZ_INTERFACE_FONT_BASELINE: f32 = 14.0;
+
+fn interface_scale_for_font_size(font_size: Pixels) -> f32 {
+    font_size.as_f32() / DEZ_INTERFACE_FONT_BASELINE
+}
+
+pub fn interface_scale(cx: &App) -> f32 {
+    interface_scale_for_font_size(ThemeSettings::get_global(cx).ui_font_size(cx))
+}
+
 pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     workspace_card_gap_for_product(paths::APP_NAME, WorkspaceSettings::get_global(cx).card_gap)
+}
+
+#[cfg(test)]
+mod interface_scale_tests {
+    use super::interface_scale_for_font_size;
+    use gpui::px;
+
+    #[test]
+    fn interface_scale_uses_the_dez_font_baseline() {
+        assert_eq!(interface_scale_for_font_size(px(14.0)), 1.0);
+        assert_eq!(interface_scale_for_font_size(px(21.0)), 1.5);
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

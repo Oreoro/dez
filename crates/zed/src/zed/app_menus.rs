@@ -186,10 +186,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
             MenuItem::submenu(Menu::new("Language Tools").items([
                 MenuItem::action("Workspace Symbols…", workspace::ToggleProjectSymbols),
                 MenuItem::action("Workspace Diagnostics", diagnostics::Deploy),
-                MenuItem::action(
-                    "Language Servers",
-                    language_tools::lsp_button::ToggleMenu,
-                ),
+                MenuItem::action("Language Servers", language_tools::lsp_button::ToggleMenu),
                 MenuItem::action(
                     "Restart Language Server for Current File",
                     editor::actions::RestartLanguageServer,
