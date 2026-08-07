@@ -1158,6 +1158,19 @@ fn saved_layout_noun_for_app(app_name: &str, count: usize) -> &'static str {
     }
 }
 
+fn saved_layout_action_accessibility_label(
+    app_name: &str,
+    action: &str,
+    layout_label: &str,
+) -> String {
+    let layout_noun = if app_name == "Zed" {
+        "Canvas Layout"
+    } else {
+        "Workspace Layout"
+    };
+    format!("{action} {layout_noun}: {layout_label}")
+}
+
 impl CanvasSavedLayoutSnapshot {
     fn display_label(&self) -> &str {
         self.label
@@ -1768,6 +1781,32 @@ impl Render for CanvasSavedLayoutManagerModal {
             .into_iter()
             .enumerate()
             .map(|(index, entry)| {
+                let save_accessibility_label =
+                    saved_layout_action_accessibility_label(paths::APP_NAME, "Save", &entry.label);
+                let restore_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    "Restore",
+                    &entry.label,
+                );
+                let rename_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    "Rename",
+                    &entry.label,
+                );
+                let duplicate_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    "Duplicate",
+                    &entry.label,
+                );
+                let clear_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    if paths::APP_NAME == "Zed" {
+                        "Clear"
+                    } else {
+                        "Remove"
+                    },
+                    &entry.label,
+                );
                 let save_kind = matches!(entry.kind, CanvasSavedLayoutManagerEntryKind::Slot(_))
                     .then_some(entry.kind.clone());
                 let restore_kind = entry.kind.clone();
@@ -1819,7 +1858,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     Button::new(("save", index), "Save")
                                         .size(ButtonSize::Compact)
                                         .tab_index(0isize)
-                                        .aria_label("Save Workspace Layout")
+                                        .aria_label(save_accessibility_label)
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.save_layout(save_kind.clone(), window, cx);
                                             cx.stop_propagation();
@@ -1830,7 +1869,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                 Button::new(("restore", index), "Restore")
                                     .size(ButtonSize::Compact)
                                     .tab_index(0isize)
-                                    .aria_label("Restore Workspace Layout")
+                                    .aria_label(restore_accessibility_label)
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.restore_layout(restore_kind.clone(), window, cx);
                                         cx.stop_propagation();
@@ -1841,7 +1880,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                 Button::new(("rename", index), "Rename")
                                     .size(ButtonSize::Compact)
                                     .tab_index(0isize)
-                                    .aria_label("Rename Workspace Layout")
+                                    .aria_label(rename_accessibility_label)
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.rename_layout(rename_kind.clone(), window, cx);
                                         cx.stop_propagation();
@@ -1853,7 +1892,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     Button::new(("duplicate", index), "Duplicate")
                                         .size(ButtonSize::Compact)
                                         .tab_index(0isize)
-                                        .aria_label("Duplicate Canvas Layout")
+                                        .aria_label(duplicate_accessibility_label)
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.duplicate_layout(
                                                 duplicate_kind.clone(),
@@ -1876,11 +1915,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                 )
                                 .size(ButtonSize::Compact)
                                 .tab_index(0isize)
-                                .aria_label(if paths::APP_NAME == "Zed" {
-                                    "Clear Canvas Layout"
-                                } else {
-                                    "Remove Saved Workspace Layout"
-                                })
+                                .aria_label(clear_accessibility_label)
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.clear_layout(clear_kind.clone(), window, cx);
                                     cx.stop_propagation();
@@ -17635,6 +17670,14 @@ mod tests {
         assert_eq!(saved_layout_noun_for_app("Dez", 2), "Workspace layouts");
         assert_eq!(saved_layout_noun_for_app("Zed", 1), "Canvas layout");
         assert_eq!(saved_layout_noun_for_app("Zed", 2), "Canvas layouts");
+        assert_eq!(
+            saved_layout_action_accessibility_label("Dez", "Restore", "Focus"),
+            "Restore Workspace Layout: Focus"
+        );
+        assert_eq!(
+            saved_layout_action_accessibility_label("Zed", "Clear", "Slot 1 — Review"),
+            "Clear Canvas Layout: Slot 1 — Review"
+        );
         assert_eq!(workspace_layout_cycle_label("Dez"), "Next Workspace Layout");
         assert_eq!(workspace_layout_cycle_label("Zed"), "Cycle Layout");
         assert_eq!(

@@ -839,6 +839,9 @@ that persistent identity. Both remain explicit user preferences.
   Dez status bar scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
+- Keep repeated Saved Workspace Layout actions distinguishable. Save, Restore,
+  Rename, and Remove announce the exact layout label they target instead of a
+  generic action name shared by every row.
 - Keep heterogeneous Workspace attention generic and truthful. Workspace
   headers announce **items need attention** because Activity may contain an
   agent, terminal, task, tmux, Herdr, or cmux destination; Session wording is
