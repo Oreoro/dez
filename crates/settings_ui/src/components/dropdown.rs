@@ -118,6 +118,14 @@ where
             current_value_label.to_string()
         };
         let menu_icon_for_value = icon_for_value.clone();
+        let popover_handle = window
+            .use_keyed_state(
+                (ElementId::from("enum-variant-dropdown-handle"), id.clone()),
+                cx,
+                |_, _| ui::PopoverMenuHandle::<ContextMenu>::default(),
+            )
+            .read(cx)
+            .clone();
 
         let context_menu = window.use_keyed_state(current_value_label, cx, |window, cx| {
             ContextMenu::new(window, cx, move |mut menu, _, _| {
@@ -158,6 +166,7 @@ where
         };
 
         dropdown
+            .handle(popover_handle)
             .when_some(aria_label, |this, label| this.aria_label(label))
             .when_some(aria_description, |this, description| {
                 this.aria_description(description)

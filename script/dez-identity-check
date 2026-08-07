@@ -420,6 +420,9 @@ require_multiline_pattern crates/settings_ui/src/pages/tool_permissions_setup.rs
 require_multiline_pattern crates/settings_ui/src/components/ollama_model_picker.rs \
     'persistent_settings_popover_handle::<OllamaModelPicker>.*?field\.json_path\.unwrap_or\("edit_predictions\.ollama\.model"\).*?with_handle\(popover_handle\.clone\(\)\).*?wire_settings_popover_trigger_a11y.*?aria_label\(title\).*?aria_value\(trigger_value\).*?popover_handle' \
     'the Ollama model picker can regress to a transient handle or hide its current and expanded state from assistive technology'
+require_multiline_pattern crates/settings_ui/src/components/dropdown.rs \
+    'let popover_handle = window.*?use_keyed_state\(.*?enum-variant-dropdown-handle.*?id\.clone\(\).*?PopoverMenuHandle::<ContextMenu>::default\(\).*?dropdown.*?handle\(popover_handle\).*?aria_label.*?aria_description' \
+    'curated enum Settings controls can regress to transient dropdown owners that conceal their expanded state'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'trait AnySettingField.*?fn is_settings_file_only\(&self\) -> bool;.*?impl<T: PartialEq.*?fn is_settings_file_only\(&self\) -> bool \{.*?TypeId::of::<T>\(\) == TypeId::of::<UnimplementedSettingField>\(\)' \
     'the native Settings catalog can lose its explicit settings-file-only field classification'
