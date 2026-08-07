@@ -185,6 +185,16 @@ fn empty_main_work_area_terminal_action_label(
     configured_terminal_launcher_action_label(configured_command).into()
 }
 
+fn empty_main_work_area_terminal_destination_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    format!(
+        "{} in Main Work Area",
+        empty_main_work_area_terminal_action_label(app_name, configured_command)
+    )
+}
+
 fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind) -> bool {
     app_name != "Zed" && pane_kind != PaneKind::Tabs
 }
@@ -1089,11 +1099,11 @@ impl Pane {
             paths::APP_NAME,
             configured_terminal_command.as_deref(),
         );
-        let terminal_action_aria_label = if paths::APP_NAME == "Zed" {
-            "Start Terminal Session in Main Work Area"
-        } else {
-            "Open Terminal in Main Work Area"
-        };
+        let terminal_action_aria_label = empty_main_work_area_terminal_destination_label(
+            paths::APP_NAME,
+            configured_terminal_command.as_deref(),
+        );
+        let terminal_tooltip_label = terminal_action_aria_label.clone();
         let terminal_action = if is_dez {
             zed_actions::terminal::OpenAgentTerminal.boxed_clone()
         } else {
@@ -1165,7 +1175,7 @@ impl Pane {
                                     .aria_label(terminal_action_aria_label)
                                     .tooltip(move |_, cx| {
                                         Tooltip::for_action(
-                                            terminal_action_aria_label,
+                                            terminal_tooltip_label.clone(),
                                             &*terminal_tooltip_action,
                                             cx,
                                         )
@@ -7053,6 +7063,14 @@ mod tests {
         assert_eq!(
             empty_main_work_area_terminal_action_label("Zed", Some("codex")),
             "Start Terminal Session"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_destination_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex in Main Work Area"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_destination_label("Zed", Some("codex --yolo")),
+            "Start Terminal Session in Main Work Area"
         );
         assert_eq!(
             pane_new_surface_control_copy("Dez"),

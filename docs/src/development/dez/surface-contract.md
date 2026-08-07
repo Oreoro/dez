@@ -794,6 +794,10 @@ that persistent identity. Both remain explicit user preferences.
 - Name the configured result at the point of launch. Generic **Open Terminal**
   may become **Open Terminal · Codex** or the resolved equivalent when space
   permits.
+- Keep that resolved destination in the accessible name and tooltip. Append
+  location only after the destination, such as **Open Terminal · Codex in Main
+  Work Area**, so assistive navigation never collapses a named action back to a
+  generic terminal.
 - Workspaces terminal controls dispatch that named configured result. Explicit
   provider commands remain literal, while **Open New Shell Here** remains a
   separate native shell and never inherits an agent launcher.
