@@ -274,9 +274,10 @@ The active or keyboard-focused Workspace keeps **Open Terminal** and
 **Workspace Options** visible. Other inactive Workspace actions may reveal on
 hover because selecting or focusing the Workspace first makes the same controls
 persistent. Every icon-only control must retain an accessible name, tooltip,
-and keyboard tab stop. Repeated Workspace-row controls include the visible
-Workspace name in both; internal element and hover-group identifiers are
-presentation-only and must never enter user-facing copy.
+keyboard tab stop, and expanded state when it opens a menu. Repeated
+Workspace-row controls include the visible Workspace name in both; internal
+element and hover-group identifiers are presentation-only and must never enter
+user-facing copy.
 
 Visible controls must also perform their advertised action: the Agent title
 pencil starts editing, worktree closure names its window scope, and the
@@ -2105,3 +2106,8 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   title as a level-one heading. Its exact reason and explicit fresh-shell
   action remain inline; Dez does not add an overlay, replace the process, or
   claim that saved computation migrated.
+- **2026-08-07: Workspace Options reports its menu state.** The existing
+  Workspace-owned options trigger now exposes expanded or collapsed state in
+  addition to its Workspace-specific name, tooltip, keyboard target, and
+  persistent active/focused presentation. Menu ownership and visible layout
+  remain unchanged.

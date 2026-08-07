@@ -10044,6 +10044,7 @@ impl Sidebar {
                     .icon_size(icon_size)
                     .tab_index(0isize)
                     .aria_label(workspace_options_label.clone())
+                    .aria_expanded(is_menu_open)
                     .tooltip(Tooltip::text(workspace_options_tooltip_label()))
                     .when(
                         !workspace_options_action_persistent(is_active, is_focused, is_menu_open),

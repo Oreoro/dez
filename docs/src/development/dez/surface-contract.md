@@ -812,6 +812,9 @@ that persistent identity. Both remain explicit user preferences.
 - Use one primary action per state. Put secondary actions in ordinary rows or
   an overflow menu.
 - Use native Zed buttons, tabs, menus, prompts, focus, and theme tokens.
+- Give every icon-only menu trigger a stable name, keyboard target, and
+  expanded state. Workspace-owned triggers include their visible Workspace
+  name so repeated rows remain distinguishable.
 - Use the shared density scale for top-bar, tab-bar, sidebar title and search
   rows, and status-bar controls. Compact navigation uses 22px targets with
   12px marks; Balanced uses 22–28px targets with 14px marks; Spacious uses
