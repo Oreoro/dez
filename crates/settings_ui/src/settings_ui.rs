@@ -5656,15 +5656,32 @@ fn wire_picker_trigger_a11y<M: gpui::ManagedView>(
     button: Button,
     handle: ui::PopoverMenuHandle<M>,
 ) -> Button {
+    let expanded = handle.is_deployed();
     let show_handle = handle.clone();
     let hide_handle = handle;
     button
+        .aria_expanded(expanded)
         .on_a11y_action(gpui::accesskit::Action::Expand, move |_, window, cx| {
             show_handle.show(window, cx);
         })
         .on_a11y_action(gpui::accesskit::Action::Collapse, move |_, _window, cx| {
             hide_handle.hide(cx);
         })
+}
+
+fn persistent_picker_handle<M: gpui::ManagedView>(
+    field_path: &'static str,
+    window: &mut Window,
+    cx: &mut App,
+) -> ui::PopoverMenuHandle<M> {
+    window
+        .use_keyed_state(
+            (gpui::ElementId::from("settings-picker-handle"), field_path),
+            cx,
+            |_, _| ui::PopoverMenuHandle::default(),
+        )
+        .read(cx)
+        .clone()
 }
 
 fn resolve_language_model_selection(
@@ -5687,7 +5704,7 @@ fn render_subagent_model_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let default_option_label = SharedString::from("Same as parent");
@@ -5707,7 +5724,11 @@ fn render_subagent_model_picker(
         (None, None) => default_option_label,
     };
 
-    let handle = ui::PopoverMenuHandle::<LanguageModelSelector>::default();
+    let handle = persistent_picker_handle::<LanguageModelSelector>(
+        field.json_path.unwrap_or("agent.default_model"),
+        window,
+        cx,
+    );
     let model_picker = PopoverMenu::new("language-model-picker")
         .trigger(wire_picker_trigger_a11y(
             render_picker_trigger_button(
@@ -5844,7 +5865,7 @@ fn render_font_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let current_value = SettingsStore::global(cx)
@@ -5853,7 +5874,11 @@ fn render_font_picker(
         .cloned()
         .map_or_else(|| SharedString::default(), |value| value.into_gpui());
 
-    let handle = ui::PopoverMenuHandle::default();
+    let handle = persistent_picker_handle(
+        field.json_path.unwrap_or("appearance.font_family"),
+        window,
+        cx,
+    );
     PopoverMenu::new("font-picker")
         .trigger(wire_picker_trigger_a11y(
             render_picker_trigger_button(
@@ -5905,7 +5930,7 @@ fn render_theme_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -5914,7 +5939,8 @@ fn render_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
-    let handle = ui::PopoverMenuHandle::default();
+    let handle =
+        persistent_picker_handle(field.json_path.unwrap_or("appearance.theme"), window, cx);
     PopoverMenu::new("theme-picker")
         .trigger(wire_picker_trigger_a11y(
             render_picker_trigger_button("theme_picker_trigger".into(), current_value.clone())
@@ -5966,7 +5992,7 @@ fn render_icon_theme_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -5975,7 +6001,11 @@ fn render_icon_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
-    let handle = ui::PopoverMenuHandle::default();
+    let handle = persistent_picker_handle(
+        field.json_path.unwrap_or("appearance.icon_theme"),
+        window,
+        cx,
+    );
     PopoverMenu::new("icon-theme-picker")
         .trigger(wire_picker_trigger_a11y(
             render_picker_trigger_button("icon_theme_picker_trigger".into(), current_value.clone())
