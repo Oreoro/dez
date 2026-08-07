@@ -83,6 +83,13 @@ and **Recent Workspaces** remain visible level-two headings, so keyboard and
 assistive navigation follows the same concise action hierarchy without adding
 an onboarding surface.
 
+Home evaluates its compact and two-column breakpoints in interface-scaled tab
+width. Whole-interface zoom therefore collapses visible action metadata and the
+secondary column before rows crowd, while zooming out may restore the split
+when equivalent space returns. The native pane remains the width owner, saved
+geometry is unchanged, and official Zed keeps its inherited physical-width
+behavior.
+
 ### 2. Run and active work
 
 ```text

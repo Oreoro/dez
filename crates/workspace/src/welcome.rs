@@ -626,6 +626,18 @@ fn welcome_loads_recent_workspaces(app_name: &str, requested: bool) -> bool {
     app_name != "Zed" || requested
 }
 
+fn welcome_responsive_viewport_width(
+    app_name: &str,
+    viewport_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        viewport_width
+    } else {
+        viewport_width * interface_scale.max(f32::EPSILON).recip()
+    }
+}
+
 fn dez_welcome_uses_compact_spacing(app_name: &str, viewport_width: Pixels) -> bool {
     app_name != "Zed" && viewport_width < DEZ_WELCOME_COMPACT_BREAKPOINT
 }
@@ -1082,11 +1094,15 @@ impl Render for WelcomePage {
             .justify_center()
             .when(is_dez, |this| this.items_start())
             .child(container_query(move |available_size, _window, cx| {
-                let compact_spacing =
-                    dez_welcome_uses_compact_spacing(APP_NAME, available_size.width);
-                let split_layout = dez_welcome_uses_split_layout(
+                let responsive_width = welcome_responsive_viewport_width(
                     APP_NAME,
                     available_size.width,
+                    crate::interface_scale(cx),
+                );
+                let compact_spacing = dez_welcome_uses_compact_spacing(APP_NAME, responsive_width);
+                let split_layout = dez_welcome_uses_split_layout(
+                    APP_NAME,
+                    responsive_width,
                     has_secondary_content,
                 );
                 let home_separator = cx.theme().colors().border_variant;
@@ -1675,6 +1691,29 @@ mod tests {
         assert!(dez_welcome_uses_split_layout("Dez", px(980.), true));
         assert!(!dez_welcome_uses_split_layout("Dez", px(1400.), false));
         assert!(!dez_welcome_uses_split_layout("Zed", px(1400.), true));
+        assert_eq!(
+            welcome_responsive_viewport_width("Dez", px(1125.), 1.5),
+            px(750.)
+        );
+        assert!(dez_welcome_uses_compact_spacing(
+            "Dez",
+            welcome_responsive_viewport_width("Dez", px(1125.), 1.5)
+        ));
+        assert!(!dez_welcome_uses_split_layout(
+            "Dez",
+            welcome_responsive_viewport_width("Dez", px(1125.), 1.5),
+            true,
+        ));
+        assert!(dez_welcome_uses_split_layout(
+            "Dez",
+            welcome_responsive_viewport_width("Dez", px(735.), 0.75),
+            true,
+        ));
+        assert_eq!(
+            welcome_responsive_viewport_width("Zed", px(1140.), 1.5),
+            px(1140.),
+            "official Zed keeps its inherited physical-width breakpoints"
+        );
         assert!(welcome_loads_recent_workspaces("Dez", false));
         assert!(welcome_loads_recent_workspaces("Dez", true));
         assert!(welcome_loads_recent_workspaces("Zed", true));
