@@ -685,6 +685,12 @@ command path instead of a dead **No matches** message. When the picker targets
 the center reveal location, Dez names that destination **Main Work Area**;
 official Zed retains its inherited central-pane wording.
 
+Recent one-shot commands remain owned by Task history. On the selected recent
+row, Dez keeps **Remove from Recent Tasks** visible, keyboard reachable, and
+assistively named; pointer hover may reveal the same action on other rows.
+Removing the history entry never claims to delete its task definition or stop
+running work. Official Zed retains its inherited hover presentation and copy.
+
 ### 19. Debug without a dead end
 
 ```text

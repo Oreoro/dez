@@ -2059,3 +2059,9 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   navigation. Dez names Workspace scope while official Zed retains Project
   copy; filtering state remains explicit through the inverse **Show all stack
   frames** action rather than icon color alone.
+- **2026-08-07: Recent Task cleanup is selected-row accessible.** The native
+  Task picker keeps history ownership and exposes **Remove from Recent Tasks**
+  as a visible, keyboard-reachable action on the selected recent command in
+  Dez. Other rows retain the quiet pointer-hover affordance, and official Zed
+  retains its inherited presentation and copy. The action removes only the
+  history entry; it does not delete a task definition or stop running work.
