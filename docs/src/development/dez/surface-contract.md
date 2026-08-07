@@ -350,6 +350,8 @@ terminal launcher, new-Workspace intent, and appearance choices—share a stable
 dropdown owner instead of rebuilding open state per render.
 Audio-device, edit-prediction-provider, and provider reasoning-effort menus use
 the same owner-scoped state and announce their selected values.
+Settings-file overflow, nested scope, and subagent reasoning-effort menus close
+the same loop; scope triggers name the exact Settings ownership they change.
 Dez also keeps product-inert microgeometry out of the curated catalog: the
 disabled outer card gap, disabled active-pane border, and unused zoom padding
 remain readable in `settings.json` for compatibility but are not presented as

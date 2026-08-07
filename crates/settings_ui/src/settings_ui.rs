@@ -3266,6 +3266,11 @@ impl SettingsWindow {
             })
             .unwrap_or(OVERFLOW_LIMIT);
         let edit_in_json_id = SharedString::new(format!("edit-in-json-{}", selected_file_ix));
+        let scope_overflow_handle = persistent_settings_popover_handle::<ContextMenu>(
+            "settings.scope.overflow",
+            window,
+            cx,
+        );
 
         h_flex()
             .id("settings-ui-files-header")
@@ -3335,6 +3340,8 @@ impl SettingsWindow {
                                         }),
                                     )
                                     .style(DropdownStyle::Subtle)
+                                    .handle(scope_overflow_handle)
+                                    .aria_label("More Settings scopes")
                                     .trigger_tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
                                         "View Other Projects"
                                     } else {
@@ -3913,12 +3920,14 @@ impl SettingsWindow {
             .filter(|(_, (file, _))| allowed_mask.contains(file.mask()))
             .map(|(ix, _)| ix)
             .collect();
+        let scope_picker_handle =
+            persistent_settings_popover_handle::<ContextMenu>("settings.subpage.scope", window, cx);
 
         let scope_element = if allowed_file_indices.len() > 1 {
             let this = cx.entity();
             DropdownMenu::new(
                 "sub-page-scope-picker",
-                scope_name,
+                scope_name.clone(),
                 ContextMenu::build(window, cx, move |mut menu, _, _| {
                     menu = menu.header("Scope");
 
@@ -3950,6 +3959,9 @@ impl SettingsWindow {
                 }),
             )
             .style(DropdownStyle::Subtle)
+            .handle(scope_picker_handle)
+            .aria_label("Settings scope")
+            .aria_value(scope_name)
             .trigger_tooltip(Tooltip::text("Change Scope"))
             .attach(gpui::Anchor::BottomLeft)
             .offset(gpui::Point {
@@ -5808,6 +5820,7 @@ fn render_subagent_model_picker(
         return model_picker;
     };
 
+    let selected_effort_label = selected_effort.name.clone();
     let selected_effort_value = selected_effort.value.clone();
     let effort_menu = ContextMenu::build(_window, cx, move |mut menu, _window, _cx| {
         for effort_level in effort_levels {
@@ -5836,6 +5849,11 @@ fn render_subagent_model_picker(
         }
         menu
     });
+    let effort_handle = persistent_settings_popover_handle::<ContextMenu>(
+        "agent.subagent_model.reasoning_effort",
+        window,
+        cx,
+    );
 
     v_flex()
         .gap_1()
@@ -5849,12 +5867,14 @@ fn render_subagent_model_picker(
                 .child(
                     DropdownMenu::new(
                         "subagent-model-effort-picker",
-                        selected_effort.name,
+                        selected_effort_label.clone(),
                         effort_menu,
                     )
                     .style(DropdownStyle::Outlined)
                     .trigger_size(ButtonSize::Compact)
-                    .aria_label("Default subagent reasoning effort"),
+                    .aria_label("Default subagent reasoning effort")
+                    .aria_value(selected_effort_label)
+                    .handle(effort_handle),
                 ),
         )
         .into_any_element()

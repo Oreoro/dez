@@ -433,6 +433,12 @@ require_multiline_pattern crates/settings_ui/src/pages/llm_providers_page.rs \
     'fn render_reasoning_effort_selector.*?persistent_settings_popover_handle::<ContextMenu>\(.*?agent\.llm_provider\.model\.\{index\}\.reasoning_effort.*?reasoning-effort-selector-\{index\}.*?aria_label\("Default reasoning effort"\).*?aria_value\(selected\.label\(\)\).*?handle\(popover_handle\)' \
     'provider reasoning-effort Settings can regress to transient dropdown ownership or conceal the selected effort'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'fn render_files_header.*?persistent_settings_popover_handle::<ContextMenu>\(.*?settings\.scope\.overflow.*?DropdownMenu::new\(.*?more-files.*?handle\(scope_overflow_handle\).*?aria_label\("More Settings scopes"\).*?fn render_sub_page_breadcrumbs.*?persistent_settings_popover_handle::<ContextMenu>\(.*?settings\.subpage\.scope.*?DropdownMenu::new\(.*?sub-page-scope-picker.*?handle\(scope_picker_handle\).*?aria_label\("Settings scope"\).*?aria_value\(scope_name\)' \
+    'Settings scope menus can regress to transient ownership or ambiguous repeated controls'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
+    'fn render_subagent_model_picker.*?let selected_effort_label = selected_effort\.name\.clone\(\).*?persistent_settings_popover_handle::<ContextMenu>\(.*?agent\.subagent_model\.reasoning_effort.*?subagent-model-effort-picker.*?aria_label\("Default subagent reasoning effort"\).*?aria_value\(selected_effort_label\).*?handle\(effort_handle\)' \
+    'subagent reasoning-effort Settings can regress to transient dropdown ownership or conceal the selected effort'
+require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
     'trait AnySettingField.*?fn is_settings_file_only\(&self\) -> bool;.*?impl<T: PartialEq.*?fn is_settings_file_only\(&self\) -> bool \{.*?TypeId::of::<T>\(\) == TypeId::of::<UnimplementedSettingField>\(\)' \
     'the native Settings catalog can lose its explicit settings-file-only field classification'
 require_multiline_pattern crates/settings_ui/src/settings_ui.rs \
