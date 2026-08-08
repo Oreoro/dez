@@ -82,6 +82,18 @@ pub fn get_provider_icon(name: &str) -> IconName {
     }
 }
 
+pub(crate) fn git_workspace_copy(
+    app_name: &str,
+    project_copy: &'static str,
+    workspace_copy: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        project_copy
+    } else {
+        workspace_copy
+    }
+}
+
 pub(crate) fn diff_surface_tab_label(app_name: &str, label: &str) -> SharedString {
     if app_name == "Zed" {
         return label.to_owned().into();
@@ -106,7 +118,7 @@ pub(crate) fn diff_surface_tab_label(app_name: &str, label: &str) -> SharedStrin
 
 #[cfg(test)]
 mod diff_surface_label_tests {
-    use super::diff_surface_tab_label;
+    use super::{diff_surface_tab_label, git_workspace_copy};
 
     #[test]
     fn dez_normalizes_first_party_diff_titles_without_changing_zed() {
@@ -130,6 +142,18 @@ mod diff_surface_label_tests {
         assert_eq!(
             diff_surface_tab_label("Zed", "Staged Changes").as_ref(),
             "Staged Changes"
+        );
+    }
+
+    #[test]
+    fn dez_names_the_workspace_as_the_public_git_owner() {
+        assert_eq!(
+            git_workspace_copy("Dez", "Open File in Project", "Open File in Workspace"),
+            "Open File in Workspace"
+        );
+        assert_eq!(
+            git_workspace_copy("Zed", "Open File in Project", "Open File in Workspace"),
+            "Open File in Project"
         );
     }
 }

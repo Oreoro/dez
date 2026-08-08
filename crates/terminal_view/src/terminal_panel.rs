@@ -5,8 +5,11 @@ use crate::{
     persistence::{
         SerializedItems, SerializedTerminalPanel, deserialize_terminal_panel, serialize_pane_group,
     },
-    terminal_failed_to_start_guidance, terminal_launch_failure_is_top_anchored,
-    terminal_launch_failure_settings_label,
+    record_terminal_workspace_access_required, terminal_failed_to_start_guidance,
+    terminal_launch_failure_is_top_anchored, terminal_launch_failure_more_label,
+    terminal_launch_failure_primary_label, terminal_launch_failure_tab_icon,
+    terminal_launch_failure_tab_tooltip, terminal_launch_failure_title,
+    terminal_workspace_access_required,
 };
 use breadcrumbs::Breadcrumbs;
 use collections::HashMap;
@@ -869,10 +872,14 @@ impl TerminalPanel {
                     result
                 }
                 Err(error) => {
+                    let workspace_access_required =
+                        terminal_workspace_access_required(&error).is_some();
                     pane.update_in(cx, |pane, window, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
                         let focus = pane.has_focus(window, cx);
                         let failed_to_spawn = cx.new(|cx| FailedToSpawnTerminal {
                             error: error.to_string(),
+                            workspace_access_required,
                             focus_handle: cx.focus_handle(),
                         });
                         pane.add_item(Box::new(failed_to_spawn), true, focus, None, window, cx);
@@ -1226,6 +1233,7 @@ async fn wait_for_terminals_tasks(
 
 struct FailedToSpawnTerminal {
     error: String,
+    workspace_access_required: bool,
     focus_handle: FocusHandle,
 }
 
@@ -1238,14 +1246,19 @@ impl Focusable for FailedToSpawnTerminal {
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
-        let settings_label = terminal_launch_failure_settings_label(paths::APP_NAME);
+        let workspace_access_required = is_dez && self.workspace_access_required;
+        let primary_label =
+            terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
+        let more_label =
+            terminal_launch_failure_more_label(paths::APP_NAME, workspace_access_required);
+        let title = terminal_launch_failure_title(paths::APP_NAME, workspace_access_required);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
                     .icon_size(IconSize::XSmall)
                     .tab_index(0isize)
-                    .aria_label("More Terminal Settings")
-                    .tooltip(Tooltip::text("More Terminal Settings")),
+                    .aria_label(more_label)
+                    .tooltip(Tooltip::text(more_label)),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, |context_menu, _, _| {
@@ -1266,7 +1279,7 @@ impl Render for FailedToSpawnTerminal {
         v_flex()
             .id("terminal-failed-to-start")
             .role(gpui::Role::Alert)
-            .aria_label("Terminal did not start")
+            .aria_label(title)
             .track_focus(&self.focus_handle)
             .size_full()
             .min_h_0()
@@ -1292,30 +1305,34 @@ impl Render for FailedToSpawnTerminal {
                                         .size(IconSize::Small)
                                         .color(Color::Warning),
                                 )
-                                .child(Headline::new("Terminal did not start")),
+                                .child(Headline::new(title)),
                         )
                     })
-                    .when(!is_dez, |this| {
-                        this.child(Label::new("Terminal did not start"))
-                    })
+                    .when(!is_dez, |this| this.child(Label::new(title)))
                     .child(
                         Label::new(format!(
                             "{}\n\n{}",
                             self.error,
-                            terminal_failed_to_start_guidance(paths::APP_NAME),
+                            terminal_failed_to_start_guidance(
+                                paths::APP_NAME,
+                                workspace_access_required,
+                            ),
                         ))
                         .size(LabelSize::Small)
                         .color(Color::Muted)
                         .mb_4(),
                     )
                     .child(SplitButton::new(
-                        ButtonLike::new("open-settings-ui")
-                            .child(Label::new(settings_label).size(LabelSize::Small))
+                        ButtonLike::new("terminal-launch-recovery")
+                            .child(Label::new(primary_label).size(LabelSize::Small))
                             .tab_index(0isize)
-                            .aria_label("Edit Terminal Settings")
-                            .tooltip(Tooltip::text("Edit Terminal Settings"))
+                            .aria_label(primary_label)
+                            .tooltip(Tooltip::text(primary_label))
                             .on_click(move |_, window, cx| {
-                                if is_dez {
+                                if workspace_access_required {
+                                    window
+                                        .dispatch_action(workspace::FocusSidebar.boxed_clone(), cx);
+                                } else if is_dez {
                                     window.dispatch_action(
                                         zed_actions::OpenSettingsAt {
                                             path: "agent.terminal_launcher".to_owned(),
@@ -1343,7 +1360,15 @@ impl workspace::Item for FailedToSpawnTerminal {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        SharedString::new_static("Terminal did not start")
+        terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
+    }
+
+    fn tab_icon(&self, _cx: &App) -> Option<Icon> {
+        terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
+    }
+
+    fn tab_tooltip_text(&self, _cx: &App) -> Option<SharedString> {
+        terminal_launch_failure_tab_tooltip(paths::APP_NAME, self.workspace_access_required)
     }
 }
 
@@ -1912,7 +1937,7 @@ mod tests {
         let result = window_handle
             .update(cx, |_, window, cx| {
                 terminal_panel.update(cx, |terminal_panel, cx| {
-                    terminal_panel.add_local_terminal_shell(RevealStrategy::Always, window, cx)
+                    terminal_panel.add_terminal_shell(None, RevealStrategy::Always, window, cx)
                 })
             })
             .unwrap()

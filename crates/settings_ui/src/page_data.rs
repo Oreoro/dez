@@ -11,8 +11,9 @@ use theme::SystemAppearance;
 use ui::{IconName, IntoElement};
 
 use crate::{
-    ActionLink, DynamicItem, PROJECT, SettingField, SettingItem, SettingsFieldMetadata,
-    SettingsPage, SettingsPageItem, SubPageLink, USER, active_language, all_language_names,
+    ActionLink, AnySettingField, DynamicItem, PROJECT, SettingField, SettingFieldRenderer,
+    SettingItem, SettingsFieldMetadata, SettingsPage, SettingsPageItem, SettingsUiFile,
+    SubPageLink, USER, active_language, all_language_names,
     pages::{
         open_audio_test_window, render_edit_prediction_setup_page, render_external_agents_page,
         render_llm_providers_page, render_mcp_servers_page, render_sandbox_settings_page,
@@ -97,9 +98,96 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
         pages.push(developer_page(cx));
     }
     if paths::APP_NAME != "Zed" {
+        let renderer = cx.try_global::<SettingFieldRenderer>();
+        pages = pages
+            .into_iter()
+            .map(|page| {
+                curate_dez_settings_page_with_field_visibility(paths::APP_NAME, page, |field| {
+                    renderer.is_none_or(|renderer| renderer.has_registered_renderer(field))
+                        && field.file_set_in(SettingsUiFile::User, cx).1
+                })
+            })
+            .collect();
         pages.sort_by_key(|page| dez_settings_page_priority(page.title));
     }
     pages
+}
+
+fn dez_curated_setting_path_visible(app_name: &str, json_path: Option<&str>) -> bool {
+    app_name == "Zed"
+        || !matches!(
+            json_path,
+            Some(
+                "card_gap"
+                    | "active_pane_modifiers.border_size"
+                    | "zoomed_padding"
+                    | "tab_bar.show"
+                    | "tab_bar.show_tab_bar_buttons"
+            )
+        )
+}
+
+fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage {
+    curate_dez_settings_page_with_field_visibility(app_name, page, |_| true)
+}
+
+fn curate_dez_settings_page_with_field_visibility(
+    app_name: &str,
+    page: SettingsPage,
+    field_visible: impl Fn(&dyn AnySettingField) -> bool,
+) -> SettingsPage {
+    if app_name == "Zed" {
+        return page;
+    }
+
+    let mut curated_items = Vec::with_capacity(page.items.len());
+    let mut pending_section_header = None;
+
+    for item in page.items.into_vec() {
+        let item = match item {
+            SettingsPageItem::SectionHeader(header) => {
+                pending_section_header = Some(header);
+                continue;
+            }
+            SettingsPageItem::SettingItem(item)
+                if item.field.is_settings_file_only()
+                    || !dez_curated_setting_path_visible(app_name, item.field.json_path())
+                    || !field_visible(item.field.as_ref()) =>
+            {
+                continue;
+            }
+            SettingsPageItem::DynamicItem(mut item) => {
+                if item.discriminant.field.is_settings_file_only()
+                    || !dez_curated_setting_path_visible(
+                        app_name,
+                        item.discriminant.field.json_path(),
+                    )
+                    || !field_visible(item.discriminant.field.as_ref())
+                {
+                    continue;
+                }
+                for fields in &mut item.fields {
+                    fields.retain(|field| {
+                        !field.field.is_settings_file_only()
+                            && dez_curated_setting_path_visible(app_name, field.field.json_path())
+                            && field_visible(field.field.as_ref())
+                    });
+                }
+                SettingsPageItem::DynamicItem(item)
+            }
+            item => item,
+        };
+
+        if let Some(section_header) = pending_section_header.take() {
+            curated_items.push(SettingsPageItem::SectionHeader(section_header));
+        }
+        curated_items.push(item);
+    }
+
+    SettingsPage {
+        title: page.title,
+        items: curated_items.into_boxed_slice(),
+    }
 }
 
 fn dez_settings_page_priority(title: &str) -> usize {
@@ -286,13 +374,14 @@ fn terminal_session_init_setting_item() -> SettingsPageItem {
 
 fn cmux_integration_action_link() -> SettingsPageItem {
     SettingsPageItem::ActionLink(ActionLink {
-        title: "cmux Integration".into(),
+        title: "cmux Workspace Handoff".into(),
         description: Some(
             "cmux owns its tabs, splits, browser, agent hooks, and action registry. Open Workspace in cmux works without live sharing. Enable cross-app API access only if you want cmux Workspace, port, and notification rows in Dez; Dez never changes cmux permissions or hooks."
                 .into(),
         ),
-        button_text: "Open cmux API Guide".into(),
+        button_text: "Open API & Access Guide".into(),
         icon: IconName::ArrowUpRight,
+        scope: ActionLinkScope::App,
         on_click: Arc::new(|_settings_window, _window, cx| {
             cx.open_url("https://cmux.com/docs/api");
         }),
@@ -342,6 +431,7 @@ fn workspace_surface_setting_path_visible(app_name: &str, json_path: Option<&str
                 | "agent.flexible"
                 | "agent.default_width"
                 | "agent.default_height"
+                | "project_panel.starts_open"
         )
     )
 }
@@ -382,6 +472,23 @@ fn projects_startup_setting() -> SettingsPageItem {
             pick: |settings_content| settings_content.sidebar.as_ref()?.starts_open.as_ref(),
             write: |settings_content, value, _| {
                 settings_content.sidebar.get_or_insert_default().starts_open = value;
+            },
+        }),
+        metadata: None,
+        files: USER,
+    })
+}
+
+fn workspace_startup_intent_setting() -> SettingsPageItem {
+    SettingsPageItem::SettingItem(SettingItem {
+        title: "New Workspace Starts With",
+        description: "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Default Terminal uses your configured launcher in the Main Work Area without creating a split. If a native tool is unavailable, Dez keeps Focus Work Area instead.",
+        field: Box::new(SettingField {
+            organization_override: None,
+            json_path: Some("startup_intent"),
+            pick: |settings_content| settings_content.workspace.startup_intent.as_ref(),
+            write: |settings_content, value, _| {
+                settings_content.workspace.startup_intent = value;
             },
         }),
         metadata: None,
@@ -882,6 +989,67 @@ fn general_page(cx: &App) -> SettingsPage {
     }
 }
 
+fn dez_interface_chrome_section(app_name: &str) -> Vec<SettingsPageItem> {
+    if app_name == "Zed" {
+        return Vec::new();
+    }
+
+    vec![
+        SettingsPageItem::SectionHeader("Interface Chrome"),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Interface Density",
+            description: "Size native title-bar controls, tabs, Workspaces rows, Settings spacing, and the status line together.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("design_system.density"),
+                pick: |settings_content| settings_content.design_system.as_ref()?.density.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .design_system
+                        .get_or_insert_default()
+                        .density = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Corner Style",
+            description: "Choose square, subtle, or rounded treatment for native Dez surfaces.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("design_system.radius"),
+                pick: |settings_content| settings_content.design_system.as_ref()?.radius.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .design_system
+                        .get_or_insert_default()
+                        .radius = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+        SettingsPageItem::SettingItem(SettingItem {
+            title: "Surface Contrast",
+            description: "Set the separation between native navigation, content, and selected surfaces.",
+            field: Box::new(SettingField {
+                organization_override: None,
+                json_path: Some("design_system.contrast"),
+                pick: |settings_content| settings_content.design_system.as_ref()?.contrast.as_ref(),
+                write: |settings_content, value, _| {
+                    settings_content
+                        .design_system
+                        .get_or_insert_default()
+                        .contrast = value;
+                },
+            }),
+            metadata: None,
+            files: USER,
+        }),
+    ]
+}
+
 fn appearance_page() -> SettingsPage {
     fn dez_visual_profile_section() -> Vec<SettingsPageItem> {
         if paths::APP_NAME == "Zed" {
@@ -893,11 +1061,12 @@ fn appearance_page() -> SettingsPage {
             SettingsPageItem::ActionLink(ActionLink {
                 title: "Restore Native Dez Appearance".into(),
                 description: Some(
-                    "Restore Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar. Font sizes and unrelated preferences stay unchanged."
+                    "Restore Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the focused Workspace status line. Font sizes and unrelated preferences stay unchanged."
                         .into(),
                 ),
                 button_text: "Restore Profile".into(),
                 icon: IconName::RotateCcw,
+                scope: ActionLinkScope::Window,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -1903,6 +2072,7 @@ fn appearance_page() -> SettingsPage {
     }
 
     let items: Box<[SettingsPageItem]> = concat_sections!(
+        dez_interface_chrome_section(paths::APP_NAME),
         dez_visual_profile_section(),
         theme_section(),
         buffer_font_section(),
@@ -1933,6 +2103,7 @@ fn keymap_page() -> SettingsPage {
                 ),
                 button_text: "Open Keymap".into(),
                 icon: IconName::Keyboard,
+                scope: ActionLinkScope::Window,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -1959,6 +2130,7 @@ fn keymap_page() -> SettingsPage {
                 ),
                 button_text: "View Defaults".into(),
                 icon: IconName::Book,
+                scope: ActionLinkScope::Window,
                 on_click: Arc::new(|settings_window, window, cx| {
                     let Some(original_window) = settings_window.original_window else {
                         return;
@@ -4361,7 +4533,7 @@ fn window_and_layout_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Show Status Bar",
-                description: "Keep the native Workspace status bar visible for active file, diagnostics, language, line endings, and cursor position.",
+                description: "Keep the native Workspace status line available for Workspaces recovery, diagnostics, language, encoding, and cursor position.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("status_bar.experimental.show"),
@@ -5793,10 +5965,10 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-                title: files_copy("Starts Open", "Open Files with Workspaces"),
+                title: files_copy("Starts Open", "Open Files Automatically"),
                 description: files_copy(
                     "Whether the project panel should open on startup.",
-                    "Whether Files opens automatically when a Workspace opens.",
+                    "Open Files when a Workspace opens. When off, the Main Work Area stays focused until you choose Files.",
                 ),
                 field: Box::new(SettingField {
                     organization_override: None,
@@ -7149,6 +7321,71 @@ fn panels_page() -> SettingsPage {
     }
 }
 
+fn debugger_start_section(app_name: &str) -> Vec<SettingsPageItem> {
+    if app_name == "Zed" {
+        return Vec::new();
+    }
+
+    vec![
+        SettingsPageItem::SectionHeader("Start & Configure"),
+        SettingsPageItem::ActionLink(ActionLink {
+            title: "Open Debugger".into(),
+            description: Some(
+                "Reveal the native Debug panel for the active Workspace. Choose a saved configuration, launch a program, or attach to a process there."
+                    .into(),
+            ),
+            button_text: "Open Debugger".into(),
+            icon: IconName::Debug,
+            scope: ActionLinkScope::WorkspaceRoot,
+            on_click: Arc::new(|settings_window, window, cx| {
+                let Some(original_window) = settings_window.original_window else {
+                    return;
+                };
+                if let Err(error) =
+                    original_window.update(cx, |_multi_workspace, original_window, cx| {
+                        original_window.dispatch_action(workspace::RevealDebug.boxed_clone(), cx);
+                        original_window.activate_window();
+                    })
+                {
+                    log::error!("failed to open the native Debug panel: {error}");
+                    return;
+                }
+                window.remove_window();
+            }),
+            files: USER | PROJECT,
+        }),
+        SettingsPageItem::ActionLink(ActionLink {
+            title: "Configure Debug Sessions".into(),
+            description: Some(
+                "Open debug.json for the active Workspace to define launch and attach configurations."
+                    .into(),
+            ),
+            button_text: "Open debug.json".into(),
+            icon: IconName::Code,
+            scope: ActionLinkScope::WorkspaceRoot,
+            on_click: Arc::new(|settings_window, window, cx| {
+                let Some(original_window) = settings_window.original_window else {
+                    return;
+                };
+                if let Err(error) =
+                    original_window.update(cx, |_multi_workspace, original_window, cx| {
+                        original_window.dispatch_action(
+                            zed_actions::OpenProjectDebugTasks.boxed_clone(),
+                            cx,
+                        );
+                        original_window.activate_window();
+                    })
+                {
+                    log::error!("failed to open the Workspace debug configuration: {error}");
+                    return;
+                }
+                window.remove_window();
+            }),
+            files: USER | PROJECT,
+        }),
+    ]
+}
+
 fn debugger_page() -> SettingsPage {
     fn general_section() -> [SettingsPageItem; 6] {
         [
@@ -7264,7 +7501,7 @@ fn debugger_page() -> SettingsPage {
 
     SettingsPage {
         title: "Debugger",
-        items: concat_sections![general_section()],
+        items: concat_sections![debugger_start_section(paths::APP_NAME), general_section()],
     }
 }
 
@@ -7279,6 +7516,7 @@ fn terminal_page() -> SettingsPage {
                 }),
                 sessions_side_setting(),
                 projects_startup_setting(),
+                workspace_startup_intent_setting(),
             ]
         } else {
             Vec::new()
@@ -8787,6 +9025,7 @@ fn collaboration_page() -> SettingsPage {
                 description: Some("Test your microphone and speaker setup".into()),
                 button_text: "Test Audio".into(),
                 icon: IconName::PlayFilled,
+                scope: ActionLinkScope::App,
                 on_click: Arc::new(|_settings_window, window, cx| {
                     open_audio_test_window(window, cx);
                 }),
@@ -11894,10 +12133,176 @@ mod tests {
     }
 
     #[test]
+    fn dez_curated_settings_hide_settings_file_only_rows() {
+        fn contains_settings_file_only_field(page: &SettingsPage) -> bool {
+            page.items.iter().any(|item| match item {
+                SettingsPageItem::SettingItem(item) => item.field.is_settings_file_only(),
+                SettingsPageItem::DynamicItem(item) => {
+                    item.discriminant.field.is_settings_file_only()
+                        || item
+                            .fields
+                            .iter()
+                            .flatten()
+                            .any(|field| field.field.is_settings_file_only())
+                }
+                SettingsPageItem::SectionHeader(_)
+                | SettingsPageItem::SubPageLink(_)
+                | SettingsPageItem::ActionLink(_) => false,
+            })
+        }
+
+        let upstream_appearance = curate_dez_settings_page("Zed", appearance_page());
+        assert!(contains_settings_file_only_field(&upstream_appearance));
+
+        for page in [appearance_page(), terminal_page()] {
+            let page = curate_dez_settings_page("Dez", page);
+            assert!(!contains_settings_file_only_field(&page));
+            assert!(!matches!(
+                page.items.last(),
+                Some(SettingsPageItem::SectionHeader(_))
+            ));
+            assert!(page.items.windows(2).all(|items| !matches!(
+                items,
+                [
+                    SettingsPageItem::SectionHeader(_),
+                    SettingsPageItem::SectionHeader(_)
+                ]
+            )));
+        }
+    }
+
+    #[test]
+    fn dez_curated_settings_hide_product_inert_controls() {
+        let hidden_paths = [
+            "card_gap",
+            "active_pane_modifiers.border_size",
+            "zoomed_padding",
+            "tab_bar.show",
+            "tab_bar.show_tab_bar_buttons",
+        ];
+        for path in hidden_paths {
+            assert!(!dez_curated_setting_path_visible("Dez", Some(path)));
+            assert!(dez_curated_setting_path_visible("Zed", Some(path)));
+        }
+
+        for path in [
+            "centered_layout.left_padding",
+            "active_pane_modifiers.inactive_opacity",
+            "pane_split_direction_vertical",
+        ] {
+            assert!(dez_curated_setting_path_visible("Dez", Some(path)));
+        }
+
+        let page = curate_dez_settings_page("Dez", window_and_layout_page());
+        for hidden_path in hidden_paths {
+            assert!(!page.items.iter().any(|item| match item {
+                SettingsPageItem::SettingItem(item) => {
+                    item.field.json_path() == Some(hidden_path)
+                }
+                SettingsPageItem::DynamicItem(item) => {
+                    item.discriminant.field.json_path() == Some(hidden_path)
+                        || item
+                            .fields
+                            .iter()
+                            .flatten()
+                            .any(|field| field.field.json_path() == Some(hidden_path))
+                }
+                SettingsPageItem::SectionHeader(_)
+                | SettingsPageItem::SubPageLink(_)
+                | SettingsPageItem::ActionLink(_) => false,
+            }));
+        }
+    }
+
+    #[test]
+    fn dez_curated_settings_drop_fields_without_native_controls() {
+        let retained_path = "terminal.font_size";
+        let page =
+            curate_dez_settings_page_with_field_visibility("Dez", terminal_page(), |field| {
+                field.json_path() == Some(retained_path)
+            });
+
+        let mut retained_field_count = 0;
+        for item in &page.items {
+            match item {
+                SettingsPageItem::SettingItem(item) => {
+                    retained_field_count += 1;
+                    assert_eq!(item.field.json_path(), Some(retained_path));
+                }
+                SettingsPageItem::DynamicItem(item) => {
+                    retained_field_count += 1;
+                    assert_eq!(item.discriminant.field.json_path(), Some(retained_path));
+                    assert!(
+                        item.fields
+                            .iter()
+                            .flatten()
+                            .all(|field| { field.field.json_path() == Some(retained_path) })
+                    );
+                }
+                SettingsPageItem::SectionHeader(_)
+                | SettingsPageItem::SubPageLink(_)
+                | SettingsPageItem::ActionLink(_) => {}
+            }
+        }
+        assert_eq!(retained_field_count, 1);
+        assert!(!matches!(
+            page.items.last(),
+            Some(SettingsPageItem::SectionHeader(_))
+        ));
+
+        let upstream_page =
+            curate_dez_settings_page_with_field_visibility("Zed", terminal_page(), |_| false);
+        assert!(upstream_page.items.iter().any(|item| matches!(
+            item,
+            SettingsPageItem::SettingItem(_) | SettingsPageItem::DynamicItem(_)
+        )));
+    }
+
+    #[test]
     fn dez_hides_staff_instrumentation_from_public_settings() {
         assert!(!developer_settings_page_visible("Dez", false));
         assert!(developer_settings_page_visible("Dez", true));
         assert!(developer_settings_page_visible("Zed", false));
+    }
+
+    #[test]
+    fn dez_debugger_settings_start_with_native_workspace_routes() {
+        let section = debugger_start_section("Dez");
+        assert_eq!(
+            section.first(),
+            Some(&SettingsPageItem::SectionHeader("Start & Configure"))
+        );
+
+        let actions = section
+            .iter()
+            .filter_map(|item| match item {
+                SettingsPageItem::ActionLink(action) => Some((
+                    action.title.as_ref(),
+                    action.button_text.as_ref(),
+                    action.icon,
+                    action.scope,
+                )),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            actions,
+            vec![
+                (
+                    "Open Debugger",
+                    "Open Debugger",
+                    IconName::Debug,
+                    ActionLinkScope::WorkspaceRoot,
+                ),
+                (
+                    "Configure Debug Sessions",
+                    "Open debug.json",
+                    IconName::Code,
+                    ActionLinkScope::WorkspaceRoot,
+                ),
+            ]
+        );
+        assert!(debugger_start_section("Zed").is_empty());
     }
 
     #[test]
@@ -11909,6 +12314,27 @@ mod tests {
         assert!(!sessions_side_setting_visible("Dez", "Agents"));
         assert!(sessions_side_setting_visible("Zed", "Agents"));
         assert!(!sessions_side_setting_visible("Zed", "Sessions & Terminal"));
+
+        let SettingsPageItem::SettingItem(startup_intent) = workspace_startup_intent_setting()
+        else {
+            panic!("Workspace startup intent must be a native setting row");
+        };
+        assert_eq!(startup_intent.title, "New Workspace Starts With");
+        assert_eq!(
+            startup_intent.description,
+            "Choose the first native destination for a Workspace with no restored layout or explicitly opened item. Default Terminal uses your configured launcher in the Main Work Area without creating a split. If a native tool is unavailable, Dez keeps Focus Work Area instead."
+        );
+        assert_eq!(startup_intent.field.json_path(), Some("startup_intent"));
+        assert_eq!(
+            <settings::WorkspaceStartupIntent as strum::VariantNames>::VARIANTS,
+            [
+                "Focus Work Area",
+                "Files",
+                "Default Terminal",
+                "Git Changes",
+                "Debug",
+            ]
+        );
     }
 
     #[test]
@@ -11993,8 +12419,8 @@ mod tests {
         assert_eq!(
             cmux_action,
             Some((
-                "cmux Integration".into(),
-                "Open cmux API Guide".into(),
+                "cmux Workspace Handoff".into(),
+                "Open API & Access Guide".into(),
                 IconName::ArrowUpRight,
             ))
         );
@@ -12014,6 +12440,7 @@ mod tests {
         for dock_only_path in [
             "project_panel.dock",
             "project_panel.default_width",
+            "project_panel.starts_open",
             "outline_panel.dock",
             "outline_panel.default_width",
             "git_panel.dock",
@@ -12076,6 +12503,29 @@ mod tests {
         assert_eq!(
             agent_session_setting_copy("Zed", "External Agents", "ACP Agents"),
             "External Agents"
+        );
+    }
+
+    #[test]
+    fn dez_appearance_exposes_only_native_interface_chrome_controls() {
+        assert!(dez_interface_chrome_section("Zed").is_empty());
+
+        let section = dez_interface_chrome_section("Dez");
+        let setting_paths = section
+            .iter()
+            .filter_map(|item| match item {
+                SettingsPageItem::SettingItem(item) => item.field.json_path(),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            setting_paths,
+            [
+                "design_system.density",
+                "design_system.radius",
+                "design_system.contrast",
+            ]
         );
     }
 

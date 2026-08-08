@@ -237,8 +237,8 @@ prefixes. The action is named **Rename Terminal…** and double-clicking the tab
 invokes the same editor.
 
 At zero sessions, the overview owns the rail title and **No agent sessions**
-status. With no Workspace open, the compact state says **No Workspace open**,
-explains that project context comes first, and offers one filled **Open
+status. With no Workspace open, the compact state says **No Workspace is
+open**, explains that Workspace context comes first, and offers one filled **Open
 Workspace…** action. It does not create a pathless terminal branch or repeat
 the launch/supervise/review route owned by Welcome. With an active Workspace
 but no Session, that Workspace group owns the primary **Open Terminal**
@@ -274,9 +274,10 @@ The active or keyboard-focused Workspace keeps **Open Terminal** and
 **Workspace Options** visible. Other inactive Workspace actions may reveal on
 hover because selecting or focusing the Workspace first makes the same controls
 persistent. Every icon-only control must retain an accessible name, tooltip,
-and keyboard tab stop. Repeated Workspace-row controls include the visible
-Workspace name in both; internal element and hover-group identifiers are
-presentation-only and must never enter user-facing copy.
+keyboard tab stop, and expanded state when it opens a menu. Repeated
+Workspace-row controls include the visible Workspace name in both; internal
+element and hover-group identifiers are presentation-only and must never enter
+user-facing copy.
 
 Visible controls must also perform their advertised action: the Agent title
 pencil starts editing, worktree closure names its window scope, and the
@@ -310,11 +311,11 @@ The active empty Main Work Area uses the same **Open Terminal** vocabulary. Its
 orientation is part of the native work surface, not a bordered card floating
 over it. The focused empty work area is headed **Main Work Area**, names what
 can open there in one sentence, and presents **Open Terminal** plus three
-immediate actions for resume, inspect, and review: **Browse Sessions**, **Find
-File**, and **Review Changes**. It does not repeat Home's product summary. In an
-explicit multi-pane layout, inactive empty work areas say **Open something
-here** and keep the same operational actions. The action row owns all
-interactive styling. Copy describes live terminal and Agent state without
+immediate actions for resume, inspect, and review: **Browse Running Sessions**,
+**Find File**, and **Review Changes**. It does not repeat Home's product
+summary. In an explicit multi-pane layout, inactive empty work areas say
+**Open something here** and keep the same operational actions. The action row
+owns all interactive styling. Copy describes live terminal and Agent state without
 assuming either GUI or Host ownership; durability is shown only when an
 external Host actually owns the exact Session.
 
@@ -1971,6 +1972,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   discovered external work. cmux remains an external owner and receives an
   explicit `cmux open <path>` handoff; hook setup remains a deliberate
   cmux/provider configuration action.
+- **2026-08-05: cmux path handoff is native and socket-independent.** **Open
+  Workspace in cmux** asks macOS LaunchServices to deliver the folder to the
+  registered stable or nightly cmux bundle before using `cmux open <path>` as
+  a compatibility fallback. The primary handoff therefore works with cmux's
+  secure process-only socket default; live activity discovery remains a
+  separate, optional cross-app permission.
 - **2026-08-02: The four-state native surface contract is authoritative.** Home
   launches work, the Main Work Area owns every terminal, editor, diff, browser,
   Settings, and Workspace tool surface, Workspaces supervises live activity,
@@ -2003,7 +2010,109 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   projection. Diagnostics keeps a keyboard-reachable Refresh action in its
   healthy empty state. The Task picker distinguishes inventory loading, no
   saved tasks, and an unmatched typed command; Dez calls the resulting actions
-  **Run Task** and **Run Command** without changing official Zed wording.
+  **Run Task** and **Run Command**, and names a centered destination **Main
+  Work Area**, without changing official Zed wording.
   Recent Workspace recovery uses the same inline state grammar. Dez opens URLs
   in the system browser and hands Workspaces to cmux explicitly because cmux
   retains ownership of its browser, tabs, splits, hooks, and action registry.
+- **2026-08-04: Layout is the final pane-and-tab projection noun.** This
+  supersedes the earlier **Open Tabs**, **Open Tabs & Tools**, **Tabs &
+  Panels**, and **Open** labels in Dez. **Layout** is activation-only: it reads
+  the active Workspace's native pane model and focuses an existing tab. Native
+  panes continue to own order, drag, preview, pin, dirty, close, and split
+  state. The section remains absent for one tab and groups rows only when a
+  user-created split produces real pane ownership.
+- **2026-08-04: Activity is the final live-supervision projection noun.** This
+  supersedes the broad visible **Sessions** section label in Dez while
+  preserving Session as the entity noun and official Zed's existing Activity
+  wording.
+  Activity contains only authoritative active, running, actionable,
+  recoverable, or review-ready agent, terminal, task, tmux, and Herdr signals.
+  It disappears when empty; idle open content stays in **Layout**, inactive
+  completed Agent Sessions stay in Agent History, and externally discovered
+  work remains under the explicit **Running Sessions** disclosure.
+- **2026-08-06: New Workspace starts are intent-led, restored, and native.**
+  The user setting **New Workspace Starts With** applies only to a new
+  Workspace that has a real root, no restorable layout, and no explicitly
+  opened item. **Focus** keeps one Main Work Area and is the default;
+  **Direct**, **Agentic**, **Review**, and **Debug** select Files, the configured
+  Default Terminal, Git Changes, or Debug. Restored layouts and explicit file or
+  tool opens always win. Agentic dispatches the existing configured-terminal
+  action into the active Main Work Area without opening a split; its terminal or
+  Workspace recovery remains authoritative if launch fails. The other intents
+  never start an agent, task, build, or debug session, and only an explicit
+  **Split Work Area** action may create another populated pane. **Work Area +
+  Built-in Agent** remains an optional explicit Workspace Layout recipe backed
+  by the existing `AgentPanel`. If any requested panel owner is unavailable,
+  Dez preserves the focused Main Work Area and records **Focus Work Area**,
+  keeping the visible layout, saved state, status line, and next-layout cycle
+  truthful. The older Files-specific `project_panel.starts_open` preference
+  remains raw-settings compatibility but is no longer a second graphical
+  startup control in Dez.
+- **2026-08-07: Git names the native Workspace owner.** Commit-file context
+  actions, write-access failures, clone destinations, and worktree eligibility
+  use Workspace language in Dez. The Git model keeps its upstream project and
+  worktree types internally, and official Zed retains its public Project copy;
+  this is product vocabulary alignment rather than a second Git abstraction.
+- **2026-08-07: Debug filtering is named and keyboard reachable.** The existing
+  stack-frame filter remains owned by the native Debug surface, enters the
+  keyboard tab order, and shares one action label across tooltip and assistive
+  navigation. Dez names Workspace scope while official Zed retains Project
+  copy; filtering state remains explicit through the inverse **Show all stack
+  frames** action rather than icon color alone.
+- **2026-08-07: Recent Task cleanup is selected-row accessible.** The native
+  Task picker keeps history ownership and exposes **Remove from Recent Tasks**
+  as a visible, keyboard-reachable action on the selected recent command in
+  Dez. Other rows retain the quiet pointer-hover affordance, and official Zed
+  retains its inherited presentation and copy. The action removes only the
+  history entry; it does not delete a task definition or stop running work.
+- **2026-08-07: Running Debug controls share one accessibility rule.** The
+  selected stack frame keeps **Restart Stack Frame** visible and keyboard
+  reachable in Dez; breakpoint toggle, removal, log, condition, hit-condition,
+  and watch-removal actions enter the keyboard order and expose their names.
+  Unsupported breakpoint actions state why they are unavailable rather than
+  relying on a disabled glyph. Official Zed retains its inherited stack-frame
+  hover presentation, and all state remains owned by native Debug lists.
+- **2026-08-07: Settings content announces its selected owner.** Each Dez root
+  page exposes its full visible title as a level-one accessible heading and
+  names the content group from that destination, such as **Workspaces &
+  Terminals Settings** or **Debugger Settings**. Navigation, visual hierarchy,
+  keyboard focus, and assistive context therefore agree without introducing a
+  second Settings surface. Official Zed retains its generic inherited content
+  label.
+- **2026-08-07: Home exposes its action hierarchy to assistive navigation.**
+  **Start a Workspace** and **Continue in this Workspace** are level-one
+  headings, while the existing launch, inspect, resume, and recent-Workspace
+  groups are level two. Home remains a concise closeable tab with the same
+  actions and responsive layout; the change does not add onboarding or a
+  competing navigation model.
+- **2026-08-07: Empty work areas announce their native pane owner.** The active
+  operational start region exposes **Main Work Area** as its level-one heading;
+  inactive empty splits expose **Empty pane**. Existing terminal, running
+  Session, file, and review actions remain unchanged and continue to dispatch
+  through the pane's native Workspace owner.
+- **2026-08-07: Workspaces exposes its visible hierarchy to assistive
+  navigation.** The native sidebar title is level one, nested **Layout** and
+  **Activity** owners are level two, and real split-pane groups remain level
+  three. Disclosure controls keep their button and expansion semantics, so the
+  change adds no new navigation surface and does not duplicate pane-tab state.
+- **2026-08-07: Terminal Details reports disclosure state.** The existing
+  inline terminal trigger now exposes expanded or collapsed state to assistive
+  navigation while retaining the same status, process, path, Git, ownership,
+  and clipboard content. Terminal output and external process ownership remain
+  unchanged.
+- **2026-08-07: Unavailable terminals expose their recovery heading.** The
+  existing alert region now also exposes its visible **Terminal unavailable**
+  title as a level-one heading. Its exact reason and explicit fresh-shell
+  action remain inline; Dez does not add an overlay, replace the process, or
+  claim that saved computation migrated.
+- **2026-08-07: Workspace Options reports its menu state.** The existing
+  Workspace-owned options trigger now exposes expanded or collapsed state in
+  addition to its Workspace-specific name, tooltip, keyboard target, and
+  persistent active/focused presentation. Menu ownership and visible layout
+  remain unchanged.
+- **2026-08-07: The Workspace terminal picker reports its menu state.** When a
+  Workspace group has multiple open destinations, its configured-terminal
+  trigger now exposes expanded or collapsed state. A group with no open
+  Workspace keeps the same direct launch action and does not announce a menu;
+  terminal launch ownership and visible layout remain unchanged.

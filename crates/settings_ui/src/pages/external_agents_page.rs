@@ -19,7 +19,9 @@ use ui::{
 use util::ResultExt as _;
 use workspace::{MultiWorkspace, Workspace, create_and_open_local_file};
 
-use crate::SettingsWindow;
+use crate::{
+    SettingsWindow, persistent_settings_popover_handle, wire_settings_popover_trigger_a11y,
+};
 
 fn external_agents_page_copy(app_name: &str) -> (&'static str, &'static str) {
     if app_name == "Zed" {
@@ -291,9 +293,12 @@ pub(crate) fn render_add_agent_popover(
         .tab_stop(true);
     let border_color = focus_ring_color(&focus_handle, window, cx);
     let settings_window = cx.entity().downgrade();
+    let popover_handle =
+        persistent_settings_popover_handle::<ContextMenu>("agent.external_agents.add", window, cx);
 
     let popover = PopoverMenu::new("add-agent-server-popover")
-        .trigger(
+        .with_handle(popover_handle.clone())
+        .trigger(wire_settings_popover_trigger_a11y(
             Button::new("add-agent", "Add Agent")
                 .style(ButtonStyle::Outlined)
                 .track_focus(&focus_handle)
@@ -303,7 +308,8 @@ pub(crate) fn render_add_agent_popover(
                         .color(Color::Muted),
                 )
                 .label_size(LabelSize::Small),
-        )
+            popover_handle,
+        ))
         .anchor(gpui::Anchor::TopRight)
         .menu(move |window, cx| {
             let settings_window = settings_window.clone();

@@ -25,18 +25,19 @@ Workspace instead of separate applications or hidden panel modes.
 - **Workspaces** — an optional, collapsible navigator for codebases, open
   Surfaces, and Agent Sessions. Fresh windows keep it closed unless the user
   enables it, restored layouts may reopen it, and its window edge is
-  configurable. Its collapsible **Open** section appears for every
-  open native Main Work Area surface. It mirrors Home, code, diffs, terminals,
-  Files, Git, Settings, and other Workspace-owned tabs, grouping them by pane
-  only after the user creates a real split. Selecting a row activates that
-  exact native tab. Close, pin, preview, middle-click, drag, ordering, dirty
-  state, overflow, and split ownership remain in Zed's pane model rather than
-  being copied into the navigator. Agent Session
-  rows keep their Dez or provider identity mark while Running, Needs Input,
-  Waiting for Permission, Reconnecting, Completed, or Error remains a separate
-  state treatment. Drafts keep the selected agent mark instead of becoming an
-  anonymous dot, and the terminal or Session title stays the primary navigation
-  label. A
+  configurable. Its collapsible **Layout** projection appears once the active
+  Workspace has at least two native Main Work Area tabs. It mirrors Home, code,
+  diffs, terminals, Files, Git, Settings, and other Workspace-owned tabs,
+  grouping them by pane only after the user creates a real split. Selecting a
+  row activates that exact native tab. Close, pin, preview, middle-click, drag,
+  ordering, dirty state, overflow, and split ownership remain in Zed's pane
+  model rather than being copied into the navigator. **Activity** contains only
+  current active, running, actionable, recoverable, or review-ready signals.
+  Agent Session rows keep their Dez or provider identity mark while Running,
+  Needs Input, Waiting for Permission, Reconnecting, Completed, or Error
+  remains a separate state treatment. Drafts keep the selected agent mark
+  instead of becoming an anonymous dot, and the terminal or Session title stays
+  the primary navigation label. A
   multi-root Workspace leads with its first root and a bounded root count; all
   root names remain searchable and available in the header tooltip and
   accessibility label. A Workspace can explicitly attach a discovered tmux or
@@ -71,11 +72,12 @@ Workspace instead of separate applications or hidden panel modes.
   shells under a small process-owning terminal service, so closing or
   accidentally losing the GUI does not end the computation. Reopening Dez
   reattaches the same Session; task and remote terminals keep their existing
-  lifecycle semantics. Workspace Options can launch the configured default,
-  a plain shell, **Workspace tmux**, Codex, Claude Code, or
-  OpenCode in the native terminal; **More Agent CLIs** adds Gemini CLI, Aider,
-  and Herdr without expanding the primary list. It can hand the Workspace path
-  to cmux without pretending cmux is a shell.
+  lifecycle semantics. Workspace Options can launch the configured default, a
+  plain shell, Codex, Claude Code, or OpenCode in the native terminal; **More
+  Agent CLIs** adds Gemini CLI, Aider, and Herdr without expanding the primary
+  list. **Sessions and Multiplexers** groups the explicit cmux handoff, running
+  Session discovery, and **Workspace tmux · fallback** without pretending
+  cmux is a shell.
 - **Evidence and review** — Dez distinguishes observed facts from reported or
   unknown state, then uses Workspace, terminal, command, check, file, and Git
   evidence to make review safer.
@@ -84,8 +86,8 @@ The primary loop stays inside one native window:
 
 ```text
 Open Workspace
-→ start or continue an agent in a native terminal tab
-→ supervise Sessions and attention in Workspaces
+→ start or resume an agent in a native terminal tab
+→ supervise Activity and attention in Workspaces
 → inspect with Files, tasks, diagnostics, and Debug
 → Review Changes in the Main Work Area
 ```
@@ -103,28 +105,30 @@ back into the same Main Work Area. The native tab-strip `+` is the shared Add
 menu for every step; no separate dashboard or onboarding mode is required.
 Its titlebar stays quiet during routine work, then names transient state beside
 **Workspaces**: matching-result count during search, **Restoring…** during
-recovery, or the number of Sessions needing attention. Search counts visible
-Workspace rows as well as Session rows, so the status cannot claim zero while
-a matching codebase is on screen.
+recovery, or the number of Activity items needing attention. Search counts
+visible Workspace rows as well as Activity rows, so the status cannot claim
+zero while a matching codebase is on screen.
 
 Clicking a Workspace header activates that codebase and restores its last
 active tab and pane; its separate chevron only expands or collapses the
-Workspace's Sessions. **View → Navigate Workspaces** exposes Focus, Search,
-Previous, and Next routes without requiring the navigator to be open first.
-Search opens Workspaces when needed, focuses its native filter, and matches
-Workspace names alongside Sessions. The same actions remain discoverable and
-rebindable in Command Palette and Keyboard & Vim. The Workspaces ellipsis menu
-mirrors Search and Previous/Next when the current inventory makes those actions
-useful; a one-Workspace, one-item window stays quiet.
+Workspace's Layout and Activity. **View → Navigate Workspaces** exposes Focus,
+Search, Previous, and Next routes without requiring the navigator to be open
+first. Search opens Workspaces when needed, focuses its native filter, and
+matches Workspace names alongside current Activity. The same actions remain
+discoverable and rebindable in Command Palette and Keyboard & Vim. The
+Workspaces ellipsis menu mirrors Search and Previous/Next when the current
+inventory makes those actions useful; a one-Workspace, one-item window stays
+quiet.
 
 Home is headed **Continue your work** in both states and always keeps Recent
-Workspaces available as ordinary rows. Inside an active Workspace, it uses two flat native sections. **Start with a
-tool** opens the configured default terminal, Codex, Claude Code, OpenCode, a
-Workspace tmux session, or the explicit external cmux handoff. **Inspect and
-resume** opens running Sessions, Files, or Review Changes. The configured-default
-label distinguishes the primary route from a generic terminal launcher. An
-active empty Main Work Area uses the same route with space-aware labels:
-**Open Terminal**, **Browse Sessions**, **Find File**, and **Review Changes**.
+Workspaces available as ordinary rows. Inside an active Workspace, it uses two
+flat native sections. **Start with a tool** opens the configured default
+terminal, Codex, Claude Code, OpenCode, the preferred external cmux handoff, or
+**Workspace tmux · fallback**. **Inspect and resume** opens running Sessions,
+Files, or Review Changes. The configured-default label distinguishes the
+primary route from a generic terminal launcher. An active empty Main Work Area
+uses the same route with space-aware labels:
+**Open Terminal**, **Browse Running Sessions**, **Find File**, and **Review Changes**.
 **New File** remains available from File, the native `+`, and keyboard
 shortcuts, but is not a primary Home or empty-state action.
 
@@ -134,40 +138,43 @@ Workspaces stays global and optional on its configured window edge. Files, Git,
 Outline, Debug, Built-in Agent, commits, diffs, reviews, agent terminals, and
 ordinary terminals use the native Workspace tab and pane model instead of
 another navigation system.
-When Workspaces is visible, **Open Tabs & Tools** provides a compact vertical
-route to the active Workspace's native surfaces once there is something useful
-to switch between. It stays flat for a single pane and introduces small
-**Pane 1**, **Pane 2**, and
-later group labels only when a real split exists. The section is collapsible,
-remembers its disclosure state, and disappears while Workspace search is active
-so search results keep the full navigator.
-Its active unpinned row keeps a native close control visible; inactive rows show
-that control on hover, and middle-click closes through the same unsaved-work
-contract. Pinned rows show their pin and cannot be closed from the navigator.
-The native tab strip remains the owner of reorder, cross-pane drag, preview
-replacement, pinning, and horizontal or vertical splits. A terminal can
-therefore sit below code without Dez manufacturing a separate multiplexer UI.
+When Workspaces is visible, **Layout** provides a compact vertical route to the
+active Workspace's native surfaces once there are at least two tabs to switch
+between. It stays flat for a single pane and introduces **Pane 1**, **Pane 2**,
+and later group labels only when a real split exists. Layout is activation-only:
+selecting a row focuses its existing native tab. It disappears while Workspace
+search is active so results keep the full navigator. **Activity** follows only
+when work is active, running, actionable, recoverable, or review-ready; idle
+tabs stay in Layout and completed Agent Sessions stay in Agent History.
+The native tab strip remains the owner of close, reorder, cross-pane drag,
+preview replacement, pinning, and horizontal or vertical splits. A terminal
+can therefore sit below code without Dez manufacturing a separate multiplexer
+UI.
 The adjacent native `+` reopens Home, opens Recent Workspaces, or routes to a
-terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in Agent surface
-through the existing Zed actions. Its terminal submenu names the configured
-Default Terminal first, followed by Native Shell, Workspace tmux, and explicit
-Codex, Claude Code, and OpenCode launchers. **More Agent CLIs** keeps Gemini
-CLI, Aider, and Herdr available without crowding the frequent path. **Continue
-Agent** resumes the last Codex, Claude Code, or OpenCode session. **Browse
-Running Sessions…** refreshes external discovery and refocuses Workspaces
-without adding another navigation surface.
+terminal, file, search, Files, Review Changes, Run Task, Debug, or Built-in
+Agent surface through the existing Zed actions. Its **Open Terminal** submenu
+names the configured Default Terminal first, followed by Native Shell, Codex,
+Claude Code, and OpenCode. **More Agent CLIs** keeps Gemini CLI,
+Aider, and Herdr available without crowding the frequent path. **Resume
+Existing Agent** resumes the last Codex, Claude Code, or OpenCode session. A
+separate **Sessions and Multiplexers** group keeps the applicable **Open
+Workspace in cmux** handoff first, followed by **Browse Running Sessions…** and
+**Workspace tmux · fallback**, without mixing external ownership into
+terminal-provider choices.
 
-Dez's **File → Open Terminal** submenu mirrors those native `+` terminal
-launch routes in the same order, followed by **Continue Agent**. Its first row previews the configured result as
+Dez's **File → Open Terminal** submenu keeps the same configured and provider
+launch order and is followed by **Resume Existing Agent** and **Sessions and
+Multiplexers**. Its first row previews the configured result as
 **Default · Native Shell**, **Default · Codex**, **Default · Claude Code**,
 **Default · OpenCode**, **Default · tmux Session**, a detected agent, or
 **Default · Custom Command**; the pane `+` keeps the shorter **Default
-Terminal** label. Native Shell, Workspace tmux, Codex, Claude Code, and OpenCode
-remain explicit alternatives; Gemini CLI, Aider, and Herdr live one level
-deeper under **More Agent CLIs**. Continue uses
+Terminal** label. Native Shell, Codex, Claude Code, and OpenCode remain explicit
+terminal alternatives; Gemini CLI, Aider, and Herdr live one level deeper under
+**More Agent CLIs**. The separate session group leads with cmux and labels tmux
+as the fallback. Resume uses
 `codex resume --last`, `claude --continue`, or `opencode --continue` in the
 active Workspace. **Browse Running Sessions…** follows those menus, so starting,
-continuing, and reopening externally owned work stay adjacent.
+resuming, and reopening externally owned work stay adjacent.
 
 Six optional layout commands remain available through **View** and Command
 Palette: **Work Area + Files**, **Work Area + Built-in Agent**, **Focus Work
@@ -179,9 +186,9 @@ and `⌘9` selects the last tab; Linux and Windows use `Alt+1`–`Alt+9`.
 `Ctrl+Tab` opens the recent-tab switcher, split-pane focus keeps the native
 Zed chords, `Ctrl+Backtick` opens the configured terminal, and
 `Ctrl+Shift+Backtick` always opens the native shell. Command Palette can start
-Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; continue a supported
-provider; launch a shell or **Workspace tmux** session; or hand the Workspace
-to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
+Codex, Claude Code, OpenCode, Gemini CLI, Aider, or Herdr; resume a supported
+provider; launch a shell or **Workspace tmux · fallback** session; or hand the
+Workspace to cmux. The native tab-strip `+` exposes the same terminal choices, **Browse
 Running Sessions…**, and **Open Workspace in cmux** without creating a second
 navigation system. The guided default lives under **Settings → Workspaces &
 Terminals → Terminal Launch → Default Terminal**. Choose Native Shell, Codex,
@@ -200,7 +207,7 @@ When that boundary rejects live discovery, the Workspace menu keeps the
 official guide and retry route available without pinning a technical notice
 above navigation. If cmux is missing, that menu offers **Get cmux…**. The path
 handoff remains available independently.
-Provider launchers and Continue actions remain one-off choices. **Settings → Keyboard & Vim**
+Provider launchers and Resume actions remain one-off choices. **Settings → Keyboard & Vim**
 exposes shortcut search, conflict inspection, base keymaps, and optional full
 Vim or Helix editing. Vim and Helix share native leader destinations for
 recent tabs (`Space b`), files (`Space f`), the configured agent terminal
@@ -241,16 +248,17 @@ TUIs inside Dez's native terminal; Dez does not replace their keyboard handling,
 colors, or full-screen layout with chat chrome. tmux owns its server sessions.
 Herdr owns its panes.
 cmux stays an external native application and receives the active path through
-its documented `cmux open <path>` command. Dez contributes Workspace context,
+the native macOS folder handoff registered by cmux, with its documented
+`cmux open <path>` command retained as a compatibility fallback. Dez contributes Workspace context,
 native tabs and splits, durable ownership for eligible Dez-created terminals,
 attention, and direct Files/Git review routes.
 
 Native launch menus keep identity visible before a terminal starts: primary
 agents use their provider marks; Gemini CLI has its provider mark; Aider uses
 the edit-agent mark; Herdr uses the orchestration mark; tmux uses the
-split-session mark; the Built-in Agent uses the Dez Agent mark; and shells
-retain the terminal icon. Those marks identify the actor or owner; live state
-remains separate status text.
+split-session mark; the Built-in Agent and its Subagents use related but
+distinct Dez marks; and shells retain the terminal icon. Those marks identify
+the actor or owner; live state remains separate status text.
 
 cmux notification and supported-session restore hooks remain an explicit cmux
 setup choice:
@@ -315,10 +323,10 @@ machine PTYs remain excluded.
 
 The active Workspace always keeps its compact terminal launcher visible, even
 before a Session exists. That menu exposes the Default Terminal, Native Shell,
-Workspace tmux, supported agent CLIs, and cmux handoff without requiring users
-to leave Workspaces for an empty Main Work Area. Inactive expanded Workspaces
-retain one labeled **Open Terminal** row, keeping each codebase's launch target
-clear without duplicating actions.
+cmux handoff, supported agent CLIs, and **Workspace tmux · fallback** without
+requiring users to leave Workspaces for an empty Main Work Area. Inactive
+expanded Workspaces retain one labeled **Open Terminal** row, keeping each
+codebase's launch target clear without duplicating actions.
 
 Opening the active Workspace in cmux also has a bounded handoff. If cmux does
 not respond within eight seconds, Dez keeps the Workspace open, ends the
@@ -419,6 +427,10 @@ Closing the optional Workspaces navigator leaves a compact, labeled
 attention, while the tooltip and accessibility label expose the native
 **Open Workspaces** action.
 
+Fresh Workspaces also keep Files closed so the Main Work Area remains primary.
+Restored layouts are preserved, and **Settings → Workspace Tools → Open Files
+Automatically** provides the deliberate always-open file-tree workflow.
+
 Fresh Dez windows open the top-anchored native Home launcher inside the normal
 Main Work Area tab frame. The tab strip and its adjacent Add control remain
 visible before the first file or terminal opens. Home does not auto-read a
@@ -448,10 +460,12 @@ previews. The next browser slice requires a real pane-scoped native surface and
 Workspace item; Dez deliberately does not expose the inherited
 geometry-only `BrowserDevelopment` recipe as a fake preview.
 
-A public v0.4 release still requires exact build, rendered, restart, crash,
-accessibility, integration, coexistence, and packaging evidence. The ordered
-release ladder and open gates are active in
-[v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md). The preserved
+A public v0.5 release still requires exact build, rendered, restart, crash,
+accessibility, integration, coexistence, and packaging evidence. The active
+source-polish and release plan is [v0.5 Surface
+Readiness](./docs/src/development/dez/v0.5-surface-readiness.md). The latest
+exact-artifact lane remains [v0.4
+Readiness](./docs/src/development/dez/v0.4-readiness.md). The preserved
 [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
 and [v0.1 Product Hardening](./docs/src/development/dez/v0.1-product-hardening.md)
 documents remain ownership and reliability input;
@@ -464,8 +478,10 @@ runbook remains historical evidence, not the current release plan.
 ## Documentation
 
 - [What is Dez?](./docs/src/dez.md) — public product guide
-- [v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md) — active
-  source, exact-artifact, stop-ship, and promotion contract
+- [v0.5 Surface Readiness](./docs/src/development/dez/v0.5-surface-readiness.md)
+  — active source-polish, surface, stop-ship, and release-evidence plan
+- [v0.4 Readiness](./docs/src/development/dez/v0.4-readiness.md) — latest
+  exact-artifact, stop-ship, and promotion contract
 - [v0.2 Workspace Polish](./docs/src/development/dez/v0.2-workspace-polish.md)
   — preserved native Workspace shell and source-polish contract
 - [Native Surface Contract](./docs/src/development/dez/surface-contract.md) —

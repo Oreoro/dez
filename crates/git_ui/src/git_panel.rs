@@ -5748,7 +5748,14 @@ impl GitPanel {
         } else if !self.has_commit_message(cx) {
             (false, "No commit message")
         } else if !self.has_write_access(cx) {
-            (false, "You do not have write access to this project")
+            (
+                false,
+                crate::git_workspace_copy(
+                    paths::APP_NAME,
+                    "You do not have write access to this project",
+                    "You do not have write access to this Workspace",
+                ),
+            )
         } else {
             (true, self.commit_button_title())
         }

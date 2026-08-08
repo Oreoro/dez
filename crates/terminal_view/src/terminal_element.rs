@@ -884,7 +884,11 @@ impl Element for TerminalElement {
                 let rem_size = window.rem_size();
                 let line_height = f32::from(window.text_style().font_size.to_pixels(rem_size))
                     * TerminalSettings::get_global(cx).line_height.value();
-                px(displayed_lines as f32 * line_height).into()
+                // Prevent device-pixel snapping from shortening the requested height before the
+                // terminal floors it back to a row count.
+                let scale_factor = window.scale_factor().max(1.);
+                let height = displayed_lines as f32 * line_height;
+                px((height * scale_factor).ceil() / scale_factor).into()
             }
             ContentMode::Scrollable => {
                 if let TerminalMode::Embedded { .. } = &self.mode {

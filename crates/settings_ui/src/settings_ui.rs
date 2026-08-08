@@ -75,6 +75,9 @@ const HEADER_GROUP_TAB_INDEX: isize = 3;
 
 const CONTENT_CONTAINER_TAB_INDEX: isize = 4;
 const CONTENT_GROUP_TAB_INDEX: isize = 5;
+const WINDOW_ACTION_UNAVAILABLE_COPY: &str =
+    "Reopen Settings from a Dez window to use this action.";
+const WORKSPACE_ACTION_UNAVAILABLE_COPY: &str = "Open a Workspace to use this action.";
 
 const SIDEBAR_WIDTH: Pixels = px(226.);
 const CONTENT_MIN_WIDTH: Pixels = px(400.);
@@ -205,6 +208,50 @@ fn canvas_settings_nav_padding(density: settings::CanvasDensity) -> Pixels {
         settings::CanvasDensity::Balanced => px(10.),
         settings::CanvasDensity::Spacious => px(14.),
     }
+}
+
+fn canvas_settings_nav_width(app_name: &str, density: settings::CanvasDensity) -> Pixels {
+    if app_name == "Zed" {
+        return SIDEBAR_WIDTH;
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => px(238.),
+        settings::CanvasDensity::Balanced => px(250.),
+        settings::CanvasDensity::Spacious => px(264.),
+    }
+}
+
+fn dez_settings_nav_icon(app_name: &str, page_title: &str) -> Option<IconName> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    match page_title {
+        "Workspaces & Terminals" => Some(IconName::Screen),
+        "Agents" => Some(IconName::DezAgent),
+        "Appearance" => Some(IconName::Sparkle),
+        "Workspace & Privacy" => Some(IconName::Lock),
+        "Keyboard & Vim" => Some(IconName::Keyboard),
+        "Editor" => Some(IconName::Code),
+        "Languages & Tools" => Some(IconName::ToolHammer),
+        "Search & Files" => Some(IconName::FolderSearch),
+        "Navigation & Layout" => Some(IconName::Split),
+        "Workspace Tools" => Some(IconName::ListTree),
+        "Debugger" => Some(IconName::Debug),
+        "Version Control" => Some(IconName::GitBranch),
+        "Network" => Some(IconName::Server),
+        "Advanced" => Some(IconName::Settings),
+        _ => None,
+    }
+}
+
+fn settings_content_accessibility_label(app_name: &str, page_title: &str) -> SharedString {
+    if app_name == "Zed" {
+        return "Settings Content".into();
+    }
+
+    format!("{page_title} Settings").into()
 }
 
 fn canvas_settings_radius(element: Stateful<Div>, radius: settings::CanvasRadius) -> Stateful<Div> {
@@ -344,6 +391,7 @@ trait AnySettingField {
     fn as_any(&self) -> &dyn Any;
     fn type_name(&self) -> &'static str;
     fn type_id(&self) -> TypeId;
+    fn is_settings_file_only(&self) -> bool;
     // Returns the file this value was set in and true, or File::Default and false to indicate it was not found in any file (missing default)
     fn file_set_in(&self, file: SettingsUiFile, cx: &App) -> (settings::SettingsFile, bool);
     fn reset_to_default_fn(
@@ -369,6 +417,10 @@ impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingFi
 
     fn type_id(&self) -> TypeId {
         TypeId::of::<T>()
+    }
+
+    fn is_settings_file_only(&self) -> bool {
+        TypeId::of::<T>() == TypeId::of::<UnimplementedSettingField>()
     }
 
     fn file_set_in(&self, file: SettingsUiFile, cx: &App) -> (settings::SettingsFile, bool) {
@@ -471,6 +523,10 @@ struct SettingFieldRenderer {
 impl Global for SettingFieldRenderer {}
 
 impl SettingFieldRenderer {
+    fn has_registered_renderer(&self, field: &dyn AnySettingField) -> bool {
+        self.renderers.borrow().contains_key(&field.type_id())
+    }
+
     fn add_basic_renderer<T: 'static>(
         &mut self,
         render_control: impl Fn(
@@ -601,7 +657,10 @@ pub fn init(cx: &mut App) {
     cx.set_global(queue);
 
     cx.on_action(|_: &OpenSettings, cx| {
-        open_settings_editor(None, None, None, cx);
+        let workspace_handle = cx
+            .active_window()
+            .and_then(|window| window.downcast::<MultiWorkspace>());
+        open_settings_editor(None, None, workspace_handle, cx);
     });
     cx.on_action(|_: &zed_actions::assistant::OpenSkillCreator, cx| {
         open_skill_creator(pages::SkillCreatorOpenMode::Form, None, cx);
@@ -712,6 +771,12 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::MultiCursorModifier>(render_dropdown)
         .add_basic_renderer::<settings::HideMouseMode>(render_dropdown)
         .add_basic_renderer::<settings::ReduceMotionMode>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasDensity>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasRadius>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasContrast>(render_dropdown)
+        .add_basic_renderer::<settings::WorkspaceStartupIntent>(
+            render_workspace_startup_intent_dropdown,
+        )
         .add_basic_renderer::<settings::CurrentLineHighlight>(render_dropdown)
         .add_basic_renderer::<settings::ShowWhitespaceSetting>(render_dropdown)
         .add_basic_renderer::<settings::SoftWrap>(render_dropdown)
@@ -1003,7 +1068,7 @@ fn open_settings_editor_with(
     if let Some(existing_window) = existing_window {
         existing_window
             .update(cx, |settings_window, window, cx| {
-                settings_window.original_window = workspace_handle;
+                settings_window.update_workspace_context(workspace_handle, cx);
                 settings_window.fetch_files(window, cx);
 
                 window.activate_window();
@@ -1098,6 +1163,7 @@ fn active_language_mut() -> Option<std::sync::RwLockWriteGuard<'static, Option<S
 pub struct SettingsWindow {
     title_bar: Option<Entity<PlatformTitleBar>>,
     original_window: Option<WindowHandle<MultiWorkspace>>,
+    workspace_context_subscription: Option<Subscription>,
     files: Vec<(SettingsUiFile, FocusHandle)>,
     worktree_root_dirs: HashMap<WorktreeId, String>,
     current_file: SettingsUiFile,
@@ -1559,67 +1625,105 @@ impl SettingsPageItem {
 
                 return content.into_any_element();
             }
-            SettingsPageItem::ActionLink(action_link) => v_flex()
-                .group("setting-item")
-                .mx_6()
-                .px(row_padding_x)
-                .map(|this| {
-                    canvas_settings_item_surface(
-                        this,
-                        canvas_radius,
-                        row_background,
-                        row_border_color,
-                        row_hover_background,
-                        row_hover_border_color,
-                    )
-                })
-                .child(
-                    h_flex()
-                        .id(action_link.title.clone())
-                        .w_full()
-                        .min_w_0()
-                        .justify_between()
-                        .map(apply_padding)
-                        .child(
-                            v_flex()
-                                .relative()
-                                .w_full()
-                                .max_w_1_2()
-                                .child(Label::new(action_link.title.clone()))
-                                .when_some(
-                                    action_link.description.as_ref(),
-                                    |this, description| {
+            SettingsPageItem::ActionLink(action_link) => {
+                let has_window = settings_window.has_live_window_context(cx);
+                let has_workspace_root = settings_window.has_workspace_root_context(cx);
+                let action_available =
+                    action_link_available(action_link.scope, has_window, has_workspace_root);
+                let unavailable_copy = if action_available {
+                    None
+                } else {
+                    action_link_unavailable_copy(action_link.scope)
+                };
+                let action_accessibility_description = if action_available {
+                    action_link.description.clone()
+                } else {
+                    Some(match action_link.description.as_ref() {
+                        Some(description) => format!(
+                            "{description} {}",
+                            unavailable_copy.unwrap_or(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                        )
+                        .into(),
+                        None => unavailable_copy
+                            .unwrap_or(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                            .into(),
+                    })
+                };
+
+                v_flex()
+                    .group("setting-item")
+                    .mx_6()
+                    .px(row_padding_x)
+                    .map(|this| {
+                        canvas_settings_item_surface(
+                            this,
+                            canvas_radius,
+                            row_background,
+                            row_border_color,
+                            row_hover_background,
+                            row_hover_border_color,
+                        )
+                    })
+                    .child(
+                        h_flex()
+                            .id(action_link.title.clone())
+                            .w_full()
+                            .min_w_0()
+                            .justify_between()
+                            .map(apply_padding)
+                            .child(
+                                v_flex()
+                                    .relative()
+                                    .w_full()
+                                    .max_w_1_2()
+                                    .child(Label::new(action_link.title.clone()))
+                                    .when_some(
+                                        action_link.description.as_ref(),
+                                        |this, description| {
+                                            this.child(
+                                                Label::new(description.clone())
+                                                    .size(LabelSize::Small)
+                                                    .color(Color::Muted),
+                                            )
+                                        },
+                                    )
+                                    .when_some(unavailable_copy, |this, unavailable_copy| {
                                         this.child(
-                                            Label::new(description.clone())
+                                            Label::new(unavailable_copy)
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         )
-                                    },
-                                ),
-                        )
-                        .child(
-                            Button::new(
-                                ("action-link".into(), action_link.title.clone()),
-                                action_link.button_text.clone(),
+                                    }),
                             )
-                            .tab_index(0_isize)
-                            .end_icon(
-                                Icon::new(action_link.icon)
-                                    .size(IconSize::Small)
-                                    .color(Color::Muted),
-                            )
-                            .style(ButtonStyle::OutlinedGhost)
-                            .size(ButtonSize::Medium)
-                            .on_click({
-                                let on_click = action_link.on_click.clone();
-                                cx.listener(move |this, _, window, cx| {
-                                    on_click(this, window, cx);
+                            .child(
+                                Button::new(
+                                    ("action-link".into(), action_link.title.clone()),
+                                    action_link.button_text.clone(),
+                                )
+                                .tab_index(0_isize)
+                                .aria_label(action_link.button_text.clone())
+                                .when_some(action_accessibility_description, |this, description| {
+                                    this.aria_description(description)
                                 })
-                            }),
-                        ),
-                )
-                .when(bottom_border, |this| this.mb_1())
-                .into_any_element(),
+                                .end_icon(
+                                    Icon::new(action_link.icon)
+                                        .size(IconSize::Small)
+                                        .color(Color::Muted),
+                                )
+                                .style(ButtonStyle::OutlinedGhost)
+                                .size(ButtonSize::Medium)
+                                .disabled(!action_available)
+                                .on_click({
+                                    let on_click = action_link.on_click.clone();
+                                    cx.listener(move |this, _, window, cx| {
+                                        on_click(this, window, cx);
+                                    })
+                                }),
+                            ),
+                    )
+                    .when(bottom_border, |this| this.mb_1())
+                    .into_any_element()
+            }
         }
     }
 }
@@ -1927,8 +2031,36 @@ struct ActionLink {
     description: Option<SharedString>,
     button_text: SharedString,
     icon: IconName,
+    scope: ActionLinkScope,
     on_click: Arc<dyn Fn(&mut SettingsWindow, &mut Window, &mut App) + Send + Sync>,
     files: FileMask,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActionLinkScope {
+    App,
+    Window,
+    WorkspaceRoot,
+}
+
+fn action_link_available(
+    scope: ActionLinkScope,
+    has_window: bool,
+    has_workspace_root: bool,
+) -> bool {
+    match scope {
+        ActionLinkScope::App => true,
+        ActionLinkScope::Window => has_window,
+        ActionLinkScope::WorkspaceRoot => has_workspace_root,
+    }
+}
+
+fn action_link_unavailable_copy(scope: ActionLinkScope) -> Option<&'static str> {
+    match scope {
+        ActionLinkScope::App => None,
+        ActionLinkScope::Window => Some(WINDOW_ACTION_UNAVAILABLE_COPY),
+        ActionLinkScope::WorkspaceRoot => Some(WORKSPACE_ACTION_UNAVAILABLE_COPY),
+    }
 }
 
 impl PartialEq for ActionLink {
@@ -2006,6 +2138,47 @@ impl SettingsUiFile {
 }
 
 impl SettingsWindow {
+    fn has_live_window_context(&self, cx: &App) -> bool {
+        self.original_window
+            .as_ref()
+            .is_some_and(|workspace_handle| workspace_handle.read(cx).is_ok())
+    }
+
+    fn has_workspace_root_context(&self, cx: &App) -> bool {
+        let Some(workspace_handle) = self.original_window.as_ref() else {
+            return false;
+        };
+        let Ok(multi_workspace) = workspace_handle.read(cx) else {
+            return false;
+        };
+        let workspace = multi_workspace.workspace().clone();
+        let project = workspace.read(cx).project().clone();
+        let project = project.read(cx);
+        project.worktrees(cx).next().is_some()
+    }
+
+    fn update_workspace_context(
+        &mut self,
+        workspace_handle: Option<WindowHandle<MultiWorkspace>>,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(workspace_handle) = workspace_handle else {
+            return;
+        };
+        if self.original_window == Some(workspace_handle)
+            && self.workspace_context_subscription.is_some()
+        {
+            return;
+        }
+
+        self.original_window = Some(workspace_handle);
+        self.workspace_context_subscription = workspace_handle
+            .entity(cx)
+            .ok()
+            .map(|multi_workspace| cx.observe(&multi_workspace, |_, _, cx| cx.notify()));
+        cx.notify();
+    }
+
     fn new(
         original_window: Option<WindowHandle<MultiWorkspace>>,
         window: &mut Window,
@@ -2198,7 +2371,9 @@ impl SettingsWindow {
         .detach();
 
         let title_bar = if !cfg!(target_os = "macos") {
-            Some(cx.new(|cx| PlatformTitleBar::new("settings-title-bar", cx)))
+            Some(cx.new(|cx| {
+                PlatformTitleBar::new("settings-title-bar", cx).with_app_name(paths::APP_NAME)
+            }))
         } else {
             None
         };
@@ -2208,7 +2383,8 @@ impl SettingsWindow {
 
         let mut this = Self {
             title_bar,
-            original_window,
+            original_window: None,
+            workspace_context_subscription: None,
 
             worktree_root_dirs: HashMap::default(),
             files: vec![],
@@ -2263,6 +2439,7 @@ impl SettingsWindow {
             skill_creator_page: None,
         };
 
+        this.update_workspace_context(original_window, cx);
         this.fetch_files(window, cx);
         this.build_ui(window, cx);
         this.build_search_index();
@@ -3089,6 +3266,11 @@ impl SettingsWindow {
             })
             .unwrap_or(OVERFLOW_LIMIT);
         let edit_in_json_id = SharedString::new(format!("edit-in-json-{}", selected_file_ix));
+        let scope_overflow_handle = persistent_settings_popover_handle::<ContextMenu>(
+            "settings.scope.overflow",
+            window,
+            cx,
+        );
 
         h_flex()
             .id("settings-ui-files-header")
@@ -3158,6 +3340,8 @@ impl SettingsWindow {
                                         }),
                                     )
                                     .style(DropdownStyle::Subtle)
+                                    .handle(scope_overflow_handle)
+                                    .aria_label("More Settings scopes")
                                     .trigger_tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
                                         "View Other Projects"
                                     } else {
@@ -3435,7 +3619,7 @@ impl SettingsWindow {
                     cx,
                 );
             }))
-            .w(SIDEBAR_WIDTH)
+            .w(canvas_settings_nav_width(paths::APP_NAME, canvas_density))
             .h_full()
             .p(canvas_settings_nav_padding(canvas_density))
             .when(cfg!(target_os = "macos"), |this| this.pt_10())
@@ -3466,6 +3650,18 @@ impl SettingsWindow {
                                         TreeViewItem::new(
                                             ("settings-ui-navbar-entry", entry_index),
                                             entry.title,
+                                        )
+                                        .when_some(
+                                            entry
+                                                .is_root
+                                                .then(|| {
+                                                    dez_settings_nav_icon(
+                                                        paths::APP_NAME,
+                                                        entry.title,
+                                                    )
+                                                })
+                                                .flatten(),
+                                            |item, icon| item.start_icon(icon),
                                         )
                                         .track_focus(&entry.focus_handle)
                                         .root_item(entry.is_root)
@@ -3724,12 +3920,14 @@ impl SettingsWindow {
             .filter(|(_, (file, _))| allowed_mask.contains(file.mask()))
             .map(|(ix, _)| ix)
             .collect();
+        let scope_picker_handle =
+            persistent_settings_popover_handle::<ContextMenu>("settings.subpage.scope", window, cx);
 
         let scope_element = if allowed_file_indices.len() > 1 {
             let this = cx.entity();
             DropdownMenu::new(
                 "sub-page-scope-picker",
-                scope_name,
+                scope_name.clone(),
                 ContextMenu::build(window, cx, move |mut menu, _, _| {
                     menu = menu.header("Scope");
 
@@ -3761,6 +3959,9 @@ impl SettingsWindow {
                 }),
             )
             .style(DropdownStyle::Subtle)
+            .handle(scope_picker_handle)
+            .aria_label("Settings scope")
+            .aria_value(scope_name)
             .trigger_tooltip(Tooltip::text("Change Scope"))
             .attach(gpui::Anchor::BottomLeft)
             .offset(gpui::Point {
@@ -3822,10 +4023,14 @@ impl SettingsWindow {
         cx: &mut Context<SettingsWindow>,
     ) -> impl IntoElement {
         let current_page_index = self.current_page_index();
+        let current_page_title = self.current_page().title;
         let mut page_content = v_flex()
             .id("settings-ui-page")
             .role(Role::Group)
-            .aria_label("Settings Content")
+            .aria_label(settings_content_accessibility_label(
+                paths::APP_NAME,
+                current_page_title,
+            ))
             .size_full();
 
         let has_active_search = !self.search_bar.read(cx).is_empty(cx);
@@ -3856,7 +4061,14 @@ impl SettingsWindow {
                             .when(this.sub_page_stack.is_empty(), |this| {
                                 this.when_some(root_nav_label, |this, title| {
                                     this.child(
-                                        Label::new(title).size(LabelSize::Large).mt_2().mb_3(),
+                                        div()
+                                            .id(("settings-page-heading", current_page_index))
+                                            .role(Role::Heading)
+                                            .aria_level(1)
+                                            .aria_label(title)
+                                            .mt_2()
+                                            .mb_3()
+                                            .child(Label::new(title).size(LabelSize::Large)),
                                     )
                                 })
                             })
@@ -5342,7 +5554,43 @@ fn render_terminal_launcher_dropdown(
         metadata,
         title,
         description,
-        Some(terminal_launcher_icon),
+        Some(Rc::new(terminal_launcher_icon)),
+        cx,
+    )
+}
+
+fn workspace_startup_intent_icon(
+    intent: settings::WorkspaceStartupIntent,
+    terminal_launcher: settings::TerminalLauncher,
+) -> IconName {
+    match intent {
+        settings::WorkspaceStartupIntent::Focus => IconName::Maximize,
+        settings::WorkspaceStartupIntent::Direct => IconName::FolderOpen,
+        settings::WorkspaceStartupIntent::Agentic => terminal_launcher_icon(terminal_launcher),
+        settings::WorkspaceStartupIntent::Review => IconName::GitBranch,
+        settings::WorkspaceStartupIntent::Debug => IconName::Debug,
+    }
+}
+
+fn render_workspace_startup_intent_dropdown(
+    field: SettingField<settings::WorkspaceStartupIntent>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    let terminal_launcher = AgentSettings::get_global(cx).terminal_launcher;
+    let icon_for_value: Rc<dyn Fn(settings::WorkspaceStartupIntent) -> IconName> =
+        Rc::new(move |intent| workspace_startup_intent_icon(intent, terminal_launcher));
+    render_dropdown_with_optional_icons(
+        field,
+        file,
+        metadata,
+        title,
+        description,
+        Some(icon_for_value),
         cx,
     )
 }
@@ -5353,7 +5601,7 @@ fn render_dropdown_with_optional_icons<T>(
     metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    icon_for_value: Option<fn(T) -> IconName>,
+    icon_for_value: Option<Rc<dyn Fn(T) -> IconName>>,
     cx: &mut App,
 ) -> AnyElement
 where
@@ -5389,7 +5637,7 @@ where
     })
     .aria_label(title)
     .when_some(icon_for_value, |this, icon_for_value| {
-        this.icon_for_value(icon_for_value)
+        this.icon_for_value(move |value| icon_for_value(value))
     })
     .when(!description.is_empty(), |this| {
         this.aria_description(description)
@@ -5413,22 +5661,40 @@ fn render_picker_trigger_button(id: SharedString, label: SharedString) -> Button
         )
 }
 
-/// Wires the Expand/Collapse accessibility actions on a picker trigger button to
-/// the popover handle, so assistive technology can open and close the picker
+/// Wires the Expand/Collapse accessibility actions on a popover trigger button to
+/// the popover handle, so assistive technology can open and close the popover
 /// (used by UIA on Windows and AX on macOS; Linux/AT-SPI uses the click action).
-fn wire_picker_trigger_a11y<M: gpui::ManagedView>(
+pub(crate) fn wire_settings_popover_trigger_a11y<M: gpui::ManagedView>(
     button: Button,
     handle: ui::PopoverMenuHandle<M>,
 ) -> Button {
+    let expanded = handle.is_deployed();
     let show_handle = handle.clone();
     let hide_handle = handle;
     button
+        .aria_expanded(expanded)
         .on_a11y_action(gpui::accesskit::Action::Expand, move |_, window, cx| {
             show_handle.show(window, cx);
         })
         .on_a11y_action(gpui::accesskit::Action::Collapse, move |_, _window, cx| {
             hide_handle.hide(cx);
         })
+}
+
+pub(crate) fn persistent_settings_popover_handle<M: gpui::ManagedView>(
+    owner_id: impl Into<gpui::ElementId>,
+    window: &mut Window,
+    cx: &mut App,
+) -> ui::PopoverMenuHandle<M> {
+    let owner_id = owner_id.into();
+    window
+        .use_keyed_state(
+            (gpui::ElementId::from("settings-popover-handle"), owner_id),
+            cx,
+            |_, _| ui::PopoverMenuHandle::default(),
+        )
+        .read(cx)
+        .clone()
 }
 
 fn resolve_language_model_selection(
@@ -5451,7 +5717,7 @@ fn render_subagent_model_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let default_option_label = SharedString::from("Same as parent");
@@ -5471,9 +5737,13 @@ fn render_subagent_model_picker(
         (None, None) => default_option_label,
     };
 
-    let handle = ui::PopoverMenuHandle::<LanguageModelSelector>::default();
+    let handle = persistent_settings_popover_handle::<LanguageModelSelector>(
+        field.json_path.unwrap_or("agent.default_model"),
+        window,
+        cx,
+    );
     let model_picker = PopoverMenu::new("language-model-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button(
                 "language_model_picker_trigger".into(),
                 current_label.clone(),
@@ -5550,6 +5820,7 @@ fn render_subagent_model_picker(
         return model_picker;
     };
 
+    let selected_effort_label = selected_effort.name.clone();
     let selected_effort_value = selected_effort.value.clone();
     let effort_menu = ContextMenu::build(_window, cx, move |mut menu, _window, _cx| {
         for effort_level in effort_levels {
@@ -5578,6 +5849,11 @@ fn render_subagent_model_picker(
         }
         menu
     });
+    let effort_handle = persistent_settings_popover_handle::<ContextMenu>(
+        "agent.subagent_model.reasoning_effort",
+        window,
+        cx,
+    );
 
     v_flex()
         .gap_1()
@@ -5591,12 +5867,14 @@ fn render_subagent_model_picker(
                 .child(
                     DropdownMenu::new(
                         "subagent-model-effort-picker",
-                        selected_effort.name,
+                        selected_effort_label.clone(),
                         effort_menu,
                     )
                     .style(DropdownStyle::Outlined)
                     .trigger_size(ButtonSize::Compact)
-                    .aria_label("Default subagent reasoning effort"),
+                    .aria_label("Default subagent reasoning effort")
+                    .aria_value(selected_effort_label)
+                    .handle(effort_handle),
                 ),
         )
         .into_any_element()
@@ -5608,7 +5886,7 @@ fn render_font_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let current_value = SettingsStore::global(cx)
@@ -5617,9 +5895,13 @@ fn render_font_picker(
         .cloned()
         .map_or_else(|| SharedString::default(), |value| value.into_gpui());
 
-    let handle = ui::PopoverMenuHandle::default();
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.font_family"),
+        window,
+        cx,
+    );
     PopoverMenu::new("font-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button(
                 "font_family_picker_trigger".into(),
                 current_value.clone(),
@@ -5669,7 +5951,7 @@ fn render_theme_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -5678,9 +5960,13 @@ fn render_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
-    let handle = ui::PopoverMenuHandle::default();
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.theme"),
+        window,
+        cx,
+    );
     PopoverMenu::new("theme-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button("theme_picker_trigger".into(), current_value.clone())
                 .aria_label(title)
                 .when(!description.is_empty(), |this| {
@@ -5730,7 +6016,7 @@ fn render_icon_theme_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -5739,9 +6025,13 @@ fn render_icon_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
-    let handle = ui::PopoverMenuHandle::default();
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.icon_theme"),
+        window,
+        cx,
+    );
     PopoverMenu::new("icon-theme-picker")
-        .trigger(wire_picker_trigger_a11y(
+        .trigger(wire_settings_popover_trigger_a11y(
             render_picker_trigger_button("icon_theme_picker_trigger".into(), current_value.clone())
                 .aria_label(title)
                 .when(!description.is_empty(), |this| {
@@ -5790,6 +6080,116 @@ pub mod test {
 
     use super::*;
 
+    #[test]
+    fn dez_settings_roots_use_semantic_native_icons() {
+        let expected = [
+            ("Workspaces & Terminals", IconName::Screen),
+            ("Agents", IconName::DezAgent),
+            ("Appearance", IconName::Sparkle),
+            ("Workspace & Privacy", IconName::Lock),
+            ("Keyboard & Vim", IconName::Keyboard),
+            ("Editor", IconName::Code),
+            ("Languages & Tools", IconName::ToolHammer),
+            ("Search & Files", IconName::FolderSearch),
+            ("Navigation & Layout", IconName::Split),
+            ("Workspace Tools", IconName::ListTree),
+            ("Debugger", IconName::Debug),
+            ("Version Control", IconName::GitBranch),
+            ("Network", IconName::Server),
+            ("Advanced", IconName::Settings),
+        ];
+
+        for (page_title, icon) in expected {
+            assert_eq!(dez_settings_nav_icon("Dez", page_title), Some(icon));
+            assert_eq!(dez_settings_nav_icon("Zed", page_title), None);
+        }
+        assert_eq!(dez_settings_nav_icon("Dez", "Unknown"), None);
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Compact),
+            px(238.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Balanced),
+            px(250.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Spacious),
+            px(264.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Zed", settings::CanvasDensity::Spacious),
+            SIDEBAR_WIDTH
+        );
+        assert_eq!(
+            settings_content_accessibility_label("Dez", "Workspaces & Terminals"),
+            "Workspaces & Terminals Settings"
+        );
+        assert_eq!(
+            settings_content_accessibility_label("Zed", "Workspaces & Terminals"),
+            "Settings Content"
+        );
+    }
+
+    #[test]
+    fn workspace_startup_intents_use_native_destination_icons() {
+        use settings::WorkspaceStartupIntent::{Agentic, Debug, Direct, Focus, Review};
+
+        assert_eq!(
+            workspace_startup_intent_icon(Focus, settings::TerminalLauncher::NativeShell),
+            IconName::Maximize
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Direct, settings::TerminalLauncher::NativeShell),
+            IconName::FolderOpen
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Agentic, settings::TerminalLauncher::Codex),
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Agentic, settings::TerminalLauncher::Tmux),
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Review, settings::TerminalLauncher::NativeShell),
+            IconName::GitBranch
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Debug, settings::TerminalLauncher::NativeShell),
+            IconName::Debug
+        );
+    }
+
+    #[test]
+    fn workspace_settings_actions_are_not_exposed_as_inert_controls() {
+        assert!(action_link_available(ActionLinkScope::App, false, false));
+        assert!(action_link_available(ActionLinkScope::App, true, false));
+        assert!(!action_link_available(
+            ActionLinkScope::Window,
+            false,
+            false
+        ));
+        assert!(action_link_available(ActionLinkScope::Window, true, false));
+        assert!(!action_link_available(
+            ActionLinkScope::WorkspaceRoot,
+            true,
+            false
+        ));
+        assert!(action_link_available(
+            ActionLinkScope::WorkspaceRoot,
+            true,
+            true
+        ));
+        assert_eq!(
+            action_link_unavailable_copy(ActionLinkScope::Window),
+            Some(WINDOW_ACTION_UNAVAILABLE_COPY)
+        );
+        assert_eq!(
+            action_link_unavailable_copy(ActionLinkScope::WorkspaceRoot),
+            Some(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+        );
+    }
+
     impl SettingsWindow {
         fn navbar_entry(&self) -> usize {
             self.navbar_entry
@@ -5805,6 +6205,7 @@ pub mod test {
             Self {
                 title_bar: None,
                 original_window: None,
+                workspace_context_subscription: None,
                 worktree_root_dirs: HashMap::default(),
                 files: Vec::default(),
                 current_file: SettingsUiFile::User,
@@ -5944,6 +6345,7 @@ pub mod test {
         let mut settings_window = SettingsWindow {
             title_bar: None,
             original_window: None,
+            workspace_context_subscription: None,
             worktree_root_dirs: HashMap::default(),
             files: Vec::default(),
             current_file: crate::SettingsUiFile::User,
@@ -6432,8 +6834,21 @@ pub mod test {
             );
         });
 
+        settings_window.update(cx, |settings_window, cx| {
+            settings_window.update_workspace_context(None, cx);
+            assert_eq!(
+                settings_window.original_window,
+                Some(workspace2_handle),
+                "reopening Settings without a new Workspace owner must preserve its current action target"
+            );
+        });
+        settings_window.read_with(cx, |settings_window, cx| {
+            assert!(settings_window.has_live_window_context(cx));
+            assert!(settings_window.has_workspace_root_context(cx));
+        });
+
         settings_window.update_in(cx, |settings_window, window, cx| {
-            settings_window.original_window = Some(workspace1_handle);
+            settings_window.update_workspace_context(Some(workspace1_handle), cx);
             settings_window.fetch_files(window, cx);
         });
 
@@ -6453,6 +6868,52 @@ pub mod test {
                 "reusing Settings from another window must replace, not merge, project scope"
             );
         });
+
+        let settings_entity = settings_window
+            .root(cx)
+            .expect("Settings window should keep its root view");
+        let notify_count = Rc::new(RefCell::new(0usize));
+        let _notify_subscription = cx.update(|cx| {
+            let notify_count = notify_count.clone();
+            cx.observe(&settings_entity, move |_, _| {
+                *notify_count.borrow_mut() += 1;
+            })
+        });
+        cx.run_until_parked();
+
+        workspace1_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("originating Workspace window should remain available");
+        cx.run_until_parked();
+        assert!(
+            *notify_count.borrow() > 0,
+            "Settings must invalidate when its originating MultiWorkspace changes"
+        );
+
+        settings_window.update(cx, |settings_window, cx| {
+            settings_window.update_workspace_context(Some(workspace2_handle), cx);
+        });
+        cx.run_until_parked();
+        let notify_count_after_retarget = *notify_count.borrow();
+
+        workspace1_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("previous Workspace window should remain available");
+        cx.run_until_parked();
+        assert_eq!(
+            *notify_count.borrow(),
+            notify_count_after_retarget,
+            "Settings must stop observing a previous Workspace owner"
+        );
+
+        workspace2_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("new Workspace window should remain available");
+        cx.run_until_parked();
+        assert!(
+            *notify_count.borrow() > notify_count_after_retarget,
+            "Settings must observe its replacement Workspace owner"
+        );
     }
 
     #[gpui::test]

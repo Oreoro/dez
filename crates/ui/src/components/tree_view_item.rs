@@ -9,6 +9,7 @@ pub struct TreeViewItem {
     id: ElementId,
     group_name: Option<SharedString>,
     label: SharedString,
+    start_icon: Option<IconName>,
     expanded: bool,
     selected: bool,
     disabled: bool,
@@ -30,6 +31,7 @@ impl TreeViewItem {
             id: id.into(),
             group_name: None,
             label: label.into(),
+            start_icon: None,
             expanded: false,
             selected: false,
             disabled: false,
@@ -48,6 +50,11 @@ impl TreeViewItem {
 
     pub fn group_name(mut self, group_name: impl Into<SharedString>) -> Self {
         self.group_name = Some(group_name.into());
+        self
+    }
+
+    pub fn start_icon(mut self, icon: IconName) -> Self {
+        self.start_icon = Some(icon);
         self
     }
 
@@ -155,6 +162,7 @@ impl RenderOnce for TreeViewItem {
         let root_item = self.root_item;
         let expanded = self.expanded;
         let selected = self.selected;
+        let start_icon = self.start_icon;
 
         h_flex()
             .id(self.id)
@@ -198,6 +206,15 @@ impl RenderOnce for TreeViewItem {
                                     .opened_icon(IconName::ChevronDown)
                                     .closed_icon(IconName::ChevronRight),
                             )
+                            .when_some(start_icon, |this, icon| {
+                                this.child(Icon::new(icon).size(IconSize::Small).color(
+                                    if selected {
+                                        Color::Default
+                                    } else {
+                                        Color::Muted
+                                    },
+                                ))
+                            })
                             .child(
                                 Label::new(label)
                                     .when(!self.selected, |this| this.color(Color::Muted)),
@@ -208,6 +225,15 @@ impl RenderOnce for TreeViewItem {
                                     .id("nested_inner_tree_view_item")
                                     .w_full()
                                     .flex_grow_1()
+                                    .when_some(start_icon, |this, icon| {
+                                        this.child(Icon::new(icon).size(IconSize::Small).color(
+                                            if selected {
+                                                Color::Default
+                                            } else {
+                                                Color::Muted
+                                            },
+                                        ))
+                                    })
                                     .child(
                                         Label::new(label)
                                             .when(!self.selected, |this| this.color(Color::Muted)),

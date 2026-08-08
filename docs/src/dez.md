@@ -54,7 +54,7 @@ eligible, attention projection, and routes back to Files and Git review.
 | **Aider**       | `aider`                              | Start a new terminal-owned CLI session                  | Native Dez terminal                       |
 | **tmux**        | `tmux new-session -A -s <workspace>-<root-id>` | The same root-scoped command attaches when the named session exists | tmux process inside a native Dez terminal |
 | **Herdr**       | `herdr`                              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
-| **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses `cmux open <path>`      | cmux remains the external app             |
+| **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses its native macOS folder handoff, with `cmux open <path>` as a compatibility fallback | cmux remains the external app             |
 
 The Start and Continue routes are available from the pane **+**, **File**, a
 Workspace's options menu, and Command Palette. They create a normal Main Work
@@ -191,8 +191,8 @@ not flatten pane ownership or conceal unsaved work.
 The tab-strip **+** is the single **Add to Main Work Area** control. Its
 **Open Terminal** submenu launches the **Default Terminal**, a **Native Shell**,
 Codex, Claude Code, or OpenCode. **More Agent CLIs** keeps Gemini CLI, Aider,
-and Herdr one level deeper. **Sessions and Multiplexers** keeps **Workspace
-tmux**, **Browse Running Sessions…**, and the applicable cmux handoff visible
+and Herdr one level deeper. **Sessions and Multiplexers** keeps the applicable
+cmux handoff, **Browse Running Sessions…**, and **Workspace tmux · fallback**
 at the first menu level. The Add menu also opens the optional Built-in Agent,
 a file, Files, Git Changes, Run Task,
 Debug, Workspace search, or symbol search. Terminal and Agent routes lead;
@@ -225,8 +225,9 @@ in the same order, followed by **Resume Existing Agent**. Its first row previews
 configured result as **Default · Native Shell**, **Default · Codex**, **Default
 · Claude Code**, **Default · OpenCode**, **Default · tmux Session**, a detected
 agent, or **Default · Custom Command**; the pane **+** keeps the shorter
-**Default Terminal** label. Native Shell, Workspace tmux, Codex, Claude Code, and
-OpenCode remain explicit alternatives. Gemini CLI, Aider, and Herdr are grouped
+**Default Terminal** label. Native Shell, Codex, Claude Code, and OpenCode
+remain explicit terminal alternatives. **Sessions and Multiplexers** keeps cmux
+first and **Workspace tmux · fallback** explicit. Gemini CLI, Aider, and Herdr are grouped
 under **More Agent CLIs** so the frequent path stays short.
 Continue routes use the providers' documented last-session commands. **Browse
 Running Sessions…** follows those menus. Starting new work, continuing provider
@@ -255,7 +256,7 @@ unrelated tool. No recipe may manufacture an empty column.
 When that work area is empty, one restrained launch panel states the product
 purpose and offers a resolved primary destination such as **Open Terminal ·
 Native Shell**, **Open Terminal · Codex**, or **Open Terminal · Custom
-Command**, followed by **Browse Sessions**, **Find File**, and **Review
+Command**, followed by **Browse Running Sessions**, **Find File**, and **Review
 Changes**. Its provider or terminal mark matches that configured destination.
 It does not repeat Home's product summary or invent a placeholder tab. It is an
 operational start state for the current Workspace, not a second Home screen.
@@ -328,7 +329,8 @@ Hierarchy follows the next useful action. Home is consistently headed
 **Continue your work**. Without a codebase, **Open Workspace** and **Clone
 Repository** are the only primary routes. Inside an active Workspace, **Start
 with a tool** offers **Open Terminal**, Codex, Claude Code, OpenCode,
-**Workspace tmux**, and the explicit **Open Workspace in cmux** handoff.
+the explicit **Open Workspace in cmux** handoff, and **Workspace tmux · fallback** as an
+in-Dez fallback.
 **Inspect and resume** keeps **Browse Running Sessions…**, **Open Files**, and
 **Review Changes** adjacent. These are native command rows on the editor
 surface, not filled dashboard cards. Home's first row identifies
@@ -359,7 +361,7 @@ resume**.
 **Open Terminal** uses the configured **Default Terminal**. Its inline detail
 names that resolved default before launch, so a returning user does not need to
 reopen Settings to remember whether **Open Terminal** starts a shell, agent, or
-**Workspace tmux** session. The adjacent **+**
+**Workspace tmux · fallback** session. The adjacent **+**
 and Command Palette keep Native Shell, tmux, Codex, Claude Code, and OpenCode
 available as one-off launches, with Gemini CLI, Aider, and Herdr grouped under
 **More Agent CLIs**. **New File** remains available from File, the
@@ -382,17 +384,26 @@ keeps its Options action visible; opening that menu keeps its scoped close
 controls visible as well. Terminal creation remains visible in the active
 Workspace header, an inactive empty-Workspace row, or a collapsed Workspace
 header, so pointer hover and a separate Main Work Area empty state are never the
-only routes. The active header launcher opens the complete native menu for the
-Default Terminal, Native Shell, Workspace tmux, supported agent CLIs, and cmux
-handoff. Search clearing and banner dismissal are keyboard-focusable. Workspace
-names and their action cluster share one bounded inline row: text truncates
-within its allocation, actions never overlap it, and no gradient mask is painted
-over either side of the header. An inactive expanded Workspace with no Agent
-Sessions shows one labeled **Open Terminal** action below the header instead of
-duplicating the compact menu. Collapsing a Workspace restores the compact header
-action, and a Workspace with Session activity keeps that route available.
+only routes. The active header launcher opens the configured terminal
+destination. **Workspace Options** keeps the broader **Open Terminal** and
+**Resume Existing Agent** menus separate, while one **Sessions and
+Multiplexers** submenu groups cmux handoff, running-session discovery, and the
+**Workspace tmux · fallback**. Search clearing and banner dismissal are
+keyboard-focusable. Workspace names and their action cluster share one bounded
+inline row: text truncates within its allocation, actions never overlap it, and
+no gradient mask is painted over either side of the header. An inactive expanded
+Workspace with no Agent Sessions shows one labeled **Open Terminal** action
+below the header instead of duplicating the compact menu. Collapsing a Workspace
+restores the compact header action, and a Workspace with Session activity keeps
+that route available.
 Readiness remains in the overview summary and the Workspace header's accessible
 name instead of being repeated as a decorative dot-and-caption row.
+
+**Remove Workspace from Window** removes that Workspace group and activates the
+nearest already loaded Workspace, including a retained remote Workspace. If no
+loaded neighbor exists, Dez may open the immediately adjacent local Workspace;
+it never treats a remote path as local. Only when no reachable neighbor remains
+does the Main Work Area move to a durable empty Workspace.
 
 The Main Work Area follows the same rule. Back, Forward, Add, Switch Surface,
 Split, Zoom, and tab close controls are keyboard-focusable and specifically
@@ -561,9 +572,10 @@ conversation beside the editor. It is optional and requires a usable provider
 and model.
 
 The tab-strip **+** exposes native terminal launch choices: **Default
-Terminal**, **Native Shell**, **Workspace tmux**, **Codex**, **Claude Code**, and
-**OpenCode**, followed by **More Agent CLIs** for **Gemini CLI**, **Aider**, and
-**Herdr**. Workspace Options identifies the configured default launcher and keeps
+Terminal**, **Native Shell**, **Codex**, **Claude Code**, and **OpenCode**,
+followed by **More Agent CLIs** for **Gemini CLI**, **Aider**, and **Herdr**.
+**Sessions and Multiplexers** leads with cmux and keeps **Workspace tmux ·
+fallback** explicit. Workspace Options identifies the configured default launcher and keeps
 a separate native-shell choice beside the explicit providers.
 The guided default is editable under **Settings → Workspaces & Terminals →
 Terminal Launch → Default Terminal**. Native Shell and the supported launchers
@@ -582,7 +594,9 @@ runs `tmux new-session -A -s <workspace>-<root-id>` after the native login shell
 is ready. Repositories with the same folder name therefore cannot attach to one
 another. During compatibility recovery, Dez attaches an older basename-only
 session only when its active pane is inside the current Workspace root; it never
-renames or terminates that session. **Workspace: Open in cmux** hands the active
+renames or terminates that session. Exact tmux targets are quoted before the
+command reaches Zsh, so tmux's leading `=` selector cannot be mistaken for Zsh
+executable-path expansion. **Workspace: Open in cmux** hands the active
 local Workspace to cmux without replacing or closing Dez. **Browse Running
 Sessions…** opens or refocuses Workspaces, removes
 temporary search and attention filters, refreshes all supported sources, and
@@ -591,6 +605,10 @@ intended.
 Dez waits for the configured shell startup before submitting the selected
 command, so login-shell initialization, remote/WSL behavior, and native PTY
 keyboard handling remain intact.
+Agent and tmux launchers assign their provider name to the native tab as soon as
+it is created. Workspaces therefore reads **Codex**, **Claude Code**, **Herdr**,
+or **Workspace tmux · fallback** instead of a stack of indistinguishable **Terminal** rows
+while process discovery catches up.
 
 Both paths edit the same Workspace and return evidence to the same Files, Git,
 diagnostics, diff, and review surfaces. Starting a terminal agent does not
@@ -803,9 +821,11 @@ because its documented [CLI](https://github.com/manaflow-ai/cmux) defines a
 separate macOS workspace and terminal application. Instead, native terminal,
 Resume Existing Agent, and Built-in Agent actions lead Workspace Options. **Open
 Workspace in cmux** begins the external-work group beside discovered
-multiplexer Sessions. It invokes the documented `cmux open <path>` handoff,
-keeps Dez open, and
-then refreshes path-matched cmux activity. Existing cmux Workspaces remain
+multiplexer Sessions. It asks macOS LaunchServices to open the folder with the
+registered stable or nightly cmux application, so the secure default socket
+policy does not block the handoff. Older installations retain the documented
+`cmux open <path>` CLI as a compatibility fallback. Dez stays open and then
+refreshes path-matched cmux activity. Existing cmux Workspaces remain
 selectable beneath their associated Dez Workspace. This preserves native Dez
 editing and review while making cmux a first-class opt-in owner for users who
 want its `claude-teams`, `codex-teams`, or `omo` workflows.
@@ -910,8 +930,8 @@ preserved; unfinished endpoints become failures so their exact last-known rows
 can remain visible.
 One hung server therefore cannot hide healthy Sessions reported by another or
 extend the refresh indefinitely.
-The explicit **Open Workspace in cmux** handoff is separately bounded to eight
-seconds. A timeout leaves the Workspace unchanged and replaces the progress
+The explicit **Open Workspace in cmux** LaunchServices or compatibility-CLI
+handoff is separately bounded to eight seconds. A timeout leaves the Workspace unchanged and replaces the progress
 notice with a persistent native toast linked to the cmux API guide. If cmux is
 not installed, the same native surface offers **Get cmux** instead. Successful
 handoffs use a short confirmation and do not leave another navigation surface
@@ -931,10 +951,14 @@ cmux Workspaces stay in cmux and open through its `select-workspace` command.
 Discovery updates automatically; **Refresh Running Sessions** in a
 Workspace's options menu requests an immediate scan, shows when discovery is
 running, and explains when no path-matched activity exists.
-Attach terminals keep the native rerun control. Failure shows an explicit
-**Retry Attach** action and refreshes discovery after completion without
-starting a duplicate attach automatically. Raw Herdr shells without structured
-agent state are labeled **Available**, not unknown.
+Attach terminals keep the native rerun control. A command that starts and then
+fails exposes **Retry Attach** in that terminal's native context toolbar, keeps
+its diagnostic output visible, and refreshes discovery after completion. **Open
+New Shell Here** starts independent work in the same Workspace without claiming
+Session transfer. A failure before terminal creation stays in one Workspace
+notification instead; Dez never shows both recoveries or starts a duplicate
+attach automatically. Raw Herdr shells without structured agent state are
+labeled **Available**, not unknown.
 When cmux is not discoverable, Workspace Options replaces the inapplicable
 handoff with one **Get cmux…** action; tmux and Herdr remain usable, navigation
 stays quiet, and no external Session is changed.
@@ -974,14 +998,23 @@ source has activity, but none belongs beneath the selected Workspace; check
 Herdr, or cmux sessions** means the available sources returned no activity. No
 state means Dez adopted or ended an external process.
 
+For the current external command and access contracts, use the official
+[cmux CLI/API reference](https://cmux.com/docs/api), [Herdr CLI
+reference](https://herdr.dev/docs/cli-reference/), and [Herdr socket API
+reference](https://herdr.dev/docs/socket-api/). Dez keeps these integrations
+bounded to documented discovery, focus, and explicit attach operations; it
+does not take over or rewrite either application's sessions.
+
 - tmux is discovered at `/opt/homebrew/bin/tmux`, `/usr/local/bin/tmux`, or on
   `PATH`. Start or attach to a tmux server and ensure the pane's working
   directory is inside the intended Workspace. **Open Workspace tmux** remains
   available when you want Dez to create or attach to the root-scoped session
   explicitly. A basename-only session from an older Dez build remains visible
   and is reused only when its active pane still belongs to that Workspace root.
-- cmux is discovered at
+- cmux is handed a folder through its registered stable or nightly macOS bundle
+  before Dez needs its control socket. CLI compatibility and live discovery use
   `/Applications/cmux.app/Contents/Resources/bin/cmux`,
+  `/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux`,
   `/opt/homebrew/bin/cmux`, `/usr/local/bin/cmux`, or on `PATH`. Open the Workspace
   in cmux first, or use **Open Workspace in cmux**; Dez leaves the Workspace
   open if the handoff fails or times out. Live rows are optional: a secure
@@ -1027,8 +1060,8 @@ and neither role is stretched into a decorative badge. The same scale applies
 to the top bar, pane Add control, Workspaces rows, and status navigation.
 
 Empty Main Work Area panes avoid a centered onboarding card: they use compact
-top-left native chrome with **Open Terminal**, **Browse Sessions**, **Find
-File**, and **Review Changes**. The Dez visual profile keeps the status bar
+top-left native chrome with **Open Terminal**, **Browse Running Sessions**,
+**Find File**, and **Review Changes**. The Dez visual profile keeps the status bar
 visible and includes active-file and line-ending context alongside the
 inherited language, diagnostics, and cursor controls. Native Back and Forward
 controls are visible in every Main Work Area tab strip, alongside Add, tab
@@ -1084,12 +1117,18 @@ persistent for people who prefer that layout. **Workspaces Position** chooses
 its window edge. Closing Workspaces never closes a Workspace, terminal, or
 Agent Session.
 
+Files is on demand for the same reason: a fresh Workspace opens in the Main
+Work Area instead of creating a second column. Restored layouts remain intact,
+and **Settings → Workspace Tools → Open Files Automatically** opts into the
+file tree for every newly opened Workspace.
+
 Each Workspace header is the primary switcher: selecting it restores that
 codebase's last active tab and pane, while its separate chevron only expands or
-collapses the Workspace's nested **Open** and **Sessions** sections. Open
-returns to real pane-owned tabs. Sessions shows only current, actionable,
-recoverable, or review-ready work; inactive completed Agent Sessions remain in
-Agent History. Externally owned tmux, Herdr, and cmux work is summarized by one
+collapses the Workspace's nested **Layout** and **Activity** sections. Layout
+returns to real pane-owned tabs and appears once there are at least two tabs to
+navigate. Activity shows only current active, running, actionable, recoverable,
+or review-ready work; inactive completed Agent Sessions remain in Agent
+History. Externally owned tmux, Herdr, and cmux work is summarized by one
 **Running Sessions** disclosure until the user asks for detailed rows.
 **View → Navigate Workspaces** collects
 **Focus Workspaces**, **Search Workspaces and Activity…**, **Previous
@@ -1234,6 +1273,7 @@ steps remain source claims until an exact newer package records runtime proof.
 For precise implementation state, read:
 
 - [Fork Notes](./development/dez/fork-notes.md)
+- [v0.5 Surface Readiness](./development/dez/v0.5-surface-readiness.md)
 - [v0.4 Readiness](./development/dez/v0.4-readiness.md)
 - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
 - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)

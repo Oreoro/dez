@@ -89,6 +89,9 @@ pub struct ThreadItem {
     density: ThreadItemDensity,
     radius: ThreadItemRadius,
     contrast: ThreadItemContrast,
+    neutral_selection: bool,
+    selected_label_weight: Option<gpui::FontWeight>,
+    state_label_badge: bool,
     is_truncated: bool,
     added: Option<usize>,
     removed: Option<usize>,
@@ -138,6 +141,9 @@ impl ThreadItem {
             density: ThreadItemDensity::default(),
             radius: ThreadItemRadius::default(),
             contrast: ThreadItemContrast::default(),
+            neutral_selection: false,
+            selected_label_weight: None,
+            state_label_badge: true,
             is_truncated: true,
             added: None,
             removed: None,
@@ -359,6 +365,21 @@ impl ThreadItem {
         self
     }
 
+    pub fn neutral_selection(mut self, neutral: bool) -> Self {
+        self.neutral_selection = neutral;
+        self
+    }
+
+    pub fn selected_label_weight(mut self, weight: Option<gpui::FontWeight>) -> Self {
+        self.selected_label_weight = weight;
+        self
+    }
+
+    pub fn state_label_badge(mut self, badge: bool) -> Self {
+        self.state_label_badge = badge;
+        self
+    }
+
     pub fn is_truncated(mut self, is_truncated: bool) -> Self {
         self.is_truncated = is_truncated;
         self
@@ -386,28 +407,46 @@ impl ThreadItem {
 impl RenderOnce for ThreadItem {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let color = cx.theme().colors();
-        let selected_color = match self.contrast {
-            ThreadItemContrast::Low => color.element_active.opacity(0.55),
-            ThreadItemContrast::Standard => color.element_active,
-            ThreadItemContrast::High => color
+        let selected_color = match (self.neutral_selection, self.contrast) {
+            (true, ThreadItemContrast::Low) => color.element_active.opacity(0.55),
+            (true, ThreadItemContrast::Standard) => color.element_active,
+            (true, ThreadItemContrast::High) => {
+                color.element_active.blend(color.text.opacity(0.08))
+            }
+            (false, ThreadItemContrast::Low) => color.element_active.opacity(0.55),
+            (false, ThreadItemContrast::Standard) => color.element_active,
+            (false, ThreadItemContrast::High) => color
                 .element_active
                 .blend(color.border_focused.opacity(0.16)),
         };
 
-        let hover_color = match self.contrast {
-            ThreadItemContrast::Low => color
+        let hover_color = match (self.neutral_selection, self.contrast) {
+            (true, ThreadItemContrast::Low) => color
                 .element_active
                 .blend(color.element_background.opacity(0.12)),
-            ThreadItemContrast::Standard => color
+            (true, ThreadItemContrast::Standard) => color
                 .element_active
                 .blend(color.element_background.opacity(0.2)),
-            ThreadItemContrast::High => color
+            (true, ThreadItemContrast::High) => {
+                color.element_active.blend(color.text.opacity(0.04))
+            }
+            (false, ThreadItemContrast::Low) => color
+                .element_active
+                .blend(color.element_background.opacity(0.12)),
+            (false, ThreadItemContrast::Standard) => color
+                .element_active
+                .blend(color.element_background.opacity(0.2)),
+            (false, ThreadItemContrast::High) => color
                 .element_active
                 .blend(color.border_focused.opacity(0.12)),
         };
-        let focused_border_color = match self.contrast {
-            ThreadItemContrast::Low => color.border_variant,
-            ThreadItemContrast::Standard | ThreadItemContrast::High => color.border_focused,
+        let focused_border_color = if self.neutral_selection {
+            color.border
+        } else {
+            match self.contrast {
+                ThreadItemContrast::Low => color.border_variant,
+                ThreadItemContrast::Standard | ThreadItemContrast::High => color.border_focused,
+            }
         };
         let (row_padding_y, row_padding_x, content_height, content_gap, metadata_gap, label_size) =
             match self.density {
@@ -620,12 +659,16 @@ impl RenderOnce for ThreadItem {
 
         let title = self.title;
         let highlight_positions = self.highlight_positions;
+        let active_title_weight = (self.selected || self.focused)
+            .then_some(self.selected_label_weight)
+            .flatten();
 
         let title_label = if let Some(title_slot) = self.title_slot {
             title_slot
         } else if self.title_generating {
             Label::new(title)
                 .size(label_size)
+                .when_some(active_title_weight, |label, weight| label.weight(weight))
                 .color(Color::Muted)
                 .with_animation(
                     "generating-title",
@@ -638,12 +681,14 @@ impl RenderOnce for ThreadItem {
         } else if highlight_positions.is_empty() {
             Label::new(title)
                 .size(label_size)
+                .when_some(active_title_weight, |label, weight| label.weight(weight))
                 .when_some(self.title_label_color, |label, color| label.color(color))
                 .truncate()
                 .into_any_element()
         } else {
             HighlightedLabel::new(title, highlight_positions)
                 .size(label_size)
+                .when_some(active_title_weight, |label, weight| label.weight(weight))
                 .when_some(self.title_label_color, |label, color| label.color(color))
                 .truncate()
                 .into_any_element()
@@ -672,6 +717,7 @@ impl RenderOnce for ThreadItem {
         let has_actor_label = self.actor_label.is_some();
         let has_visible_actor_label = has_actor_label && self.actor_label_visible;
         let has_state_label = self.state_label.is_some();
+        let state_label_badge = self.state_label_badge;
         let has_host_label = self.host_label.is_some();
         let has_visible_host_label = has_host_label && self.host_label_visible;
         let has_evidence_label = self.evidence_label.is_some();
@@ -797,22 +843,32 @@ impl RenderOnce for ThreadItem {
                                     })
                                 })
                                 .when_some(self.state_label, |this, state| {
-                                    this.child(
-                                        h_flex()
-                                            .min_w_0()
-                                            .flex_shrink_1()
-                                            .max_w(px(168.0))
-                                            .overflow_hidden()
-                                            .px_1()
-                                            .rounded_sm()
-                                            .bg(color.element_background)
-                                            .child(
-                                                Label::new(state)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(Color::Muted)
-                                                    .truncate(),
-                                            ),
-                                    )
+                                    let state_label = Label::new(state)
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted)
+                                        .truncate();
+                                    if state_label_badge {
+                                        this.child(
+                                            h_flex()
+                                                .min_w_0()
+                                                .flex_shrink_1()
+                                                .max_w(px(168.0))
+                                                .overflow_hidden()
+                                                .px_1()
+                                                .rounded_sm()
+                                                .bg(color.element_background)
+                                                .child(state_label),
+                                        )
+                                    } else {
+                                        this.child(
+                                            h_flex()
+                                                .min_w_0()
+                                                .flex_shrink_1()
+                                                .max_w(px(168.0))
+                                                .overflow_hidden()
+                                                .child(state_label),
+                                        )
+                                    }
                                 })
                                 .when(self.host_label_visible, |this| {
                                     this.when_some(self.host_label, |this, host| {

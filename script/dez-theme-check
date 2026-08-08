@@ -97,8 +97,10 @@ function requireAlphaRange(theme, token, minimum, maximum) {
 
 function requireGlassMaterial(theme) {
   // The native macOS material is the primary glass layer. Theme colors tint
-  // that material; they must not be opaque enough to turn nested panes black.
-  requireAlphaRange(theme, "background", 0.32, 0.5);
+  // that material. The dark variant needs a stronger tint to remain readable
+  // over bright desktops, while the light variant keeps its lighter wash.
+  const darkMaterial = theme.appearance === "dark";
+  requireAlphaRange(theme, "background", darkMaterial ? 0.78 : 0.32, darkMaterial ? 0.84 : 0.5);
   for (const token of [
     "surface.background",
     "panel.background",
@@ -108,10 +110,10 @@ function requireGlassMaterial(theme) {
     "tab_bar.background",
     "toolbar.background",
   ]) {
-    requireAlphaRange(theme, token, 0.16, 0.32);
+    requireAlphaRange(theme, token, darkMaterial ? 0.72 : 0.16, darkMaterial ? 0.84 : 0.32);
   }
   for (const token of ["title_bar.background", "status_bar.background"]) {
-    requireAlphaRange(theme, token, 0.32, 0.5);
+    requireAlphaRange(theme, token, darkMaterial ? 0.8 : 0.32, darkMaterial ? 0.88 : 0.5);
   }
   for (const token of ["elevated_surface.background", "panel.overlay_background"]) {
     requireAlphaRange(theme, token, 0.8, 0.95);
@@ -356,7 +358,14 @@ function requireDarkThemeContrast(theme, surfaces) {
 }
 
 const opaqueDarkSurfaces = resolvedThemeSurfaces(luminOpaque, ["#000000"]);
-const blurredDarkBackdrops = ["#000000", "#303030", "#18212B"];
+const blurredDarkBackdrops = [
+  "#000000",
+  "#303030",
+  "#18212B",
+  "#FFFFFF",
+  "#D8E2EC",
+  "#E9DED2",
+];
 const blurredDarkSurfaces = resolvedThemeSurfaces(luminBlur, blurredDarkBackdrops);
 requireDarkThemeContrast(luminBlur, blurredDarkSurfaces);
 requireDarkThemeContrast(luminOpaque, opaqueDarkSurfaces);
@@ -416,7 +425,7 @@ const initialSettings = fs.readFileSync(initialSettingsPath, "utf8");
 for (const settings of [defaultSettings, initialSettings]) {
   requireValue(settings.includes('"light": "Lumin Light"'), "light default must select Lumin Light");
   requireValue(settings.includes('"dark": "Lumin Blur"'), "dark default must select Lumin Blur");
-  requireValue(settings.includes('"density": "balanced"'), "Dez visual defaults must use balanced density");
+  requireValue(settings.includes('"density": "spacious"'), "Dez visual defaults must use spacious density");
   requireValue(
     settings.includes('"buffer_font_family": "Lilex"'),
     "editor default must select the bundled Lilex coding face",

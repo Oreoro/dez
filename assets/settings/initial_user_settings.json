@@ -2,15 +2,16 @@
 //
 // Dez starts with one native Main Work Area for files, terminals, tools, and
 // review. Workspaces stays closed until cross-Workspace supervision is useful.
-// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and
-// terminal text keep those native surfaces visually coherent.
+// Rounded, high-contrast Lumin chrome, comfortable 16 px IBM Plex Sans
+// interface text, and Lilex code and terminal text keep those native surfaces
+// visually coherent.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
   "ui_font_family": "IBM Plex Sans",
-  "ui_font_size": 14,
+  "ui_font_size": 16,
   "buffer_font_family": "Lilex",
   "buffer_font_size": 14,
   "theme": {
@@ -19,12 +20,15 @@
     "dark": "Lumin Blur"
   },
   "design_system": {
-    "density": "balanced"
+    "density": "spacious",
+    "radius": "rounded",
+    "contrast": "high"
   },
   "icon_theme": "Dez (Default)",
   "project_panel": {
     "starts_open": false
   },
+  "startup_intent": "focus",
   "tab_bar": {
     "show": true,
     "show_nav_history_buttons": true,
@@ -32,8 +36,11 @@
   },
   "status_bar": {
     "experimental.show": true,
-    "show_active_file": true,
-    "line_endings_button": true
+    "show_active_file": false,
+    "active_language_button": true,
+    "cursor_position_button": true,
+    "line_endings_button": false,
+    "active_encoding_button": "non_utf8"
   },
   "markdown_preview_code_font_family": "Lilex",
   "terminal": {

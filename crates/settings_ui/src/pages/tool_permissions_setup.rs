@@ -8,11 +8,11 @@ use settings::{Settings as _, SettingsStore, ToolPermissionMode};
 use shell_command_parser::extract_commands;
 use std::sync::Arc;
 use theme_settings::ThemeSettings;
-use ui::{Banner, ContextMenu, Divider, PopoverMenu, Severity, Tooltip, prelude::*};
+use ui::{Banner, ContextMenu, Divider, DropdownMenu, Severity, Tooltip, prelude::*};
 use util::ResultExt as _;
 use util::shell::ShellKind;
 
-use crate::{SettingsWindow, components::SettingsInputField};
+use crate::{SettingsWindow, components::SettingsInputField, persistent_settings_popover_handle};
 
 const HARDCODED_RULES_DESCRIPTION: &str =
     "`rm -rf` commands are always blocked when run on `$HOME`, `~`, `.`, `..`, or `/`";
@@ -203,7 +203,11 @@ pub(crate) fn render_tool_permissions_setup_page(
         )
         .child(
             v_flex()
-                .child(render_global_default_mode_section(global_default))
+                .child(render_global_default_mode_section(
+                    global_default,
+                    window,
+                    cx,
+                ))
                 .child(Divider::horizontal())
                 .children(tool_items.into_iter().enumerate().flat_map(|(i, item)| {
                     let mut elements: Vec<AnyElement> = vec![item];
@@ -391,7 +395,12 @@ pub(crate) fn render_tool_config_page(
                 .min_w_0()
                 .w_full()
                 .gap_5()
-                .child(render_default_mode_section(tool.id, rules.default, cx))
+                .child(render_default_mode_section(
+                    tool.id,
+                    rules.default,
+                    window,
+                    cx,
+                ))
                 .child(Divider::horizontal().color(ui::DividerColor::BorderFaded))
                 .child(render_rule_section(
                     tool.id,
@@ -1069,8 +1078,46 @@ fn render_add_pattern_input(
         .into_any_element()
 }
 
-fn render_global_default_mode_section(current_mode: ToolPermissionMode) -> AnyElement {
-    let mode_label = current_mode.to_string();
+fn render_global_default_mode_section(
+    current_mode: ToolPermissionMode,
+    window: &mut Window,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    let mode_label = mode_display_label(current_mode);
+    let menu = ContextMenu::build(window, cx, move |menu, _, _| {
+        menu.toggleable_entry(
+            "Confirm",
+            current_mode == ToolPermissionMode::Confirm,
+            IconPosition::Start,
+            None,
+            move |_, cx| {
+                set_global_default_permission(ToolPermissionMode::Confirm, cx);
+            },
+        )
+        .toggleable_entry(
+            "Allow",
+            current_mode == ToolPermissionMode::Allow,
+            IconPosition::Start,
+            None,
+            move |_, cx| {
+                set_global_default_permission(ToolPermissionMode::Allow, cx);
+            },
+        )
+        .toggleable_entry(
+            "Deny",
+            current_mode == ToolPermissionMode::Deny,
+            IconPosition::Start,
+            None,
+            move |_, cx| {
+                set_global_default_permission(ToolPermissionMode::Deny, cx);
+            },
+        )
+    });
+    let popover_handle = persistent_settings_popover_handle::<ContextMenu>(
+        "agent.tool_permissions.global_default",
+        window,
+        cx,
+    );
 
     h_flex()
         .my_4()
@@ -1090,28 +1137,13 @@ fn render_global_default_mode_section(current_mode: ToolPermissionMode) -> AnyEl
                 ),
         )
         .child(
-            PopoverMenu::new("global-default-mode")
-                .trigger(
-                    Button::new("global-mode-trigger", mode_label)
-                        .tab_index(0_isize)
-                        .style(ButtonStyle::Outlined)
-                        .size(ButtonSize::Medium)
-                        .end_icon(Icon::new(IconName::ChevronDown).size(IconSize::Small)),
-                )
-                .menu(move |window, cx| {
-                    Some(ContextMenu::build(window, cx, move |menu, _, _| {
-                        menu.entry("Confirm", None, move |_, cx| {
-                            set_global_default_permission(ToolPermissionMode::Confirm, cx);
-                        })
-                        .entry("Allow", None, move |_, cx| {
-                            set_global_default_permission(ToolPermissionMode::Allow, cx);
-                        })
-                        .entry("Deny", None, move |_, cx| {
-                            set_global_default_permission(ToolPermissionMode::Deny, cx);
-                        })
-                    }))
-                })
-                .anchor(gpui::Anchor::TopRight),
+            DropdownMenu::new("global-default-mode", mode_label, menu)
+                .style(DropdownStyle::Outlined)
+                .trigger_size(ButtonSize::Medium)
+                .tab_index(0_isize)
+                .aria_label("Default permission")
+                .aria_value(mode_label)
+                .handle(popover_handle),
         )
         .into_any_element()
 }
@@ -1119,15 +1151,44 @@ fn render_global_default_mode_section(current_mode: ToolPermissionMode) -> AnyEl
 fn render_default_mode_section(
     tool_id: &'static str,
     current_mode: ToolPermissionMode,
-    _cx: &mut Context<SettingsWindow>,
+    window: &mut Window,
+    cx: &mut Context<SettingsWindow>,
 ) -> AnyElement {
-    let mode_label = match current_mode {
-        ToolPermissionMode::Allow => "Allow",
-        ToolPermissionMode::Deny => "Deny",
-        ToolPermissionMode::Confirm => "Confirm",
-    };
-
-    let tool_id_owned = tool_id.to_string();
+    let mode_label = mode_display_label(current_mode);
+    let menu = ContextMenu::build(window, cx, move |menu, _, _| {
+        menu.toggleable_entry(
+            "Confirm",
+            current_mode == ToolPermissionMode::Confirm,
+            IconPosition::Start,
+            None,
+            move |_, cx| {
+                set_default_mode(tool_id, ToolPermissionMode::Confirm, cx);
+            },
+        )
+        .toggleable_entry(
+            "Allow",
+            current_mode == ToolPermissionMode::Allow,
+            IconPosition::Start,
+            None,
+            move |_, cx| {
+                set_default_mode(tool_id, ToolPermissionMode::Allow, cx);
+            },
+        )
+        .toggleable_entry(
+            "Deny",
+            current_mode == ToolPermissionMode::Deny,
+            IconPosition::Start,
+            None,
+            move |_, cx| {
+                set_default_mode(tool_id, ToolPermissionMode::Deny, cx);
+            },
+        )
+    });
+    let popover_handle = persistent_settings_popover_handle::<ContextMenu>(
+        format!("agent.tool_permissions.{tool_id}.default"),
+        window,
+        cx,
+    );
 
     h_flex()
         .min_w_0()
@@ -1144,33 +1205,13 @@ fn render_default_mode_section(
                 ),
         )
         .child(
-            PopoverMenu::new(format!("default-mode-{}", tool_id))
-                .trigger(
-                    Button::new(format!("mode-trigger-{}", tool_id), mode_label)
-                        .tab_index(0_isize)
-                        .style(ButtonStyle::Outlined)
-                        .size(ButtonSize::Medium)
-                        .end_icon(Icon::new(IconName::ChevronDown).size(IconSize::Small)),
-                )
-                .menu(move |window, cx| {
-                    let tool_id = tool_id_owned.clone();
-                    Some(ContextMenu::build(window, cx, move |menu, _, _| {
-                        let tool_id_confirm = tool_id.clone();
-                        let tool_id_allow = tool_id.clone();
-                        let tool_id_deny = tool_id;
-
-                        menu.entry("Confirm", None, move |_, cx| {
-                            set_default_mode(&tool_id_confirm, ToolPermissionMode::Confirm, cx);
-                        })
-                        .entry("Allow", None, move |_, cx| {
-                            set_default_mode(&tool_id_allow, ToolPermissionMode::Allow, cx);
-                        })
-                        .entry("Deny", None, move |_, cx| {
-                            set_default_mode(&tool_id_deny, ToolPermissionMode::Deny, cx);
-                        })
-                    }))
-                })
-                .anchor(gpui::Anchor::TopRight),
+            DropdownMenu::new(format!("default-mode-{tool_id}"), mode_label, menu)
+                .style(DropdownStyle::Outlined)
+                .trigger_size(ButtonSize::Medium)
+                .tab_index(0_isize)
+                .aria_label("Default action")
+                .aria_value(mode_label)
+                .handle(popover_handle),
         )
         .into_any_element()
 }

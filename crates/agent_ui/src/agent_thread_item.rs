@@ -212,12 +212,12 @@ impl AgentThreadItem {
             })
     }
 
-    pub fn workspace_navigation_icon(&self, color: Color, cx: &App) -> AnyElement {
+    pub fn workspace_navigation_icon(&self, color: Color, size: IconSize, cx: &App) -> AnyElement {
         if !self.is_draft(cx)
             && let Some(icon_path) = self.agent_icon_from_external_svg(cx)
         {
             return Icon::from_external_svg(icon_path)
-                .size(IconSize::XSmall)
+                .size(size)
                 .color(color)
                 .into_any_element();
         }
@@ -227,10 +227,7 @@ impl AgentThreadItem {
         } else {
             self.agent_icon(cx)
         };
-        Icon::new(icon)
-            .size(IconSize::XSmall)
-            .color(color)
-            .into_any_element()
+        Icon::new(icon).size(size).color(color).into_any_element()
     }
 
     fn install_sibling_thread_host(&self, cx: &mut Context<Self>) {

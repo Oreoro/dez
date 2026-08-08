@@ -79,6 +79,7 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
             TypeId::of::<NewTerminal>(),
+            TypeId::of::<editor::actions::ToggleTabBar>(),
         ]
     }
 }
@@ -1437,9 +1438,14 @@ mod tests {
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
             TypeId::of::<NewTerminal>(),
+            TypeId::of::<editor::actions::ToggleTabBar>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }
+        assert!(
+            !product_hidden_action_types("Zed")
+                .contains(&TypeId::of::<editor::actions::ToggleTabBar>())
+        );
 
         let hidden_types = product_hidden_action_types("Zed");
         for action_type in [

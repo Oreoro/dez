@@ -165,6 +165,11 @@
   //  4. Open the native launchpad without touching previous Workspace folders
   //         "restore_on_startup": "launchpad",
   "restore_on_startup": "launchpad",
+  // The first native destination for a new Workspace with no restored layout
+  // or explicitly opened item. May be focus, direct (Files), agentic (Default
+  // Terminal), review (Git Changes), or debug.
+  // Restored layouts and explicit file or tool opens always win.
+  "startup_intent": "focus",
   // The default behavior when opening paths from the CLI without
   // an explicit `-e` (existing window) or `-n` (new window) flag.
   //
@@ -812,8 +817,9 @@
     // when a corresponding project entry becomes active.
     // Gitignored entries are never auto revealed.
     "auto_reveal_entries": true,
-    // Whether the project panel should open on startup.
-    "starts_open": true,
+    // Files stays on demand so a fresh Workspace opens in the Main Work Area.
+    // Restored layouts and an explicit user setting may still open it.
+    "starts_open": false,
     // Whether to fold directories automatically and show compact folders
     // (e.g. "a/b/c" ) when a directory has only one subdirectory inside.
     "auto_fold_dirs": false,
@@ -1078,10 +1084,10 @@
   // Settings for the Dez design system.
   "design_system": {
     "family": "zed_canvas",
-    "density": "balanced",
-    "radius": "subtle",
+    "density": "spacious",
+    "radius": "rounded",
     "motion": "system",
-    "contrast": "standard",
+    "contrast": "high",
     "content_width": "comfortable",
     "icon_style": "outline",
     "show_labels": "contextual"

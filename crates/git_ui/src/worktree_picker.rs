@@ -429,9 +429,23 @@ impl WorktreePickerDelegate {
     fn creation_blocked_reason(&self, cx: &App) -> Option<SharedString> {
         let project = self.project.read(cx);
         if project.is_via_collab() {
-            Some("Worktree creation is not supported in collaborative projects".into())
+            Some(
+                crate::git_workspace_copy(
+                    paths::APP_NAME,
+                    "Worktree creation is not supported in collaborative projects",
+                    "Worktree creation is not supported in shared Workspaces",
+                )
+                .into(),
+            )
         } else if project.repositories(cx).is_empty() {
-            Some("Requires a Git repository in the project".into())
+            Some(
+                crate::git_workspace_copy(
+                    paths::APP_NAME,
+                    "Requires a Git repository in the project",
+                    "Requires a Git repository in this Workspace",
+                )
+                .into(),
+            )
         } else {
             None
         }
@@ -789,7 +803,14 @@ impl PickerDelegate for WorktreePickerDelegate {
             worktree.directory_name(main_worktree_path.as_deref()) == normalized_query
         });
         let create_named_disabled_reason: Option<String> = if self.has_multiple_repositories {
-            Some("Cannot create a named worktree in a project with multiple repositories".into())
+            Some(
+                crate::git_workspace_copy(
+                    paths::APP_NAME,
+                    "Cannot create a named worktree in a project with multiple repositories",
+                    "Cannot create a named worktree in a Workspace with multiple repositories",
+                )
+                .into(),
+            )
         } else if has_named_worktree {
             Some("A worktree with this name already exists".into())
         } else {

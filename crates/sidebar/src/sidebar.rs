@@ -57,7 +57,7 @@ use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
 use session::{AppSession, AppSessionEvent, DurableWorkspaceResolution, WorkspaceRestoreState};
-use settings::Settings as _;
+use settings::{Settings as _, SettingsStore};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::mem;
@@ -78,15 +78,16 @@ use terminal::{
     },
 };
 use terminal_view::{
-    TerminalView, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label, terminal_agent_icon,
+    TerminalView, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
 };
 use theme::{ActiveTheme, CLIENT_SIDE_DECORATION_ROUNDING};
 use ui::{
     AgentThreadStatus, ButtonLike, Callout, CommonAnimationExt, ContextMenu, ContextMenuEntry,
     HighlightedLabel, PopoverMenu, PopoverMenuHandle, ScrollAxes, Scrollbars, Severity, Tab,
-    ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus, ThreadItemRadius,
-    ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, right_click_menu,
+    TabDensity, ThreadItem, ThreadItemContrast, ThreadItemDensity, ThreadItemEvidenceStatus,
+    ThreadItemRadius, ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*,
+    right_click_menu,
 };
 use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
@@ -101,8 +102,9 @@ use workspace::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
     },
+    interface_scale,
     notifications::NotificationId,
-    render_sidebar_header_controls_with_state,
+    render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
 };
 
 use git_ui::{
@@ -169,6 +171,22 @@ const DEZ_MAX_WIDTH: Pixels = px(360.0);
 const RESPONSIVE_MIN_WIDTH: Pixels = px(200.0);
 const SESSION_RAIL_MAX_VIEWPORT_FRACTION: f32 = 0.30;
 const SESSION_NOTICES_MAX_VIEWPORT_FRACTION: f32 = 0.42;
+const WORKSPACE_ACTIVITY_PREVIEW_LIMIT: usize = 5;
+const WORKSPACES_NAVIGATION_HEADING_LEVEL: usize = 1;
+const WORKSPACE_SECTION_HEADING_LEVEL: usize = 2;
+const WORKSPACE_PANE_HEADING_LEVEL: usize = 3;
+
+fn workspace_navigation_responsive_width(
+    app_name: &str,
+    physical_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        physical_width
+    } else {
+        physical_width * interface_scale.max(f32::EPSILON).recip()
+    }
+}
 
 #[derive(Clone, Debug, settings::RegisterSetting)]
 struct SessionRailSettings {
@@ -1130,6 +1148,14 @@ fn session_search_control_visible(app_name: &str, session_count: usize) -> bool 
     app_name != "Zed" && session_count > 1
 }
 
+fn session_header_search_control_visible(
+    app_name: &str,
+    session_count: usize,
+    rail_width: Pixels,
+) -> bool {
+    session_search_control_visible(app_name, session_count) && rail_width >= MIN_WIDTH
+}
+
 fn session_overview_visible(
     app_name: &str,
     session_count: usize,
@@ -1197,12 +1223,103 @@ fn session_rail_title(app_name: &str) -> &'static str {
     }
 }
 
-fn session_rail_header_button_size(app_name: &str) -> ButtonSize {
+fn workspace_navigation_control_metrics(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
     if app_name == "Zed" {
-        ButtonSize::Medium
-    } else {
-        ButtonSize::Default
+        return (ButtonSize::Medium, IconSize::Small);
     }
+
+    sidebar_header_control_metrics(app_name, density)
+}
+
+fn workspace_navigation_selected_style(app_name: &str) -> ButtonStyle {
+    if app_name == "Zed" {
+        ButtonStyle::Tinted(TintColor::Accent)
+    } else {
+        ButtonStyle::Filled
+    }
+}
+
+fn workspace_navigation_selected_icon_color(app_name: &str) -> Color {
+    if app_name == "Zed" {
+        Color::Accent
+    } else {
+        Color::Default
+    }
+}
+
+fn workspace_navigation_tab_density(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> TabDensity {
+    if app_name == "Zed" {
+        return TabDensity::Balanced;
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => TabDensity::Compact,
+        settings::CanvasDensity::Balanced => TabDensity::Balanced,
+        settings::CanvasDensity::Spacious => TabDensity::Spacious,
+    }
+}
+
+fn workspace_open_row_metrics(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
+    workspace_navigation_control_metrics(app_name, density)
+}
+
+fn workspace_running_session_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Dez" {
+        LabelSize::XSmall
+    } else {
+        LabelSize::Small
+    }
+}
+
+fn workspace_primary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Dez" {
+        LabelSize::Small
+    } else {
+        LabelSize::Default
+    }
+}
+
+fn workspace_secondary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
+        LabelSize::XSmall
+    } else {
+        LabelSize::Small
+    }
+}
+
+fn workspace_header_label_size(app_name: &str, density: settings::CanvasDensity) -> LabelSize {
+    if app_name == "Zed" && density == settings::CanvasDensity::Compact {
+        LabelSize::XSmall
+    } else {
+        workspace_primary_label_size(app_name)
+    }
+}
+
+fn workspace_header_height(
+    app_name: &str,
+    density: settings::CanvasDensity,
+    inherited_height: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        return inherited_height;
+    }
+
+    let base_height = match density {
+        settings::CanvasDensity::Compact => 36.0,
+        settings::CanvasDensity::Balanced => 40.0,
+        settings::CanvasDensity::Spacious => 44.0,
+    };
+    px(base_height * interface_scale)
 }
 
 fn session_rail_accessibility_label(app_name: &str) -> &'static str {
@@ -1261,6 +1378,13 @@ fn workspace_activity_multiplexer_visible(app_name: &str, state: MultiplexerSess
     app_name == "Zed" || state != MultiplexerSessionState::Completed
 }
 
+fn external_multiplexer_attention_visible(
+    state: MultiplexerSessionState,
+    is_last_known: bool,
+) -> bool {
+    state == MultiplexerSessionState::NeedsAttention || is_last_known
+}
+
 fn workspace_activity_section_visible(
     app_name: &str,
     is_sticky: bool,
@@ -1270,16 +1394,56 @@ fn workspace_activity_section_visible(
     app_name != "Zed" && !is_sticky && !is_collapsed && has_activity
 }
 
+fn workspace_activity_section_title(_app_name: &str) -> &'static str {
+    "Activity"
+}
+
+fn workspace_activity_preview_indices(
+    row_states: &[(bool, bool)],
+    limit: usize,
+    expanded: bool,
+) -> Vec<usize> {
+    if expanded || row_states.len() <= limit {
+        return (0..row_states.len()).collect();
+    }
+
+    let mut selected = Vec::with_capacity(limit);
+    for (index, (is_active, _)) in row_states.iter().enumerate() {
+        if *is_active && selected.len() < limit {
+            selected.push(index);
+        }
+    }
+    for (index, (_, needs_attention)) in row_states.iter().enumerate() {
+        if *needs_attention && selected.len() < limit && !selected.contains(&index) {
+            selected.push(index);
+        }
+    }
+    for index in 0..row_states.len() {
+        if selected.len() == limit {
+            break;
+        }
+        if !selected.contains(&index) {
+            selected.push(index);
+        }
+    }
+    selected.sort_unstable();
+    selected
+}
+
 fn workspace_tabs_section_title(app_name: &str) -> &'static str {
     if app_name == "Zed" {
         "Open Tabs"
     } else {
-        "Open"
+        "Layout"
     }
 }
 
 fn workspace_tabs_section_visible(app_name: &str, tab_count: usize) -> bool {
-    app_name != "Zed" && tab_count > 0
+    app_name != "Zed" && tab_count > 1
+}
+
+fn workspace_layout_nested_rows_visible(rail_width: Pixels) -> bool {
+    rail_width >= PRIMARY_ACTION_LABELS_MIN_WIDTH
 }
 
 fn workspace_tab_layout_label(app_name: &str, tab_count: usize, pane_count: usize) -> String {
@@ -1316,10 +1480,60 @@ fn workspace_pane_header_label(
     })
 }
 
+fn workspace_pane_header_accessibility_label(
+    pane_index: usize,
+    pane_count: usize,
+    is_focused: bool,
+    tab_count: usize,
+) -> String {
+    let focus = if is_focused { ", focused" } else { "" };
+    let item_label = if tab_count == 1 {
+        "1 open item".to_owned()
+    } else {
+        format!("{tab_count} open items")
+    };
+    format!(
+        "Pane {} of {}{focus}, {item_label}",
+        pane_index + 1,
+        pane_count
+    )
+}
+
+fn workspace_layout_accessibility_label(
+    tab_count: usize,
+    pane_count: usize,
+    nested_rows_visible: bool,
+) -> String {
+    let item_label = if tab_count == 1 {
+        "1 open item".to_owned()
+    } else {
+        format!("{tab_count} open items")
+    };
+    let pane_label = if pane_count == 1 {
+        "1 pane".to_owned()
+    } else {
+        format!("{pane_count} panes")
+    };
+
+    if nested_rows_visible {
+        format!("Layout for the active Workspace, {item_label} in {pane_label}")
+    } else {
+        format!(
+            "Layout summary for the active Workspace, {item_label} in {pane_label}. Use the native pane tabs to open an item"
+        )
+    }
+}
+
 fn workspace_tab_icon_color(is_visible: bool, is_focused: bool) -> Color {
+    if is_focused || is_visible {
+        Color::Default
+    } else {
+        Color::Muted
+    }
+}
+
+fn workspace_pane_header_color(is_focused: bool) -> Color {
     if is_focused {
-        Color::Accent
-    } else if is_visible {
         Color::Default
     } else {
         Color::Muted
@@ -1485,20 +1699,41 @@ fn session_start_state_copy(
         )
     } else {
         (
-            "No Workspace open",
-            "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+            "No Workspace is open",
+            "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
             "Open Workspace…",
             None,
         )
     }
 }
 
-fn active_workspace_terminal_destination_label(app_name: &str) -> &'static str {
+fn active_workspace_terminal_action_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
     if app_name == "Zed" {
-        "Start Terminal Session in Main Work Area of Active Workspace"
+        terminal_launch_label(app_name).to_owned()
     } else {
-        "Open Terminal in Main Work Area of Active Workspace"
+        configured_terminal_launcher_action_label(configured_command)
     }
+}
+
+fn active_workspace_terminal_destination_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    format!(
+        "{} in Main Work Area of Active Workspace",
+        active_workspace_terminal_action_label(app_name, configured_command)
+    )
+}
+
+fn workspace_terminal_launch_uses_configured_launcher(
+    app_name: &str,
+    startup_command: Option<&str>,
+    working_directory: Option<&Path>,
+) -> bool {
+    app_name != "Zed" && startup_command.is_none() && working_directory.is_none()
 }
 
 fn workspace_new_terminal_action_persistent(
@@ -1535,7 +1770,7 @@ fn workspace_options_action_persistent(
 }
 
 fn workspace_header_accessibility_label(
-    _app_name: &str,
+    app_name: &str,
     workspace_name: &str,
     has_sessions: bool,
     has_running_sessions: bool,
@@ -1544,15 +1779,75 @@ fn workspace_header_accessibility_label(
     let noun = "Workspace";
     let mut label = format!("{noun} {workspace_name}");
     if !has_sessions {
-        label.push_str(", ready for a session");
+        if app_name == "Dez" {
+            label.push_str(", ready to start work");
+        } else {
+            label.push_str(", ready for a session");
+        }
     }
     if has_running_sessions {
         label.push_str(", running work");
     }
+    if let Some(attention_summary) = workspace_attention_summary(app_name, attention_count) {
+        label.push_str(", ");
+        label.push_str(&attention_summary);
+    }
+    label
+}
+
+fn workspace_attention_summary(app_name: &str, attention_count: usize) -> Option<String> {
+    let noun = if app_name == "Dez" {
+        if attention_count == 1 {
+            "item"
+        } else {
+            "items"
+        }
+    } else if attention_count == 1 {
+        "session"
+    } else {
+        "sessions"
+    };
+    match attention_count {
+        0 => None,
+        1 => Some(format!("1 {noun} needs attention")),
+        _ => Some(format!("{attention_count} {noun} need attention")),
+    }
+}
+
+fn workspace_running_sessions_disclosure_accessibility_label(
+    expanded: bool,
+    session_count: usize,
+    attention_count: usize,
+) -> String {
+    let action = if expanded { "Show fewer" } else { "Show all" };
+    let mut label = if session_count == 1 {
+        format!("{action} Running Sessions. 1 session listed")
+    } else {
+        format!("{action} Running Sessions. {session_count} sessions listed")
+    };
     if attention_count == 1 {
-        label.push_str(", 1 session needs attention");
+        label.push_str(". 1 needs attention");
     } else if attention_count > 1 {
-        label.push_str(&format!(", {attention_count} sessions need attention"));
+        label.push_str(&format!(". {attention_count} need attention"));
+    }
+    label
+}
+
+fn external_multiplexer_accessibility_label(
+    action_label: &str,
+    state_label: &str,
+    working_directory: Option<&Path>,
+    port_label: Option<&str>,
+) -> String {
+    let mut label = format!("{action_label} Status: {state_label}.");
+    if let Some(working_directory) = working_directory {
+        label.push_str(&format!(
+            " Working directory: {}.",
+            working_directory.display()
+        ));
+    }
+    if let Some(port_label) = port_label {
+        label.push_str(&format!(" Listening ports: {port_label}."));
     }
     label
 }
@@ -1570,12 +1865,22 @@ fn workspace_navigation_label(
     format!("{primary_name} · {root_count} roots").into()
 }
 
-fn workspace_new_terminal_control_label(app_name: &str, workspace_name: &str) -> String {
-    format!("{} in {workspace_name}", terminal_launch_label(app_name))
+fn workspace_new_terminal_control_label(
+    app_name: &str,
+    workspace_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    format!(
+        "{} in {workspace_name}",
+        active_workspace_terminal_action_label(app_name, configured_command)
+    )
 }
 
-fn workspace_new_terminal_tooltip_label(app_name: &str) -> &'static str {
-    terminal_launch_label(app_name)
+fn workspace_new_terminal_tooltip_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    active_workspace_terminal_action_label(app_name, configured_command)
 }
 
 fn workspace_options_control_label(workspace_name: &str) -> String {
@@ -1591,6 +1896,30 @@ fn workspace_access_root_label(root: &Path) -> String {
         .filter(|name| !name.is_empty())
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| root.display().to_string())
+}
+
+fn workspace_access_grant_accessibility_label(root_labels: &[String]) -> String {
+    match root_labels {
+        [] => "Grant Workspace Folder Access".to_owned(),
+        [root_label] => format!("Grant Access to Workspace Folder: {root_label}"),
+        root_labels => format!(
+            "Grant Access to One of {} Blocked Workspace Folders",
+            root_labels.len()
+        ),
+    }
+}
+
+fn workspace_access_grant_tooltip(root_labels: &[String]) -> String {
+    match root_labels {
+        [] => "Grant access without opening or replacing a Workspace".to_owned(),
+        [root_label] => {
+            format!("Grant access to “{root_label}” without opening or replacing the Workspace")
+        }
+        root_labels => format!(
+            "Choose one of {} exact blocked Workspace folders; Dez keeps the current layout",
+            root_labels.len()
+        ),
+    }
 }
 
 fn project_header_primary_action_activates_workspace(app_name: &str) -> bool {
@@ -1689,14 +2018,6 @@ fn canvas_thread_item_style(
     thread_item: ThreadItem,
     design_system: &DesignSystemSettings,
 ) -> ThreadItem {
-    if APP_NAME != "Zed" {
-        return thread_item
-            .density(ThreadItemDensity::Compact)
-            .radius(ThreadItemRadius::None)
-            .contrast(ThreadItemContrast::Standard)
-            .metadata_visible(true);
-    }
-
     let density = match design_system.density {
         settings::CanvasDensity::Compact => ThreadItemDensity::Compact,
         settings::CanvasDensity::Balanced => ThreadItemDensity::Balanced,
@@ -1717,6 +2038,10 @@ fn canvas_thread_item_style(
         .density(density)
         .radius(radius)
         .contrast(contrast)
+        .neutral_selection(APP_NAME != "Zed")
+        .selected_label_weight((APP_NAME != "Zed").then_some(gpui::FontWeight::MEDIUM))
+        .state_label_badge(APP_NAME == "Zed")
+        .metadata_visible(true)
 }
 
 fn canvas_layout_recipe_label(recipe_id: &str) -> Option<&'static str> {
@@ -2449,10 +2774,10 @@ mod workspace_header_label_tests {
         assert_eq!(
             workspace_header_accessibility_with_metadata(
                 "Dez",
-                "Workspace app, ready for a session".to_owned(),
+                "Workspace app, ready to start work".to_owned(),
                 Some("main · 1 change")
             ),
-            "Workspace app, ready for a session. Git: main · 1 change."
+            "Workspace app, ready to start work. Git: main · 1 change."
         );
         assert_eq!(
             workspace_header_accessibility_with_metadata(
@@ -2480,18 +2805,55 @@ mod workspace_header_label_tests {
         ));
         assert_eq!(
             workspace_header_accessibility_label("Dez", "compiler", false, false, 0),
-            "Workspace compiler, ready for a session"
+            "Workspace compiler, ready to start work"
         );
         assert_eq!(
             workspace_header_accessibility_label("Zed", "compiler", false, false, 0),
             "Workspace compiler, ready for a session"
         );
         assert_eq!(
-            workspace_new_terminal_control_label("Dez", "compiler"),
-            "Open Terminal in compiler"
+            workspace_header_accessibility_label("Dez", "compiler", true, true, 2),
+            "Workspace compiler, running work, 2 items need attention"
         );
         assert_eq!(
-            workspace_new_terminal_control_label("Zed", "compiler"),
+            workspace_header_accessibility_label("Zed", "compiler", true, true, 2),
+            "Workspace compiler, running work, 2 sessions need attention"
+        );
+        assert_eq!(
+            workspace_attention_summary("Dez", 1).as_deref(),
+            Some("1 item needs attention")
+        );
+        assert_eq!(
+            workspace_attention_summary("Zed", 1).as_deref(),
+            Some("1 session needs attention")
+        );
+        assert_eq!(
+            workspace_running_sessions_disclosure_accessibility_label(false, 1, 0),
+            "Show all Running Sessions. 1 session listed"
+        );
+        assert_eq!(
+            workspace_running_sessions_disclosure_accessibility_label(true, 3, 2),
+            "Show fewer Running Sessions. 3 sessions listed. 2 need attention"
+        );
+        assert_eq!(
+            external_multiplexer_accessibility_label(
+                "Refresh tmux before opening this last-known session.",
+                "Available · last known",
+                Some(Path::new("/workspace/compiler")),
+                Some(":3000, :5173"),
+            ),
+            "Refresh tmux before opening this last-known session. Status: Available · last known. Working directory: /workspace/compiler. Listening ports: :3000, :5173."
+        );
+        assert_eq!(
+            workspace_new_terminal_control_label("Dez", "compiler", None),
+            "Open Terminal · Native Shell in compiler"
+        );
+        assert_eq!(
+            workspace_new_terminal_control_label("Dez", "compiler", Some("codex --yolo")),
+            "Open Terminal · Codex in compiler"
+        );
+        assert_eq!(
+            workspace_new_terminal_control_label("Zed", "compiler", Some("codex --yolo")),
             "Start Terminal Session in compiler"
         );
         assert_eq!(
@@ -2516,7 +2878,36 @@ mod workspace_header_label_tests {
             "zed 3.0"
         );
         assert_eq!(workspace_access_root_label(Path::new("/")), "/");
-        assert_eq!(workspace_new_terminal_tooltip_label("Dez"), "Open Terminal");
+        assert_eq!(
+            workspace_access_grant_accessibility_label(&["zed 3.0".to_owned()]),
+            "Grant Access to Workspace Folder: zed 3.0"
+        );
+        assert_eq!(
+            workspace_access_grant_accessibility_label(&[]),
+            "Grant Workspace Folder Access"
+        );
+        assert_eq!(
+            workspace_access_grant_tooltip(&[]),
+            "Grant access without opening or replacing a Workspace"
+        );
+        assert_eq!(
+            workspace_access_grant_tooltip(&["zed 3.0".to_owned()]),
+            "Grant access to “zed 3.0” without opening or replacing the Workspace"
+        );
+        assert_eq!(
+            workspace_access_grant_accessibility_label(
+                &["zed 3.0".to_owned(), "ideas".to_owned(),]
+            ),
+            "Grant Access to One of 2 Blocked Workspace Folders"
+        );
+        assert_eq!(
+            workspace_access_grant_tooltip(&["zed 3.0".to_owned(), "ideas".to_owned()]),
+            "Choose one of 2 exact blocked Workspace folders; Dez keeps the current layout"
+        );
+        assert_eq!(
+            workspace_new_terminal_tooltip_label("Dez", Some("claude")),
+            "Open Terminal · Claude Code"
+        );
         assert!(workspace_header_terminal_action_visible(
             "Dez", false, false, true
         ));
@@ -2526,7 +2917,30 @@ mod workspace_header_label_tests {
         assert!(!workspace_header_terminal_action_visible(
             "Zed", false, false, true
         ));
-        assert!(!workspace_new_terminal_control_label("Dez", "compiler").contains("header-group"));
+        assert!(workspace_terminal_launch_uses_configured_launcher(
+            "Dez", None, None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Zed", None, None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Dez",
+            Some("codex"),
+            None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Dez",
+            Some(""),
+            None
+        ));
+        assert!(!workspace_terminal_launch_uses_configured_launcher(
+            "Dez",
+            None,
+            Some(Path::new("/Users/test/Documents/dez"))
+        ));
+        assert!(
+            !workspace_new_terminal_control_label("Dez", "compiler", None).contains("header-group")
+        );
         assert!(!workspace_options_control_label("compiler").contains("header-group"));
         assert_eq!(
             configured_terminal_launcher_label(None),
@@ -2617,6 +3031,55 @@ mod workspace_header_label_tests {
             None
         );
     }
+
+    #[test]
+    fn dez_workspace_chrome_follows_canvas_density() {
+        assert_eq!(
+            workspace_navigation_tab_density("Dez", settings::CanvasDensity::Compact),
+            TabDensity::Compact
+        );
+        assert_eq!(
+            workspace_navigation_tab_density("Dez", settings::CanvasDensity::Balanced),
+            TabDensity::Balanced
+        );
+        assert_eq!(
+            workspace_navigation_tab_density("Dez", settings::CanvasDensity::Spacious),
+            TabDensity::Spacious
+        );
+        assert_eq!(
+            workspace_navigation_tab_density("Zed", settings::CanvasDensity::Compact),
+            TabDensity::Balanced
+        );
+        assert_eq!(
+            workspace_header_height("Dez", settings::CanvasDensity::Compact, px(28.0), 1.0),
+            px(36.0)
+        );
+        assert_eq!(
+            workspace_header_height("Dez", settings::CanvasDensity::Spacious, px(35.0), 1.5),
+            px(66.0)
+        );
+        assert_eq!(
+            workspace_header_height("Zed", settings::CanvasDensity::Spacious, px(35.0), 1.5),
+            px(35.0)
+        );
+    }
+
+    #[test]
+    fn dez_workspace_breakpoints_follow_whole_interface_zoom() {
+        let zoomed_in_width = workspace_navigation_responsive_width("Dez", px(300.0), 1.5);
+        assert_eq!(zoomed_in_width, px(200.0));
+        assert!(!workspace_layout_nested_rows_visible(zoomed_in_width));
+
+        let zoomed_out_width = workspace_navigation_responsive_width("Dez", px(210.0), 0.75);
+        assert_eq!(zoomed_out_width, px(280.0));
+        assert!(workspace_layout_nested_rows_visible(zoomed_out_width));
+
+        assert_eq!(
+            workspace_navigation_responsive_width("Zed", px(300.0), 1.5),
+            px(300.0),
+            "official Zed keeps its inherited physical-width breakpoints"
+        );
+    }
 }
 
 #[cfg(test)]
@@ -2629,22 +3092,94 @@ mod session_start_state_tests {
         assert!(!session_start_state_visible(false, 1, false, false, false));
         assert_eq!(session_rail_title("Dez"), "Workspaces");
         assert_eq!(session_rail_title("Zed"), "Sessions");
-        assert_eq!(session_rail_header_button_size("Dez"), ButtonSize::Default);
-        assert_eq!(session_rail_header_button_size("Zed"), ButtonSize::Medium);
+        assert!(
+            workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert!(
+            workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Balanced)
+                == (ButtonSize::Default, IconSize::Small)
+        );
+        assert!(
+            workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert!(
+            workspace_navigation_control_metrics("Zed", settings::CanvasDensity::Compact)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert_eq!(
+            workspace_navigation_selected_style("Dez"),
+            ButtonStyle::Filled
+        );
+        assert_eq!(
+            workspace_navigation_selected_style("Zed"),
+            ButtonStyle::Tinted(TintColor::Accent)
+        );
+        assert_eq!(
+            workspace_navigation_selected_icon_color("Dez"),
+            Color::Default
+        );
+        assert_eq!(
+            workspace_navigation_selected_icon_color("Zed"),
+            Color::Accent
+        );
+        assert!(
+            workspace_open_row_metrics("Dez", settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert!(
+            workspace_open_row_metrics("Dez", settings::CanvasDensity::Balanced)
+                == (ButtonSize::Default, IconSize::Small)
+        );
+        assert!(
+            workspace_open_row_metrics("Dez", settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert_eq!(
+            workspace_running_session_label_size("Dez"),
+            LabelSize::Small
+        );
+        assert_eq!(
+            workspace_running_session_label_size("Zed"),
+            LabelSize::XSmall
+        );
+        assert_eq!(workspace_primary_label_size("Dez"), LabelSize::Default);
+        assert_eq!(workspace_primary_label_size("Zed"), LabelSize::Small);
+        assert_eq!(workspace_secondary_label_size("Dez"), LabelSize::Small);
+        assert_eq!(workspace_secondary_label_size("Zed"), LabelSize::XSmall);
+        assert_eq!(
+            workspace_header_label_size("Dez", settings::CanvasDensity::Compact),
+            LabelSize::Default
+        );
+        assert_eq!(
+            workspace_header_label_size("Zed", settings::CanvasDensity::Compact),
+            LabelSize::XSmall
+        );
+        assert_eq!(
+            workspace_header_label_size("Zed", settings::CanvasDensity::Balanced),
+            LabelSize::Small
+        );
         assert_eq!(
             session_rail_accessibility_label("Dez"),
             "Workspaces and Activity"
         );
-        assert_eq!(workspace_tabs_section_title("Dez"), "Open");
+        assert_eq!(workspace_tabs_section_title("Dez"), "Layout");
         assert_eq!(workspace_tabs_section_title("Zed"), "Open Tabs");
+        assert_eq!(workspace_activity_section_title("Dez"), "Activity");
+        assert_eq!(workspace_activity_section_title("Zed"), "Activity");
         assert!(workspace_tabs_section_visible("Dez", 2));
-        assert!(workspace_tabs_section_visible("Dez", 1));
+        assert!(!workspace_tabs_section_visible("Dez", 1));
         assert!(!workspace_tabs_section_visible("Dez", 0));
         assert!(!workspace_tabs_section_visible("Zed", 3));
         assert_eq!(workspace_tab_layout_label("Dez", 1, 1), "1 open");
         assert_eq!(workspace_tab_layout_label("Dez", 3, 1), "3 open");
         assert_eq!(workspace_tab_layout_label("Dez", 3, 2), "3 open · 2 panes");
         assert_eq!(workspace_tab_layout_label("Zed", 3, 1), "3 tabs");
+        assert!(!workspace_layout_nested_rows_visible(px(279.0)));
+        assert!(workspace_layout_nested_rows_visible(
+            PRIMARY_ACTION_LABELS_MIN_WIDTH
+        ));
         assert_eq!(workspace_pane_navigation_label(0, 1), None);
         assert_eq!(
             workspace_pane_navigation_label(1, 3).as_deref(),
@@ -2659,9 +3194,27 @@ mod session_start_state_tests {
             Some("Pane 2")
         );
         assert_eq!(workspace_pane_header_label(0, 1, true), None);
+        assert_eq!(
+            workspace_pane_header_accessibility_label(0, 2, true, 3),
+            "Pane 1 of 2, focused, 3 open items"
+        );
+        assert_eq!(
+            workspace_pane_header_accessibility_label(1, 2, false, 1),
+            "Pane 2 of 2, 1 open item"
+        );
+        assert_eq!(
+            workspace_layout_accessibility_label(4, 2, true),
+            "Layout for the active Workspace, 4 open items in 2 panes"
+        );
+        assert_eq!(
+            workspace_layout_accessibility_label(4, 2, false),
+            "Layout summary for the active Workspace, 4 open items in 2 panes. Use the native pane tabs to open an item"
+        );
         assert_eq!(workspace_tab_icon_color(false, false), Color::Muted);
         assert_eq!(workspace_tab_icon_color(true, false), Color::Default);
-        assert_eq!(workspace_tab_icon_color(true, true), Color::Accent);
+        assert_eq!(workspace_tab_icon_color(true, true), Color::Default);
+        assert_eq!(workspace_pane_header_color(true), Color::Default);
+        assert_eq!(workspace_pane_header_color(false), Color::Muted);
         assert_eq!(
             session_rail_search_label("Dez"),
             "Search Workspaces and Activity"
@@ -2736,23 +3289,39 @@ mod session_start_state_tests {
         assert_eq!(
             session_start_state_copy("Dez"),
             (
-                "No Workspace open",
-                "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+                "No Workspace is open",
+                "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
                 "Open Workspace…",
                 None
             ),
             "the true-empty Sessions state should have one project-scoped next step"
         );
         assert_eq!(
-            active_workspace_terminal_destination_label("Dez"),
-            "Open Terminal in Main Work Area of Active Workspace"
+            active_workspace_terminal_action_label("Dez", None),
+            "Open Terminal · Native Shell"
+        );
+        assert_eq!(
+            active_workspace_terminal_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            active_workspace_terminal_action_label("Dez", Some("tmux")),
+            "Open Terminal · tmux Session"
+        );
+        assert_eq!(
+            active_workspace_terminal_action_label("Dez", Some("my-agent --resume")),
+            "Open Terminal · Custom Command"
+        );
+        assert_eq!(
+            active_workspace_terminal_destination_label("Dez", Some("claude")),
+            "Open Terminal · Claude Code in Main Work Area of Active Workspace"
         );
         assert_eq!(
             session_start_state_copy("Zed").3,
             Some("Open Scratch Terminal")
         );
         assert_eq!(
-            active_workspace_terminal_destination_label("Zed"),
+            active_workspace_terminal_destination_label("Zed", Some("codex --yolo")),
             "Start Terminal Session in Main Work Area of Active Workspace"
         );
         assert_eq!(
@@ -2764,22 +3333,6 @@ mod session_start_state_tests {
                 "Show All",
                 "Show all Workspace Activity",
             )
-        );
-        assert_eq!(
-            machine_terminal_count_label(RESPONSIVE_MIN_WIDTH, 12),
-            "12 observed"
-        );
-        assert_eq!(
-            machine_terminal_count_label(DETAILED_MIN_WIDTH, 12),
-            "12 observed · read-only"
-        );
-        assert_eq!(
-            machine_terminal_section_tooltip_label(),
-            "Machine terminals are read-only; select one to return to its owning app"
-        );
-        assert!(
-            machine_terminal_section_accessibility_description()
-                .contains("does not own these PTYs")
         );
         assert!(!session_rail_supplemental_metadata_visible(DEFAULT_WIDTH));
         assert!(session_rail_supplemental_metadata_visible(
@@ -2867,6 +3420,18 @@ mod session_start_state_tests {
             "Dez",
             MultiplexerSessionState::Unknown,
         ));
+        assert!(external_multiplexer_attention_visible(
+            MultiplexerSessionState::NeedsAttention,
+            false,
+        ));
+        assert!(external_multiplexer_attention_visible(
+            MultiplexerSessionState::Available,
+            true,
+        ));
+        assert!(!external_multiplexer_attention_visible(
+            MultiplexerSessionState::Available,
+            false,
+        ));
         assert!(workspace_activity_section_visible(
             "Dez", false, false, true,
         ));
@@ -2876,6 +3441,39 @@ mod session_start_state_tests {
         assert!(!workspace_activity_section_visible(
             "Zed", false, false, true,
         ));
+    }
+
+    #[test]
+    fn workspace_activity_preview_preserves_active_and_attention_rows() {
+        let row_states = [
+            (false, false),
+            (false, false),
+            (false, false),
+            (false, false),
+            (false, false),
+            (false, true),
+            (true, false),
+            (false, true),
+        ];
+
+        assert_eq!(
+            workspace_activity_preview_indices(
+                &row_states,
+                WORKSPACE_ACTIVITY_PREVIEW_LIMIT,
+                false,
+            ),
+            [0, 1, 5, 6, 7],
+            "the bounded preview must retain the current destination and actionable rows"
+        );
+        assert_eq!(
+            workspace_activity_preview_indices(&row_states, 4, false),
+            [0, 5, 6, 7],
+            "a Running Sessions disclosure may reserve one of the five Activity rows"
+        );
+        assert_eq!(
+            workspace_activity_preview_indices(&row_states, WORKSPACE_ACTIVITY_PREVIEW_LIMIT, true,),
+            (0..row_states.len()).collect::<Vec<_>>()
+        );
     }
 }
 
@@ -4021,6 +4619,26 @@ mod external_multiplexer_project_group_tests {
     }
 
     #[test]
+    fn external_discovery_recovery_names_the_failed_owners() {
+        assert_eq!(
+            external_activity_retry_accessibility_label(&["Herdr"]),
+            "Retry Herdr Discovery"
+        );
+        assert_eq!(
+            external_activity_retry_tooltip(&["Herdr"]),
+            "Check Herdr again without changing its sessions"
+        );
+        assert_eq!(
+            external_activity_retry_accessibility_label(&["tmux", "Herdr", "cmux"]),
+            "Retry External Terminal Discovery for tmux, Herdr, cmux"
+        );
+        assert_eq!(
+            external_activity_retry_tooltip(&["tmux", "Herdr", "cmux"]),
+            "Check tmux, Herdr, cmux again without changing their sessions"
+        );
+    }
+
+    #[test]
     fn external_attach_executes_the_multiplexer_without_shell_expansion() {
         let spawn = external_session_attach_spawn(
             "tmux",
@@ -4111,6 +4729,30 @@ mod external_multiplexer_project_group_tests {
             other_running_sessions_empty_label(false, &ready),
             "All running sessions belong to open Workspaces"
         );
+
+        let ready_and_failed = [
+            source_status(MultiplexerKind::Tmux, MultiplexerSourceAvailability::Ready),
+            source_status(
+                MultiplexerKind::Herdr,
+                MultiplexerSourceAvailability::Failed,
+            ),
+        ];
+        assert_eq!(
+            other_running_sessions_empty_label(false, &ready_and_failed),
+            "Running session discovery needs attention"
+        );
+
+        let ready_and_private = [
+            source_status(MultiplexerKind::Tmux, MultiplexerSourceAvailability::Ready),
+            source_status(
+                MultiplexerKind::Cmux,
+                MultiplexerSourceAvailability::AccessRequired,
+            ),
+        ];
+        assert_eq!(
+            other_running_sessions_empty_label(false, &ready_and_private),
+            "cmux activity sharing is off; no other running sessions"
+        );
     }
 
     #[test]
@@ -4141,6 +4783,18 @@ mod external_multiplexer_project_group_tests {
             .is_none()
         );
     }
+
+    #[test]
+    fn last_known_external_sessions_use_attention_status() {
+        assert_eq!(
+            external_multiplexer_status(MultiplexerSessionState::Available, true),
+            Some(AgentThreadStatus::WaitingForConfirmation),
+        );
+        assert_eq!(
+            external_multiplexer_status(MultiplexerSessionState::Available, false),
+            Some(AgentThreadStatus::Running),
+        );
+    }
 }
 
 fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mut App) {
@@ -4153,7 +4807,14 @@ fn activate_observed_machine_terminal(terminal: ObservedMachineTerminal, cx: &mu
         .detach_and_log_err(cx);
 }
 
-fn external_multiplexer_status(state: MultiplexerSessionState) -> Option<AgentThreadStatus> {
+fn external_multiplexer_status(
+    state: MultiplexerSessionState,
+    is_last_known: bool,
+) -> Option<AgentThreadStatus> {
+    if external_multiplexer_attention_visible(state, is_last_known) {
+        return Some(AgentThreadStatus::WaitingForConfirmation);
+    }
+
     match state {
         MultiplexerSessionState::Available
         | MultiplexerSessionState::Attached
@@ -4171,7 +4832,7 @@ fn external_multiplexer_icon(session: &ExternalMultiplexerSession) -> IconName {
         .detected_agent_kind
         .map(terminal_agent_icon)
         .unwrap_or(match session.kind {
-            MultiplexerKind::Tmux => IconName::Terminal,
+            MultiplexerKind::Tmux => IconName::SplitAlt,
             MultiplexerKind::Herdr => IconName::Inception,
             MultiplexerKind::Cmux => IconName::Screen,
         })
@@ -4208,6 +4869,32 @@ fn external_activity_issue_description(issue: &MultiplexerSourceIssue) -> String
         issue.kind.display_name(),
         issue.summary.trim_end_matches(&['.', '!', '?'][..])
     )
+}
+
+fn external_activity_retry_accessibility_label(source_names: &[&str]) -> String {
+    match source_names {
+        [] => "Retry External Terminal Discovery".to_owned(),
+        [source_name] => format!("Retry {source_name} Discovery"),
+        source_names => format!(
+            "Retry External Terminal Discovery for {}",
+            source_names.join(", ")
+        ),
+    }
+}
+
+fn external_activity_retry_tooltip(source_names: &[&str]) -> String {
+    match source_names {
+        [] => {
+            "Check external terminal integrations again without changing their sessions".to_owned()
+        }
+        [source_name] => {
+            format!("Check {source_name} again without changing its sessions")
+        }
+        source_names => format!(
+            "Check {} again without changing their sessions",
+            source_names.join(", ")
+        ),
+    }
 }
 
 fn external_sessions_empty_label(
@@ -4254,20 +4941,35 @@ fn other_running_sessions_empty_label(
     refreshing: bool,
     statuses: &[MultiplexerSourceStatus],
 ) -> &'static str {
-    if !refreshing
-        && statuses
-            .iter()
-            .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
-    {
-        "All running sessions belong to open Workspaces"
-    } else {
-        external_sessions_empty_label(refreshing, statuses)
+    if refreshing {
+        return "Checking tmux, Herdr, and cmux…";
     }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::Failed)
+    {
+        return "Running session discovery needs attention";
+    }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::AccessRequired)
+    {
+        return "cmux activity sharing is off; no other running sessions";
+    }
+    if statuses
+        .iter()
+        .any(|status| status.availability == MultiplexerSourceAvailability::Ready)
+    {
+        return "All running sessions belong to open Workspaces";
+    }
+    external_sessions_empty_label(false, statuses)
 }
 
 const CMUX_HANDOFF_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
 const CMUX_API_GUIDE_URL: &str = "https://cmux.com/docs/api";
 const CMUX_WEBSITE_URL: &str = "https://cmux.com";
+const CMUX_LAUNCH_SERVICES_PROGRAM: &str = "/usr/bin/open";
+const CMUX_APP_BUNDLE_IDS: [&str; 2] = ["com.cmuxterm.app", "com.cmuxterm.app.nightly"];
 
 struct CmuxIntegrationStatusPresentation {
     title: &'static str,
@@ -4370,12 +5072,69 @@ async fn run_bounded_cmux_command(
     }
 }
 
+fn cmux_launch_services_app_is_missing(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    message.contains("lscopyapplicationurlsforbundleidentifier() failed")
+        || message.contains("unable to find application")
+        || message.contains("could not find application")
+        || (message.contains("application") && message.contains("cannot be found"))
+}
+
+async fn open_workspace_path_in_cmux_via_launch_services(
+    path: &Path,
+    executor: &gpui::BackgroundExecutor,
+) -> Result<bool, CmuxWorkspaceHandoffError> {
+    for bundle_id in CMUX_APP_BUNDLE_IDS {
+        let mut command = util::command::new_command(CMUX_LAUNCH_SERVICES_PROGRAM);
+        command.args(["-b", bundle_id]).arg(path);
+        match run_bounded_cmux_command(&mut command, executor).await {
+            Ok(output) if output.status.success() => return Ok(true),
+            Ok(output) => {
+                let detail = format!(
+                    "{} {}",
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+                if cmux_launch_services_app_is_missing(&detail) {
+                    continue;
+                }
+                let detail = detail.trim();
+                let detail = if detail.is_empty() {
+                    format!("macOS returned {}", output.status)
+                } else {
+                    detail.to_owned()
+                };
+
+                return Err(CmuxWorkspaceHandoffError::Failed(format!(
+                    "macOS couldn't open this Workspace in cmux: {detail}. This Workspace is still open in Dez."
+                )));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+            Err(error) if error.kind() == std::io::ErrorKind::TimedOut => {
+                return Err(CmuxWorkspaceHandoffError::TimedOut);
+            }
+            Err(error) => {
+                return Err(CmuxWorkspaceHandoffError::Failed(format!(
+                    "Dez couldn't ask macOS to open cmux: {error}. This Workspace is still open in Dez."
+                )));
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 pub async fn open_workspace_path_in_cmux(
     path: &Path,
     executor: &gpui::BackgroundExecutor,
 ) -> Result<(), CmuxWorkspaceHandoffError> {
+    if open_workspace_path_in_cmux_via_launch_services(path, executor).await? {
+        return Ok(());
+    }
+
     for program in [
         "/Applications/cmux.app/Contents/Resources/bin/cmux",
+        "/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux",
         "/opt/homebrew/bin/cmux",
         "/usr/local/bin/cmux",
         "cmux",
@@ -4413,6 +5172,32 @@ pub async fn open_workspace_path_in_cmux(
     }
 
     Err(CmuxWorkspaceHandoffError::NotInstalled)
+}
+
+#[cfg(test)]
+mod cmux_workspace_handoff_tests {
+    use super::*;
+
+    #[test]
+    fn recognizes_launch_services_missing_application_failures() {
+        assert!(cmux_launch_services_app_is_missing(
+            "LSCopyApplicationURLsForBundleIdentifier() failed while trying to determine the application"
+        ));
+        assert!(cmux_launch_services_app_is_missing(
+            "The application com.cmuxterm.app cannot be found"
+        ));
+        assert!(!cmux_launch_services_app_is_missing(
+            "The application could not open the selected Workspace"
+        ));
+    }
+
+    #[test]
+    fn prefers_stable_cmux_before_the_nightly_bundle() {
+        assert_eq!(
+            CMUX_APP_BUNDLE_IDS,
+            ["com.cmuxterm.app", "com.cmuxterm.app.nightly"]
+        );
+    }
 }
 
 async fn terminate_legacy_terminal_session(
@@ -4951,6 +5736,9 @@ enum ListEntry {
         has_notifications: bool,
         is_active: bool,
         has_threads: bool,
+        activity_count: usize,
+        activity_expanded: bool,
+        activity_disclosure_available: bool,
         external_sessions: Vec<ExternalMultiplexerSession>,
     },
     Thread(Arc<ThreadEntry>),
@@ -5592,7 +6380,7 @@ fn create_worktree_in_workspace(
 pub struct Sidebar {
     multi_workspace: WeakEntity<MultiWorkspace>,
     width: Pixels,
-    rendered_width: Pixels,
+    responsive_projection_width: Pixels,
     focus_handle: FocusHandle,
     filter_editor: Entity<Editor>,
     thread_rename_editor: Entity<Editor>,
@@ -5610,6 +6398,10 @@ pub struct Sidebar {
     /// technical rows should only occupy navigation space after the user asks
     /// to inspect them.
     workspace_external_sessions_expanded: HashSet<ProjectGroupKey>,
+    /// Busy Workspaces expose a five-row Activity preview. Expansion changes
+    /// only this projection; the owning terminal and Agent surfaces remain
+    /// unchanged.
+    workspace_activity_expanded: HashSet<ProjectGroupKey>,
     reveal_running_sessions_after_refresh: bool,
     /// The index of the list item that currently has the keyboard focus
     ///
@@ -5664,6 +6456,7 @@ pub struct Sidebar {
     project_header_new_thread_menu_handles: HashMap<usize, PopoverMenuHandle<ContextMenu>>,
     project_header_menu_ix: Option<usize>,
     worktree_default_branches: HashMap<ProjectGroupKey, DefaultBranchCache>,
+    _settings_subscription: gpui::Subscription,
     _subscriptions: Vec<gpui::Subscription>,
     _draft_editor_observations: Vec<gpui::Subscription>,
     update_task: Option<Task<()>>,
@@ -5705,6 +6498,10 @@ impl Sidebar {
                 window,
                 cx,
             )
+        });
+        let settings_subscription = cx.observe_global::<SettingsStore>(|this, cx| {
+            this.schedule_update_entries(false, cx);
+            cx.notify();
         });
 
         cx.subscribe_in(
@@ -5789,6 +6586,8 @@ impl Sidebar {
                                     == Some(project_group_key)
                             }) {
                                 this.set_group_expanded(project_group_key, true, cx);
+                                this.workspace_external_sessions_expanded
+                                    .insert(project_group_key.clone());
                             }
                         }
                     }
@@ -5878,7 +6677,7 @@ impl Sidebar {
         Self {
             multi_workspace: multi_workspace.downgrade(),
             width: DEFAULT_WIDTH,
-            rendered_width: DEFAULT_WIDTH,
+            responsive_projection_width: DEFAULT_WIDTH,
             focus_handle,
             filter_editor,
             thread_rename_editor,
@@ -5888,6 +6687,7 @@ impl Sidebar {
             session_search_open: false,
             external_activity_expanded: false,
             workspace_external_sessions_expanded: HashSet::new(),
+            workspace_activity_expanded: HashSet::new(),
             reveal_running_sessions_after_refresh: false,
             selection: None,
             active_entry: None,
@@ -5919,6 +6719,7 @@ impl Sidebar {
             project_header_new_thread_menu_handles: HashMap::new(),
             project_header_menu_ix: None,
             worktree_default_branches: HashMap::new(),
+            _settings_subscription: settings_subscription,
             _subscriptions: Vec::new(),
             _draft_editor_observations: Vec::new(),
             update_task: None,
@@ -6512,8 +7313,9 @@ impl Sidebar {
         }
         let machine_terminal_count = machine_terminals.len();
         if self.attention_only {
-            multiplexer_sessions
-                .retain(|session| session.state == MultiplexerSessionState::NeedsAttention);
+            multiplexer_sessions.retain(|session| {
+                external_multiplexer_attention_visible(session.state, session.is_last_known())
+            });
             machine_terminals.clear();
         }
 
@@ -6547,6 +7349,8 @@ impl Sidebar {
         let mut project_header_indices: Vec<usize> = Vec::new();
         let mut seen_thread_ids: HashSet<agent_ui::ThreadId> = HashSet::new();
         let mut seen_terminal_ids: HashSet<TerminalId> = HashSet::new();
+        let mut managed_activity_count = 0usize;
+        let mut managed_attention_count = 0usize;
 
         let has_open_projects = workspaces
             .iter()
@@ -7482,7 +8286,9 @@ impl Sidebar {
             });
             attention_thread_count += external_sessions
                 .iter()
-                .filter(|session| session.state == MultiplexerSessionState::NeedsAttention)
+                .filter(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                })
                 .count();
             let has_visible_rows =
                 !threads.is_empty() || !terminals.is_empty() || !external_sessions.is_empty();
@@ -7576,11 +8382,32 @@ impl Sidebar {
                 let has_terminal_notifications = matched_terminals
                     .iter()
                     .any(|terminal| terminal.needs_attention);
-                let has_external_notifications = external_sessions
-                    .iter()
-                    .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
+                let has_external_notifications = external_sessions.iter().any(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                });
                 visible_multiplexer_session_ids
                     .extend(external_sessions.iter().map(|session| session.id.clone()));
+                let mut activity_entries = Vec::new();
+                Self::push_entries_by_session_rail_sort(
+                    &mut activity_entries,
+                    matched_terminals,
+                    matched_threads,
+                    session_rail_sort_by,
+                    &notified_threads,
+                    &notified_terminals,
+                    &manual_entry_order,
+                    &mut current_session_ids,
+                    &mut current_thread_ids,
+                );
+                managed_activity_count += activity_entries.len();
+                managed_attention_count += activity_entries
+                    .iter()
+                    .filter(|entry| {
+                        entry_needs_attention(entry, &notified_threads, &notified_terminals)
+                    })
+                    .count();
+                let activity_count =
+                    activity_entries.len() + usize::from(!external_sessions.is_empty());
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
@@ -7596,20 +8423,12 @@ impl Sidebar {
                         || has_external_notifications,
                     is_active,
                     has_threads,
+                    activity_count,
+                    activity_expanded: true,
+                    activity_disclosure_available: false,
                     external_sessions,
                 });
-
-                Self::push_entries_by_session_rail_sort(
-                    &mut entries,
-                    matched_terminals,
-                    matched_threads,
-                    session_rail_sort_by,
-                    &notified_threads,
-                    &notified_terminals,
-                    &manual_entry_order,
-                    &mut current_session_ids,
-                    &mut current_thread_ids,
-                );
+                entries.extend(activity_entries);
             } else {
                 if !has_threads && !session_rail_shows_idle_workspaces(APP_NAME) {
                     continue;
@@ -7617,9 +8436,9 @@ impl Sidebar {
 
                 let has_terminal_notifications =
                     terminals.iter().any(|terminal| terminal.needs_attention);
-                let has_external_notifications = external_sessions
-                    .iter()
-                    .any(|session| session.state == MultiplexerSessionState::NeedsAttention);
+                let has_external_notifications = external_sessions.iter().any(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                });
                 visible_multiplexer_session_ids
                     .extend(external_sessions.iter().map(|session| session.id.clone()));
 
@@ -7644,6 +8463,66 @@ impl Sidebar {
                         .iter()
                         .any(|t| notified_threads.contains(&t.metadata.thread_id))
                 };
+                let mut activity_entries = Vec::new();
+                Self::push_entries_by_session_rail_sort(
+                    &mut activity_entries,
+                    terminals,
+                    threads,
+                    session_rail_sort_by,
+                    &notified_threads,
+                    &notified_terminals,
+                    &manual_entry_order,
+                    &mut current_session_ids,
+                    &mut current_thread_ids,
+                );
+                managed_activity_count += activity_entries.len();
+                managed_attention_count += activity_entries
+                    .iter()
+                    .filter(|entry| {
+                        entry_needs_attention(entry, &notified_threads, &notified_terminals)
+                    })
+                    .count();
+
+                let external_activity_row_count = usize::from(!external_sessions.is_empty());
+                let activity_count = activity_entries.len() + external_activity_row_count;
+                let activity_disclosure_available = !is_collapsed
+                    && !self.attention_only
+                    && activity_count > WORKSPACE_ACTIVITY_PREVIEW_LIMIT;
+                let activity_expanded = !activity_disclosure_available
+                    || self.workspace_activity_expanded.contains(group_key);
+                if activity_disclosure_available && !activity_expanded {
+                    let preview_limit = WORKSPACE_ACTIVITY_PREVIEW_LIMIT
+                        .saturating_sub(external_activity_row_count);
+                    let row_states = activity_entries
+                        .iter()
+                        .map(|entry| {
+                            (
+                                self.active_entry
+                                    .as_ref()
+                                    .is_some_and(|active| active.matches_entry(entry)),
+                                entry_needs_attention(
+                                    entry,
+                                    &notified_threads,
+                                    &notified_terminals,
+                                ),
+                            )
+                        })
+                        .collect::<Vec<_>>();
+                    let preview_indices = workspace_activity_preview_indices(
+                        &row_states,
+                        preview_limit,
+                        activity_expanded,
+                    )
+                    .into_iter()
+                    .collect::<HashSet<_>>();
+                    activity_entries = activity_entries
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(index, entry)| {
+                            preview_indices.contains(&index).then_some(entry)
+                        })
+                        .collect();
+                }
                 project_header_indices.push(entries.len());
                 entries.push(ListEntry::ProjectHeader {
                     key: group_key.clone(),
@@ -7659,24 +8538,16 @@ impl Sidebar {
                         || has_external_notifications,
                     is_active,
                     has_threads,
+                    activity_count,
+                    activity_expanded,
+                    activity_disclosure_available,
                     external_sessions,
                 });
 
                 if is_collapsed {
                     continue;
                 }
-
-                Self::push_entries_by_session_rail_sort(
-                    &mut entries,
-                    terminals,
-                    threads,
-                    session_rail_sort_by,
-                    &notified_threads,
-                    &notified_terminals,
-                    &manual_entry_order,
-                    &mut current_session_ids,
-                    &mut current_thread_ids,
-                );
+                entries.extend(activity_entries);
             }
         }
 
@@ -7706,23 +8577,16 @@ impl Sidebar {
                 .map(|session| session.id.clone()),
         );
 
-        let session_count = entries
-            .iter()
-            .filter(|entry| matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_)))
-            .count()
-            + visible_multiplexer_session_ids.len();
-        let attention_count = entries
-            .iter()
-            .filter(|entry| {
-                matches!(entry, ListEntry::Thread(_) | ListEntry::Terminal(_))
-                    && entry_needs_attention(entry, &notified_threads, &notified_terminals)
-            })
-            .count()
+        let session_count = managed_activity_count + visible_multiplexer_session_ids.len();
+        let attention_count = managed_attention_count
             + multiplexer_sessions
                 .iter()
                 .filter(|session| {
                     visible_multiplexer_session_ids.contains(&session.id)
-                        && session.state == MultiplexerSessionState::NeedsAttention
+                        && external_multiplexer_attention_visible(
+                            session.state,
+                            session.is_last_known(),
+                        )
                 })
                 .count();
         let has_attention = attention_count > 0;
@@ -8046,6 +8910,9 @@ impl Sidebar {
                 has_notifications,
                 is_active: is_active_group,
                 has_threads,
+                activity_count,
+                activity_expanded,
+                activity_disclosure_available,
                 external_sessions,
             } => {
                 self.project_header_menu_handles.entry(ix).or_default();
@@ -8068,6 +8935,9 @@ impl Sidebar {
                     *is_active_group,
                     is_selected,
                     *has_threads,
+                    *activity_count,
+                    *activity_expanded,
+                    *activity_disclosure_available,
                     external_sessions,
                     // has_active_draft,
                     window,
@@ -8132,6 +9002,102 @@ impl Sidebar {
         )
     }
 
+    fn render_workspace_activity_heading(
+        &self,
+        ix: usize,
+        key: &ProjectGroupKey,
+        workspace_name: &SharedString,
+        activity_count: usize,
+        activity_expanded: bool,
+        activity_disclosure_available: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let (workspace_control_size, workspace_icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
+        let content = h_flex()
+            .role(gpui::Role::Heading)
+            .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
+            .w_full()
+            .min_w_0()
+            .gap_1()
+            .child(
+                Label::new(workspace_activity_section_title(APP_NAME))
+                    .size(workspace_secondary_label_size(APP_NAME))
+                    .weight(gpui::FontWeight::MEDIUM)
+                    .color(Color::Muted),
+            )
+            .child(div().flex_1())
+            .child(
+                Label::new(activity_count.to_string())
+                    .size(workspace_secondary_label_size(APP_NAME))
+                    .color(Color::Muted),
+            );
+
+        if !activity_disclosure_available {
+            return content.px_3().pt_1().pb_0p5().into_any_element();
+        }
+
+        let accessibility_label = if activity_expanded {
+            format!(
+                "Show fewer Activity items in {}; {} total",
+                workspace_name.as_ref(),
+                activity_count
+            )
+        } else {
+            format!(
+                "Show all {} Activity items in {}",
+                activity_count,
+                workspace_name.as_ref()
+            )
+        };
+        let disclosure_key = key.clone();
+        let sidebar = cx.weak_entity();
+        h_flex()
+            .w_full()
+            .px_2()
+            .pt_1()
+            .pb_0p5()
+            .child(
+                ButtonLike::new(ElementId::from(format!(
+                    "workspace-activity-disclosure-{ix}"
+                )))
+                .size(workspace_control_size)
+                .style(ButtonStyle::Subtle)
+                .full_width()
+                .tab_index(0isize)
+                .aria_expanded(activity_expanded)
+                .aria_label(accessibility_label.clone())
+                .tooltip(Tooltip::text(accessibility_label))
+                .child(
+                    content.child(
+                        Icon::new(if activity_expanded {
+                            IconName::ChevronDown
+                        } else {
+                            IconName::ChevronRight
+                        })
+                        .size(workspace_icon_size)
+                        .color(Color::Muted),
+                    ),
+                )
+                .on_click(move |_, _window, cx| {
+                    cx.stop_propagation();
+                    sidebar
+                        .update(cx, |sidebar, cx| {
+                            if !sidebar.workspace_activity_expanded.remove(&disclosure_key) {
+                                sidebar
+                                    .workspace_activity_expanded
+                                    .insert(disclosure_key.clone());
+                            }
+                            sidebar.update_entries(cx);
+                        })
+                        .log_err();
+                }),
+            )
+            .into_any_element()
+    }
+
     fn render_project_header(
         &self,
         ix: usize,
@@ -8148,6 +9114,9 @@ impl Sidebar {
         is_active: bool,
         is_focused: bool,
         has_threads: bool,
+        activity_count: usize,
+        activity_expanded: bool,
+        activity_disclosure_available: bool,
         external_sessions: &[ExternalMultiplexerSession],
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -8158,37 +9127,27 @@ impl Sidebar {
         let session_rail_settings = SessionRailSettings::get_global(cx);
         let design_system = DesignSystemSettings::get_global(cx);
         let labels_visible = session_rail_labels_visible(&design_system);
+        let (workspace_control_size, workspace_icon_size) =
+            workspace_navigation_control_metrics(APP_NAME, design_system.density);
         let show_agent_attention =
             WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention;
-        let (header_height, header_padding_left, header_padding_right, header_gap, label_size) =
+        let (header_height, header_padding_left, header_padding_right, header_gap) =
             match design_system.density {
-                settings::CanvasDensity::Compact => {
-                    (px(28.0), px(6.0), px(4.0), px(4.0), LabelSize::XSmall)
+                settings::CanvasDensity::Compact => (px(28.0), px(6.0), px(4.0), px(4.0)),
+                settings::CanvasDensity::Balanced => {
+                    (Tab::content_height(cx), px(8.0), px(6.0), px(4.0))
                 }
-                settings::CanvasDensity::Balanced => (
-                    Tab::content_height(cx),
-                    px(8.0),
-                    px(6.0),
-                    px(4.0),
-                    LabelSize::Small,
-                ),
-                settings::CanvasDensity::Spacious => (
-                    Tab::container_height(cx),
-                    px(10.0),
-                    px(8.0),
-                    px(6.0),
-                    LabelSize::Small,
-                ),
+                settings::CanvasDensity::Spacious => {
+                    (Tab::container_height(cx), px(10.0), px(8.0), px(6.0))
+                }
             };
-        let header_height = if APP_NAME == "Zed" {
-            header_height
-        } else {
-            match design_system.density {
-                settings::CanvasDensity::Compact => px(36.0),
-                settings::CanvasDensity::Balanced => px(40.0),
-                settings::CanvasDensity::Spacious => px(44.0),
-            }
-        };
+        let label_size = workspace_header_label_size(APP_NAME, design_system.density);
+        let header_height = workspace_header_height(
+            APP_NAME,
+            design_system.density,
+            header_height,
+            interface_scale(cx),
+        );
 
         let id_prefix = if is_sticky { "sticky-" } else { "" };
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
@@ -8239,6 +9198,11 @@ impl Sidebar {
         let label = if highlight_positions.is_empty() {
             Label::new(label.clone())
                 .size(label_size)
+                .weight(if is_active {
+                    gpui::FontWeight::MEDIUM
+                } else {
+                    gpui::FontWeight::NORMAL
+                })
                 .when(!is_active, |this| this.color(Color::Muted))
                 .truncate()
                 .into_any_element()
@@ -8260,17 +9224,13 @@ impl Sidebar {
             settings::CanvasContrast::Standard => color
                 .element_active
                 .blend(color.element_background.opacity(0.2)),
-            settings::CanvasContrast::High => color
-                .element_active
-                .blend(color.border_focused.opacity(0.12)),
+            settings::CanvasContrast::High => color.element_active.blend(color.text.opacity(0.04)),
         };
         let hover_solid = base_bg.blend(hover_base);
         let active_background = match design_system.contrast {
             settings::CanvasContrast::Low => color.element_active.opacity(0.55),
             settings::CanvasContrast::Standard => color.element_active,
-            settings::CanvasContrast::High => color
-                .element_active
-                .blend(color.border_focused.opacity(0.16)),
+            settings::CanvasContrast::High => color.element_active.blend(color.text.opacity(0.08)),
         };
         let focused_border_color = if design_system.is_low_contrast() {
             color.border_variant
@@ -8343,8 +9303,8 @@ impl Sidebar {
                                     )),
                                     disclosure_icon,
                                 )
-                                .size(ButtonSize::Medium)
-                                .icon_size(IconSize::Small)
+                                .size(workspace_control_size)
+                                .icon_size(workspace_icon_size)
                                 .tab_index(0isize)
                                 .aria_label(disclosure_label.clone())
                                 .tooltip(Tooltip::text(disclosure_label))
@@ -8439,10 +9399,10 @@ impl Sidebar {
                             },
                         )
                         .when(show_agent_attention && attention_thread_count > 0, |this| {
-                            let tooltip_text = if attention_thread_count == 1 {
-                                "1 session needs attention".to_string()
-                            } else {
-                                format!("{attention_thread_count} sessions need attention")
+                            let Some(tooltip_text) =
+                                workspace_attention_summary(APP_NAME, attention_thread_count)
+                            else {
+                                return this;
                             };
                             this.child(
                                 div()
@@ -8543,17 +9503,6 @@ impl Sidebar {
             is_collapsed,
             has_threads || !external_sessions.is_empty(),
         );
-        let workspace_activity_heading = || {
-            h_flex().w_full().px_3().pt_1().pb_0p5().child(
-                Label::new(if APP_NAME == "Zed" {
-                    "Activity"
-                } else {
-                    "Sessions"
-                })
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
-            )
-        };
 
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
             let external_sessions_expanded =
@@ -8593,12 +9542,13 @@ impl Sidebar {
                                 tooltip_label.push_str("\nListening ports: ");
                                 tooltip_label.push_str(port_label);
                             }
-                            let accessibility_label =
-                                if let Some(port_label) = port_detail_label.as_deref() {
-                                    format!("{action_label} Listening ports: {port_label}.")
-                                } else {
-                                    action_label.clone()
-                                };
+                            let state_label = session.state_label();
+                            let accessibility_label = external_multiplexer_accessibility_label(
+                                &action_label,
+                                &state_label,
+                                session.working_directory.as_deref(),
+                                port_detail_label.as_deref(),
+                            );
                             ButtonLike::new(ElementId::from(format!(
                                 "workspace-external-session-{}",
                                 session.id
@@ -8616,11 +9566,12 @@ impl Sidebar {
                                     .gap_2()
                                     .child(
                                         Icon::new(external_multiplexer_icon(session))
-                                            .size(IconSize::XSmall)
+                                            .size(workspace_icon_size)
                                             .color(
-                                                if session.state
-                                                    == MultiplexerSessionState::NeedsAttention
-                                                {
+                                                if external_multiplexer_attention_visible(
+                                                    session.state,
+                                                    session.is_last_known(),
+                                                ) {
                                                     Color::Warning
                                                 } else {
                                                     Color::Muted
@@ -8634,11 +9585,9 @@ impl Sidebar {
                                             .gap(px(1.0))
                                             .child(
                                                 Label::new(session.title.clone())
-                                                    .size(if labels_visible {
-                                                        LabelSize::XSmall
-                                                    } else {
-                                                        LabelSize::Small
-                                                    })
+                                                    .size(workspace_running_session_label_size(
+                                                        APP_NAME,
+                                                    ))
                                                     .truncate(),
                                             )
                                             .when(labels_visible, |this| {
@@ -8677,26 +9626,30 @@ impl Sidebar {
                 })
                 .unwrap_or_default();
             let external_session_count = external_sessions.len();
-            let external_sessions_need_attention = external_sessions.iter().any(|session| {
-                session.state == MultiplexerSessionState::NeedsAttention || session.is_last_known()
-            });
+            let external_sessions_attention_count = external_sessions
+                .iter()
+                .filter(|session| {
+                    external_multiplexer_attention_visible(session.state, session.is_last_known())
+                })
+                .count();
+            let external_sessions_need_attention = external_sessions_attention_count > 0;
             let disclosure_key = key.clone();
             let disclosure_sidebar = cx.weak_entity();
-            let disclosure_label = if external_sessions_expanded {
-                "Hide running multiplexer sessions"
-            } else {
-                "Show running multiplexer sessions"
-            };
+            let disclosure_accessibility_label =
+                workspace_running_sessions_disclosure_accessibility_label(
+                    external_sessions_expanded,
+                    external_session_count,
+                    external_sessions_attention_count,
+                );
             let external_sessions_disclosure =
                 ButtonLike::new(ElementId::from(format!("workspace-running-sessions-{ix}")))
-                    .size(ButtonSize::Medium)
+                    .size(workspace_control_size)
                     .style(ButtonStyle::Subtle)
                     .full_width()
                     .tab_index(0isize)
-                    .aria_label(format!(
-                        "{disclosure_label}. {external_session_count} running sessions"
-                    ))
-                    .tooltip(Tooltip::text(disclosure_label))
+                    .aria_expanded(external_sessions_expanded)
+                    .aria_label(disclosure_accessibility_label.clone())
+                    .tooltip(Tooltip::text(disclosure_accessibility_label))
                     .child(
                         h_flex()
                             .w_full()
@@ -8708,12 +9661,15 @@ impl Sidebar {
                                 } else {
                                     IconName::ChevronRight
                                 })
-                                .size(IconSize::XSmall)
+                                .size(workspace_icon_size)
                                 .color(Color::Muted),
                             )
                             .child(
                                 Label::new("Running Sessions")
-                                    .size(LabelSize::XSmall)
+                                    .size(workspace_running_session_label_size(APP_NAME))
+                                    .when(APP_NAME != "Zed", |label| {
+                                        label.weight(gpui::FontWeight::MEDIUM)
+                                    })
                                     .truncate(),
                             )
                             .child(div().flex_1())
@@ -8751,7 +9707,15 @@ impl Sidebar {
                 .child(header)
                 .when_some(workspace_layout, |this, layout| this.child(layout))
                 .when(workspace_activity_visible, |this| {
-                    this.child(workspace_activity_heading())
+                    this.child(self.render_workspace_activity_heading(
+                        ix,
+                        key,
+                        &workspace_name,
+                        activity_count,
+                        activity_expanded,
+                        activity_disclosure_available,
+                        cx,
+                    ))
                 })
                 .child(
                     v_flex()
@@ -8769,6 +9733,17 @@ impl Sidebar {
             && (APP_NAME == "Dez" || (APP_NAME == "Zed" && labels_visible))
             && workspace_empty_terminal_row_visible_for_active_state(APP_NAME, is_active)
         {
+            let configured_terminal_command = AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref();
+            let terminal_action_label =
+                active_workspace_terminal_action_label(APP_NAME, configured_terminal_command);
+            let terminal_action_aria_label =
+                format!("{} in {}", terminal_action_label, workspace_name.as_ref());
+            let terminal_action_icon =
+                workspace_default_terminal_icon(APP_NAME, configured_terminal_command);
+            let terminal_tooltip_label = terminal_action_label.clone();
+
             v_flex()
                 .w_full()
                 .child(header)
@@ -8815,37 +9790,19 @@ impl Sidebar {
                                 SharedString::from(format!(
                                     "{id_prefix}empty-project-new-terminal-{ix}"
                                 )),
-                                terminal_launch_label(APP_NAME),
+                                terminal_action_label,
                             )
                             .full_width()
-                            .size(ButtonSize::Medium)
+                            .size(workspace_control_size)
                             .style(if APP_NAME == "Zed" {
                                 ButtonStyle::Filled
                             } else {
                                 ButtonStyle::Subtle
                             })
-                            .start_icon(
-                                Icon::new(workspace_default_terminal_icon(
-                                    APP_NAME,
-                                    AgentSettings::get_global(cx)
-                                        .terminal_init_command
-                                        .as_deref(),
-                                ))
-                                .size(IconSize::XSmall),
-                            )
+                            .start_icon(Icon::new(terminal_action_icon).size(workspace_icon_size))
                             .tab_index(0isize)
-                            .aria_label(SharedString::from(format!(
-                                "{} in {}",
-                                terminal_launch_label(APP_NAME),
-                                workspace_name.as_ref()
-                            )))
-                            .tooltip(move |_, cx| {
-                                Tooltip::for_action(
-                                    workspace_new_terminal_tooltip_label(APP_NAME),
-                                    &NewCenterTerminal::default(),
-                                    cx,
-                                )
-                            })
+                            .aria_label(terminal_action_aria_label)
+                            .tooltip(Tooltip::text(terminal_tooltip_label))
                             .on_click(cx.listener(
                                 move |this, _, window, cx| {
                                     this.set_group_expanded(&key_for_empty_terminal, true, cx);
@@ -8857,7 +9814,7 @@ impl Sidebar {
                                     } else {
                                         this.open_workspace_and_create_entry(
                                             &key_for_empty_terminal,
-                                            NewEntryTarget::Terminal(None),
+                                            default_new_session_target(),
                                             window,
                                             cx,
                                         );
@@ -8874,7 +9831,15 @@ impl Sidebar {
                     .child(header)
                     .when_some(workspace_layout, |this, layout| this.child(layout))
                     .when(workspace_activity_visible, |this| {
-                        this.child(workspace_activity_heading())
+                        this.child(self.render_workspace_activity_heading(
+                            ix,
+                            key,
+                            &workspace_name,
+                            activity_count,
+                            activity_expanded,
+                            activity_disclosure_available,
+                            cx,
+                        ))
                     })
                     .into_any_element()
             } else {
@@ -8895,6 +9860,10 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let focus_handle = self.focus_handle.clone();
+        let (control_size, icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
 
         let menu_handle = self
             .project_header_new_thread_menu_handles
@@ -8902,23 +9871,23 @@ impl Sidebar {
             .cloned()
             .unwrap_or_default();
         let is_menu_open = menu_handle.is_deployed();
+        let configured_terminal_command =
+            AgentSettings::get_global(cx).terminal_init_command.clone();
         let new_terminal_label = SharedString::from(workspace_new_terminal_control_label(
             APP_NAME,
             workspace_name,
+            configured_terminal_command.as_deref(),
         ));
+        let terminal_tooltip_label =
+            workspace_new_terminal_tooltip_label(APP_NAME, configured_terminal_command.as_deref());
 
         let button = IconButton::new(
             SharedString::from(format!("{id_prefix}workspace-new-session-{ix}")),
-            workspace_default_terminal_icon(
-                APP_NAME,
-                AgentSettings::get_global(cx)
-                    .terminal_init_command
-                    .as_deref(),
-            ),
+            workspace_default_terminal_icon(APP_NAME, configured_terminal_command.as_deref()),
         )
-        .size(ButtonSize::Medium)
-        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-        .icon_size(IconSize::Small)
+        .size(control_size)
+        .selected_style(workspace_navigation_selected_style(APP_NAME))
+        .icon_size(icon_size)
         .tab_index(0isize)
         .aria_label(new_terminal_label.clone())
         .when(
@@ -8934,10 +9903,11 @@ impl Sidebar {
 
         if open_workspaces.is_empty() {
             let key = key.clone();
+            let terminal_tooltip_label = terminal_tooltip_label.clone();
             return button
                 .tooltip(move |_, cx| {
                     Tooltip::for_action_in(
-                        workspace_new_terminal_tooltip_label(APP_NAME),
+                        terminal_tooltip_label.clone(),
                         &NewSessionInGroup,
                         &focus_handle,
                         cx,
@@ -8962,6 +9932,7 @@ impl Sidebar {
 
         let this = cx.weak_entity();
         let key = key.clone();
+        let button = button.aria_expanded(is_menu_open);
 
         PopoverMenu::new(SharedString::from(format!(
             "{id_prefix}workspace-new-session-menu-{ix}"
@@ -8969,7 +9940,7 @@ impl Sidebar {
         .with_handle(menu_handle)
         .trigger_with_tooltip(button, move |_, cx| {
             Tooltip::for_action_in(
-                workspace_new_terminal_tooltip_label(APP_NAME),
+                terminal_tooltip_label.clone(),
                 &NewSessionInGroup,
                 &focus_handle,
                 cx,
@@ -9031,9 +10002,9 @@ impl Sidebar {
                                     ))
                                     .when(is_active_workspace, |this| {
                                         this.child(
-                                            Icon::new(IconName::Check)
-                                                .size(IconSize::Small)
-                                                .color(Color::Accent),
+                                            Icon::new(IconName::Check).size(IconSize::Small).color(
+                                                workspace_navigation_selected_icon_color(APP_NAME),
+                                            ),
                                         )
                                     })
                                     .into_any_element()
@@ -9215,6 +10186,10 @@ impl Sidebar {
     ) -> AnyElement {
         let multi_workspace = self.multi_workspace.clone();
         let project_group_key = project_group_key.clone();
+        let (control_size, icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
 
         let show_multi_project_entries = multi_workspace
             .read_with(cx, |mw, _| {
@@ -9238,11 +10213,12 @@ impl Sidebar {
             .with_handle(menu_handle)
             .trigger(
                 IconButton::new(trigger_id, IconName::Ellipsis)
-                    .size(ButtonSize::Medium)
-                    .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                    .icon_size(IconSize::Small)
+                    .size(control_size)
+                    .selected_style(workspace_navigation_selected_style(APP_NAME))
+                    .icon_size(icon_size)
                     .tab_index(0isize)
                     .aria_label(workspace_options_label.clone())
+                    .aria_expanded(is_menu_open)
                     .tooltip(Tooltip::text(workspace_options_tooltip_label()))
                     .when(
                         !workspace_options_action_persistent(is_active, is_focused, is_menu_open),
@@ -9357,6 +10333,23 @@ impl Sidebar {
                                 APP_NAME,
                                 built_in_agent_ready,
                             );
+                        let terminal_sidebar = this_for_menu.clone();
+                        let terminal_key = project_group_key.clone();
+                        let terminal_menu = weak_menu.clone();
+                        let workspace_root = project_group_key
+                            .path_list()
+                            .ordered_paths()
+                            .next()
+                            .map(PathBuf::as_path);
+                        let tmux_startup_command =
+                            terminal_view::tmux_startup_command_for_workspace(workspace_root);
+                        let tmux_sidebar = terminal_sidebar.clone();
+                        let tmux_key = terminal_key.clone();
+                        let tmux_menu = terminal_menu.clone();
+                        let cmux_key = project_group_key.clone();
+                        let cmux_sidebar = this_for_menu.clone();
+                        let get_cmux_menu = weak_menu.clone();
+                        let open_cmux_menu = weak_menu.clone();
                         let menu = if APP_NAME == "Zed" {
                             menu.entry(
                                 built_in_agent_label,
@@ -9386,9 +10379,6 @@ impl Sidebar {
                                 },
                             )
                         } else {
-                            let terminal_sidebar = this_for_menu.clone();
-                            let terminal_key = project_group_key.clone();
-                            let terminal_menu = weak_menu.clone();
                             let resume_sidebar = this_for_menu.clone();
                             let resume_key = project_group_key.clone();
                             let resume_menu = weak_menu.clone();
@@ -9399,19 +10389,9 @@ impl Sidebar {
                                 APP_NAME,
                                 configured_command.as_deref(),
                             );
-                            let workspace_root = project_group_key
-                                .path_list()
-                                .ordered_paths()
-                                .next()
-                                .map(PathBuf::as_path);
-                            let tmux_startup_command =
-                                terminal_view::tmux_startup_command_for_workspace(workspace_root);
-                            let cmux_key = project_group_key.clone();
-                            let cmux_sidebar = this_for_menu.clone();
-                            let get_cmux_menu = weak_menu.clone();
-                            let open_cmux_menu = weak_menu.clone();
-                            let menu = menu.submenu(
+                            let menu = menu.submenu_with_icon(
                                 terminal_launch_label(APP_NAME),
+                                configured_icon,
                                 move |mut submenu, _window, _cx| {
                                     for (label, icon, startup_command) in [
                                         (
@@ -9425,11 +10405,6 @@ impl Sidebar {
                                             "Native Shell".to_owned(),
                                             IconName::Terminal,
                                             Some(String::new()),
-                                        ),
-                                        (
-                                            WORKSPACE_TMUX_LAUNCHER_LABEL.to_owned(),
-                                            IconName::SplitAlt,
-                                            Some(tmux_startup_command.clone()),
                                         ),
                                         (
                                             "Codex".to_owned(),
@@ -9513,8 +10488,11 @@ impl Sidebar {
                                     )
                                 },
                             )
-                            .submenu("Resume Existing Agent", move |mut submenu, _window, _cx| {
-                                for (label, icon, startup_command) in [
+                            .submenu_with_icon(
+                                "Resume Existing Agent",
+                                IconName::HistoryRerun,
+                                move |mut submenu, _window, _cx| {
+                                    for (label, icon, startup_command) in [
                                     (
                                         "Codex · Last Session",
                                         IconName::AiOpenAi,
@@ -9554,8 +10532,9 @@ impl Sidebar {
                                         ),
                                     );
                                 }
-                                submenu
-                            })
+                                    submenu
+                                },
+                            )
                             .separator();
                             let menu = if built_in_agent_ready {
                                 menu.item(
@@ -9612,108 +10591,200 @@ impl Sidebar {
                                         }),
                                 )
                             };
-                            menu.when(
-                                project_group_key.host().is_none(),
-                                |menu| {
-                                    if cmux_is_missing {
-                                        menu.separator().item(
-                                            ContextMenuEntry::new("Get cmux…")
-                                                .icon(IconName::Screen)
-                                                .handler(move |_window, cx| {
-                                                    cx.open_url(CMUX_WEBSITE_URL);
-                                                    get_cmux_menu
-                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                        .log_err();
-                                                }),
-                                        )
-                                    } else {
-                                        menu.separator().item(
-                                            ContextMenuEntry::new("Open Workspace in cmux")
-                                                .icon(IconName::ArrowUpRight)
-                                                .handler(move |window, cx| {
-                                                    cmux_sidebar
-                                                        .update(cx, |sidebar, cx| {
-                                                            sidebar.open_project_group_in_cmux(
-                                                                &cmux_key, window, cx,
-                                                            );
-                                                        })
-                                                        .log_err();
-                                                    open_cmux_menu
-                                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                        .log_err();
-                                                }),
-                                        )
-                                    }
-                                },
-                            )
-                        }
-                        .separator();
+                            menu
+                        };
 
+                        let cmux_handoff_available = project_group_key.host().is_none();
                         let attachable_sessions_for_menu = attachable_sessions.clone();
                         let attach_sidebar = this_for_menu.clone();
-                        let menu = if attachable_sessions.is_empty() {
-                            menu.item(
-                                ContextMenuEntry::new(external_sessions_empty_label(
-                                    external_activity_refreshing,
-                                    &external_source_statuses,
-                                ))
-                                .disabled(true),
-                            )
-                        } else {
-                            let attach_sidebar = attach_sidebar.clone();
-                            menu.submenu(
-                                "Open Running Session…",
-                                move |mut submenu, _window, _cx| {
-                                    for session in attachable_sessions_for_menu.clone() {
-                                        let label = format!(
-                                            "{} · {} · {}",
-                                            session.title,
-                                            session.kind.display_name(),
-                                            session.state_label()
-                                        );
-                                        let attach_sidebar = attach_sidebar.clone();
-                                        submenu = submenu.entry(label, None, move |window, cx| {
-                                            attach_sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar.open_external_multiplexer_session(
-                                                        session.clone(),
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .ok();
-                                        });
-                                    }
-                                    submenu
-                                },
-                            )
-                        };
                         let refresh_menu = weak_menu.clone();
-                        let menu = if external_activity_refreshing {
-                            menu.item(
-                                ContextMenuEntry::new("Refreshing running sessions…")
-                                    .disabled(true),
-                            )
-                        } else {
-                            let multiplexer_store = multiplexer_store.clone();
-                            menu.entry(
-                                if running_session_discovery_failed {
-                                    "Retry Running Sessions"
-                                } else {
-                                    "Refresh Running Sessions"
-                                },
-                                None,
-                                move |_window, cx| {
-                                    if let Some(store) = &multiplexer_store {
-                                        store.update(cx, |store, cx| store.refresh(cx));
+                        let external_source_statuses_for_menu = external_source_statuses.clone();
+                        let multiplexer_store_for_menu = multiplexer_store.clone();
+                        let menu = menu
+                            .separator()
+                            .submenu_with_icon(
+                                "Sessions and Multiplexers",
+                                IconName::ListTree,
+                                move |mut submenu, _window, _cx| {
+                                    if cmux_handoff_available {
+                                        submenu = if cmux_is_missing {
+                                            let get_cmux_menu = get_cmux_menu.clone();
+                                            submenu.item(
+                                                ContextMenuEntry::new("Get cmux…")
+                                                    .icon(IconName::Screen)
+                                                    .handler(move |_window, cx| {
+                                                        cx.open_url(CMUX_WEBSITE_URL);
+                                                        get_cmux_menu
+                                                            .update(cx, |_, cx| {
+                                                                cx.emit(DismissEvent)
+                                                            })
+                                                            .log_err();
+                                                    }),
+                                            )
+                                        } else {
+                                            let cmux_sidebar = cmux_sidebar.clone();
+                                            let cmux_key = cmux_key.clone();
+                                            let open_cmux_menu = open_cmux_menu.clone();
+                                            submenu.item(
+                                                ContextMenuEntry::new("Open Workspace in cmux")
+                                                    .icon(IconName::Screen)
+                                                    .handler(move |window, cx| {
+                                                        cmux_sidebar
+                                                            .update(cx, |sidebar, cx| {
+                                                                sidebar.open_project_group_in_cmux(
+                                                                    &cmux_key, window, cx,
+                                                                );
+                                                            })
+                                                            .log_err();
+                                                        open_cmux_menu
+                                                            .update(cx, |_, cx| {
+                                                                cx.emit(DismissEvent)
+                                                            })
+                                                            .log_err();
+                                                    }),
+                                            )
+                                        };
                                     }
-                                    refresh_menu
-                                        .update(cx, |_, cx| cx.emit(DismissEvent))
-                                        .log_err();
+
+                                    let tmux_sidebar = tmux_sidebar.clone();
+                                    let tmux_key = tmux_key.clone();
+                                    let tmux_menu = tmux_menu.clone();
+                                    let tmux_startup_command = tmux_startup_command.clone();
+                                    submenu = submenu.item(
+                                        ContextMenuEntry::new(WORKSPACE_TMUX_LAUNCHER_LABEL)
+                                            .icon(IconName::SplitAlt)
+                                            .handler(move |window, cx| {
+                                                tmux_sidebar
+                                                    .update(cx, |sidebar, cx| {
+                                                        sidebar.create_terminal_in_project_group(
+                                                            &tmux_key,
+                                                            Some(tmux_startup_command.clone()),
+                                                            window,
+                                                            cx,
+                                                        );
+                                                    })
+                                                    .log_err();
+                                                tmux_menu
+                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                    .log_err();
+                                            }),
+                                    );
+
+                                    submenu = submenu.separator();
+                                    if attachable_sessions_for_menu.is_empty() {
+                                        submenu = submenu.item(
+                                            ContextMenuEntry::new(external_sessions_empty_label(
+                                                external_activity_refreshing,
+                                                &external_source_statuses_for_menu,
+                                            ))
+                                            .disabled(true),
+                                        );
+                                    } else {
+                                        let attach_sidebar = attach_sidebar.clone();
+                                        let attachable_sessions =
+                                            attachable_sessions_for_menu.clone();
+                                        submenu = submenu.submenu_with_icon(
+                                            "Open Running Session…",
+                                            IconName::ListTree,
+                                            move |mut sessions, _window, _cx| {
+                                                for session in attachable_sessions.clone() {
+                                                    let label = format!(
+                                                        "{} · {} · {}",
+                                                        session.title,
+                                                        session.kind.display_name(),
+                                                        session.state_label()
+                                                    );
+                                                    let icon =
+                                                        external_multiplexer_icon(&session);
+                                                    let attach_session = session.clone();
+                                                    let takeover_session = session
+                                                        .takeover_command()
+                                                        .is_some()
+                                                        .then(|| session.clone());
+                                                    let attach_sidebar = attach_sidebar.clone();
+                                                    let takeover_sidebar = attach_sidebar.clone();
+                                                    sessions = sessions.item(
+                                                        ContextMenuEntry::new(label)
+                                                            .icon(icon)
+                                                            .handler(move |window, cx| {
+                                                                attach_sidebar
+                                                                    .update(cx, |sidebar, cx| {
+                                                                        sidebar.open_external_multiplexer_session(
+                                                                            attach_session.clone(),
+                                                                            window,
+                                                                            cx,
+                                                                        );
+                                                                    })
+                                                                    .log_err();
+                                                            }),
+                                                    );
+                                                    if let Some(takeover_session) = takeover_session
+                                                    {
+                                                        let takeover_label = format!(
+                                                            "Take Control of {} in Dez · Herdr",
+                                                            takeover_session.title
+                                                        );
+                                                        sessions = sessions.item(
+                                                            ContextMenuEntry::new(takeover_label)
+                                                                .icon(IconName::Inception)
+                                                                .handler(move |window, cx| {
+                                                                    takeover_sidebar
+                                                                        .update(
+                                                                            cx,
+                                                                            |sidebar, cx| {
+                                                                                sidebar.take_control_of_external_multiplexer_session(
+                                                                                    takeover_session.clone(),
+                                                                                    window,
+                                                                                    cx,
+                                                                                );
+                                                                            },
+                                                                        )
+                                                                        .log_err();
+                                                                }),
+                                                        );
+                                                    }
+                                                }
+                                                sessions
+                                            },
+                                        );
+                                    }
+
+                                    if external_activity_refreshing {
+                                        submenu.item(
+                                            ContextMenuEntry::new(
+                                                "Refreshing running sessions…",
+                                            )
+                                            .icon(IconName::ArrowCircle)
+                                            .disabled(true),
+                                        )
+                                    } else {
+                                        let multiplexer_store =
+                                            multiplexer_store_for_menu.clone();
+                                        let refresh_menu = refresh_menu.clone();
+                                        submenu.item(
+                                            ContextMenuEntry::new(
+                                                if running_session_discovery_failed {
+                                                    "Retry Running Sessions"
+                                                } else {
+                                                    "Refresh Running Sessions"
+                                                },
+                                            )
+                                            .icon(IconName::ArrowCircle)
+                                            .handler(move |_window, cx| {
+                                                if let Some(store) = &multiplexer_store {
+                                                    store.update(cx, |store, cx| {
+                                                        store.refresh(cx)
+                                                    });
+                                                }
+                                                refresh_menu
+                                                    .update(cx, |_, cx| cx.emit(DismissEvent))
+                                                    .log_err();
+                                            }),
+                                        )
+                                    }
                                 },
                             )
-                        }
-                        .separator();
+                            .separator();
 
                         let menu = menu.when(is_active, |menu| {
                             menu.action("Open Files", Box::new(RevealFiles))
@@ -9802,7 +10873,11 @@ impl Sidebar {
                                                 this.pr_1().child(
                                                     Icon::new(IconName::Check)
                                                         .size(IconSize::Small)
-                                                        .color(Color::Accent),
+                                                        .color(
+                                                            workspace_navigation_selected_icon_color(
+                                                                APP_NAME,
+                                                            ),
+                                                        ),
                                                 )
                                             })
                                             .when(!is_active_workspace, |this| {
@@ -9980,6 +11055,9 @@ impl Sidebar {
             has_notifications,
             is_active,
             has_threads,
+            activity_count,
+            activity_expanded,
+            activity_disclosure_available,
             external_sessions,
         } = self.contents.entries.get(header_idx)?
         else {
@@ -10004,6 +11082,9 @@ impl Sidebar {
             *is_active,
             is_selected,
             *has_threads,
+            *activity_count,
+            *activity_expanded,
+            *activity_disclosure_available,
             external_sessions,
             window,
             cx,
@@ -14489,7 +15570,7 @@ impl Sidebar {
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let rail_width = self.rendered_width;
+        let rail_width = self.responsive_projection_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible_for_product(APP_NAME, rail_width);
@@ -15037,7 +16118,7 @@ impl Sidebar {
         let has_changes = changed_files > 0;
         let focus_handle = self.focus_handle.clone();
         let session_rail_settings = SessionRailSettings::get_global(cx);
-        let rail_width = self.rendered_width;
+        let rail_width = self.responsive_projection_width;
         let primary_action_labels_visible = session_row_primary_action_labels_visible(rail_width);
         let supplemental_metadata_visible =
             session_rail_supplemental_metadata_visible_for_product(APP_NAME, rail_width);
@@ -16153,15 +17234,23 @@ impl Sidebar {
         });
 
         let workspace_focus = workspace.read(cx).focus_handle(cx);
-        workspace_focus.dispatch_action(
-            &NewCenterTerminal {
-                local: false,
-                startup_command,
-                working_directory,
-            },
-            window,
-            cx,
-        );
+        if workspace_terminal_launch_uses_configured_launcher(
+            APP_NAME,
+            startup_command.as_deref(),
+            working_directory.as_deref(),
+        ) {
+            workspace_focus.dispatch_action(&zed_actions::terminal::OpenAgentTerminal, window, cx);
+        } else {
+            workspace_focus.dispatch_action(
+                &NewCenterTerminal {
+                    local: false,
+                    startup_command,
+                    working_directory,
+                },
+                window,
+                cx,
+            );
+        }
     }
 
     fn create_terminal_in_project_group(
@@ -16257,13 +17346,23 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.open_external_multiplexer_session_in_workspace(session, None, window, cx);
+        self.open_external_multiplexer_session_in_workspace(session, None, false, window, cx);
+    }
+
+    fn take_control_of_external_multiplexer_session(
+        &mut self,
+        session: ExternalMultiplexerSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.open_external_multiplexer_session_in_workspace(session, None, true, window, cx);
     }
 
     fn open_external_multiplexer_session_in_workspace(
         &mut self,
         session: ExternalMultiplexerSession,
         preferred_workspace: Option<Entity<Workspace>>,
+        takeover: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -16271,7 +17370,13 @@ impl Sidebar {
             return;
         };
 
-        let open = session.open_command();
+        let open = if takeover {
+            session
+                .takeover_command()
+                .unwrap_or_else(|| session.open_command())
+        } else {
+            session.open_command()
+        };
         let target_workspace = preferred_workspace.or_else(|| {
             let multi_workspace = multi_workspace.read(cx);
             let project_group_keys = multi_workspace.project_group_keys().to_vec();
@@ -16291,7 +17396,7 @@ impl Sidebar {
             session.working_directory.is_some(),
             target_workspace.is_some(),
         ) {
-            self.open_workspace_and_attach_external_session(session, window, cx);
+            self.open_workspace_and_attach_external_session(session, takeover, window, cx);
             return;
         }
         let target_workspace =
@@ -16410,16 +17515,19 @@ impl Sidebar {
             workspace.spawn_in_terminal(spawn, window, cx)
         });
         cx.spawn(async move |_, cx| {
-            let failure = match terminal_task.await {
+            let failure_before_terminal = match terminal_task.await {
                 Some(Ok(status)) if !status.success() => {
-                    Some(format!("Attach exited with {status}"))
+                    log::error!(
+                        "external terminal session attach exited in its terminal: {status}"
+                    );
+                    None
                 }
                 Some(Err(error)) => Some(format!("Could not attach: {error}")),
                 None => Some("No terminal provider was available for this Workspace".to_owned()),
                 Some(Ok(_)) => None,
             };
 
-            if let Some(failure) = failure {
+            if let Some(failure) = failure_before_terminal {
                 log::error!("external terminal session attach failed: {failure}");
                 let retry_sidebar = retry_sidebar.clone();
                 let retry_session_id = retry_session_id.clone();
@@ -16440,6 +17548,7 @@ impl Sidebar {
                                         .update(cx, |sidebar, cx| {
                                             sidebar.retry_external_multiplexer_session(
                                                 &retry_session_id,
+                                                takeover,
                                                 window,
                                                 cx,
                                             );
@@ -16462,6 +17571,7 @@ impl Sidebar {
     fn open_workspace_and_attach_external_session(
         &mut self,
         session: ExternalMultiplexerSession,
+        takeover: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -16500,6 +17610,7 @@ impl Sidebar {
                         this.open_external_multiplexer_session_in_workspace(
                             session,
                             Some(workspace),
+                            takeover,
                             window,
                             cx,
                         );
@@ -16535,6 +17646,7 @@ impl Sidebar {
     fn retry_external_multiplexer_session(
         &mut self,
         session_id: &str,
+        takeover: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -16547,7 +17659,9 @@ impl Sidebar {
                 .cloned()
         });
         if let Some(session) = current_session {
-            self.open_external_multiplexer_session(session, window, cx);
+            self.open_external_multiplexer_session_in_workspace(
+                session, None, takeover, window, cx,
+            );
             return;
         }
 
@@ -16610,13 +17724,15 @@ impl Sidebar {
             .upgrade()
             .and_then(|mw| mw.read(cx).last_active_workspace_for_group(key, cx))
             .or_else(|| self.workspace_for_group(key, cx));
+        self.selection = None;
         if let Some(workspace) = workspace {
+            self.active_entry = None;
             self.activate_workspace(&workspace, window, cx);
+            self.sync_active_entry_from_active_workspace(cx);
         } else {
             self.open_workspace_for_group(key, window, cx);
         }
-        self.selection = None;
-        self.active_entry = None;
+        self.update_entries(cx);
     }
 
     fn active_project_group_key(&self, cx: &App) -> Option<ProjectGroupKey> {
@@ -16784,6 +17900,22 @@ impl Sidebar {
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let (icon, title, description) =
             session_empty_state_copy(APP_NAME, has_query, is_restoring);
+        let configured_terminal_command = AgentSettings::get_global(cx)
+            .terminal_init_command
+            .as_deref();
+        let terminal_action_label =
+            active_workspace_terminal_action_label(APP_NAME, configured_terminal_command);
+        let terminal_tooltip_label = terminal_action_label.clone();
+        let terminal_action_aria_label =
+            active_workspace_terminal_destination_label(APP_NAME, configured_terminal_command);
+        let terminal_action_icon =
+            workspace_default_terminal_icon(APP_NAME, configured_terminal_command);
+        let terminal_action = if APP_NAME == "Zed" {
+            NewCenterTerminal::default().boxed_clone()
+        } else {
+            zed_actions::terminal::OpenAgentTerminal.boxed_clone()
+        };
+        let terminal_tooltip_action = terminal_action.boxed_clone();
 
         v_flex()
             .id("sidebar-no-results")
@@ -16817,11 +17949,11 @@ impl Sidebar {
                                         Icon::new(icon).size(IconSize::Small).color(Color::Muted),
                                     ),
                             )
-                            .child(Label::new(title).size(LabelSize::Small)),
+                            .child(Label::new(title).size(workspace_primary_label_size(APP_NAME))),
                     )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(workspace_secondary_label_size(APP_NAME))
                             .color(Color::Muted),
                     )
                     .when(has_query, |this| {
@@ -16845,25 +17977,22 @@ impl Sidebar {
                     })
                     .when(!has_query && !is_restoring, |this| {
                         this.child(
-                            Button::new("no-results-new-terminal", terminal_launch_label(APP_NAME))
+                            Button::new("no-results-new-terminal", terminal_action_label)
                                 .full_width()
                                 .style(ButtonStyle::Filled)
                                 .label_size(LabelSize::Small)
-                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .start_icon(Icon::new(terminal_action_icon).size(IconSize::XSmall))
                                 .tab_index(0isize)
-                                .aria_label(active_workspace_terminal_destination_label(APP_NAME))
-                                .tooltip(|_, cx| {
+                                .aria_label(terminal_action_aria_label)
+                                .tooltip(move |_, cx| {
                                     Tooltip::for_action(
-                                        workspace_new_terminal_tooltip_label(APP_NAME),
-                                        &NewCenterTerminal::default(),
+                                        terminal_tooltip_label.clone(),
+                                        &*terminal_tooltip_action,
                                         cx,
                                     )
                                 })
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        NewCenterTerminal::default().boxed_clone(),
-                                        cx,
-                                    );
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(&*terminal_action, cx);
                                 }),
                         )
                     }),
@@ -16905,11 +18034,11 @@ impl Sidebar {
                                     .color(Color::Success),
                             ),
                     )
-                    .child(Label::new(title).size(LabelSize::Small)),
+                    .child(Label::new(title).size(workspace_primary_label_size(APP_NAME))),
             )
             .child(
                 Label::new(description)
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .color(Color::Muted),
             )
             .child(
@@ -16937,7 +18066,7 @@ impl Sidebar {
             || self.session_search_open
             || self.filter_editor.focus_handle(cx).is_focused(window);
         let is_restoring = self.workspace_restore_status_is_visible(cx);
-        let narrow_scope_controls = self.rendered_width < MIN_WIDTH;
+        let narrow_scope_controls = self.responsive_projection_width < MIN_WIDTH;
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
         let status_label = session_overview_status_label_with_observed_terminals(
             APP_NAME,
@@ -16949,7 +18078,7 @@ impl Sidebar {
             is_restoring,
         );
         let (all_scope_label, attention_scope_label) = session_scope_labels(
-            self.rendered_width,
+            self.responsive_projection_width,
             total_item_count,
             self.contents.attention_count,
         );
@@ -17041,11 +18170,13 @@ impl Sidebar {
                                         )
                                         .tab_index(0isize)
                                         .aria_label(active_workspace_terminal_destination_label(
-                                            APP_NAME,
+                                            APP_NAME, None,
                                         ))
                                         .tooltip(|_, cx| {
                                             Tooltip::for_action(
-                                                workspace_new_terminal_tooltip_label(APP_NAME),
+                                                workspace_new_terminal_tooltip_label(
+                                                    APP_NAME, None,
+                                                ),
                                                 &NewCenterTerminal::default(),
                                                 cx,
                                             )
@@ -17140,7 +18271,9 @@ impl Sidebar {
                                         })
                                         .style(ButtonStyle::Subtle)
                                         .toggle_state(!self.attention_only)
-                                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                        .selected_style(workspace_navigation_selected_style(
+                                            APP_NAME,
+                                        ))
                                         .tab_index(0isize)
                                         .aria_label(all_scope_aria_label)
                                         .aria_keyshortcuts("Shift+A")
@@ -17207,28 +18340,32 @@ impl Sidebar {
     fn render_session_search(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = self.has_filter_query(cx);
         let dismiss_label = session_search_dismiss_label(APP_NAME);
+        let design_density = DesignSystemSettings::get_global(cx).density;
+        let tab_density = workspace_navigation_tab_density(APP_NAME, design_density);
+        let (control_size, icon_size) =
+            workspace_navigation_control_metrics(APP_NAME, design_density);
 
         h_flex()
             .id("session-search")
             .role(gpui::Role::Search)
             .aria_label(session_rail_search_label(APP_NAME))
             .flex_none()
-            .h(Tab::content_height(cx))
+            .h(tab_density.content_height(cx))
             .px_1p5()
             .gap_1()
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(
                 Icon::new(IconName::MagnifyingGlass)
-                    .size(IconSize::Small)
+                    .size(icon_size)
                     .color(Color::Muted),
             )
             .child(self.render_filter_input(cx))
             .when(has_query || paths::APP_NAME != "Zed", |this| {
                 this.child(
                     IconButton::new("clear-session-search", IconName::Close)
-                        .size(ButtonSize::Medium)
-                        .icon_size(IconSize::Small)
+                        .size(control_size)
+                        .icon_size(icon_size)
                         .tab_index(0isize)
                         .aria_label(dismiss_label)
                         .tooltip(Tooltip::text(dismiss_label))
@@ -17258,6 +18395,14 @@ impl Sidebar {
             .map(|multi_workspace| multi_workspace.read(cx).project_group_keys().to_vec())
             .unwrap_or_default();
         let query = self.filter_editor.read(cx).text(cx);
+        let multiplexer_store = MultiplexerSessionStore::try_global(cx);
+        let (external_activity_refreshing, external_source_statuses) = multiplexer_store
+            .as_ref()
+            .map(|store| {
+                let store = store.read(cx);
+                (store.is_refreshing(), store.source_statuses().to_vec())
+            })
+            .unwrap_or_default();
         let multiplexer_sessions = self
             .contents
             .multiplexer_sessions
@@ -17273,25 +18418,33 @@ impl Sidebar {
             .collect::<Vec<_>>();
         let has_rows = !multiplexer_sessions.is_empty()
             || (APP_NAME == "Zed" && !self.contents.machine_terminals.is_empty());
-        if !has_rows {
+        let show_explicit_empty_state =
+            APP_NAME != "Zed" && self.external_activity_expanded && query.is_empty();
+        if !has_rows && !show_explicit_empty_state {
             return None;
         }
 
         let attachable_count = multiplexer_sessions.len();
         let observed_count = self.contents.machine_terminals.len();
         let count_label = if APP_NAME != "Zed" {
-            match attachable_count {
+            has_rows.then(|| match attachable_count {
                 1 => "1 session".to_owned(),
                 count => format!("{count} sessions"),
-            }
-        } else if self.rendered_width < RESPONSIVE_MIN_WIDTH {
-            format!("{attachable_count} · {observed_count}")
+            })
+        } else if self.responsive_projection_width < RESPONSIVE_MIN_WIDTH {
+            Some(format!("{attachable_count} · {observed_count}"))
         } else {
-            format!("{attachable_count} attachable · {observed_count} observed")
+            Some(format!(
+                "{attachable_count} attachable · {observed_count} observed"
+            ))
         };
-        let supplemental_metadata_visible =
-            session_rail_supplemental_metadata_visible_for_product(APP_NAME, self.rendered_width);
+        let supplemental_metadata_visible = session_rail_supplemental_metadata_visible_for_product(
+            APP_NAME,
+            self.responsive_projection_width,
+        );
         let design_system = DesignSystemSettings::get_global(cx);
+        let (navigation_control_size, navigation_icon_size) =
+            workspace_navigation_control_metrics(APP_NAME, design_system.density);
         let labels_visible = session_rail_labels_visible(&design_system);
         let sidebar = cx.weak_entity();
         let project_roots = self
@@ -17338,7 +18491,7 @@ impl Sidebar {
                 } else {
                     IconName::ArrowUpRight
                 };
-                let status = external_multiplexer_status(session.state);
+                let status = external_multiplexer_status(session.state, session.is_last_known());
                 let icon = external_multiplexer_icon(&session);
                 let row_session = session.clone();
                 let action_session = session.clone();
@@ -17371,8 +18524,8 @@ impl Sidebar {
                         ),
                         action_icon,
                     )
-                    .size(ButtonSize::Medium)
-                    .icon_size(IconSize::Small)
+                    .size(navigation_control_size)
+                    .icon_size(navigation_icon_size)
                     .tab_index(0isize)
                     .aria_label(action_label.clone())
                     .tooltip(Tooltip::text(action_label))
@@ -17470,8 +18623,8 @@ impl Sidebar {
                                 ),
                                 action_icon,
                             )
-                            .size(ButtonSize::Medium)
-                            .icon_size(IconSize::Small)
+                            .size(navigation_control_size)
+                            .icon_size(navigation_icon_size)
                             .tab_index(0isize)
                             .aria_label(action_label.clone())
                             .tooltip(Tooltip::text(action_label))
@@ -17491,22 +18644,37 @@ impl Sidebar {
 
         let disclosure_sidebar = sidebar.clone();
         let disclosure_label = if APP_NAME != "Zed" {
-            "Sessions outside the currently open Workspace roots"
+            if self.external_activity_expanded {
+                "Hide Other Running Sessions"
+            } else {
+                "Show Other Running Sessions"
+            }
         } else if self.external_activity_expanded {
             "Hide observed machine terminals"
         } else {
             "Show observed machine terminals"
         };
-        let section_header = h_flex()
-            .id("external-terminal-section-header")
-            .flex_none()
-            .h(Tab::content_height(cx))
-            .px_1p5()
-            .gap_1()
-            .justify_between()
-            .cursor_pointer()
+        let empty_label = (!has_rows && show_explicit_empty_state).then(|| {
+            SharedString::from(other_running_sessions_empty_label(
+                external_activity_refreshing,
+                &external_source_statuses,
+            ))
+        });
+        let section_header_accessibility_label = empty_label
+            .as_ref()
+            .map(|empty_label| format!("{disclosure_label}. {empty_label}"))
+            .unwrap_or_else(|| disclosure_label.to_owned());
+        let section_header = ButtonLike::new("external-terminal-section-header")
+            .size(navigation_control_size)
+            .style(ButtonStyle::Subtle)
+            .full_width()
+            .tab_index(0isize)
+            .aria_label(section_header_accessibility_label)
+            .aria_expanded(self.external_activity_expanded)
             .child(
                 h_flex()
+                    .w_full()
+                    .min_w_0()
                     .gap_1()
                     .child(
                         Icon::new(if self.external_activity_expanded {
@@ -17514,7 +18682,7 @@ impl Sidebar {
                         } else {
                             IconName::ChevronRight
                         })
-                        .size(IconSize::XSmall)
+                        .size(navigation_icon_size)
                         .color(Color::Muted),
                     )
                     .child(
@@ -17523,13 +18691,18 @@ impl Sidebar {
                         } else {
                             "Other Running Sessions"
                         })
-                        .size(LabelSize::Small),
-                    ),
-            )
-            .child(
-                Label::new(count_label)
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
+                        .size(workspace_primary_label_size(APP_NAME))
+                        .weight(gpui::FontWeight::MEDIUM)
+                        .truncate(),
+                    )
+                    .child(div().flex_1())
+                    .when_some(count_label, |this, count_label| {
+                        this.child(
+                            Label::new(count_label)
+                                .size(workspace_secondary_label_size(APP_NAME))
+                                .color(Color::Muted),
+                        )
+                    }),
             )
             .tooltip(Tooltip::text(disclosure_label));
         let section_header = section_header.on_click(move |_, _, cx| {
@@ -17539,6 +18712,68 @@ impl Sidebar {
                     cx.notify();
                 })
                 .log_err();
+        });
+        let discovery_failed = external_source_statuses
+            .iter()
+            .any(|status| status.availability == MultiplexerSourceAvailability::Failed);
+        let refresh_store = (!external_activity_refreshing
+            && (discovery_failed || external_source_statuses.is_empty()))
+        .then(|| multiplexer_store.clone())
+        .flatten();
+        let refresh_label = if discovery_failed { "Retry" } else { "Refresh" };
+        let animate_empty_state_icon =
+            external_activity_refreshing && design_system.motion != settings::CanvasMotion::Reduced;
+        let empty_state = empty_label.map(|empty_label| {
+            let empty_state_icon = Icon::new(if external_activity_refreshing {
+                IconName::LoadCircle
+            } else if discovery_failed {
+                IconName::Warning
+            } else {
+                IconName::ListTree
+            })
+            .size(IconSize::XSmall)
+            .color(if discovery_failed {
+                Color::Warning
+            } else {
+                Color::Muted
+            });
+            let empty_state_icon = if animate_empty_state_icon {
+                empty_state_icon.with_rotate_animation(2).into_any_element()
+            } else {
+                empty_state_icon.into_any_element()
+            };
+
+            h_flex()
+                .id("other-running-sessions-empty-state")
+                .role(gpui::Role::Status)
+                .w_full()
+                .min_w_0()
+                .gap_2()
+                .px_2()
+                .py_1p5()
+                .child(empty_state_icon)
+                .child(
+                    Label::new(empty_label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .flex_1(),
+                )
+                .when_some(refresh_store, |this, store| {
+                    this.child(
+                        Button::new("refresh-empty-running-sessions", refresh_label)
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0isize)
+                            .aria_label(format!("{refresh_label} Running Sessions"))
+                            .tooltip(Tooltip::text(format!(
+                                "{refresh_label} tmux, Herdr, and cmux discovery"
+                            )))
+                            .on_click(move |_, _window, cx| {
+                                store.update(cx, |store, cx| store.refresh(cx));
+                            }),
+                    )
+                })
+                .into_any_element()
         });
         let rows_visible = APP_NAME == "Zed" || self.external_activity_expanded;
         let section = v_flex()
@@ -17558,6 +18793,7 @@ impl Sidebar {
             .border_t_1()
             .border_color(cx.theme().colors().border)
             .child(section_header)
+            .when_some(empty_state, |this, empty_state| this.child(empty_state))
             .when(rows_visible && !rows.is_empty(), |this| this.child(
                 v_flex()
                     .id("external-terminal-list")
@@ -17584,6 +18820,9 @@ impl Sidebar {
     }
 
     fn render_empty_state(&self, cx: &mut Context<Self>) -> AnyElement {
+        let design_density = DesignSystemSettings::get_global(cx).density;
+        let (row_size, icon_size) = workspace_open_row_metrics(APP_NAME, design_density);
+
         if dez_installation_required(cx) {
             return v_flex()
                 .id("sidebar-installation-required")
@@ -17592,16 +18831,20 @@ impl Sidebar {
                 .flex_1()
                 .min_h_0()
                 .overflow_y_scroll()
-                .px_2()
-                .py_2()
+                .px_3()
+                .py_4()
                 .child(
                     v_flex()
                         .w_full()
-                        .gap_1()
-                        .child(Label::new("No Workspaces yet").size(LabelSize::Small))
+                        .gap_2()
+                        .child(
+                            Label::new("No Workspaces yet")
+                                .size(workspace_primary_label_size(APP_NAME))
+                                .weight(gpui::FontWeight::MEDIUM),
+                        )
                         .child(
                             Label::new("Install Dez to get started.")
-                                .size(LabelSize::XSmall)
+                                .size(workspace_secondary_label_size(APP_NAME))
                                 .color(Color::Muted),
                         ),
                 )
@@ -17618,23 +18861,38 @@ impl Sidebar {
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
-            .px_2()
-            .py_2()
+            .px_3()
+            .py_4()
             .child(
                 v_flex()
                     .w_full()
-                    .gap_2()
-                    .child(Label::new(title).size(LabelSize::Small))
+                    .gap_3()
+                    .child(
+                        Label::new(title)
+                            .size(workspace_primary_label_size(APP_NAME))
+                            .weight(gpui::FontWeight::MEDIUM),
+                    )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(workspace_secondary_label_size(APP_NAME))
                             .color(Color::Muted),
                     )
                     .child(
                         Button::new("start-open", open_workspace_label)
                             .full_width()
                             .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
+                            .when(APP_NAME != "Zed", |button| {
+                                button
+                                    .size(row_size)
+                                    .label_size(workspace_primary_label_size(APP_NAME))
+                            })
+                            .start_icon(Icon::new(IconName::FolderOpen).size(
+                                if APP_NAME == "Zed" {
+                                    IconSize::Small
+                                } else {
+                                    icon_size
+                                },
+                            ))
                             .tab_index(0isize)
                             .aria_label(open_workspace_label)
                             .tooltip(move |_, cx| {
@@ -17661,7 +18919,18 @@ impl Sidebar {
                             Button::new("start-terminal", scratch_terminal_label)
                                 .full_width()
                                 .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
-                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .when(APP_NAME != "Zed", |button| {
+                                    button
+                                        .size(row_size)
+                                        .label_size(workspace_primary_label_size(APP_NAME))
+                                })
+                                .start_icon(Icon::new(IconName::Terminal).size(
+                                    if APP_NAME == "Zed" {
+                                        IconSize::XSmall
+                                    } else {
+                                        icon_size
+                                    },
+                                ))
                                 .tab_index(0isize)
                                 .aria_label(terminal_launch_in_main_work_area_label(APP_NAME))
                                 .tooltip(|_, cx| {
@@ -17822,6 +19091,8 @@ impl Sidebar {
                 root_labels.len()
             )
         };
+        let grant_accessibility_label = workspace_access_grant_accessibility_label(&root_labels);
+        let grant_tooltip = workspace_access_grant_tooltip(&root_labels);
 
         Some(
             Callout::new()
@@ -17834,10 +19105,8 @@ impl Sidebar {
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Filled)
                         .tab_index(0isize)
-                        .aria_label("Grant Access to a Blocked Workspace Folder")
-                        .tooltip(Tooltip::text(
-                            "Grant access without opening or replacing a Workspace",
-                        ))
+                        .aria_label(grant_accessibility_label)
+                        .tooltip(Tooltip::text(grant_tooltip))
                         .on_click(|_, window, cx| {
                             window.dispatch_action(
                                 zed_actions::dez::GrantWorkspaceAccess.boxed_clone(),
@@ -17861,11 +19130,17 @@ impl Sidebar {
         } else {
             format!("{} terminal integrations unavailable", issues.len())
         };
+        let source_names = issues
+            .iter()
+            .map(|issue| issue.kind.display_name())
+            .collect::<Vec<_>>();
         let description = issues
             .iter()
             .map(external_activity_issue_description)
             .collect::<Vec<_>>()
             .join(" ");
+        let retry_accessibility_label = external_activity_retry_accessibility_label(&source_names);
+        let retry_tooltip = external_activity_retry_tooltip(&source_names);
         let retry_store = store.clone();
 
         Some(
@@ -17879,10 +19154,8 @@ impl Sidebar {
                         .size(ButtonSize::Medium)
                         .style(ButtonStyle::Filled)
                         .tab_index(0isize)
-                        .aria_label("Retry External Terminal Discovery")
-                        .tooltip(Tooltip::text(
-                            "Check tmux, Herdr, and cmux again without changing their sessions",
-                        ))
+                        .aria_label(retry_accessibility_label)
+                        .tooltip(Tooltip::text(retry_tooltip))
                         .on_click(move |_, _window, cx| {
                             retry_store.update(cx, |store, cx| store.refresh(cx));
                         }),
@@ -18128,6 +19401,8 @@ impl Sidebar {
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let workspace = self.active_workspace(cx)?;
+        let (row_size, row_icon_size) =
+            workspace_open_row_metrics(APP_NAME, DesignSystemSettings::get_global(cx).density);
         let active_pane = workspace.read(cx).active_pane().clone();
         let pane_items = workspace
             .read(cx)
@@ -18158,33 +19433,52 @@ impl Sidebar {
             })
             .unwrap_or_else(|| SharedString::from("Current Workspace"));
         let pane_count = pane_items.len();
+        let nested_rows_visible =
+            workspace_layout_nested_rows_visible(self.responsive_projection_width);
         let mut rows = Vec::with_capacity(tab_count + pane_count);
         let mut tab_position = 0;
 
         for (pane_index, (pane, items)) in pane_items.into_iter().enumerate() {
             let pane_is_active = pane == active_pane;
-            let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
-            let pinned_count = pane.read(cx).pinned_count();
-            let details = workspace::tab_details(&items, window, cx);
+            let pane_tab_count = items.len();
 
             if let Some(pane_label) =
                 workspace_pane_header_label(pane_index, pane_count, pane_is_active)
             {
                 rows.push(
                     h_flex()
+                        .role(gpui::Role::Heading)
+                        .aria_level(WORKSPACE_PANE_HEADING_LEVEL)
+                        .aria_label(workspace_pane_header_accessibility_label(
+                            pane_index,
+                            pane_count,
+                            pane_is_active,
+                            pane_tab_count,
+                        ))
                         .px_2()
                         .pt_1()
                         .pb_0p5()
-                        .child(Label::new(pane_label).size(LabelSize::XSmall).color(
-                            if pane_is_active {
-                                Color::Accent
-                            } else {
-                                Color::Muted
-                            },
-                        ))
+                        .child(
+                            Label::new(pane_label)
+                                .size(LabelSize::XSmall)
+                                .weight(if pane_is_active {
+                                    gpui::FontWeight::MEDIUM
+                                } else {
+                                    gpui::FontWeight::NORMAL
+                                })
+                                .color(workspace_pane_header_color(pane_is_active)),
+                        )
                         .into_any_element(),
                 );
             }
+
+            if !nested_rows_visible {
+                continue;
+            }
+
+            let active_item_id = pane.read(cx).active_item().map(|item| item.item_id());
+            let pinned_count = pane.read(cx).pinned_count();
+            let details = workspace::tab_details(&items, window, cx);
 
             for (item_index, item) in items.into_iter().enumerate() {
                 tab_position += 1;
@@ -18198,11 +19492,11 @@ impl Sidebar {
                 let icon = if let Some(agent_thread) = item.downcast::<AgentThreadItem>() {
                     agent_thread
                         .read(cx)
-                        .workspace_navigation_icon(icon_color, cx)
+                        .workspace_navigation_icon(icon_color, row_icon_size, cx)
                 } else {
                     item.tab_icon(window, cx)
                         .unwrap_or_else(|| Icon::new(IconName::File))
-                        .size(IconSize::XSmall)
+                        .size(row_icon_size)
                         .color(icon_color)
                         .into_any_element()
                 };
@@ -18236,11 +19530,11 @@ impl Sidebar {
                             ButtonLike::new(ElementId::from(format!(
                                 "workspace-native-tab-{item_id}"
                             )))
-                            .size(ButtonSize::Medium)
+                            .size(row_size)
                             .style(ButtonStyle::Subtle)
                             .full_width()
                             .toggle_state(is_visible)
-                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                            .selected_style(ButtonStyle::Filled)
                             .tab_index(0isize)
                             .aria_label(accessibility_label.clone())
                             .tooltip(Tooltip::text(accessibility_label))
@@ -18253,7 +19547,12 @@ impl Sidebar {
                                     .child(icon)
                                     .child(
                                         Label::new(label)
-                                            .size(LabelSize::Small)
+                                            .size(workspace_primary_label_size(APP_NAME))
+                                            .weight(if is_focused {
+                                                gpui::FontWeight::MEDIUM
+                                            } else {
+                                                gpui::FontWeight::NORMAL
+                                            })
                                             .truncate()
                                             .flex_1(),
                                     )
@@ -18283,6 +19582,8 @@ impl Sidebar {
             }
         }
         let section_header = h_flex()
+            .role(gpui::Role::Heading)
+            .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
             .min_w_0()
             .px_3()
@@ -18290,36 +19591,42 @@ impl Sidebar {
             .pb_1()
             .child(
                 Label::new(workspace_tabs_section_title(APP_NAME))
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
+                    .weight(gpui::FontWeight::MEDIUM)
                     .color(Color::Muted)
                     .flex_1(),
             )
             .child(
                 Label::new(workspace_tab_layout_label(APP_NAME, tab_count, pane_count))
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .color(Color::Muted),
             );
+        let has_rows = !rows.is_empty();
+        let accessibility_label =
+            workspace_layout_accessibility_label(tab_count, pane_count, nested_rows_visible);
 
         Some(
             v_flex()
                 .id("active-workspace-tabs")
                 .role(gpui::Role::Region)
-                .aria_label("Tabs and panels in the active Workspace")
+                .aria_label(accessibility_label.clone())
                 .flex_none()
                 .min_h_0()
                 .border_b_1()
                 .border_color(cx.theme().colors().border)
                 .child(section_header)
-                .child(
-                    v_flex()
-                        .id("active-workspace-tab-list")
-                        .role(gpui::Role::List)
-                        .aria_label("Tabs and panels in the active Workspace")
-                        .max_h(vh(0.28, window))
-                        .overflow_y_scroll()
-                        .p_1()
-                        .children(rows),
-                )
+                .when(has_rows, |this| {
+                    this.child(
+                        v_flex()
+                            .id("active-workspace-tab-list")
+                            .role(gpui::Role::List)
+                            .aria_label(accessibility_label)
+                            .max_h(vh(0.28, window))
+                            .overflow_y_scroll()
+                            .p_1()
+                            .children(rows),
+                    )
+                })
                 .into_any_element(),
         )
     }
@@ -18343,9 +19650,19 @@ impl Sidebar {
             || self.filter_editor.focus_handle(cx).is_focused(window);
         let total_item_count = self.contents.session_count + self.contents.observed_terminal_count;
         let searchable_item_count = total_item_count + self.contents.project_header_indices.len();
-        let show_search_control =
-            session_search_control_visible(paths::APP_NAME, searchable_item_count)
-                && !search_is_active;
+        let show_search_control = session_header_search_control_visible(
+            paths::APP_NAME,
+            searchable_item_count,
+            self.responsive_projection_width,
+        ) && !search_is_active;
+        let (header_control_size, header_icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
+        let header_tab_density = workspace_navigation_tab_density(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let header_status_label = session_header_status_label(
             APP_NAME,
@@ -18406,7 +19723,7 @@ impl Sidebar {
 
         h_flex()
             .flex_none()
-            .h(Tab::container_height(cx))
+            .h(header_tab_density.container_height(cx))
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)
@@ -18440,10 +19757,17 @@ impl Sidebar {
                         .flex_1()
                         .gap_1()
                         .child(
-                            Label::new(session_rail_title(APP_NAME))
-                                .size(LabelSize::Small)
+                            div()
+                                .role(gpui::Role::Heading)
+                                .aria_level(WORKSPACES_NAVIGATION_HEADING_LEVEL)
                                 .flex_none()
-                                .truncate(),
+                                .child(
+                                    Label::new(session_rail_title(APP_NAME))
+                                        .size(workspace_primary_label_size(APP_NAME))
+                                        .weight(gpui::FontWeight::MEDIUM)
+                                        .flex_none()
+                                        .truncate(),
+                                ),
                         )
                         .when_some(header_status_label, |this, header_status_label| {
                             this.child(
@@ -18479,8 +19803,8 @@ impl Sidebar {
                 |this| {
                     this.child(
                         IconButton::new("open-workspace", IconName::Plus)
-                            .size(session_rail_header_button_size(APP_NAME))
-                            .icon_size(IconSize::Small)
+                            .size(header_control_size)
+                            .icon_size(header_icon_size)
                             .tab_index(0isize)
                             .aria_label("Open Workspace")
                             .tooltip(|_, cx| {
@@ -18507,8 +19831,8 @@ impl Sidebar {
             .when(show_search_control, |this| {
                 this.child(
                     IconButton::new("open-session-search", IconName::MagnifyingGlass)
-                        .size(session_rail_header_button_size(APP_NAME))
-                        .icon_size(IconSize::Small)
+                        .size(header_control_size)
+                        .icon_size(header_icon_size)
                         .tab_index(0isize)
                         .aria_label(session_rail_search_label(APP_NAME))
                         .tooltip(|_, cx| {
@@ -18635,19 +19959,23 @@ impl Sidebar {
             );
         let sidebar_can_hide = !SidebarSettings::get_global(cx).always_open;
         let menu_open = self.agent_options_menu_handle.is_deployed();
+        let (workspace_control_size, workspace_icon_size) = workspace_navigation_control_metrics(
+            APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let trigger = ButtonLike::new("agent-sidebar-options-menu-trigger")
             .size(if is_dez {
-                session_rail_header_button_size(APP_NAME)
+                workspace_control_size
             } else {
                 ButtonSize::Compact
             })
             .tab_index(0isize)
             .aria_label(session_rail_menu_label(APP_NAME))
             .aria_expanded(menu_open)
-            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+            .selected_style(workspace_navigation_selected_style(APP_NAME))
             .child(if is_dez {
                 Icon::new(IconName::Ellipsis)
-                    .size(IconSize::Small)
+                    .size(workspace_icon_size)
                     .into_any_element()
             } else {
                 h_flex()
@@ -18893,7 +20221,7 @@ impl Sidebar {
             "Show Agent History"
         };
         let on_right = self.side(cx) == SidebarSide::Right;
-        let rail_width = self.rendered_width;
+        let rail_width = self.responsive_projection_width;
         let agent_tools_visible_label = session_rail_agent_tools_utility_label(rail_width);
         let history_visible_label = session_rail_agent_history_utility_label(rail_width);
 
@@ -19318,8 +20646,15 @@ impl WorkspaceSidebar for Sidebar {
     }
 
     fn has_notifications(&self, cx: &App) -> bool {
-        WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention
-            && self.contents.has_attention
+        self.attention_count(cx) > 0
+    }
+
+    fn attention_count(&self, cx: &App) -> usize {
+        if WorkspaceBarAttentionSettings::get_global(cx).show_agent_attention {
+            self.contents.attention_count
+        } else {
+            0
+        }
     }
 
     fn is_threads_list_view_active(&self) -> bool {
@@ -19366,6 +20701,8 @@ impl WorkspaceSidebar for Sidebar {
                         == Some(project_group_key)
                 }) {
                     self.set_group_expanded(project_group_key, true, cx);
+                    self.workspace_external_sessions_expanded
+                        .insert(project_group_key.clone());
                 }
             }
         }
@@ -19490,7 +20827,8 @@ impl Render for Sidebar {
         let rail_width = session_rail_settings
             .responsive_width(self.width, window.viewport_size().width)
             .min(session_rail_max_width(APP_NAME));
-        self.rendered_width = rail_width;
+        self.responsive_projection_width =
+            workspace_navigation_responsive_width(APP_NAME, rail_width, interface_scale(cx));
 
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);

@@ -6,21 +6,22 @@ use crate::{
     persistence::WorkspaceDb,
 };
 use agent_settings::{
-    AgentSettings, configured_terminal_launcher_icon, configured_terminal_launcher_label,
+    AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
+    configured_terminal_launcher_icon,
 };
 use git::Clone as GitClone;
 use gpui::WeakEntity;
 use gpui::{
     Action, App, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
-    InteractiveElement, ParentElement, Pixels, Render, Styled, Task, TaskExt, Window, actions,
-    container_query, px,
+    InteractiveElement, ParentElement, Pixels, Render, Styled, Subscription, Task, TaskExt, Window,
+    actions, container_query, px,
 };
 use menu::{SelectNext, SelectPrevious};
 use paths::APP_NAME;
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use settings::{DefaultOpenBehavior, Settings};
+use settings::{DefaultOpenBehavior, Settings, SettingsStore};
 use ui::{
     ButtonLike, Callout, Divider, DividerColor, KeyBinding, Severity, Tooltip, prelude::*,
     theme_is_transparent,
@@ -60,12 +61,17 @@ impl SectionHeader {
 
 impl RenderOnce for SectionHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let accessibility_title = self.title.clone();
         let title: SharedString = if APP_NAME == "Zed" {
             self.title.to_ascii_uppercase().into()
         } else {
             self.title
         };
         h_flex()
+            .id(("home-section-heading", accessibility_title.clone()))
+            .role(gpui::Role::Heading)
+            .aria_level(2)
+            .aria_label(accessibility_title)
             .w_full()
             .min_w_0()
             .px_1()
@@ -76,7 +82,7 @@ impl RenderOnce for SectionHeader {
                     Label::new(title)
                         .when(APP_NAME == "Zed", |label| label.buffer_font(cx))
                         .color(Color::Muted)
-                        .size(LabelSize::XSmall),
+                        .size(welcome_secondary_label_size(APP_NAME)),
                 ),
             )
             .when(APP_NAME == "Zed", |this| {
@@ -187,7 +193,7 @@ impl RenderOnce for SectionButton {
                                         div().max_w(rems_from_px(220.)).overflow_hidden().child(
                                             Label::new(meta)
                                                 .truncate()
-                                                .size(LabelSize::XSmall)
+                                                .size(welcome_secondary_label_size(APP_NAME))
                                                 .color(Color::Muted),
                                         ),
                                     )
@@ -234,13 +240,14 @@ impl SectionEntry {
         focus: &FocusHandle,
         primary: bool,
         show_meta: bool,
+        label_override: Option<SharedString>,
         meta_override: Option<SharedString>,
         icon_override: Option<IconName>,
         local_workspace: bool,
     ) -> Option<impl IntoElement> {
         self.visibility_guard.is_visible(local_workspace).then(|| {
             let button = SectionButton::new(
-                self.title,
+                label_override.unwrap_or_else(|| SharedString::new_static(self.title)),
                 icon_override.unwrap_or(self.icon),
                 self.action,
                 button_index,
@@ -290,11 +297,13 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     }
 }
 
-fn welcome_title(app_name: &str, _has_workspace: bool) -> &'static str {
+fn welcome_title(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Terminal-native development"
+    } else if has_workspace {
+        "Continue in this Workspace"
     } else {
-        "Continue your work"
+        "Start a Workspace"
     }
 }
 
@@ -306,25 +315,43 @@ fn welcome_identity_label(app_name: &str) -> Option<&'static str> {
     (app_name != "Zed").then_some("Dez")
 }
 
+fn welcome_primary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
+        LabelSize::Small
+    } else {
+        LabelSize::Default
+    }
+}
+
+fn welcome_secondary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
+        LabelSize::XSmall
+    } else {
+        LabelSize::Small
+    }
+}
+
 fn welcome_forces_tab_bar(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
+pub(crate) const DEZ_HOME_ICON: IconName = IconName::Compass;
+
 fn welcome_tab_icon(app_name: &str) -> Option<IconName> {
-    (app_name != "Zed").then_some(IconName::Compass)
+    (app_name != "Zed").then_some(DEZ_HOME_ICON)
 }
 
 fn welcome_emphasizes_first_action(app_name: &str) -> bool {
     app_name != "Zed"
 }
 
-fn welcome_terminal_action_meta(
+fn welcome_terminal_action_label(
     app_name: &str,
     has_workspace: bool,
     configured_command: Option<&str>,
 ) -> Option<String> {
     (app_name != "Zed" && has_workspace)
-        .then(|| configured_terminal_launcher_label(configured_command))
+        .then(|| configured_terminal_launcher_action_label(configured_command))
 }
 
 fn welcome_terminal_action_icon(
@@ -467,18 +494,18 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
-                icon: IconName::SplitAlt,
-                title: "Workspace tmux",
-                meta: Some("Native terminal session"),
-                action: &OPEN_TMUX_TERMINAL,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::ArrowUpRight,
+                icon: IconName::Screen,
                 title: "Open Workspace in cmux",
-                meta: Some("External handoff"),
+                meta: Some("Preferred external app"),
                 action: &OPEN_WORKSPACE_IN_CMUX,
                 visibility_guard: SectionVisibility::LocalWorkspace,
+            },
+            SectionEntry {
+                icon: IconName::SplitAlt,
+                title: WORKSPACE_TMUX_LAUNCHER_LABEL,
+                meta: Some("Durable terminal fallback"),
+                action: &OPEN_TMUX_TERMINAL,
+                visibility_guard: SectionVisibility::Always,
             },
         ],
     },
@@ -517,11 +544,14 @@ struct Section {
 }
 
 impl Section {
-    fn visible_entry_count(self, local_workspace: bool) -> usize {
+    fn visible_entries(self, local_workspace: bool) -> impl Iterator<Item = &'static SectionEntry> {
         self.entries
             .iter()
-            .filter(|entry| entry.visibility_guard.is_visible(local_workspace))
-            .count()
+            .filter(move |entry| entry.visibility_guard.is_visible(local_workspace))
+    }
+
+    fn visible_entry_count(self, local_workspace: bool) -> usize {
+        self.visible_entries(local_workspace).count()
     }
 
     fn render(
@@ -530,6 +560,7 @@ impl Section {
         focus: &FocusHandle,
         emphasize_first: bool,
         show_meta: bool,
+        first_entry_label_override: Option<SharedString>,
         first_entry_meta_override: Option<SharedString>,
         first_entry_icon_override: Option<IconName>,
         local_workspace: bool,
@@ -540,8 +571,7 @@ impl Section {
             .gap_0p5()
             .child(SectionHeader::new(self.title))
             .children(
-                self.entries
-                    .iter()
+                self.visible_entries(local_workspace)
                     .enumerate()
                     .filter_map(|(index, entry)| {
                         entry.render(
@@ -549,6 +579,9 @@ impl Section {
                             focus,
                             emphasize_first && index == 0,
                             show_meta,
+                            (index == 0)
+                                .then(|| first_entry_label_override.clone())
+                                .flatten(),
                             (index == 0)
                                 .then(|| first_entry_meta_override.clone())
                                 .flatten(),
@@ -563,6 +596,7 @@ impl Section {
 pub struct WelcomePage {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
+    _settings_subscription: Option<Subscription>,
     fallback_to_recent_projects: bool,
     recent_workspaces: Option<Vec<RecentWorkspace>>,
     recent_workspaces_load_failed: bool,
@@ -608,6 +642,18 @@ fn welcome_loads_recent_workspaces(app_name: &str, requested: bool) -> bool {
     app_name != "Zed" || requested
 }
 
+fn welcome_responsive_viewport_width(
+    app_name: &str,
+    viewport_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        viewport_width
+    } else {
+        viewport_width * interface_scale.max(f32::EPSILON).recip()
+    }
+}
+
 fn dez_welcome_uses_compact_spacing(app_name: &str, viewport_width: Pixels) -> bool {
     app_name != "Zed" && viewport_width < DEZ_WELCOME_COMPACT_BREAKPOINT
 }
@@ -635,10 +681,13 @@ impl WelcomePage {
         if let Some(workspace) = workspace.upgrade() {
             cx.observe(&workspace, |_, _, cx| cx.notify()).detach();
         }
+        let settings_subscription =
+            (APP_NAME != "Zed").then(|| cx.observe_global::<SettingsStore>(|_, cx| cx.notify()));
 
         let mut welcome_page = WelcomePage {
             workspace,
             focus_handle,
+            _settings_subscription: settings_subscription,
             fallback_to_recent_projects,
             recent_workspaces: None,
             recent_workspaces_load_failed: false,
@@ -791,10 +840,10 @@ impl WelcomePage {
                         v_flex()
                             .min_w_0()
                             .gap_0p5()
-                            .child(Label::new(title).size(LabelSize::Small))
+                            .child(Label::new(title).size(welcome_primary_label_size(APP_NAME)))
                             .child(
                                 Label::new(description)
-                                    .size(LabelSize::XSmall)
+                                    .size(welcome_secondary_label_size(APP_NAME))
                                     .color(Color::Muted),
                             ),
                     ),
@@ -963,6 +1012,7 @@ impl Render for WelcomePage {
                     true,
                     None,
                     None,
+                    None,
                     local_workspace,
                 )
                 .into_any_element()
@@ -1026,7 +1076,7 @@ impl Render for WelcomePage {
             Some(crate::WorkspaceStartupState::Ready) | None => None,
         };
         let section_focus_handle = self.focus_handle.clone();
-        let first_entry_meta_override = welcome_terminal_action_meta(
+        let first_entry_label_override = welcome_terminal_action_label(
             APP_NAME,
             has_workspace,
             AgentSettings::get_global(cx)
@@ -1060,11 +1110,15 @@ impl Render for WelcomePage {
             .justify_center()
             .when(is_dez, |this| this.items_start())
             .child(container_query(move |available_size, _window, cx| {
-                let compact_spacing =
-                    dez_welcome_uses_compact_spacing(APP_NAME, available_size.width);
-                let split_layout = dez_welcome_uses_split_layout(
+                let responsive_width = welcome_responsive_viewport_width(
                     APP_NAME,
                     available_size.width,
+                    crate::interface_scale(cx),
+                );
+                let compact_spacing = dez_welcome_uses_compact_spacing(APP_NAME, responsive_width);
+                let split_layout = dez_welcome_uses_split_layout(
+                    APP_NAME,
+                    responsive_width,
                     has_secondary_content,
                 );
                 let home_separator = cx.theme().colors().border_variant;
@@ -1086,7 +1140,8 @@ impl Render for WelcomePage {
                                     &section_focus_handle,
                                     welcome_emphasizes_first_action(APP_NAME),
                                     true,
-                                    first_entry_meta_override.clone(),
+                                    first_entry_label_override.clone(),
+                                    None,
                                     first_entry_icon_override,
                                     local_workspace,
                                 )),
@@ -1117,7 +1172,8 @@ impl Render for WelcomePage {
                             &section_focus_handle,
                             welcome_emphasizes_first_action(APP_NAME),
                             !compact_spacing,
-                            first_entry_meta_override.clone(),
+                            first_entry_label_override.clone(),
+                            None,
                             first_entry_icon_override,
                             local_workspace,
                         ))
@@ -1179,13 +1235,13 @@ impl Render for WelcomePage {
                                         h_flex()
                                             .gap_1()
                                             .child(
-                                                Icon::new(IconName::Compass)
+                                                Icon::new(DEZ_HOME_ICON)
                                                     .size(IconSize::XSmall)
                                                     .color(Color::Accent),
                                             )
                                             .child(
                                                 Label::new(identity)
-                                                    .size(LabelSize::XSmall)
+                                                    .size(welcome_secondary_label_size(APP_NAME))
                                                     .color(Color::Muted)
                                                     .weight(FontWeight::MEDIUM),
                                             ),
@@ -1193,13 +1249,17 @@ impl Render for WelcomePage {
                                 })
                                 .child(
                                     div()
+                                        .id("dez-home-heading")
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label(page_title)
                                         .font_weight(FontWeight::MEDIUM)
                                         .child(Headline::new(page_title).size(HeadlineSize::Large)),
                                 )
                                 .when(!installation_required, |this| {
                                     this.child(
                                         Label::new(page_summary)
-                                            .size(LabelSize::Small)
+                                            .size(welcome_primary_label_size(APP_NAME))
                                             .color(Color::Muted),
                                     )
                                 })
@@ -1485,16 +1545,20 @@ mod tests {
             welcome_summary("Zed", true),
             "Write. Delegate. Watch. Verify."
         );
-        assert_eq!(welcome_title("Dez", false), "Continue your work");
-        assert_eq!(welcome_title("Dez", true), "Continue your work");
+        assert_eq!(welcome_title("Dez", false), "Start a Workspace");
+        assert_eq!(welcome_title("Dez", true), "Continue in this Workspace");
         assert_eq!(welcome_identity_label("Dez"), Some("Dez"));
         assert_eq!(welcome_identity_label("Zed"), None);
+        assert_eq!(welcome_primary_label_size("Dez"), LabelSize::Default);
+        assert_eq!(welcome_primary_label_size("Zed"), LabelSize::Small);
+        assert_eq!(welcome_secondary_label_size("Dez"), LabelSize::Small);
+        assert_eq!(welcome_secondary_label_size("Zed"), LabelSize::XSmall);
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
         assert!(welcome_forces_tab_bar("Dez"));
         assert!(!welcome_forces_tab_bar("Zed"));
-        assert_eq!(welcome_tab_icon("Dez"), Some(IconName::Compass));
+        assert_eq!(welcome_tab_icon("Dez"), Some(DEZ_HOME_ICON));
         assert_eq!(welcome_tab_icon("Zed"), None);
         assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
         assert_eq!(DEZ_CONTENT.0.entries[0].meta, Some("Local folder"));
@@ -1511,31 +1575,31 @@ mod tests {
             Some("Default terminal")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, None).as_deref(),
-            Some("Default · Native Shell")
+            welcome_terminal_action_label("Dez", true, None).as_deref(),
+            Some("Open Terminal · Native Shell")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("codex --yolo")).as_deref(),
-            Some("Default · Codex")
+            welcome_terminal_action_label("Dez", true, Some("codex --yolo")).as_deref(),
+            Some("Open Terminal · Codex")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("aider")).as_deref(),
-            Some("Default · Aider")
+            welcome_terminal_action_label("Dez", true, Some("aider")).as_deref(),
+            Some("Open Terminal · Aider")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("tmux")).as_deref(),
-            Some("Default · tmux Session")
+            welcome_terminal_action_label("Dez", true, Some("tmux")).as_deref(),
+            Some("Open Terminal · tmux Session")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", true, Some("my-agent")).as_deref(),
-            Some("Default · Custom Command")
+            welcome_terminal_action_label("Dez", true, Some("my-agent")).as_deref(),
+            Some("Open Terminal · Custom Command")
         );
         assert_eq!(
-            welcome_terminal_action_meta("Dez", false, Some("codex")),
+            welcome_terminal_action_label("Dez", false, Some("codex")),
             None
         );
         assert_eq!(
-            welcome_terminal_action_meta("Zed", true, Some("codex")),
+            welcome_terminal_action_label("Zed", true, Some("codex")),
             None
         );
         assert_eq!(
@@ -1566,10 +1630,13 @@ mod tests {
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[1].title, "Codex");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[2].title, "Claude Code");
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[3].title, "OpenCode");
-        assert_eq!(DEZ_WORKSPACE_CONTENT.0.entries[4].title, "Workspace tmux");
+        assert_eq!(
+            DEZ_WORKSPACE_CONTENT.0.entries[4].title,
+            "Open Workspace in cmux"
+        );
         assert_eq!(
             DEZ_WORKSPACE_CONTENT.0.entries[5].title,
-            "Open Workspace in cmux"
+            WORKSPACE_TMUX_LAUNCHER_LABEL
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(true), 6);
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.visible_entry_count(false), 5);
@@ -1596,6 +1663,45 @@ mod tests {
     }
 
     #[test]
+    fn dez_home_keeps_conditional_workspace_actions_in_keyboard_order() {
+        let local_actions = DEZ_WORKSPACE_CONTENT
+            .0
+            .visible_entries(true)
+            .enumerate()
+            .map(|(index, entry)| (index, entry.title))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            local_actions,
+            vec![
+                (0, "Open Terminal"),
+                (1, "Codex"),
+                (2, "Claude Code"),
+                (3, "OpenCode"),
+                (4, "Open Workspace in cmux"),
+                (5, WORKSPACE_TMUX_LAUNCHER_LABEL),
+            ]
+        );
+
+        let remote_actions = DEZ_WORKSPACE_CONTENT
+            .0
+            .visible_entries(false)
+            .enumerate()
+            .map(|(index, entry)| (index, entry.title))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            remote_actions,
+            vec![
+                (0, "Open Terminal"),
+                (1, "Codex"),
+                (2, "Claude Code"),
+                (3, "OpenCode"),
+                (4, WORKSPACE_TMUX_LAUNCHER_LABEL),
+            ],
+            "hiding the local-only cmux handoff must not leave a keyboard-order gap"
+        );
+    }
+
+    #[test]
     fn dez_welcome_layout_uses_space_without_becoming_a_dashboard() {
         assert!(dez_welcome_uses_compact_spacing("Dez", px(600.)));
         assert!(!dez_welcome_uses_compact_spacing("Dez", px(760.)));
@@ -1605,6 +1711,29 @@ mod tests {
         assert!(dez_welcome_uses_split_layout("Dez", px(980.), true));
         assert!(!dez_welcome_uses_split_layout("Dez", px(1400.), false));
         assert!(!dez_welcome_uses_split_layout("Zed", px(1400.), true));
+        assert_eq!(
+            welcome_responsive_viewport_width("Dez", px(1125.), 1.5),
+            px(750.)
+        );
+        assert!(dez_welcome_uses_compact_spacing(
+            "Dez",
+            welcome_responsive_viewport_width("Dez", px(1125.), 1.5)
+        ));
+        assert!(!dez_welcome_uses_split_layout(
+            "Dez",
+            welcome_responsive_viewport_width("Dez", px(1125.), 1.5),
+            true,
+        ));
+        assert!(dez_welcome_uses_split_layout(
+            "Dez",
+            welcome_responsive_viewport_width("Dez", px(735.), 0.75),
+            true,
+        ));
+        assert_eq!(
+            welcome_responsive_viewport_width("Zed", px(1140.), 1.5),
+            px(1140.),
+            "official Zed keeps its inherited physical-width breakpoints"
+        );
         assert!(welcome_loads_recent_workspaces("Dez", false));
         assert!(welcome_loads_recent_workspaces("Dez", true));
         assert!(welcome_loads_recent_workspaces("Zed", true));

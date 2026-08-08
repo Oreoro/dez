@@ -96,6 +96,26 @@ fn task_run_action_label(
     }
 }
 
+fn task_picker_placeholder(app_name: &str, targets_center_pane: bool) -> &'static str {
+    match (app_name == "Zed", targets_center_pane) {
+        (true, true) => "Find a task, or run a command in the central pane",
+        (false, true) => "Find a task, or run a command in the Main Work Area",
+        (_, false) => "Find a task, or run a command",
+    }
+}
+
+fn recent_task_removal_action_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Delete from Recent Tasks"
+    } else {
+        "Remove from Recent Tasks"
+    }
+}
+
+fn recent_task_removal_is_persistently_visible(app_name: &str, selected: bool) -> bool {
+    app_name != "Zed" && selected
+}
+
 impl TasksModalDelegate {
     fn new(
         task_store: Entity<TaskStore>,
@@ -103,14 +123,16 @@ impl TasksModalDelegate {
         task_overrides: Option<TaskOverrides>,
         workspace: WeakEntity<Workspace>,
     ) -> Self {
-        let placeholder_text = if let Some(TaskOverrides {
-            reveal_target: Some(RevealTarget::Center),
-        }) = &task_overrides
-        {
-            Arc::from("Find a task, or run a command in the central pane")
-        } else {
-            Arc::from("Find a task, or run a command")
-        };
+        let targets_center_pane = matches!(
+            task_overrides.as_ref(),
+            Some(TaskOverrides {
+                reveal_target: Some(RevealTarget::Center),
+            })
+        );
+        let placeholder_text = Arc::from(task_picker_placeholder(
+            paths::APP_NAME,
+            targets_center_pane,
+        ));
         Self {
             task_store,
             workspace,
@@ -615,12 +637,20 @@ impl PickerDelegate for TasksModalDelegate {
                         || Some(ix) <= self.divider_index
                     {
                         let task_index = hit.candidate_id;
+                        let removal_action_label =
+                            recent_task_removal_action_label(paths::APP_NAME);
+                        let removal_action_is_persistently_visible =
+                            recent_task_removal_is_persistently_visible(paths::APP_NAME, selected);
                         let delete_button = div().child(
                             IconButton::new("delete", IconName::Close)
                                 .shape(IconButtonShape::Square)
                                 .icon_color(Color::Muted)
                                 .size(ButtonSize::None)
                                 .icon_size(IconSize::XSmall)
+                                .aria_label(removal_action_label)
+                                .when(removal_action_is_persistently_visible, |button| {
+                                    button.tab_index(0isize)
+                                })
                                 .on_click(cx.listener(move |picker, _event, window, cx| {
                                     cx.stop_propagation();
                                     window.prevent_default();
@@ -633,9 +663,13 @@ impl PickerDelegate for TasksModalDelegate {
                                         .checked_sub(1);
                                     picker.refresh(window, cx);
                                 }))
-                                .tooltip(|_, cx| Tooltip::simple("Delete from Recent Tasks", cx)),
+                                .tooltip(move |_, cx| Tooltip::simple(removal_action_label, cx)),
                         );
-                        item.end_slot_on_hover(delete_button)
+                        if removal_action_is_persistently_visible {
+                            item.end_slot(delete_button)
+                        } else {
+                            item.end_slot_on_hover(delete_button)
+                        }
                     } else {
                         item
                     }
@@ -855,6 +889,37 @@ mod tests {
             "Spawn Oneshot"
         );
         assert_eq!(task_run_action_label("Zed", false, false, false), "Spawn");
+    }
+
+    #[test]
+    fn dez_task_picker_names_the_main_work_area_destination() {
+        assert_eq!(
+            task_picker_placeholder("Dez", true),
+            "Find a task, or run a command in the Main Work Area"
+        );
+        assert_eq!(
+            task_picker_placeholder("Dez", false),
+            "Find a task, or run a command"
+        );
+        assert_eq!(
+            task_picker_placeholder("Zed", true),
+            "Find a task, or run a command in the central pane"
+        );
+    }
+
+    #[test]
+    fn dez_keeps_recent_task_removal_named_and_visible_on_selection() {
+        assert_eq!(
+            recent_task_removal_action_label("Dez"),
+            "Remove from Recent Tasks"
+        );
+        assert!(recent_task_removal_is_persistently_visible("Dez", true));
+        assert!(!recent_task_removal_is_persistently_visible("Dez", false));
+        assert_eq!(
+            recent_task_removal_action_label("Zed"),
+            "Delete from Recent Tasks"
+        );
+        assert!(!recent_task_removal_is_persistently_visible("Zed", true));
     }
 
     #[gpui::test]

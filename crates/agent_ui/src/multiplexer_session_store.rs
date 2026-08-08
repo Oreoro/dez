@@ -22,6 +22,13 @@ const MULTIPLEXER_COMMAND_TIMEOUT: Duration = Duration::from_secs(4);
 const HERDR_ENDPOINT_TIMEOUT: Duration = Duration::from_secs(2);
 const HERDR_SOURCE_TIMEOUT: Duration = Duration::from_secs(4);
 const HERDR_MAX_CONCURRENT_ENDPOINT_QUERIES: usize = 8;
+const CMUX_EXECUTABLE_CANDIDATES: &[&str] = &[
+    "/Applications/cmux.app/Contents/Resources/bin/cmux",
+    "/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux",
+    "/opt/homebrew/bin/cmux",
+    "/usr/local/bin/cmux",
+    "cmux",
+];
 const CMUX_WORKSPACE_LIST_ARGS: &[&str] = &["list-workspaces", "--json"];
 const CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS: &[&str] = &["workspace", "list", "--json"];
 // tmux sanitizes control characters when Dez is launched from Finder's
@@ -241,6 +248,17 @@ impl ExternalMultiplexerSession {
             label,
             mode,
         }
+    }
+
+    pub fn takeover_command(&self) -> Option<ExternalSessionCommand> {
+        if self.kind != MultiplexerKind::Herdr || self.discovery_stale {
+            return None;
+        }
+
+        let mut command = self.open_command();
+        command.args.push("--takeover".to_owned());
+        command.label = format!("Take Control of {}", self.title);
+        Some(command)
     }
 }
 
@@ -685,16 +703,8 @@ fn tmux_failure_is_no_server(exit_code: Option<i32>, stderr: &str) -> bool {
 }
 
 async fn scan_cmux_workspaces() -> Result<MultiplexerScanOutcome> {
-    let Some((executable, current_output)) = run_first_available(
-        &[
-            "/Applications/cmux.app/Contents/Resources/bin/cmux",
-            "/opt/homebrew/bin/cmux",
-            "/usr/local/bin/cmux",
-            "cmux",
-        ],
-        CMUX_WORKSPACE_LIST_ARGS,
-    )
-    .await?
+    let Some((executable, current_output)) =
+        run_first_available(CMUX_EXECUTABLE_CANDIDATES, CMUX_WORKSPACE_LIST_ARGS).await?
     else {
         return Ok(MultiplexerScanOutcome::MissingExecutable);
     };
@@ -1672,6 +1682,16 @@ mod tests {
 
     #[test]
     fn cmux_discovery_prefers_the_documented_cli_before_compatibility() {
+        assert_eq!(
+            CMUX_EXECUTABLE_CANDIDATES,
+            &[
+                "/Applications/cmux.app/Contents/Resources/bin/cmux",
+                "/Applications/cmux NIGHTLY.app/Contents/Resources/bin/cmux",
+                "/opt/homebrew/bin/cmux",
+                "/usr/local/bin/cmux",
+                "cmux",
+            ]
+        );
         assert_eq!(CMUX_WORKSPACE_LIST_ARGS, &["list-workspaces", "--json"]);
         assert_eq!(
             CMUX_COMPATIBILITY_WORKSPACE_LIST_ARGS,
@@ -1957,6 +1977,7 @@ mod tests {
             sessions[0].open_command().args,
             ["attach-session", "-t", "$1"]
         );
+        assert!(sessions[0].takeover_command().is_none());
     }
 
     #[test]
@@ -2030,6 +2051,24 @@ mod tests {
             sessions[0].open_command().args,
             ["--session", "team", "agent", "attach", "pane-1"]
         );
+        let takeover = sessions[0]
+            .takeover_command()
+            .expect("a current Herdr pane should support explicit takeover");
+        assert_eq!(
+            takeover.args,
+            [
+                "--session",
+                "team",
+                "agent",
+                "attach",
+                "pane-1",
+                "--takeover"
+            ]
+        );
+        assert_eq!(takeover.label, "Take Control of Fix parser");
+        let mut stale_session = sessions[0].clone();
+        stale_session.discovery_stale = true;
+        assert!(stale_session.takeover_command().is_none());
     }
 
     #[test]
@@ -2060,6 +2099,13 @@ mod tests {
         );
         assert_eq!(sessions[0].state, MultiplexerSessionState::Available);
         assert_eq!(sessions[0].working_directory, Some("/tmp/compiler".into()));
+        assert_eq!(
+            sessions[0]
+                .takeover_command()
+                .expect("a current Herdr terminal should support explicit takeover")
+                .args,
+            ["terminal", "attach", "terminal-1", "--takeover"]
+        );
     }
 
     #[test]

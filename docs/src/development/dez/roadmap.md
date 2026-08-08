@@ -8,11 +8,12 @@ Do not erase completed evidence.
 
 ## Objective {#objective}
 
-Reach Dez v0.4 as a public-quality native IDE for developers who move between
+Prepare Dez v0.5 as a public-quality native IDE for developers who move between
 code, durable terminals, and terminal-native agents. Preserve Zed-quality
 editing and tools, make Workspaces optional supervision rather than mandatory
 navigation, and prove lifecycle, integration, visual, accessibility, and
-packaging behavior through exact artifacts.
+packaging behavior through exact artifacts. The v0.4 artifact lane remains the
+latest compiled evidence until an exact v0.5 candidate is built and audited.
 
 ## Dependency order {#dependency-order}
 
@@ -28,10 +29,33 @@ source checks
 Visual polish continues in small slices, but it must support truthful state and
 the product loop rather than outrun ownership foundations.
 
+## v0.5 active surface-readiness track {#v0-5-active-surface-readiness-track}
+
+The active source-polish and release-planning contract lives in
+[v0.5 Surface Readiness](./v0.5-surface-readiness.md). It advances the complete
+native shell, navigation, Home, Settings, terminal integrations, editor tools,
+visual system, accessibility, continuity, and release gates over the 0.4.0
+baseline. It does not claim that a v0.5 artifact exists.
+
+The v0.5 product route is:
+
+```text
+Open Workspace
+-> start or resume work in a native tab
+-> supervise bounded Activity without losing pane or tab ownership
+-> inspect Files, Search, Diagnostics, Debug, Git, and diffs
+-> review and return after restart with Workspace and process context intact
+```
+
+While builds are paused, v0.5 work advances only through reviewable source
+slices and permitted source checks. Compilation, focused regressions,
+optimized packaging, installation, runtime, visual, accessibility, signing,
+and notarization evidence remain open for the exact future candidate.
+
 ## v0.4 active readiness track {#v0-4-active-readiness-track}
 
-The active source and exact-artifact contract lives in
-[v0.4 Readiness](./v0.4-readiness.md). The [Native Surface
+The latest exact-artifact contract lives in [v0.4
+Readiness](./v0.4-readiness.md). The [Native Surface
 Contract](./surface-contract.md) defines the current interface, while
 [v0.2 Workspace Polish](./v0.2-workspace-polish.md) and [v0.1 Product
 Hardening](./v0.1-product-hardening.md) preserve the ownership and reliability
@@ -106,7 +130,8 @@ a second navigation model:
 - every discovery source distinguishes **Missing**, **Empty**, **Failed**, and
   **Ready**, preserving only failed-source rows as **last known**;
 - browsing running Sessions clears transient navigator filters, refreshes
-  sources, expands matching groups, and focuses Workspaces;
+  sources, expands each matching Workspace and its nested running-session
+  disclosure, and focuses Workspaces;
 - expanded Workspaces now separate **Layout** from **Activity**: Layout returns
   to native open tabs, while Activity retains only active, running, actionable,
   recoverable, or review-ready work; completed history remains in Agent
@@ -4456,3 +4481,94 @@ Completed for the Workspace Layout ownership source slice:
 - updated the native surface contract and static identity guards; and
 - retained source-only verification. No build, test binary, alternate binary,
   package, or app launch was performed.
+
+Completed for the explicit running-session result source slice:
+
+- kept **Other Running Sessions** absent when ordinary navigation has no rows,
+  while preserving one bounded result after **Browse Running Sessions…**;
+- distinguished checking, source failure, private cmux activity, sessions
+  already grouped under open Workspaces, and a genuinely empty inventory;
+- prevented one healthy source from masking a failed or access-limited source;
+- removed the decorative zero-session count from the explicit empty result;
+- changed the disclosure from a pointer-only row to a keyboard target with an
+  announced expanded state, and exposed Retry only when discovery can help;
+- aligned the empty Main Work Area button with the full **Browse Running
+  Sessions** product noun; and
+- retained source-only verification. No build, test binary, alternate binary,
+  package, or app launch was performed.
+
+Completed for the Layout noun and running-session disclosure source slice:
+
+- restored **Layout** as the final name for the active Workspace's
+  activation-only native pane/tab projection, replacing the regressed
+  **Open** label;
+- aligned the surface contract, release-readiness contract, annotated
+  wireframe, permanent fork decision, exact-copy assertion, and static guard;
+- announced the Running Sessions disclosure's expanded state, natural
+  singular/plural count, and attention count to keyboard and assistive
+  navigation;
+- kept pane lifecycle, tab ordering, and split ownership in the native Main
+  Work Area; and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the Activity noun source slice:
+
+- corrected the active Workspace's bounded live projection from **Sessions**
+  to **Activity**, matching the existing actionable-lifecycle filters and
+  Workspace-first information architecture;
+- preserved official Zed's existing **Activity** wording and kept **Session**
+  as the entity noun in Agent History, Running Sessions, resume, and
+  multiplexer actions;
+- kept idle open tabs in **Layout**, completed inactive Agent Sessions in Agent
+  History, and only current authoritative signals in Activity;
+- synchronized the native surface contract, v0.4 readiness contract,
+  navigation wireframe, permanent fork decision, source assertion, and static
+  identity guards; and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the fresh Workspace ownership source slice:
+
+- aligned the bundled Files startup default with the existing first-run
+  profile so a fresh Workspace begins in the Main Work Area instead of opening
+  a second column;
+- preserved restored layouts and the explicit Files startup preference;
+- renamed the graphical toggle **Open Files Automatically** and explained its
+  Main Work Area consequence without inherited panel language;
+- synchronized the v0.4 contract, public guides, and static identity guard;
+  and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the final Workspace navigation-copy source slice:
+
+- changed the empty Workspaces headline to the complete **No Workspace is
+  open** sentence and named folders or repositories as the next context;
+- replaced the public guide's superseded **Open Tabs & Tools** and
+  **Open/Sessions** hierarchy with activation-only **Layout** and bounded
+  **Activity**;
+- removed guide claims that Workspaces owns close or middle-click lifecycle,
+  keeping those actions with the native tab strip;
+- preserved official Zed's existing empty-state wording; and
+- synchronized tests, the annotated wireframe, Fork Notes, and static identity
+  guards with source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the installed Lumin contrast source slice:
+
+- used the installed Preview to identify a real whole-window compositing
+  failure rather than reshaping native navigation from screenshots alone;
+- retained one macOS under-window material and the existing Home, Workspace,
+  Layout, Activity, tab-strip, and status-line ownership;
+- deepened Lumin Blur's translucent structural layers so a bright desktop
+  cannot flatten the product into a middle-gray field;
+- raised muted text, placeholder, and icon roles while keeping ordinary
+  selected controls neutral and reserving the warm accent for attention;
+- extended the dark blurred-theme gate to white, blue-gray, and warm light
+  desktop samples so the installed failure mode remains covered;
+- promoted only the primary Workspace name at Compact density, leaving section
+  labels and metadata compact; and
+- retained source-only verification. A new exact-SHA Preview is still required
+  to validate the revised hierarchy in Home, Workspaces, Settings, native tabs,
+  terminal/editor content, and the status line.

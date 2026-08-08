@@ -3,16 +3,17 @@ mod system_window_tabs;
 
 use gpui::{
     Action, AnyElement, App, Context, Decorations, Entity, Hsla, InteractiveElement, IntoElement,
-    MouseButton, ParentElement, StatefulInteractiveElement, Styled, WeakEntity, Window,
-    WindowButtonLayout, WindowControlArea, div, px,
+    MouseButton, ParentElement, Pixels, StatefulInteractiveElement, Styled, Subscription,
+    WeakEntity, Window, WindowButtonLayout, WindowControlArea, div, px,
 };
+use settings::{Settings as _, SettingsStore};
 use smallvec::SmallVec;
 use std::mem;
 use ui::{
     prelude::*,
     utils::{TRAFFIC_LIGHT_PADDING, platform_title_bar_height},
 };
-use workspace::{MultiWorkspace, SidebarRenderState, SidebarSide};
+use workspace::{DesignSystemSettings, MultiWorkspace, SidebarRenderState, SidebarSide};
 
 use crate::{
     platforms::{platform_linux, platform_windows},
@@ -25,28 +26,38 @@ pub use system_window_tabs::{
 
 pub struct PlatformTitleBar {
     id: ElementId,
+    app_name: &'static str,
     platform_style: PlatformStyle,
     children: SmallVec<[AnyElement; 2]>,
     should_move: bool,
     system_window_tabs: Entity<SystemWindowTabs>,
     button_layout: Option<WindowButtonLayout>,
     multi_workspace: Option<WeakEntity<MultiWorkspace>>,
+    _settings_subscription: Subscription,
 }
 
 impl PlatformTitleBar {
     pub fn new(id: impl Into<ElementId>, cx: &mut Context<Self>) -> Self {
         let platform_style = PlatformStyle::platform();
         let system_window_tabs = cx.new(|_cx| SystemWindowTabs::new());
+        let settings_subscription = cx.observe_global::<SettingsStore>(|_, cx| cx.notify());
 
         Self {
             id: id.into(),
+            app_name: "Zed",
             platform_style,
             children: SmallVec::new(),
             should_move: false,
             system_window_tabs,
             button_layout: None,
             multi_workspace: None,
+            _settings_subscription: settings_subscription,
         }
+    }
+
+    pub fn with_app_name(mut self, app_name: &'static str) -> Self {
+        self.app_name = app_name;
+        self
     }
 
     pub fn with_multi_workspace(mut self, multi_workspace: WeakEntity<MultiWorkspace>) -> Self {
@@ -149,9 +160,9 @@ pub fn render_right_window_controls(
     button_layout: Option<WindowButtonLayout>,
     close_action: Box<dyn Action>,
     window: &Window,
+    height: Pixels,
 ) -> Option<AnyElement> {
     let decorations = window.window_decorations();
-    let height = platform_title_bar_height(window);
 
     match PlatformStyle::platform() {
         PlatformStyle::Linux => {
@@ -182,7 +193,12 @@ impl Render for PlatformTitleBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let supported_controls = window.window_controls();
         let decorations = window.window_decorations();
-        let height = platform_title_bar_height(window);
+        let height = product_title_bar_height(
+            self.app_name,
+            DesignSystemSettings::get_global(cx).density,
+            platform_title_bar_height(window),
+            workspace::interface_scale(cx),
+        );
         let titlebar_color = self.title_bar_color(window, cx);
         let close_action = Box::new(workspace::CloseWindow);
         let children = mem::take(&mut self.children);
@@ -299,6 +315,7 @@ impl Render for PlatformTitleBar {
                                 button_layout,
                                 close_action.as_ref().boxed_clone(),
                                 window,
+                                height,
                             )
                         })
                         .flatten(),
@@ -324,8 +341,93 @@ impl Render for PlatformTitleBar {
     }
 }
 
+fn product_title_bar_height(
+    app_name: &str,
+    density: settings::CanvasDensity,
+    platform_height: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        return platform_height;
+    }
+
+    let density_height = platform_height
+        + match density {
+            settings::CanvasDensity::Compact => px(0.),
+            settings::CanvasDensity::Balanced => px(4.),
+            settings::CanvasDensity::Spacious => px(8.),
+        };
+    px(density_height.as_f32() * interface_scale).max(platform_height)
+}
+
 impl ParentElement for PlatformTitleBar {
     fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
         self.children.extend(elements)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::product_title_bar_height;
+    use gpui::px;
+
+    #[test]
+    fn dez_title_bar_tracks_interface_density_without_changing_zed() {
+        let platform_height = px(34.);
+
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Compact,
+                platform_height,
+                1.0,
+            ),
+            px(34.)
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Balanced,
+                platform_height,
+                1.0,
+            ),
+            px(38.)
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Spacious,
+                platform_height,
+                1.0,
+            ),
+            px(42.)
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Zed",
+                settings::CanvasDensity::Spacious,
+                platform_height,
+                1.5,
+            ),
+            platform_height
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Balanced,
+                platform_height,
+                1.5,
+            ),
+            px(57.)
+        );
+        assert_eq!(
+            product_title_bar_height(
+                "Dez",
+                settings::CanvasDensity::Compact,
+                platform_height,
+                0.5,
+            ),
+            platform_height
+        );
     }
 }

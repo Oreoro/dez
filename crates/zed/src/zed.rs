@@ -16,7 +16,7 @@ pub mod visual_tests;
 pub(crate) mod windows_only_instance;
 
 use agent_settings::{UserAgentsMdState, init_user_agents_md};
-use agent_ui::AgentDiffToolbar;
+use agent_ui::{AgentDiffToolbar, AgentPanel};
 use anyhow::Context as _;
 pub use app_menus::*;
 use assets::Assets;
@@ -655,8 +655,15 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let image_info = cx.new(|_cx| ImageInfo::new(workspace));
 
         let lsp_button_menu_handle = PopoverMenuHandle::default();
-        let lsp_button =
-            cx.new(|cx| LspButton::new(workspace, lsp_button_menu_handle.clone(), window, cx));
+        let lsp_button = cx.new(|cx| {
+            LspButton::new(
+                workspace,
+                lsp_button_menu_handle.clone(),
+                APP_NAME != "Zed",
+                window,
+                cx,
+            )
+        });
         workspace.register_action({
             move |_, _: &lsp_button::ToggleMenu, window, cx| {
                 lsp_button_menu_handle.toggle(window, cx);
@@ -891,6 +898,17 @@ async fn initialize_agent_panel(
         }
     })?;
 
+    if APP_NAME != "Zed" {
+        let panel = AgentPanel::load(workspace_handle.clone(), cx.clone())
+            .await
+            .context("failed to load built-in Agent panel")?;
+        workspace_handle.update_in(&mut cx, |workspace, window, cx| {
+            if workspace.panel::<AgentPanel>(cx).is_none() {
+                workspace.add_panel(panel, window, cx);
+            }
+        })?;
+    }
+
     anyhow::Ok(())
 }
 
@@ -909,8 +927,10 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     settings.theme.icon_theme = Some(settings::IconThemeSelection::Static(
         settings::IconThemeName(Arc::from("Dez (Default)")),
     ));
-    settings.design_system.get_or_insert_default().density =
-        Some(settings::CanvasDensity::Balanced);
+    let design_system = settings.design_system.get_or_insert_default();
+    design_system.density = Some(settings::CanvasDensity::Spacious);
+    design_system.radius = Some(settings::CanvasRadius::Rounded);
+    design_system.contrast = Some(settings::CanvasContrast::High);
     let terminal = settings.terminal.get_or_insert_default();
     terminal.font_family = Some(code_font);
     terminal.line_height = Some(settings::TerminalLineHeight::Standard);
@@ -923,8 +943,11 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     tab_bar.show_tab_bar_buttons = Some(true);
     let status_bar = settings.status_bar.get_or_insert_default();
     status_bar.show = Some(true);
-    status_bar.show_active_file = Some(true);
-    status_bar.line_endings_button = Some(true);
+    status_bar.show_active_file = Some(false);
+    status_bar.active_language_button = Some(true);
+    status_bar.cursor_position_button = Some(true);
+    status_bar.line_endings_button = Some(false);
+    status_bar.active_encoding_button = Some(settings::EncodingDisplayOptions::NonUtf8);
 }
 
 struct InstallationRequiredForWorkspaceAction;
@@ -1303,7 +1326,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, balanced density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the editor status bar.",
+                                "Restored Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the focused Workspace status line.",
                             ),
                             cx,
                         );
@@ -3333,7 +3356,9 @@ mod tests {
             })
         );
         assert_eq!(settings["icon_theme"], "Dez (Default)");
-        assert_eq!(settings["design_system"]["density"], "balanced");
+        assert_eq!(settings["design_system"]["density"], "spacious");
+        assert_eq!(settings["design_system"]["radius"], "rounded");
+        assert_eq!(settings["design_system"]["contrast"], "high");
         assert_eq!(settings["terminal"]["font_family"], "Lilex");
         assert_eq!(settings["terminal"]["line_height"], "standard");
         assert_eq!(settings["terminal"]["alternate_scroll"], "on");
@@ -3343,8 +3368,11 @@ mod tests {
         assert_eq!(settings["tab_bar"]["show_nav_history_buttons"], true);
         assert_eq!(settings["tab_bar"]["show_tab_bar_buttons"], true);
         assert_eq!(settings["status_bar"]["experimental.show"], true);
-        assert_eq!(settings["status_bar"]["show_active_file"], true);
-        assert_eq!(settings["status_bar"]["line_endings_button"], true);
+        assert_eq!(settings["status_bar"]["show_active_file"], false);
+        assert_eq!(settings["status_bar"]["active_language_button"], true);
+        assert_eq!(settings["status_bar"]["cursor_position_button"], true);
+        assert_eq!(settings["status_bar"]["line_endings_button"], false);
+        assert_eq!(settings["status_bar"]["active_encoding_button"], "non_utf8");
         assert_eq!(settings["ui_font_size"], 18.0);
     }
 

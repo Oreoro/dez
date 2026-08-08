@@ -4,7 +4,7 @@ use fs::Fs;
 use gpui::{
     Action, AnyElement, App, AppContext, AsyncWindowContext, Context, Entity, EventEmitter,
     FocusHandle, Focusable, Global, IntoElement, KeyContext, Pixels, Render, ScrollHandle,
-    SharedString, Subscription, Task, WeakEntity, Window, actions, px,
+    SharedString, Subscription, Task, WeakEntity, Window, actions, container_query, px,
 };
 use notifications::status_toast::StatusToast;
 use paths::APP_NAME;
@@ -59,6 +59,18 @@ pub fn should_show_onboarding_on_first_open(app_name: &str) -> bool {
 
 fn onboarding_page_enabled_for_app(app_name: &str) -> bool {
     app_name == "Zed"
+}
+
+fn onboarding_responsive_viewport_width(
+    app_name: &str,
+    viewport_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        viewport_width
+    } else {
+        viewport_width * interface_scale.max(f32::EPSILON).recip()
+    }
 }
 
 fn dez_onboarding_uses_compact_layout(app_name: &str, viewport_width: Pixels) -> bool {
@@ -275,13 +287,14 @@ impl Onboarding {
 impl Render for Onboarding {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = APP_NAME != "Zed";
-        let compact_layout =
-            dez_onboarding_uses_compact_layout(APP_NAME, window.viewport_size().width);
         let onboarding_background = if is_dez && theme_is_transparent(cx) {
             gpui::transparent_black()
         } else {
             cx.theme().colors().editor_background
         };
+        let page = self.render_page(cx);
+        let finish_focus_handle = self.focus_handle.clone();
+        let content_scroll_handle = self.scroll_handle.clone();
 
         div()
             .image_cache(gpui::retain_all("onboarding-page"))
@@ -306,7 +319,15 @@ impl Render for Onboarding {
                 cx.notify();
             }))
             .vertical_scrollbar_for(&self.scroll_handle, window, cx)
-            .child(
+            .child(container_query(move |available_size, _window, cx| {
+                let responsive_width = onboarding_responsive_viewport_width(
+                    APP_NAME,
+                    available_size.width,
+                    workspace::interface_scale(cx),
+                );
+                let compact_layout =
+                    dez_onboarding_uses_compact_layout(APP_NAME, responsive_width);
+
                 div()
                     .id("page-content")
                     .size_full()
@@ -419,7 +440,7 @@ impl Render for Onboarding {
                                             .when(compact_layout, |this| this.full_width())
                                             .key_binding(KeyBinding::for_action_in(
                                                 &Finish,
-                                                &self.focus_handle,
+                                                &finish_focus_handle,
                                                 cx,
                                             ))
                                             .on_click(|_, window, cx| {
@@ -428,10 +449,10 @@ impl Render for Onboarding {
                                     }),
                             )
                             .child(Divider::horizontal().color(ui::DividerColor::BorderVariant))
-                            .child(self.render_page(cx)),
+                            .child(page),
                     )
-                    .track_scroll(&self.scroll_handle),
-            )
+                    .track_scroll(&content_scroll_handle)
+            }))
     }
 }
 
@@ -494,6 +515,19 @@ mod tests {
         assert!(dez_onboarding_uses_compact_layout("Dez", px(759.)));
         assert!(!dez_onboarding_uses_compact_layout("Dez", px(760.)));
         assert!(!dez_onboarding_uses_compact_layout("Zed", px(320.)));
+
+        assert_eq!(
+            onboarding_responsive_viewport_width("Dez", px(1140.), 1.5),
+            px(760.)
+        );
+        assert_eq!(
+            onboarding_responsive_viewport_width("Dez", px(570.), 0.75),
+            px(760.)
+        );
+        assert_eq!(
+            onboarding_responsive_viewport_width("Zed", px(570.), 1.5),
+            px(570.)
+        );
     }
 
     #[test]

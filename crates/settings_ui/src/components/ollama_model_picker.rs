@@ -8,8 +8,8 @@ use ui::{ListItem, ListItemSpacing, PopoverMenu, prelude::*};
 use util::ResultExt;
 
 use crate::{
-    SettingField, SettingsFieldMetadata, SettingsUiFile, render_picker_trigger_button,
-    update_settings_file,
+    SettingField, SettingsFieldMetadata, SettingsUiFile, persistent_settings_popover_handle,
+    render_picker_trigger_button, update_settings_file, wire_settings_popover_trigger_a11y,
 };
 
 type OllamaModelPicker = Picker<OllamaModelPickerDelegate>;
@@ -162,7 +162,7 @@ pub fn render_ollama_model_picker(
     _metadata: Option<&SettingsFieldMetadata>,
     title: &'static str,
     description: &'static str,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -175,15 +175,26 @@ pub fn render_ollama_model_picker(
     } else {
         current_value.clone()
     };
+    let popover_handle = persistent_settings_popover_handle::<OllamaModelPicker>(
+        field.json_path.unwrap_or("edit_predictions.ollama.model"),
+        window,
+        cx,
+    );
 
     PopoverMenu::new("ollama-model-picker")
-        .trigger(
-            render_picker_trigger_button("ollama_model_picker_trigger".into(), trigger_value)
-                .aria_label(title)
-                .when(!description.is_empty(), |this| {
-                    this.aria_description(description)
-                }),
-        )
+        .with_handle(popover_handle.clone())
+        .trigger(wire_settings_popover_trigger_a11y(
+            render_picker_trigger_button(
+                "ollama_model_picker_trigger".into(),
+                trigger_value.clone(),
+            )
+            .aria_label(title)
+            .aria_value(trigger_value)
+            .when(!description.is_empty(), |this| {
+                this.aria_description(description)
+            }),
+            popover_handle,
+        ))
         .menu(move |window, cx| {
             Some(cx.new(|cx| {
                 let file = file.clone();
@@ -221,6 +232,5 @@ pub fn render_ollama_model_picker(
             x: px(0.0),
             y: px(2.0),
         })
-        .with_handle(ui::PopoverMenuHandle::default())
         .into_any_element()
 }

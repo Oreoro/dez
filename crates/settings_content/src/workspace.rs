@@ -50,6 +50,11 @@ pub struct WorkspaceSettingsContent {
     /// Values: empty_tab, last_workspace, last_session, launchpad
     /// Default: last_session
     pub restore_on_startup: Option<RestoreOnStartupBehavior>,
+    /// Chooses the first native destination for a new Workspace that has no
+    /// restorable layout or explicitly opened item.
+    ///
+    /// Default: focus
+    pub startup_intent: Option<WorkspaceStartupIntent>,
     /// The default behavior when opening paths from the CLI without
     /// an explicit `-e` or `-n` flag.
     ///
@@ -140,6 +145,35 @@ pub struct WorkspaceSettingsContent {
     /// Whether the focused panel follows the mouse location
     /// Default: false
     pub focus_follows_mouse: Option<FocusFollowsMouse>,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkspaceStartupIntent {
+    #[default]
+    #[strum(serialize = "Focus Work Area")]
+    Focus,
+    #[strum(serialize = "Files")]
+    Direct,
+    #[strum(serialize = "Default Terminal")]
+    Agentic,
+    #[strum(serialize = "Git Changes")]
+    Review,
+    #[strum(serialize = "Debug")]
+    Debug,
 }
 
 #[with_fallible_options]

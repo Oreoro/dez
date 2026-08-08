@@ -578,7 +578,6 @@ mod tests {
         LanguageModelName, LanguageModelProviderId, LanguageModelProviderName,
         LanguageModelRequest, LanguageModelToolChoice,
     };
-    use ui::IconName;
 
     #[derive(Clone)]
     struct TestLanguageModel {

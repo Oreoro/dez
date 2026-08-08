@@ -7458,6 +7458,7 @@ mod tests {
     use super::*;
     use crate::NewWorktreeBranchTarget;
     use crate::conversation_view::tests::{StubAgentServer, init_test};
+    use crate::terminal_thread_metadata_store::TerminalAttentionState;
     use crate::test_support::{
         active_session_id, active_thread_id, open_thread_with_connection,
         open_thread_with_custom_connection, register_test_sidebar, send_message,

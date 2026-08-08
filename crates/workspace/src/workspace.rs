@@ -38,7 +38,8 @@ pub use multi_workspace::{
     ProjectGroup, ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent,
     SidebarHandle, SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
     render_sidebar_header_controls_with_auxiliary_visibility,
-    render_sidebar_header_controls_with_state, sidebar_side_context_menu,
+    render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
+    sidebar_side_context_menu,
 };
 pub use path_list::{PathList, SerializedPathList};
 pub use remote::{
@@ -171,10 +172,35 @@ pub use workspace_settings::{
     RestoreOnStartupBehavior, SidebarSettings, StatusBarSettings, TabBarSettings, ToolbarSettings,
     WorkspaceSettings, observe_accessible_mode,
 };
-use zed_actions::{OpenTelemetryLog, Spawn, feedback::FileBugReport, theme::ToggleMode};
+use zed_actions::{
+    OpenTelemetryLog, Spawn, feedback::FileBugReport, terminal::OpenAgentTerminal,
+    theme::ToggleMode,
+};
+
+const DEZ_INTERFACE_FONT_BASELINE: f32 = 14.0;
+
+fn interface_scale_for_font_size(font_size: Pixels) -> f32 {
+    font_size.as_f32() / DEZ_INTERFACE_FONT_BASELINE
+}
+
+pub fn interface_scale(cx: &App) -> f32 {
+    interface_scale_for_font_size(ThemeSettings::get_global(cx).ui_font_size(cx))
+}
 
 pub(crate) fn workspace_card_gap(cx: &App) -> Pixels {
     workspace_card_gap_for_product(paths::APP_NAME, WorkspaceSettings::get_global(cx).card_gap)
+}
+
+#[cfg(test)]
+mod interface_scale_tests {
+    use super::interface_scale_for_font_size;
+    use gpui::px;
+
+    #[test]
+    fn interface_scale_uses_the_dez_font_baseline() {
+        assert_eq!(interface_scale_for_font_size(px(14.0)), 1.0);
+        assert_eq!(interface_scale_for_font_size(px(21.0)), 1.5);
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -550,6 +576,38 @@ fn next_dez_public_canvas_layout(active_layout: Option<CanvasLayoutRecipe>) -> C
         .unwrap_or(CanvasLayoutRecipe::Full)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DezStartupDestination {
+    CanvasLayout(CanvasLayoutRecipe),
+    DefaultTerminal,
+}
+
+fn dez_startup_destination(
+    app_name: &str,
+    intent: settings::WorkspaceStartupIntent,
+    is_new_workspace: bool,
+    has_explicitly_opened_item: bool,
+    has_workspace_root: bool,
+) -> Option<DezStartupDestination> {
+    if app_name == "Zed" || !is_new_workspace || has_explicitly_opened_item || !has_workspace_root {
+        return None;
+    }
+
+    match intent {
+        settings::WorkspaceStartupIntent::Focus => None,
+        settings::WorkspaceStartupIntent::Direct => Some(DezStartupDestination::CanvasLayout(
+            CanvasLayoutRecipe::Full,
+        )),
+        settings::WorkspaceStartupIntent::Agentic => Some(DezStartupDestination::DefaultTerminal),
+        settings::WorkspaceStartupIntent::Review => Some(DezStartupDestination::CanvasLayout(
+            CanvasLayoutRecipe::Review,
+        )),
+        settings::WorkspaceStartupIntent::Debug => Some(DezStartupDestination::CanvasLayout(
+            CanvasLayoutRecipe::Debug,
+        )),
+    }
+}
+
 fn dez_layout_uses_single_work_area(recipe: CanvasLayoutRecipe) -> bool {
     matches!(
         recipe,
@@ -559,6 +617,17 @@ fn dez_layout_uses_single_work_area(recipe: CanvasLayoutRecipe) -> bool {
             | CanvasLayoutRecipe::Review
             | CanvasLayoutRecipe::Debug
     )
+}
+
+fn dez_resolved_single_work_area_recipe(
+    requested_recipe: CanvasLayoutRecipe,
+    destination_available: bool,
+) -> CanvasLayoutRecipe {
+    if destination_available {
+        requested_recipe
+    } else {
+        CanvasLayoutRecipe::EditorFocus
+    }
 }
 
 const FOUR_AGENT_MATRIX_SPLIT_DIRECTIONS: &[SplitDirection] = &[
@@ -1109,6 +1178,19 @@ fn saved_layout_noun_for_app(app_name: &str, count: usize) -> &'static str {
         (false, true) => "Workspace layout",
         (false, false) => "Workspace layouts",
     }
+}
+
+fn saved_layout_action_accessibility_label(
+    app_name: &str,
+    action: &str,
+    layout_label: &str,
+) -> String {
+    let layout_noun = if app_name == "Zed" {
+        "Canvas Layout"
+    } else {
+        "Workspace Layout"
+    };
+    format!("{action} {layout_noun}: {layout_label}")
 }
 
 impl CanvasSavedLayoutSnapshot {
@@ -1721,6 +1803,32 @@ impl Render for CanvasSavedLayoutManagerModal {
             .into_iter()
             .enumerate()
             .map(|(index, entry)| {
+                let save_accessibility_label =
+                    saved_layout_action_accessibility_label(paths::APP_NAME, "Save", &entry.label);
+                let restore_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    "Restore",
+                    &entry.label,
+                );
+                let rename_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    "Rename",
+                    &entry.label,
+                );
+                let duplicate_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    "Duplicate",
+                    &entry.label,
+                );
+                let clear_accessibility_label = saved_layout_action_accessibility_label(
+                    paths::APP_NAME,
+                    if paths::APP_NAME == "Zed" {
+                        "Clear"
+                    } else {
+                        "Remove"
+                    },
+                    &entry.label,
+                );
                 let save_kind = matches!(entry.kind, CanvasSavedLayoutManagerEntryKind::Slot(_))
                     .then_some(entry.kind.clone());
                 let restore_kind = entry.kind.clone();
@@ -1772,7 +1880,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     Button::new(("save", index), "Save")
                                         .size(ButtonSize::Compact)
                                         .tab_index(0isize)
-                                        .aria_label("Save Workspace Layout")
+                                        .aria_label(save_accessibility_label)
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.save_layout(save_kind.clone(), window, cx);
                                             cx.stop_propagation();
@@ -1783,7 +1891,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                 Button::new(("restore", index), "Restore")
                                     .size(ButtonSize::Compact)
                                     .tab_index(0isize)
-                                    .aria_label("Restore Workspace Layout")
+                                    .aria_label(restore_accessibility_label)
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.restore_layout(restore_kind.clone(), window, cx);
                                         cx.stop_propagation();
@@ -1794,7 +1902,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                 Button::new(("rename", index), "Rename")
                                     .size(ButtonSize::Compact)
                                     .tab_index(0isize)
-                                    .aria_label("Rename Workspace Layout")
+                                    .aria_label(rename_accessibility_label)
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         this.rename_layout(rename_kind.clone(), window, cx);
                                         cx.stop_propagation();
@@ -1806,7 +1914,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                     Button::new(("duplicate", index), "Duplicate")
                                         .size(ButtonSize::Compact)
                                         .tab_index(0isize)
-                                        .aria_label("Duplicate Canvas Layout")
+                                        .aria_label(duplicate_accessibility_label)
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.duplicate_layout(
                                                 duplicate_kind.clone(),
@@ -1829,11 +1937,7 @@ impl Render for CanvasSavedLayoutManagerModal {
                                 )
                                 .size(ButtonSize::Compact)
                                 .tab_index(0isize)
-                                .aria_label(if paths::APP_NAME == "Zed" {
-                                    "Clear Canvas Layout"
-                                } else {
-                                    "Remove Saved Workspace Layout"
-                                })
+                                .aria_label(clear_accessibility_label)
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.clear_layout(clear_kind.clone(), window, cx);
                                     cx.stop_propagation();
@@ -2064,6 +2168,13 @@ pub trait TerminalProvider {
 }
 
 pub trait DebuggerProvider {
+    fn open_panel(
+        &self,
+        workspace: &mut Workspace,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    );
+
     // `active_buffer` is used to resolve build task's name against language-specific tasks.
     fn start_session(
         &self,
@@ -3856,8 +3967,15 @@ impl Workspace {
             .root::<MultiWorkspace>()
             .flatten()
             .map(|mw| mw.downgrade());
-        let status_bar =
-            cx.new(|cx| StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx));
+        let status_bar = cx.new(|cx| {
+            StatusBar::new(
+                &center_pane.clone(),
+                weak_handle.clone(),
+                multi_workspace.clone(),
+                window,
+                cx,
+            )
+        });
 
         let session_id = app_state.session.read(cx).id().to_owned();
         if let Some(workspace_id) = workspace_id {
@@ -3889,7 +4007,7 @@ impl Workspace {
             Self::serialize_items(&this, serializable_items_rx, cx).await
         });
 
-        let subscriptions = vec![
+        let mut subscriptions = vec![
             cx.observe_window_activation(window, Self::on_window_activation_changed),
             cx.observe_window_bounds(window, move |this, window, cx| {
                 if !window.is_window_active() {
@@ -3927,6 +4045,10 @@ impl Workspace {
                 }
             }),
         ];
+        if paths::APP_NAME != "Zed" {
+            subscriptions
+                .push(cx.observe_global_in::<SettingsStore>(window, |_, _, cx| cx.notify()));
+        }
 
         cx.defer_in(window, move |this, window, cx| {
             this.update_window_title(window, cx);
@@ -4093,6 +4215,7 @@ impl Workspace {
                 .as_ref()
                 .map(|_| canvas_saved_layouts_from_persisted(db.saved_canvas_layouts(workspace_id)))
                 .unwrap_or_default();
+            let is_new_workspace = serialized_workspace.is_none();
 
             let toolchains = db.toolchains(workspace_id).await?;
 
@@ -4274,6 +4397,51 @@ impl Workspace {
                 })?
                 .await
                 .unwrap_or_default();
+            let has_explicitly_opened_item = !opened_items.is_empty();
+            let startup_destination = window
+                .update(cx, |_, _window, cx| {
+                    let workspace = workspace.read(cx);
+                    let has_workspace_root =
+                        workspace
+                            .project
+                            .read(cx)
+                            .visible_worktrees(cx)
+                            .any(|worktree| {
+                                worktree
+                                    .read(cx)
+                                    .root_entry()
+                                    .is_some_and(|entry| entry.is_dir())
+                            });
+                    dez_startup_destination(
+                        paths::APP_NAME,
+                        WorkspaceSettings::get_global(cx).startup_intent,
+                        is_new_workspace,
+                        has_explicitly_opened_item,
+                        has_workspace_root,
+                    )
+                })
+                .log_err()
+                .flatten();
+
+            if let Some(DezStartupDestination::CanvasLayout(startup_recipe)) = startup_destination {
+                let panels_task = window
+                    .update(cx, |_, _window, cx| {
+                        workspace.update(cx, |workspace, _cx| workspace.take_panels_task())
+                    })
+                    .log_err()
+                    .flatten();
+                if let Some(panels_task) = panels_task {
+                    panels_task.await.log_err();
+                }
+
+                window
+                    .update(cx, |_, window, cx| {
+                        workspace.update(cx, |workspace, cx| {
+                            workspace.apply_canvas_layout_recipe(startup_recipe.id(), window, cx);
+                        });
+                    })
+                    .log_err();
+            }
 
             // Restore default dock state for empty workspaces
             // Only restore if:
@@ -4315,6 +4483,19 @@ impl Workspace {
                     });
                 })
                 .log_err();
+
+            if startup_destination == Some(DezStartupDestination::DefaultTerminal) {
+                window
+                    .update(cx, |_, window, cx| {
+                        workspace.update(cx, |workspace, cx| {
+                            let active_pane = workspace.active_pane().clone();
+                            active_pane
+                                .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx));
+                        });
+                        window.dispatch_action(OpenAgentTerminal.boxed_clone(), cx);
+                    })
+                    .log_err();
+            }
 
             if open_mode == OpenMode::NewWindow || open_mode == OpenMode::Activate {
                 window
@@ -9186,10 +9367,19 @@ impl Workspace {
             .last_tabbed_pane(cx)
             .unwrap_or_else(|| self.ensure_tabbed_pane(window, cx));
         let destination = self.consolidate_dez_main_work_area(destination, window, cx);
-        self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
+        self.set_active_pane(&destination, window, cx);
+        let destination_available =
+            self.select_dez_essential_canvas_recipe_panel(layout_recipe, window, cx);
         let destination = self.last_tabbed_pane(cx).unwrap_or(destination);
         self.focus_canvas_pane(&destination, window, cx);
-        self.finish_canvas_recipe(Some(layout_recipe), window, cx);
+        self.finish_canvas_recipe(
+            Some(dez_resolved_single_work_area_recipe(
+                layout_recipe,
+                destination_available,
+            )),
+            window,
+            cx,
+        );
     }
 
     fn consolidate_dez_main_work_area(
@@ -9408,15 +9598,22 @@ impl Workspace {
             return true;
         }
 
+        if recipe == CanvasLayoutRecipe::Debug
+            && let Some(debugger_provider) = self.debugger_provider.clone()
+        {
+            debugger_provider.open_panel(self, window, cx);
+            return true;
+        }
+
         // A named destination such as Work Area + Git is only truthful when
         // its owned panel exists. If panel registration is unavailable, do
         // not expose a blank drawer or the previous tool under the new layout
         // label. Collapse the auxiliary region and preserve the user's Main
         // Work Area instead.
-        if let Some(panel_pane_kind) =
-            essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME)
-        {
-            self.set_canvas_panel_pane_visible(panel_pane_kind, false, window, cx);
+        if essential_canvas_recipe_auxiliary_pane_for_app(recipe, paths::APP_NAME).is_some() {
+            for panel_pane_kind in [PanelPaneKind::Project, PanelPaneKind::Agent] {
+                self.set_canvas_panel_pane_visible(panel_pane_kind, false, window, cx);
+            }
             self.center.mark_positions(cx);
         }
         false
@@ -16517,7 +16714,7 @@ pub fn open_remote_project_with_new_connection(
     app_state: Arc<AppState>,
     paths: Vec<PathBuf>,
     cx: &mut App,
-) -> Task<Result<Vec<Option<Box<dyn ItemHandle>>>>> {
+) -> Task<Result<(Option<Entity<Workspace>>, Vec<Option<Box<dyn ItemHandle>>>)>> {
     cx.spawn(async move |cx| {
         let (
             workspace_id,
@@ -16541,7 +16738,7 @@ pub fn open_remote_project_with_new_connection(
             .await?
         {
             Some(result) => result,
-            None => return Ok(Vec::new()),
+            None => return Ok((None, Vec::new())),
         };
 
         let project = cx.update(|cx| {
@@ -16557,7 +16754,7 @@ pub fn open_remote_project_with_new_connection(
             )
         });
 
-        open_remote_project_inner(
+        let (workspace, items) = open_remote_project_inner(
             project,
             paths,
             workspace_id,
@@ -16570,7 +16767,8 @@ pub fn open_remote_project_with_new_connection(
             None,
             cx,
         )
-        .await
+        .await?;
+        Ok((Some(workspace), items))
     })
 }
 
@@ -16583,7 +16781,7 @@ pub fn open_remote_project_with_existing_connection(
     provisional_project_group_key: Option<ProjectGroupKey>,
     source_workspace: Option<WeakEntity<Workspace>>,
     cx: &mut AsyncApp,
-) -> Task<Result<Vec<Option<Box<dyn ItemHandle>>>>> {
+) -> Task<Result<(Entity<Workspace>, Vec<Option<Box<dyn ItemHandle>>>)>> {
     cx.spawn(async move |cx| {
         let (
             workspace_id,
@@ -16622,7 +16820,7 @@ async fn open_remote_project_inner(
     provisional_project_group_key: Option<ProjectGroupKey>,
     source_workspace: Option<WeakEntity<Workspace>>,
     cx: &mut AsyncApp,
-) -> Result<Vec<Option<Box<dyn ItemHandle>>>> {
+) -> Result<(Entity<Workspace>, Vec<Option<Box<dyn ItemHandle>>>)> {
     let mut project_paths_to_open = vec![];
     let mut project_path_errors = vec![];
 
@@ -16723,7 +16921,10 @@ async fn open_remote_project_inner(
         }
     });
 
-    Ok(items.into_iter().map(|item| item?.ok()).collect())
+    Ok((
+        workspace,
+        items.into_iter().map(|item| item?.ok()).collect(),
+    ))
 }
 
 fn deserialize_remote_project(
@@ -17491,6 +17692,14 @@ mod tests {
         assert_eq!(saved_layout_noun_for_app("Dez", 2), "Workspace layouts");
         assert_eq!(saved_layout_noun_for_app("Zed", 1), "Canvas layout");
         assert_eq!(saved_layout_noun_for_app("Zed", 2), "Canvas layouts");
+        assert_eq!(
+            saved_layout_action_accessibility_label("Dez", "Restore", "Focus"),
+            "Restore Workspace Layout: Focus"
+        );
+        assert_eq!(
+            saved_layout_action_accessibility_label("Zed", "Clear", "Slot 1 — Review"),
+            "Clear Canvas Layout: Slot 1 — Review"
+        );
         assert_eq!(workspace_layout_cycle_label("Dez"), "Next Workspace Layout");
         assert_eq!(workspace_layout_cycle_label("Zed"), "Cycle Layout");
         assert_eq!(
@@ -17620,6 +17829,123 @@ mod tests {
         assert!(!dez_layout_uses_single_work_area(
             CanvasLayoutRecipe::CodeRunObserve
         ));
+        for recipe in [
+            CanvasLayoutRecipe::Full,
+            CanvasLayoutRecipe::AgentControl,
+            CanvasLayoutRecipe::Review,
+            CanvasLayoutRecipe::Debug,
+        ] {
+            assert_eq!(dez_resolved_single_work_area_recipe(recipe, true), recipe);
+            assert_eq!(
+                dez_resolved_single_work_area_recipe(recipe, false),
+                CanvasLayoutRecipe::EditorFocus,
+                "an unavailable native destination must preserve and name the focused Main Work Area"
+            );
+        }
+    }
+
+    #[test]
+    fn dez_startup_intent_never_overrides_restored_or_explicit_work() {
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Focus,
+                true,
+                false,
+                true,
+            ),
+            None
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                false,
+                true,
+            ),
+            Some(DezStartupDestination::CanvasLayout(
+                CanvasLayoutRecipe::Full
+            ))
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Agentic,
+                true,
+                false,
+                true,
+            ),
+            Some(DezStartupDestination::DefaultTerminal)
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Review,
+                true,
+                false,
+                true,
+            ),
+            Some(DezStartupDestination::CanvasLayout(
+                CanvasLayoutRecipe::Review
+            ))
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Debug,
+                true,
+                false,
+                true,
+            ),
+            Some(DezStartupDestination::CanvasLayout(
+                CanvasLayoutRecipe::Debug
+            ))
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                false,
+                false,
+                true,
+            ),
+            None,
+            "a restored Workspace keeps its saved native layout"
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                true,
+                true,
+            ),
+            None,
+            "an explicitly opened item remains the first destination"
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Dez",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                false,
+                false,
+            ),
+            None,
+            "Home remains the owner when no Workspace root exists"
+        );
+        assert_eq!(
+            dez_startup_destination(
+                "Zed",
+                settings::WorkspaceStartupIntent::Direct,
+                true,
+                false,
+                true,
+            ),
+            None,
+            "official Zed keeps its upstream startup behavior"
+        );
     }
 
     #[test]

@@ -7,7 +7,7 @@ document disagree, this document wins.
 
 The [tmux and Claude Code Navigation Wireframe](./tmux-claude-navigation-wireframe.md)
 tracks the remaining exploration around the Workspace → Pane → Tab hierarchy.
-Its activation-only **Open** projection and bounded **Sessions** feed are
+Its activation-only **Layout** projection and bounded **Activity** feed are
 authoritative here; navigation mode and return recaps remain proposals until
 this contract is deliberately updated again.
 
@@ -31,8 +31,8 @@ development environment, not a terminal dashboard and not a chat client.
 Window
 ├── Workspaces (optional global navigator)
 │   ├── Workspace rows
-│   ├── Open (activation-only projection of the active Workspace)
-│   ├── Sessions (bounded running, actionable, recovery, or review signal)
+│   ├── Layout (activation-only projection of the active Workspace)
+│   ├── Activity (bounded running or actionable signals)
 │   └── Workspace notices (bounded recovery states)
 ├── Main Work Area (authoritative native pane and tab model)
 │   ├── Home, files, diffs, search, Settings, browser, diagnostics
@@ -43,7 +43,7 @@ Window
 ```
 
 One Workspace owns every tab, tool, Session, and user-created pane associated
-with its codebase. A Workspace is not a list of terminals. **Open** reads the
+with its codebase. A Workspace is not a list of terminals. **Layout** reads the
 native pane model and activates its existing items; it never stores duplicate
 order, focus, close, pin, dirty, or split state.
 
@@ -53,16 +53,16 @@ order, focus, close, pin, dirty, or split state.
 
 ```text
 ┌ Workspaces ──────┬ Home ─ + ─────────────────────────────────────────┐
-│ dez  main        │ Continue your work                                │
+│ dez  main        │ Continue in this Workspace                        │
 │ 3 agents · 2 ports│ Run a tool, supervise its work, then review it.   │
 │                  │                                                    │
-│ Open             │ Start with a tool          Recent Workspaces      │
-│  Home            │  Open Terminal · Default   superzed               │
+│ Layout           │ Start with a tool          Recent Workspaces      │
+│  Home            │  Open Terminal · Codex     superzed               │
 │  Codex · Working │  Codex                     website                │
 │  app.rs          │  Claude Code               infra                  │
 │  Terminal · Ready│  OpenCode                  tools                  │
-│  Files           │  Workspace tmux                                   │
-│  Git Changes     │  Open Workspace in cmux                           │
+│  Files           │  Open Workspace in cmux                           │
+│  Git Changes     │  Workspace tmux · fallback                        │
 │                  │                                                    │
 │ superzed         │ Inspect and resume                                │
 │ website          │  Browse Running Sessions                          │
@@ -74,17 +74,38 @@ order, focus, close, pin, dirty, or split state.
 
 Home is a launcher in a normal closeable tab. It has no hero illustration,
 provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
+Every empty-window ingress follows the same ownership rule: cold start and an
+explicit no-path new-window request both open Home in the Main Work Area. They
+never substitute a scratch file or reopen the inherited onboarding surface.
+Its state-aware title—**Start a Workspace** or **Continue in this Workspace**—is
+the level-one accessible heading. **Start with a tool**, **Inspect and resume**,
+and **Recent Workspaces** remain visible level-two headings, so keyboard and
+assistive navigation follows the same concise action hierarchy without adding
+an onboarding surface.
+
+Home evaluates its compact and two-column breakpoints in interface-scaled tab
+width. Whole-interface zoom therefore collapses visible action metadata and the
+secondary column before rows crowd, while zooming out may restore the split
+when equivalent space returns. The native pane remains the width owner, saved
+geometry is unchanged, and official Zed keeps its inherited physical-width
+behavior.
+
+The native setup surface follows the same interface-scaled tab-width policy.
+Zooming in stacks its heading and **Finish Setup** action before they compete
+for space; zooming out restores the horizontal header only when equivalent tab
+width returns. The assigned pane remains the physical width owner, and official
+Zed retains its inherited physical-width onboarding behavior.
 
 ### 2. Run and active work
 
 ```text
 ┌ Workspaces ──────┬ Codex · Working | app.rs | Terminal | Files | Git | + ┐
 │ dez  main        │ Workspace: dez · main · ~/code/dez · Codex working     │
-│ Sessions         ├─────────────────────────────────────────────────────────┤
+│ Activity         ├─────────────────────────────────────────────────────────┤
 │  Codex · Working │                                                         │
 │  Claude · Attention  Native TerminalView renders the provider TUI here.   │
 │  Terminal · Ready│  Dez does not place a custom chat renderer around it.  │
-│ Open             │                                                         │
+│ Layout           │                                                         │
 │  Codex · Working │                                                         │
 │  app.rs          │                                                         │
 │  Terminal        │                                                         │
@@ -96,7 +117,11 @@ provider promotion, setup wizard, or overlay. The adjacent `+` remains visible.
 
 Provider and subagent glyphs identify activity; adjacent state text says
 Working, Needs attention, Completed, Failed, or Available. Color is supportive,
-never the only state signal.
+never the only state signal. The ordinary Workspace projection shows at most
+five top-level Activity rows. A **Running Sessions** disclosure occupies one of
+those rows; the current destination and attention-required rows take priority
+over routine activity. The native Activity disclosure reveals the
+complete current set, while Search and Attention scope remain exhaustive.
 
 ### 3. Supervise and recover
 
@@ -105,13 +130,13 @@ never the only state signal.
 │ dez  main               │ Herdr attach failed · Connection refused    │
 │ Workspace access required│ [Retry Attach] [Open new shell here]       │
 │ [Grant Access…]         ├──────────────────────────────────────────────┤
-│ Sessions                │ Existing terminal output remains visible.    │
+│ Activity                │ Existing terminal output remains visible.    │
 │  Codex · Working        │                                              │
 │  Claude · Attention     │ Terminal Details                             │
 │  Terminal · Ready       │ Provider · Herdr                             │
 │  Running Sessions · 2   │ Working directory · ~/code/dez               │
 │  Legacy · Access blocked│ Host generation · legacy                     │
-│ Open                    │ Endpoint · offline                           │
+│ Layout                  │ Endpoint · offline                           │
 │  Terminal · Failed      │ Ownership · external process unchanged       │
 │  Files · Diff · Git     │                                              │
 ├─────────────────────────┴──────────────────────────────────────────────┤
@@ -120,19 +145,47 @@ never the only state signal.
 ```
 
 **Browse Running Sessions…** focuses Workspaces, clears transient filters,
-expands groups with activity, refreshes discovery, and preserves the active
-Main Work Area tab. It never creates a duplicate Sessions page. Recovery is
-inline and states both cause and next action. Terminal Details is a disclosure
-within the terminal surface, not a floating inspector. An attach tab names tmux
-or Herdr as the external owner and describes itself only as the attach client.
-Destructive legacy termination remains behind a native confirmation.
+expands each matching Workspace and its nested **Running Sessions** disclosure,
+refreshes discovery, and preserves the active Main Work Area tab.
+It never creates a duplicate Activity page. Recovery is inline and states both cause
+and next action. Terminal Details is a disclosure within the terminal surface, not a
+floating inspector. An attach tab names tmux or Herdr as the external owner and
+describes itself only as the attach client. When an attach command reaches that tab
+and exits unsuccessfully, the terminal toolbar presents the primary **Retry Attach**
+action, a secondary **Open New Shell Here** action, and keeps the failed output
+visible. The new shell is explicit independent work in the same Workspace; it
+never claims to migrate the external Session. A provider failure that occurs
+before a terminal exists remains a Workspace notification with the same explicit
+retry; Dez does not show both recoveries for one failure. Destructive legacy
+termination remains behind a native confirmation.
+Normal Herdr attachment never requests input ownership. **Open Running Session…**
+adds a separate **Take Control of _pane_ in Dez · Herdr** action only for a
+current Herdr pane. That deliberate action runs Herdr's documented `--takeover`
+path; ordinary row activation, discovery, retry, restore, and startup never add
+it. The label names both the pane and ownership transfer before execution, and
+the resulting attach client remains an ordinary native terminal tab.
+Retry and fresh-shell controls include the external owner and target Workspace
+in their accessible names. The fresh-shell description also repeats that tmux
+or Herdr remains external, so compact icon-only recovery does not obscure
+ownership.
+The Workspaces discovery notice follows the same rule: its compact **Retry**
+action names the failed external owner when one integration is unavailable and
+enumerates every affected owner when several sources fail. Refresh never
+changes or terminates external sessions.
+
+**Workspace tmux · fallback** resolves the executable through the same known
+Homebrew and shell `PATH` locations as running-session discovery, then runs its
+root-scoped attach policy through `/bin/sh`. This keeps the action independent
+of the GUI process `PATH` and of the user's interactive shell syntax. If tmux is
+not installed, the terminal says so and returns to the native shell; Dez does
+not leave a fake Session row or replace the Workspace.
 
 ### 4. Review and intentional split
 
 ```text
 ┌ Workspaces ──────┬ Diff · app.rs | app.rs | + ┬ Terminal | Files | Git | + ┐
 │ dez  main        │                              │                             │
-│ Open             │ diff                         │ native terminal              │
+│ Layout           │ diff                         │ native terminal              │
 │ Pane 1 · Focused │                              │ or review-adjacent tool      │
 │  Diff · app.rs   │                              │                             │
 │  app.rs          │                              │                             │
@@ -149,13 +202,77 @@ A pane group exists only after the user invokes a split action. Each pane owns
 its native tab strip and adjacent `+`. Closing Workspaces preserves both panes,
 their tabs, and the focused Main Work Area item.
 
+### Native chrome density
+
+```text
+                         Compact        Balanced       Spacious
+Platform title bar      baseline       baseline + 4   baseline + 8
+Main pane tab strip     24 px          32 px          40 px
+Pane chrome target      22 px          28 px          28 px
+Status line             24 px          26 px          30 px
+
+┌ native window title / traffic-light region ─────────────────────────┐
+├ native pane tabs ─ adjacent + ─ overflow ─ split ─ zoom ────────────┤
+│ Main Work Area                                                     │
+├ Workspaces · active Workspace · repository · attention · position ┤
+└────────────────────────────────────────────────────────────────────┘
+```
+
+The platform title bar retains its native font and traffic-light sizing, then
+adds the selected density offset for Dez. The Main Work Area continues to use
+the existing pane tab strip; on macOS it is the top content chrome below the
+traffic lights, not a second custom title-bar row. All pane-menu marks stay on
+the shared pane control metric. Official Zed retains its inherited platform
+title-bar height and native tab metrics. Interface Density changes invalidate
+the platform title bar, pane tabs, Workspaces, the Workspace-owned notification
+shelf, and the status line together; the shell must not wait for a Workspace,
+terminal, notification, or focus event before those native owners agree on the
+new metrics.
+
+The table records the 14 px interface-font scaling baseline. Fresh Dez profiles
+start at 16 px so native tabs, Workspaces, Home, and the status line are
+comfortably legible without making editor or terminal text larger. Dez derives
+title-bar, Workspaces header, and status-line heights from one interface scale,
+so UI zoom grows or shrinks those owners together. The platform title bar never
+shrinks below the native traffic-light requirement. Role-specific bars remain
+deliberately different heights; their scale and density progression are shared.
+
+Dez treats **Zoom In**, **Zoom Out**, and **Reset Zoom** as whole-interface
+controls. They change the shared UI scale used by the title bar, native pane
+tabs, Workspaces, Settings, menus, and the status line; editor- and
+terminal-font sizing remain separate explicit actions. The View menu and the
+default keyboard shortcuts must dispatch the same interface actions. Official
+Zed retains its inherited buffer-zoom View menu.
+
+Status-line responsive breakpoints use interface-scaled width in Dez. Zooming
+the whole interface in therefore collapses repository, pane, and secondary
+Workspace text before it can crowd native actions; zooming out restores that
+context when equivalent space is available. Tooltips and accessible names keep
+the complete state at every scale. Official Zed keeps its inherited physical
+viewport breakpoints.
+
+The native View menu keeps language intelligence discoverable without adding a
+second tool rail. **Language Tools** routes to the existing Workspace Symbols,
+Workspace Diagnostics, Language Servers status menu, current-file language
+server restart, and Language Server Logs owners. These are navigation and
+recovery actions over Zed's existing LSP implementation, not a parallel Dez
+language-service layer.
+
+While a code editor is active, Dez keeps the native Language Servers status
+control reachable even before a server has started. Its tooltip and assistive
+state say that no language servers are active, and its existing popover offers
+Language Server Logs instead of pretending that every server is operational.
+Restricted, starting, warning, and error states retain their native priority.
+Non-editor surfaces do not gain a second language-tool control, and official
+Zed retains its inherited status-control visibility policy.
+
 ## Secondary-state wireframe
 
 ### 5. Install-first Home
 
 ```text
 ┌ Workspaces ─────────┬ Home ─ + ──────────────────────────────────────┐
-│                    │ Continue your work                              │
+│                    │ Start a Workspace                               │
 │ No Workspaces yet  │                                                 │
 │ Install Dez to get │ ┌ Install Dez to continue ────────────────────┐ │
 │ started.           │ │ Install in Applications and relaunch before│ │
@@ -186,7 +303,7 @@ Workspaces supplies a quiet explanation rather than a duplicate button.
 │ │ terminals start.    │ │                                            │
 │ │ [Grant Access…]     │ │                                            │
 │ └─────────────────────┘ │                                            │
-│ Open                    │                                            │
+│ Layout                  │                                            │
 ├─────────────────────────┴────────────────────────────────────────────┤
 │ Workspace: dez | main | Permissions: Access required                │
 └──────────────────────────────────────────────────────────────────────┘
@@ -195,25 +312,31 @@ Workspaces supplies a quiet explanation rather than a duplicate button.
 Permission recovery belongs to the affected Workspace root. One aggregated
 notice names the exact folder and gates Git, search, LSP, agents, and terminals
 behind the same preflight. Selecting **Grant Access…** never opens or replaces
-a Workspace, and Home does not mirror the notice over the Main Work Area.
+a Workspace, and Home does not mirror the notice over the Main Work Area. The
+native action names that exact root to assistive navigation when one folder is
+blocked. When several roots are blocked, it announces **one of N blocked
+Workspace folders** and the picker grants one exact root at a time.
 
 ### 7. Product-first Settings
 
 ```text
-┌ Workspaces ─────┬ Settings ─ + ──────────────────────────────────────┐
-│ dez             │ Workspaces & Terminals │ Workspaces                │
-│ Open            │ Agents                 │ Workspaces Position  Left │
-│                 │ Appearance             │ Show on Startup       Off │
-│  Settings       │ Workspace & Privacy    │───────────────────────────│
-│  Terminal       │ Keyboard & Vim         │ Terminal Launch           │
-│  Files          │ Editor                 │ Default Terminal           │
-│                 │ Languages & Tools      │  Native Shell              │
-│                 │ Search & Files         │  Codex · Claude Code       │
-│                 │ Navigation & Layout    │  OpenCode · tmux · Custom  │
-│                 │ Workspace Tools        │ Open Workspace in cmux  ↗  │
-├─────────────────┴────────────────────────┴────────────────────────────┤
-│ Workspace: dez | main | Permissions: Healthy                        │
-└──────────────────────────────────────────────────────────────────────┘
+┌ Workspaces ─────┬ Settings ─ + ─────────────────────────────────────────┐
+│ dez             │ ▣ Workspaces & Terminals │ Workspaces                 │
+│ Layout          │ ◉ Agents                 │ Workspaces Position  Left  │
+│                 │ ✦ Appearance             │ Show on Startup       Off  │
+│  Settings       │ ◇ Workspace & Privacy    │────────────────────────────│
+│  Terminal       │ ⌨ Keyboard & Vim         │ Terminal Launch            │
+│  Files          │ <> Editor                │ Default Terminal           │
+│                 │ ⚒ Languages & Tools      │  Native Shell              │
+│                 │ ⌕ Search & Files         │  Codex · Claude Code       │
+│                 │ ⫶ Navigation & Layout    │  OpenCode · tmux · Custom  │
+│                 │ ≡ Workspace Tools        │ Open Workspace in cmux  ↗  │
+│                 │ ▶ Debugger               │────────────────────────────│
+│                 │                          │ Open Debugger             ▶│
+│                 │                          │ Open debug.json           {}│
+├─────────────────┴──────────────────────────┴────────────────────────────┤
+│ Workspace: dez | main | Permissions: Healthy                            │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 Settings begins with the choices required to run work: Workspace behavior and
@@ -221,6 +344,92 @@ Terminal Launch, then Agents and Appearance. Privacy remains prominent before
 inherited editor customization. Native shell and TUI profiles launch inside
 Dez; **Open Workspace in cmux** is an explicit external handoff and therefore
 an action or documentation route, never an availability toggle.
+
+Changing **Default Terminal** updates the visible Home action label without
+waiting for Home to be reopened. Home, the empty Main Work Area, empty
+Workspaces Activity, Workspace terminal controls, and the adjacent `+` menu use
+the same resolved action label, icon, and configured-terminal action, so the
+primary launcher never collapses back to a generic terminal row or bypasses the
+selected destination before activation.
+Home assigns keyboard order after local-only actions are filtered, so hiding
+the cmux handoff for a remote Workspace never creates a
+duplicate or skipped action target.
+
+**New Workspace Starts With** names the existing native destination it will
+open: **Focus Work Area**, **Files**, **Default Terminal**, **Git Changes**, or
+**Debug**. These are not durable product modes. The choice applies only when a
+new Workspace has a root but no restored layout or explicitly opened item.
+**Default Terminal** dispatches the same configured launcher used by Home and
+the adjacent `+` into the active Main Work Area without creating a split. Its
+native Terminal or Workspace recovery remains authoritative if launch fails.
+If a panel destination's native owner is unavailable, the focused Main Work
+Area remains visible and **Focus Work Area** becomes the active saved layout.
+The status line and next-layout cycle must never claim a tool that did not open.
+The native dropdown pairs each destination with its existing semantic icon;
+Default Terminal resolves the configured provider glyph instead of presenting
+a generic terminal identity.
+
+Each Dez root page has one quiet semantic icon drawn from the same native icon
+set used by Home, Workspaces, tabs, and the status line. Icons supplement the
+page title and never replace it. Nested section rows remain text-only, keeping
+the root-page hierarchy scannable without turning Settings into a second tool
+rail. The navigation column follows Interface Density so full root titles do
+not clip beside their disclosure and icon. Official Zed keeps its inherited
+text-only Settings navigation and dimensions.
+The selected root title is also the page's level-one accessible heading, and
+the content group announces that exact owner—for example, **Workspaces &
+Terminals Settings**—instead of exposing every destination as an
+indistinguishable generic Settings region.
+
+Debugger Settings begins with two native recovery routes. **Open Debugger**
+reveals the existing Debug panel, while **Open debug.json** opens the active
+Workspace configuration. Neither action starts a build or creates a parallel
+debug surface. Advanced adapter preferences remain below these actions.
+
+Settings retains the originating Workspace when its existing window is reused,
+including when a global Settings command is dispatched while Settings already
+has focus. It observes that window's `MultiWorkspace` owner, so switching the
+active Workspace immediately re-evaluates root-scoped actions and their
+assistive descriptions without waiting for a Settings or project event.
+Window-owned actions such as native keymaps and visual-profile recovery remain
+available from Home while that originating window exists.
+Root-owned actions—Debugger and `debug.json`—remain visibly disabled with an
+inline explanation until that window owns a real Workspace root. They never
+appear enabled and then fail silently. App-wide actions such as documentation
+and audio testing remain available without a Dez window.
+
+The curated Dez pages contain only fields with native controls. Settings that
+still require structured JSON stay available through the native Settings File
+route instead of appearing as rows whose only control is **Edit in
+settings.json**. Official Zed retains its complete upstream settings catalog.
+Before a Dez page enters navigation, search, or keyboard focus order, page
+curation verifies that each field has both a registered renderer and a resolved
+default. A defensive settings-file fallback may remain in shared rendering
+code, but it is not a curated Dez control.
+Native Settings popovers retain an owner-scoped handle across renders.
+Default-model, Ollama-model, font, theme, and icon-theme pickers plus Add
+Provider, Add Agent, and Add Server triggers report the live expanded state and
+accept assistive Expand and Collapse actions. They do not create a second
+Settings surface or a separate value owner. Global and per-tool permission
+dropdowns follow the same contract and mark the currently selected Confirm,
+Allow, or Deny policy in their native menus. Curated enum rows—including
+terminal launcher, new-Workspace intent, and appearance choices—share a stable
+dropdown owner instead of rebuilding open state per render.
+Audio-device, edit-prediction-provider, and provider reasoning-effort menus use
+the same owner-scoped state and announce their selected values.
+Settings-file overflow, nested scope, and subagent reasoning-effort menus close
+the same loop; scope triggers name the exact Settings ownership they change.
+Dez also keeps product-inert microgeometry out of the curated catalog: the
+disabled outer card gap, disabled active-pane border, and unused zoom padding
+remain readable in `settings.json` for compatibility but are not presented as
+working native controls.
+
+The Main Work Area's native pane strip and adjacent Add control are product
+navigation, not optional decoration. Dez therefore keeps them visible even if
+an inherited `tab_bar.show`, `tab_bar.show_tab_bar_buttons`, or
+`pane_grid.auto_hide_single_tab_bar` value requests otherwise. The two tab-bar
+visibility rows are omitted from curated Settings, while the raw keys remain
+readable for compatibility. Official Zed continues to honor all three values.
 
 ### 8. Compact navigation
 
@@ -237,7 +446,13 @@ an action or documentation route, never an availability toggle.
 Closing Workspaces gives its width back to the Main Work Area. The labeled
 status-bar control remains the recovery route and uses **Open Workspaces** for
 its tooltip and action. Compact layouts may hide secondary text, never the
-control's meaning or accessible identity.
+control's meaning or accessible identity. At less than 760px of window width,
+the density-scaled Workspaces mark remains the same keyboard, tooltip,
+attention, expanded-state, and accessibility target while its visible
+Workspace label yields space to editor and terminal status. Medium windows show
+the stable **Workspaces** noun without the active Workspace name; wide windows
+add that name as supporting context. This collapse order removes metadata
+before navigation identity and never adds a second status row.
 
 ## Operational-state wireframe
 
@@ -250,7 +465,8 @@ control's meaning or accessible identity.
 │ No activity yet   │ Files and Git review open as tabs here.          │
 │                   │                                                  │
 │ superzed          │ [Open Terminal · Codex]                          │
-│ website           │ [Browse Sessions] [Find File] [Review Changes]   │
+│ website           │ [Browse Running Sessions] [Find File]            │
+│                   │ [Review Changes]                                 │
 ├───────────────────┴──────────────────────────────────────────────────┤
 │ Workspace: dez | main | Permissions: Healthy                       │
 └──────────────────────────────────────────────────────────────────────┘
@@ -261,22 +477,29 @@ The tab strip remains visible but contains no invented placeholder tab. Its
 adjacent `+` is available immediately. The one primary action names the
 resolved configured destination—Native Shell, tmux Session, a recognized
 provider, or Custom Command—while the provider glyph reinforces that identity.
+The matching empty Workspaces Activity action uses that same named destination
+and opens it in the active Main Work Area; it never falls back to a generic
+shell action.
+The visible **Main Work Area** or **Empty pane** identity is the level-one
+heading for this pane-owned region, so assistive navigation names the exact
+native target before its terminal, running-session, file, and review actions.
 
 ### 10. Add and switch tabs
 
 ```text
-┌ Codex · Working | app.rs* | Diff · config.rs | Terminal | + | Switch Tab ┐
-│ Add to Main Work Area             Tabs in This Pane                      │
-│  Default Terminal                 Codex · Working · Active               │
-│  Native Shell                     app.rs · Modified                       │
-│  Workspace tmux                   Diff · config.rs                        │
-│  Codex · Claude Code · OpenCode   Terminal · Pinned                       │
-│  More Agent CLIs ›                Settings                                │
-│  Resume Existing Agent ›                                                  │
-│  Browse Running Sessions…                                                  │
-│  Open Workspace in cmux                                                   │
-│  Files · Review · Task · Debug                                             │
-│  Home · Recent Workspaces                                                  │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Codex · Working | app.rs* | Diff · config.rs | Terminal | + | Switch Tab    │
+│ Add to Main Work Area             Tabs in This Pane                         │
+│   Open Terminal ›                 Codex · Working · Active                  │
+│     Default · Shell · Agents      app.rs · Modified                         │
+│   Resume Existing Agent ›         Diff · config.rs                          │
+│   Built-in Agent                  Terminal · Pinned                         │
+│   Sessions and Multiplexers       Settings                                  │
+│     Open Workspace in cmux                                                  │
+│     Browse Running Sessions…                                                │
+│     Workspace tmux · fallback                                               │
+│   Files · Review · Task · Debug                                             │
+│   Home · Recent Workspaces                                                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -284,6 +507,9 @@ The two menus are alternate anchored native menus and never appear together in
 the product. `+` follows the final visible tab and remains pinned to the tab
 viewport edge during overflow. **Switch Tab** lists only the owning pane and
 preserves active, modified, and pinned meaning in text as well as icon state.
+The Compass glyph is the stable Home identity across the Home heading, Home
+tab, and the rooted and rootless `+` menus. Folder and history glyphs remain
+reserved for opening or returning to Workspace destinations.
 
 Dez disables preview tabs by default so opening another file does not replace
 the previous file tab. Users may explicitly enable preview tabs for Zed-style
@@ -292,10 +518,10 @@ tab; activating it again returns to the pane's most recently active different
 tab. It never opens a second Files drawer or changes the Workspace layout.
 
 The Add menu keeps **Sessions and Multiplexers** visible as a first-class
-group: **Workspace tmux**, **Browse Running Sessions…**, and the applicable
-**Open Workspace in cmux** handoff. **Open Terminal → Claude Code** always
-starts `claude`; **Resume Existing Agent → Claude Code · Last Session** is the
-separate opt-in `claude --continue` path.
+group: the applicable **Open Workspace in cmux** handoff, **Browse Running
+Sessions…**, and **Workspace tmux · fallback**. **Open Terminal → Claude
+Code** always starts `claude`; **Resume Existing Agent → Claude Code · Last
+Session** is the separate opt-in `claude --continue` path.
 
 ### 11. Discover and supervise
 
@@ -303,7 +529,7 @@ separate opt-in `claude --continue` path.
 ┌ Workspaces ─────────────────┬ app.rs ─ + ────────────────────────────┐
 │ Search · All · Attention    │ Existing editor remains active.        │
 │ dez · main                  │                                        │
-│ Sessions                    │ Browse Running Sessions never opens    │
+│ Activity                    │ Browse Running Sessions never opens    │
 │  Codex · Working            │ or replaces this Main Work Area tab.   │
 │  Claude Code · Attention    │                                        │
 │  tmux · Available           │                                        │
@@ -321,9 +547,23 @@ separate opt-in `claude --continue` path.
 Each external source owns one Missing, Empty, Failed, or Ready state. One
 bounded failed-source notice exposes one non-destructive **Retry**; concurrent
 refresh requests coalesce, and last-known rows remain visibly qualified. A
-truly empty list uses one primary **Open Terminal** action. Search recovery uses
-one primary **Clear Search** action, while a caught-up Attention scope uses a
-subordinate **Show All** action.
+last-known tmux, Herdr, or cmux row stays reachable in **Attention** until its
+source refreshes or resolves, and its row uses attention status rather than
+claiming current Running state. A truly empty list uses one primary configured
+**Open Terminal · Codex**, shell, tmux, provider, or custom action. Search
+recovery uses one primary **Clear Search** action, while a
+caught-up Attention scope uses a subordinate **Show All** action.
+
+**Other Running Sessions** remains absent during ordinary work when it has no
+rows. After the user explicitly chooses **Browse Running Sessions…**, it may
+stay open long enough to report **Checking…**, **All running sessions belong to
+open Workspaces**, **No running sessions**, or **Discovery needs attention**.
+It omits a decorative zero count, exposes **Retry** only for failed discovery,
+and uses a keyboard-operable disclosure with an announced expanded state.
+The disclosure announces **Show all** or **Show fewer** plus a listed count; it
+does not call last-known recovery rows live or running. Each row's accessible
+name retains the same authoritative state, working directory, and bounded port
+metadata visible in the row and its tooltip.
 
 ### 12. Terminal launch failure
 
@@ -346,7 +586,45 @@ subordinate **Show All** action.
 The failure remains in its owning native tab, uses terminal material, names the
 cause, and starts no substitute process. The primary split action deep-links to
 **Workspaces & Terminals → Terminal Launch → Default Terminal**; its menu keeps
-the general Settings and raw JSON alternatives available.
+the general Settings and raw JSON alternatives available. Its native tab uses
+the warning glyph and a concise recovery tooltip, so the failure remains
+identifiable after another tab takes focus without crowding the tab label.
+
+A typed protected-folder failure keeps the same native hierarchy but changes
+the recovery owner instead of presenting access as a launch configuration
+problem:
+
+```text
+┌ Workspace access required | + | app.rs ──────────────────────────────┐
+│ [!] Workspace access required                                        │
+│   Workspace access required for ~/Documents/dez before a terminal…   │
+│                                                                      │
+│   Workspace access is required before a terminal can start. Open    │
+│   Workspaces, then grant access to the blocked folder.               │
+│                                                                      │
+│   [Open Workspaces ▾]                                                │
+│      Open Settings                                                   │
+│      Edit settings.json                                              │
+├──────────────────────────────────────────────────────────────────────┤
+│ Workspace: dez | main | Permissions: Access required                │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Open Workspaces** focuses the existing native access owner; it does not show
+a second prompt or grant access from the terminal tab. **Grant Access…** stays
+in the active Workspace row, while the split menu retains general diagnostic
+settings. The native tab and alert retain **Workspace access required** when
+inactive or projected through Workspaces. Ordinary launch failures and
+official Zed keep their existing title, icon behavior, and Settings recovery.
+
+If the native shell starts but a recognized terminal agent such as Codex,
+Claude Code, OpenCode, or Herdr exits non-zero, its own output remains the
+authoritative diagnosis. Dez appends one concise line to that same terminal:
+the startup command exited, the shell is still interactive, and the user can
+fix the tool configuration and retry. It does not replace the terminal with a
+failure card, infer agent state from transcript text, or start a substitute
+process. An ordinary zero exit and an interactive interrupt do not add the
+recovery line. Official Zed keeps its inherited command submission behavior.
 
 ## Review-and-recovery wireframe
 
@@ -356,8 +634,8 @@ the general Settings and raw JSON alternatives available.
 ┌ Workspaces ─────┬ Review · app.rs | app.rs | + ──────────────┐
 │ dez · main       │ 3 files  +52  -17                              │
 │                 │ [Previous Change] [Next Change]                   │
-│ Open Tabs &     │ [Reject All Changes] [Keep All Changes]           │
-│ Tools           ├──────────────────────────────────────────┤
+│ Layout          │ [Reject All Changes] [Keep All Changes]           │
+│                 ├──────────────────────────────────────────┤
 │  Built-in Agent│ src/app.rs       [Review] [Reject] [Keep]          │
 │  Git Changes   │ src/config.rs    [Review] [Reject] [Keep]          │
 │  Terminal      │ tests/app_tests.rs [Review] [Reject] [Keep]        │
@@ -416,9 +694,11 @@ and do not advertise an action that cannot help.
 
 The Edits disclosure announces its file count and expanded state and responds
 to Enter and Space. **Review Changes** is the primary inspection route;
-whole-review decisions are visibly secondary. Subagent state remains text, not
-color alone. **Open Subagent Session** is a visible outlined handoff that
-focuses the existing child Session rather than creating a new one.
+whole-review decisions are visibly secondary. The related but distinct Dez
+Subagent mark preserves hierarchy without reusing a provider logo. Subagent
+state remains text, not color alone. **Open Subagent Session** is a visible
+outlined handoff that focuses the existing child Session rather than creating
+a new one.
 
 ### 16. Resume honestly
 
@@ -441,8 +721,17 @@ focuses the existing child Session rather than creating a new one.
 
 Unavailable and legacy records preserve evidence without claiming process
 death, liveness, ownership transfer, or migration. A fresh shell is explicitly
-separate computation. Terminal Details stays inline, and **Terminate legacy
-session…** remains a context-menu action behind native confirmation.
+separate computation. The unavailable terminal remains one alert region whose
+visible title is also its level-one heading, so recovery is both announced and
+navigable without an overlay. **Open New Shell Here** starts an independent
+native shell and never inherits the configured agent or tmux launcher.
+Terminal Details stays inline, and **Terminate legacy session…** remains a
+context-menu action behind native confirmation.
+
+The terminal context menu dispatches the same configured-terminal action as
+Home, Workspaces, and the adjacent `+`. In particular, a named tmux destination
+uses the root-scoped Workspace tmux policy rather than starting a raw `tmux`
+command through the generic center-terminal path.
 
 ## Native-tool wireframe
 
@@ -452,10 +741,10 @@ session…** remains a context-menu action behind native confirmation.
 ┌ Workspaces ─────────┬ Files | Search | + ──────┬ Workspace Diagnostics | + ┐
 │ paykit              │ Files tree | editor       │ No problems in Workspace   │
 │ main · 2 panes      │                           │ [Refresh]                   │
-│ Sessions            │ Search this Workspace     │                             │
+│ Activity            │ Search this Workspace     │                             │
 │  Claude · Working   │ No matches                │                             │
 │  tmux · Attached    │ Broaden the query or      │                             │
-│ Open                │ remove path filters.      │                             │
+│ Layout              │ remove path filters.      │                             │
 │  Pane 1             │                           │                             │
 │   Files · Search    │                           │                             │
 │  Pane 2             │                           │                             │
@@ -477,12 +766,12 @@ turning a healthy state into a warning.
 ```text
 ┌ Workspaces ─────────┬ main.rs | Task · test | + ─────────────────────────────┐
 │ paykit              │ Task · test                 Running       [Stop Task] │
-│ Sessions            │ cargo test --workspace                                  │
+│ Activity            │ cargo test --workspace                                  │
 │  Claude · Working   │ running 42 tests…                                       │
 │  tmux · Attached    │                                                         │
 │  Task · test        │ ┌ Run Task ──────────────────────────────────────────┐  │
 │    Running          │ │ Find a task, or run a command                      │  │
-│ Open                │ │ test · test:unit · test:watch · fmt · clippy       │  │
+│ Layout              │ │ test · test:unit · test:watch · fmt · clippy       │  │
 │  Pane 1             │ │ [Rerun Last Task]                            [Run] │  │
 │   main.rs           │ └────────────────────────────────────────────────────┘  │
 │   Task · test       │                                                         │
@@ -495,14 +784,22 @@ A Task owns its native terminal output tab and appears in Workspaces only as
 live activity. The task picker says **Run**, not spawn, in Dez. While inventory
 loads it reports that state; an empty inventory explains that typed input can
 run once; and an unmatched non-empty query offers the same honest one-shot
-command path instead of a dead **No matches** message.
+command path instead of a dead **No matches** message. When the picker targets
+the center reveal location, Dez names that destination **Main Work Area**;
+official Zed retains its inherited central-pane wording.
+
+Recent one-shot commands remain owned by Task history. On the selected recent
+row, Dez keeps **Remove from Recent Tasks** visible, keyboard reachable, and
+assistively named; pointer hover may reveal the same action on other rows.
+Removing the history entry never claims to delete its task definition or stop
+running work. Official Zed retains its inherited hover presentation and copy.
 
 ### 19. Debug without a dead end
 
 ```text
 ┌ Workspaces ─────────┬ main.rs | Debug | + ───────────────────────────────────┐
 │ paykit              │ Start debugging                                       │
-│ Open                │ [Start Debug Session] [Configure debug.json]           │
+│ Layout              │ [Start Debug Session] [Configure debug.json]           │
 │  Pane 1             │ Documentation · Adapter Logs                           │
 │   main.rs           ├───────────────────────────┬────────────────────────────┤
 │   Debug             │ Breakpoints               │ Console                    │
@@ -522,15 +819,35 @@ breakpoint guidance points back to the editor. Failures preserve the adapter
 reason and expose Retry and logs inline; they never open an overlay or create a
 second Debug navigation system.
 
+The stack-frame filter remains an icon-only native Debug control, but it is in
+the keyboard tab order and exposes the same action name to its tooltip and
+assistive navigation. Dez calls the filtered result **stack frames from this
+Workspace**; official Zed retains its upstream Project wording. The label
+reverses to **Show all stack frames** while the filter is active.
+
+Running Debug controls follow the same selected-row rule. Dez keeps **Restart
+Stack Frame** visible and keyboard reachable on the selected frame while other
+rows retain the quiet hover affordance. Breakpoint enable, removal, log,
+condition, and hit-condition controls, plus **Remove Watch**, expose their
+action names and enter the keyboard order. An unavailable breakpoint action
+names why it cannot run instead of relying on a disabled glyph alone. Official
+Zed retains its inherited stack-frame hover presentation.
+
+A missing adapter or Workspace root fails before a Debug Session record is
+created. Adapter boot failures keep the exact launch request for **Retry** and
+render one native error callout above the existing Debug content. Starting a
+new attempt clears the previous failure; closing a booting Session does not
+turn its intentional shutdown into a new launch error.
+
 ### 20. Resume and hand off honestly
 
 ```text
 ┌ Workspaces ─────────┬ Home | + ──────────────────────────────────────────────┐
 │ paykit              │ Recent Workspaces                                      │
-│ Sessions            │ paykit · ~/dev/paykit                                  │
+│ Activity            │ paykit · ~/dev/paykit                                  │
 │  Claude · Working   │ client-app · Access required     [Grant Folder Access] │
 │  tmux · Attached    │ Recent Workspaces unavailable                 [Retry]  │
-│ Open                │                                                        │
+│ Layout              │                                                        │
 │  Pane 1 · Home      │ External tools                                         │
 │  Pane 2 ·           │ [Open Workspace in cmux]                               │
 │   Diagnostics       │ cmux owns its tabs, splits, and browser.               │
@@ -550,6 +867,12 @@ live process. cmux owns its tabs, splits, browser, hooks, and action registry;
 Dez provides an explicit Workspace handoff. Ordinary URLs open in the system
 browser rather than a fake embedded browser surface.
 
+Inline Git attribution is compact navigation context, not a second commit
+viewer. It normalizes contributor summaries to one visible line and truncates
+inside the editor or status-line width. Author, relative time, icon, and focus
+remain readable; the native blame popover and commit view retain the complete
+message and metadata.
+
 The final shell contract is: **one sidebar, many Workspaces, many panes, any
 native tool, honest ownership, inline recovery**.
 
@@ -559,8 +882,8 @@ native tool, honest ownership, inline recovery**.
 | --- | --- | --- | --- | --- |
 | Home | Main Work Area tab | Start or resume the product loop | tab `+`, Help, first run | install-first and recent-history retry are inline |
 | Workspaces | optional window navigator | switch codebases and supervise activity | status bar, View menu, shortcut | one Open Workspace action; bounded notices |
-| Open | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | visible for every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
-| Sessions | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; external work begins as one Running Sessions disclosure; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
+| Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | appears once there are at least two open tabs and then includes every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
+| Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; default preview is at most five top-level rows and prioritizes the current and attention-required destinations; external work begins as one Running Sessions disclosure; native expansion, Search, and Attention scope reveal the complete relevant set; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
 | Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
@@ -574,43 +897,136 @@ native tool, honest ownership, inline recovery**.
 | Status bar | window | durable Workspace and editor context | visible by default | explicit preference may hide it; closed Workspaces keeps a labeled restore control |
 | Installation and access | Home plus Workspaces notice | unblock safe startup | startup preflight | install/relaunch or grant one exact folder; never background prompt loops |
 
+The Dez visual profile keeps the status line visible with active language,
+cursor position, and non-UTF-8 encoding when relevant. It leaves the active-file
+name and line-ending control off because the native tab and editor already own
+that persistent identity. Both remain explicit user preferences.
+
+Lumin Blur, Lumin, and Lumin Light define the complete native syntax-role set
+used by the bundled editor themes. Namespaces, markup punctuation, selectors,
+pseudo-selectors, and inline diff additions and deletions keep distinct semantic
+color in every appearance instead of silently falling back to ordinary editor
+text. Syntax color never substitutes for active-language or language-server
+status; those remain explicit native status-line controls.
+
 ## Interaction and copy rules
 
 - Use one primary action per state. Put secondary actions in ordinary rows or
   an overflow menu.
 - Use native Zed buttons, tabs, menus, prompts, focus, and theme tokens.
-- Use the shared density scale for top-bar, tab-bar, sidebar, and status-bar
-  controls. Navigation marks stay 12–14px in compact native targets; status
-  type remains supporting text and the Dez status bar scales from 24–30px.
+- Give every icon-only menu trigger a stable name, keyboard target, and
+  expanded state. Workspace-owned triggers include their visible Workspace
+  name so repeated rows remain distinguishable.
+- Use the shared density scale for top-bar, tab-bar, sidebar title and search
+  rows, and status-bar controls. Compact navigation uses 22px targets with
+  12px marks; Balanced uses 22–28px targets with 14px marks; Spacious uses
+  28–32px targets with 14px marks. Status type remains supporting text and the
+  Dez status bar scales from 24–30px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
+- Keep repeated Saved Workspace Layout actions distinguishable. Save, Restore,
+  Rename, and Remove announce the exact layout label they target instead of a
+  generic action name shared by every row.
+- Keep heterogeneous Workspace attention generic and truthful. Workspace
+  headers announce **items need attention** because Activity may contain an
+  agent, terminal, task, tmux, Herdr, or cmux destination; Session wording is
+  reserved for surfaces that actually contain only Sessions.
+- Selected navigation uses neutral material and medium-weight type. Lifecycle
+  state stays plain supporting text; accent remains reserved for attention,
+  modification, and recovery. Lumin's blurred, opaque, and light variants apply
+  that neutral selection ladder at the theme-token level.
+- Native pane-menu triggers expose whether their menu is expanded. The adjacent
+  Add, tab-overflow, and split controls use neutral selected material while
+  open; they do not become accent-colored status signals.
 - Preserve visible keyboard focus and a visual reading order that matches
   accessibility navigation.
 - Use cause plus recovery for errors: **Attach failed · Connection refused**,
   then **Retry Attach** or **Open new shell here**.
+- Keep the public Git owner consistent with the rest of Dez. Commit-file
+  actions, write-access failures, clone destinations, and worktree eligibility
+  name the **Workspace**; internal project and worktree types do not leak into
+  the native Git workflow. Official Zed retains its upstream Project copy.
 - Name the configured result at the point of launch. Generic **Open Terminal**
   may become **Open Terminal · Codex** or the resolved equivalent when space
   permits.
+- Keep that resolved destination in the accessible name and tooltip. Append
+  location only after the destination, such as **Open Terminal · Codex in Main
+  Work Area**, so assistive navigation never collapses a named action back to a
+  generic terminal.
+- Workspaces terminal controls dispatch that named configured result. Explicit
+  provider commands remain literal, while **Open New Shell Here** remains a
+  separate native shell and never inherits an agent launcher.
 - Keep permission scope explicit: **Workspace access required** and **Grant
   Access…** for one exact root.
 - Keep recovery in its owning surface: installation on Home, root access in
   Workspaces, terminal lifecycle in the terminal tab.
+- Keep active-Workspace access failure visible when Workspaces is closed. The
+  existing status control names **Access required** and opens Workspaces; the
+  exact root-scoped **Grant Access…** action remains owned by Workspaces.
 - Reserve the status bar for durable context. Transient progress and lengthy
   diagnostics belong to the owning surface.
+- Keep the Workspaces recovery control subscribed to its native owner. Sidebar
+  visibility, position, active Workspace identity, and attention state update
+  its visible and assistive labels immediately without waiting for pane focus.
+- Activating or reselecting a Workspace header immediately re-derives the
+  active Activity destination from that Workspace. Returning focus to the Main
+  Work Area never clears its current terminal or agent projection.
 - Never introduce a Studio/Projects mode switch, custom browser tabs, a chat
   wrapper around terminal tools, floating onboarding, or an automatic split.
+- Route every empty-window entry through Home. A no-path CLI or new-window
+  request must not bypass first-run policy and resurrect inherited onboarding.
 
 ## Responsive contract
 
 - The Main Work Area keeps at least 60% of the window width.
 - Workspaces may collapse or close; its state remains reachable from the
   labeled status-bar control.
+- At labeled widths the Workspaces status control projects the sidebar owner's
+  exact bounded attention count as **Attention 2**. At compact icon-only widths
+  the accessible name retains the full active Workspace identity and exact
+  count, while the semantic indicator reinforces attention; the status bar
+  never maintains a second identity or attention total.
+- When the active local Workspace requires folder access, the same control adds
+  **Access required** at labeled widths and retains the cause in its accessible
+  name, native tooltip, and warning indicator at compact widths. Attention
+  remains exact in that tooltip when both states are present. Activating the
+  control opens the native Workspaces recovery surface instead of starting
+  another permission prompt.
+- Long Workspace names truncate as secondary status metadata before they can
+  crowd the Workspaces recovery action or its visible attention count.
 - Top and status chrome must change size together when Compact, Balanced, or
   Spacious density changes; individual surfaces do not invent local scales.
+- Workspaces evaluates its compact, balanced, and detailed projections in
+  interface-scaled width. Whole-interface zoom may collapse nested Layout
+  destinations and secondary row metadata sooner, or reveal them when more
+  effective width is available, but it never changes the rail's saved physical
+  width, native resize bounds, or ownership. Official Zed retains its inherited
+  physical-width breakpoints.
+- The status line derives split-pane identity from the active native Workspace.
+  It shows **Pane 1 of 2** at wide widths, contracts to **Pane 1/2** before
+  other status metadata, and disappears below the labeled navigation threshold.
+  A single Main Work Area does not repeat the implicit **Pane 1** label.
+- The status line derives repository context from that Workspace's native Git
+  store. At 1200px and wider it shows the active branch and changed-file count
+  beside the Git branch icon; detached work remains explicit. Repository context
+  disappears first as width contracts, preserving Workspace recovery and pane
+  identity without creating another repository store.
+- Pane Back, Forward, adjacent Add, overflow, split, zoom, and close controls
+  share one tab-bar metric. Workspace disclosure, terminal launch, options,
+  search, and Layout rows share the Workspace navigation metrics.
 - Secondary row metadata truncates before the title or primary recovery action.
 - Compact widths hide button text but retain the icon, tooltip, accessibility
   label, and keyboard target.
-- Open stays flat for a single-pane Workspace and reports only the
+- Below 280px, Layout retains its open-item count and real pane headings but
+  omits nested destination rows. Pane headings announce position, focus, and
+  open-item counts; the native pane tab strip remains the destination owner.
+- The assistive hierarchy matches the visible Workspace model: **Workspaces**
+  is a level-one heading, **Layout** and **Activity** are level two, and real
+  split-pane groups are level three. Activity expansion remains a named button
+  within its section heading rather than becoming a second navigation owner.
+- Layout is omitted while the active Workspace has only one tab because the
+  native tab strip already exposes that sole destination. Beginning with the
+  second tab, Layout stays flat for a single-pane Workspace and reports only the
   open-item count. With a user-created split it adds the real pane count,
   groups rows under **Pane 1**, **Pane 2**, and so on, and names the focused
   pane in text. Selection styling and accessibility copy carry focused and
@@ -626,20 +1042,36 @@ native tool, honest ownership, inline recovery**.
 ## Acceptance checklist
 
 - Every open panel, tool, terminal, file, diff, and browser surface is reachable
-  as a native tab and appears in Open for the active Workspace.
+  as a native tab. Once the active Workspace has at least two tabs, every open
+  surface appears in Layout.
 - Browse Running Sessions focuses Workspaces without replacing the current tab.
-- Sessions excludes inactive completed history while preserving active,
-  attention, recovery, and review-ready rows. Open remains the route to idle
+- Reselecting the active Workspace preserves its current Activity projection;
+  the sidebar never waits for an unrelated pane or Settings event to recover it.
+- A fresh Workspace starts in the Main Work Area without an automatic Files
+  column; restored layouts and an explicit Files startup preference still win.
+- Activity excludes inactive completed history while preserving active,
+  attention, recovery, and review-ready rows. Layout remains the route to idle
   open tabs and Agent History remains the route to completed Agent Sessions.
+- Activity shows at most five top-level rows before native expansion, reserves
+  one row for Running Sessions when present, and prioritizes the current and
+  attention-required managed destinations in that preview.
+- Workspace headers announce an empty Workspace as **ready to start work** and
+  count heterogeneous Activity attention as items rather than Sessions.
 - Empty Workspaces and search states expose one visually primary recovery;
   caught-up scope changes remain subordinate.
+- Removing the active Workspace group activates the nearest healthy retained
+  Workspace, including a loaded remote Workspace. An unloaded immediate local
+  neighbor may open normally; an unloaded remote path is never reinterpreted as
+  local, and a durable empty Workspace is the final fallback.
 - Native pane tabs remain the source of order, focus, dirty, close, and split
-  truth.
+  truth. Dez keeps each Main Work Area pane strip and its adjacent `+` visible;
+  inherited tab-bar visibility preferences cannot remove that navigation.
 - Agent review disclosures and decisions remain keyboard reachable, and Git
   History failure retries only the completed failed request.
 - Subagent supervision keeps state in text and opens the existing child Session.
-- Terminal Details expands inline, summarizes Status, Agent or Process, Path,
-  Git, and Ownership, and never obscures or re-renders terminal output.
+- Terminal Details expands inline, exposes its expanded or collapsed state to
+  assistive navigation, summarizes Status, Agent or Process, Path, Git, and
+  Ownership, and never obscures or re-renders terminal output.
 - Provider and subagent glyphs use the shared icon family; lifecycle remains
   readable without color.
 - Empty, loading, permission, attach-failure, disconnected-host, and legacy
@@ -649,5 +1081,8 @@ native tool, honest ownership, inline recovery**.
 - Settings starts with **Workspaces & Terminals**, **Agents**, **Appearance**,
   and **Workspace & Privacy** before inherited editor customization.
 - The status bar remains visible by default and contains no transient prose.
+- Closing Workspaces cannot conceal active-Workspace access failure; the status
+  recovery control stays named and routes back to the single **Grant Access…**
+  action.
 - No screen creates an unexplained pane, permanent inspector, custom tab bar,
   floating onboarding, or duplicated Workspace navigation.

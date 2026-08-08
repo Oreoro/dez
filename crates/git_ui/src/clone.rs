@@ -73,7 +73,18 @@ pub fn clone_and_open(
                         gpui::PromptLevel::Info,
                         &format!("Git Clone: {}", repo_name),
                         None,
-                        &["Add repo to project", "Open repo in new project"],
+                        &[
+                            crate::git_workspace_copy(
+                                paths::APP_NAME,
+                                "Add repo to project",
+                                "Add Repository to Workspace",
+                            ),
+                            crate::git_workspace_copy(
+                                paths::APP_NAME,
+                                "Open repo in new project",
+                                "Open Repository in New Workspace",
+                            ),
+                        ],
                         cx,
                     )
                 })

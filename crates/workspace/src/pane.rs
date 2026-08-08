@@ -23,7 +23,8 @@ use crate::{
 };
 use agent_settings::{
     AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, built_in_agent_is_ready,
-    configured_terminal_launcher_icon, configured_terminal_launcher_label,
+    configured_terminal_launcher_action_label, configured_terminal_launcher_icon,
+    configured_terminal_launcher_label,
 };
 use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
@@ -96,6 +97,14 @@ fn canvas_tab_contrast(cx: &App) -> TabContrast {
     }
 }
 
+fn pane_tab_selected_label_weight(app_name: &str) -> Option<gpui::FontWeight> {
+    (app_name != "Zed").then_some(gpui::FontWeight::MEDIUM)
+}
+
+fn pane_chrome_menu_selected_style(app_name: &str) -> Option<ButtonStyle> {
+    (app_name != "Zed").then_some(ButtonStyle::Filled)
+}
+
 fn canvas_tab_bar(id: &'static str, cx: &App) -> TabBar {
     TabBar::new(id)
         .density(canvas_tab_density(cx))
@@ -104,6 +113,21 @@ fn canvas_tab_bar(id: &'static str, cx: &App) -> TabBar {
 
 fn canvas_tab_bar_height(cx: &App) -> Pixels {
     canvas_tab_density(cx).container_height(cx)
+}
+
+fn canvas_tab_bar_control_metrics_for_density(
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
+    match density {
+        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
+        settings::CanvasDensity::Balanced | settings::CanvasDensity::Spacious => {
+            (ButtonSize::Medium, IconSize::Small)
+        }
+    }
+}
+
+fn canvas_tab_bar_control_metrics(cx: &App) -> (ButtonSize, IconSize) {
+    canvas_tab_bar_control_metrics_for_density(DesignSystemSettings::get_global(cx).density)
 }
 
 fn pane_drag_handle_visible(app_name: &str) -> bool {
@@ -118,8 +142,32 @@ fn pane_new_surface_control_belongs_in_tab_strip(app_name: &str, pane_kind: Pane
     app_name != "Zed" && pane_kind == PaneKind::Tabs
 }
 
-fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
+fn pane_preserves_native_tab_strip(app_name: &str, pane_kind: PaneKind) -> bool {
     app_name != "Zed" && pane_kind == PaneKind::Tabs
+}
+
+fn pane_tab_bar_visible(app_name: &str, pane_kind: PaneKind, configured_visible: bool) -> bool {
+    configured_visible || pane_preserves_native_tab_strip(app_name, pane_kind)
+}
+
+fn pane_tab_bar_buttons_visible(
+    app_name: &str,
+    pane_kind: PaneKind,
+    configured_visible: bool,
+) -> bool {
+    configured_visible || pane_preserves_native_tab_strip(app_name, pane_kind)
+}
+
+fn pane_auto_hides_single_tab_bar(
+    app_name: &str,
+    pane_kind: PaneKind,
+    configured_auto_hide: bool,
+) -> bool {
+    configured_auto_hide && !pane_preserves_native_tab_strip(app_name, pane_kind)
+}
+
+fn pane_keeps_tab_bar_when_empty(app_name: &str, pane_kind: PaneKind) -> bool {
+    pane_preserves_native_tab_strip(app_name, pane_kind)
 }
 
 fn empty_main_work_area_shows_orientation(app_name: &str, is_active_pane: bool) -> bool {
@@ -134,11 +182,17 @@ fn empty_main_work_area_terminal_action_label(
         return "Start Terminal Session".into();
     }
 
-    let configured_label = configured_terminal_launcher_label(configured_command);
-    let destination = configured_label
-        .strip_prefix("Default · ")
-        .unwrap_or(&configured_label);
-    format!("Open Terminal · {destination}").into()
+    configured_terminal_launcher_action_label(configured_command).into()
+}
+
+fn empty_main_work_area_terminal_destination_label(
+    app_name: &str,
+    configured_command: Option<&str>,
+) -> String {
+    format!(
+        "{} in Main Work Area",
+        empty_main_work_area_terminal_action_label(app_name, configured_command)
+    )
 }
 
 fn empty_auxiliary_surface_is_edge_anchored(app_name: &str, pane_kind: PaneKind) -> bool {
@@ -1045,11 +1099,11 @@ impl Pane {
             paths::APP_NAME,
             configured_terminal_command.as_deref(),
         );
-        let terminal_action_aria_label = if paths::APP_NAME == "Zed" {
-            "Start Terminal Session in Main Work Area"
-        } else {
-            "Open Terminal in Main Work Area"
-        };
+        let terminal_action_aria_label = empty_main_work_area_terminal_destination_label(
+            paths::APP_NAME,
+            configured_terminal_command.as_deref(),
+        );
+        let terminal_tooltip_label = terminal_action_aria_label.clone();
         let terminal_action = if is_dez {
             zed_actions::terminal::OpenAgentTerminal.boxed_clone()
         } else {
@@ -1089,6 +1143,10 @@ impl Pane {
                             .when(is_dez, |this| {
                                 this.child(
                                     h_flex()
+                                        .id("empty-main-work-area-heading")
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label(title)
                                         .gap_2()
                                         .child(
                                             Icon::new(IconName::Tab)
@@ -1121,7 +1179,7 @@ impl Pane {
                                     .aria_label(terminal_action_aria_label)
                                     .tooltip(move |_, cx| {
                                         Tooltip::for_action(
-                                            terminal_action_aria_label,
+                                            terminal_tooltip_label.clone(),
                                             &*terminal_tooltip_action,
                                             cx,
                                         )
@@ -1136,25 +1194,30 @@ impl Pane {
                             )
                             .when(is_dez, |this| {
                                 this.child(
-                                    Button::new("empty-project-browse-sessions", "Browse Sessions")
-                                        .tab_index(1isize)
-                                        .style(ButtonStyle::Outlined)
-                                        .start_icon(Icon::new(IconName::ListTree))
-                                        .aria_label("Browse Running Sessions")
-                                        .tooltip(|_, cx| {
-                                            Tooltip::for_action(
-                                                "Browse Running Sessions",
-                                                &BrowseRunningSessions,
-                                                cx,
-                                            )
-                                        })
-                                        .on_click(move |_, window, cx| {
+                                    Button::new(
+                                        "empty-project-browse-sessions",
+                                        "Browse Running Sessions",
+                                    )
+                                    .tab_index(1isize)
+                                    .style(ButtonStyle::Outlined)
+                                    .start_icon(Icon::new(IconName::ListTree))
+                                    .aria_label("Browse Running Sessions")
+                                    .tooltip(|_, cx| {
+                                        Tooltip::for_action(
+                                            "Browse Running Sessions",
+                                            &BrowseRunningSessions,
+                                            cx,
+                                        )
+                                    })
+                                    .on_click(
+                                        move |_, window, cx| {
                                             browse_sessions_focus.dispatch_action(
                                                 &BrowseRunningSessions,
                                                 window,
                                                 cx,
                                             );
-                                        }),
+                                        },
+                                    ),
                                 )
                             })
                             .child(
@@ -3381,7 +3444,11 @@ impl Pane {
         let icon = item
             .tab_icon(window, cx)?
             .size(IconSize::Small)
-            .color(Color::Muted);
+            .color(if is_active {
+                Color::Default
+            } else {
+                Color::Muted
+            });
 
         let item_diagnostic = item
             .project_path(cx)
@@ -3473,9 +3540,9 @@ impl Pane {
                     this.tab_index(0isize)
                 })
                 .aria_label(if toggleable {
-                    "Unlock File"
+                    "Unlock Tab"
                 } else {
-                    "Locked File"
+                    "Locked Tab"
                 })
                 .disabled(!toggleable)
                 .tooltip(move |_, cx| {
@@ -3505,6 +3572,10 @@ impl Pane {
             .density(canvas_tab_density(cx))
             .radius(canvas_tab_radius(cx))
             .contrast(canvas_tab_contrast(cx))
+            .when_some(
+                pane_tab_selected_label_weight(paths::APP_NAME),
+                |tab, weight| tab.selected_label_weight(weight),
+            )
             .position(if is_first_item {
                 TabPosition::First
             } else if is_last_item {
@@ -4151,10 +4222,11 @@ impl Pane {
         }
 
         let focus_handle = self.focus_handle.clone();
+        let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
 
         let navigate_backward = IconButton::new("navigate_backward", IconName::ArrowLeft)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label("Go Back")
             .on_click({
@@ -4179,8 +4251,8 @@ impl Pane {
             });
 
         let navigate_forward = IconButton::new("navigate_forward", IconName::ArrowRight)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label("Go Forward")
             .on_click({
@@ -4297,7 +4369,11 @@ impl Pane {
                 },
             )
             .map(|tab_bar| {
-                if self.show_tab_bar_buttons {
+                if pane_tab_bar_buttons_visible(
+                    paths::APP_NAME,
+                    self.pane_kind,
+                    self.show_tab_bar_buttons,
+                ) {
                     let render_tab_buttons = self.render_tab_bar_buttons.clone();
                     let (left_children, right_children) = render_tab_buttons(self, window, cx);
                     tab_bar
@@ -4456,7 +4532,7 @@ impl Pane {
                     .flex_none()
                     .h_full()
                     .px(DynamicSpacing::Base04.rems(cx))
-                    .child(render_new_surface_control(self))
+                    .child(render_new_surface_control(self, cx))
                     .into_any_element()
             });
         let fixed_new_surface_control =
@@ -4466,7 +4542,7 @@ impl Pane {
                     .flex_none()
                     .h_full()
                     .px(DynamicSpacing::Base04.rems(cx))
-                    .child(render_new_surface_control(self))
+                    .child(render_new_surface_control(self, cx))
                     .into_any_element()
             });
 
@@ -4519,14 +4595,21 @@ impl Pane {
         let pane = cx.entity();
         let (overflow_control_label, overflow_menu_header) =
             pane_tab_overflow_copy(paths::APP_NAME);
+        let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
+        let menu_open = self.tab_overflow_context_menu_handle.is_deployed();
 
         PopoverMenu::new("pane-tab-overflow-menu")
             .trigger_with_tooltip(
                 IconButton::new("pane-tab-overflow-menu-button", IconName::ListTree)
-                    .size(ButtonSize::Medium)
-                    .icon_size(IconSize::Small)
+                    .size(control_size)
+                    .icon_size(icon_size)
                     .tab_index(0isize)
-                    .aria_label(overflow_control_label),
+                    .aria_label(overflow_control_label)
+                    .aria_expanded(menu_open)
+                    .when_some(
+                        pane_chrome_menu_selected_style(paths::APP_NAME),
+                        |button, style| button.selected_style(style),
+                    ),
                 Tooltip::text(overflow_control_label),
             )
             .anchor(Anchor::TopRight)
@@ -5674,13 +5757,13 @@ fn default_render_tab_bar_buttons(
             PaneKind::Project => {
                 return (
                     None,
-                    Some(render_auxiliary_pane_hide_control(PaneKind::Project)),
+                    Some(render_auxiliary_pane_hide_control(PaneKind::Project, cx)),
                 );
             }
             PaneKind::Agent => {
                 return (
                     None,
-                    Some(render_auxiliary_pane_hide_control(PaneKind::Agent)),
+                    Some(render_auxiliary_pane_hide_control(PaneKind::Agent, cx)),
                 );
             }
             PaneKind::Tabs => {}
@@ -5699,22 +5782,29 @@ fn default_render_tab_bar_buttons(
     };
     let split_enabled = can_clone || can_split_move;
     let (split_aria_label, split_tooltip) = pane_split_control_copy(paths::APP_NAME, split_enabled);
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
+    let split_menu_open = pane.split_item_context_menu_handle.is_deployed();
     // Ideally we would return a vec of elements here to pass directly to the [TabBar]'s
     // `end_slot`, but due to needing a view here that isn't possible.
     let right_children = h_flex()
         // Instead we need to replicate the spacing from the [TabBar]'s `end_slot` here.
         .gap(DynamicSpacing::Base04.rems(cx))
         .when(paths::APP_NAME == "Zed", |this| {
-            this.child(render_new_surface_control(pane))
+            this.child(render_new_surface_control(pane, cx))
         })
         .child(
             PopoverMenu::new("pane-tab-bar-split")
                 .trigger_with_tooltip(
                     IconButton::new("split", IconName::Split)
-                        .size(ButtonSize::Medium)
-                        .icon_size(IconSize::Small)
+                        .size(control_size)
+                        .icon_size(icon_size)
                         .tab_index(0isize)
                         .aria_label(split_aria_label)
+                        .aria_expanded(split_menu_open)
+                        .when_some(
+                            pane_chrome_menu_selected_style(paths::APP_NAME),
+                            |button, style| button.selected_style(style),
+                        )
                         .disabled(!split_enabled),
                     Tooltip::text(split_tooltip),
                 )
@@ -5744,19 +5834,26 @@ fn default_render_tab_bar_buttons(
     (None, right_children)
 }
 
-fn render_new_surface_control(pane: &Pane) -> AnyElement {
+fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
     let (aria_label, tooltip) = pane_new_surface_control_copy(paths::APP_NAME);
     let workspace = pane.workspace();
     let (new_file, open_file, search_workspace, search_symbols) =
         pane_new_surface_menu_copy(paths::APP_NAME);
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
+    let menu_open = pane.new_item_context_menu_handle.is_deployed();
 
     PopoverMenu::new("pane-tab-bar-popover-menu")
         .trigger_with_tooltip(
             IconButton::new("plus", IconName::Plus)
-                .size(ButtonSize::Medium)
-                .icon_size(IconSize::Small)
+                .size(control_size)
+                .icon_size(icon_size)
                 .tab_index(0isize)
-                .aria_label(aria_label),
+                .aria_label(aria_label)
+                .aria_expanded(menu_open)
+                .when_some(
+                    pane_chrome_menu_selected_style(paths::APP_NAME),
+                    |button, style| button.selected_style(style),
+                ),
             Tooltip::text(tooltip),
         )
         .anchor(Anchor::TopRight)
@@ -5777,11 +5874,12 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
             let has_workspace_root = workspace_location.is_some_and(|(_, has_root)| has_root);
             let cmux_handoff_applicable =
                 workspace_location.is_some_and(|(is_local, has_root)| is_local && has_root);
-            let default_terminal_icon = configured_terminal_launcher_icon(
-                AgentSettings::get_global(cx)
-                    .terminal_init_command
-                    .as_deref(),
-            );
+            let default_terminal_command = AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref();
+            let default_terminal_label =
+                configured_terminal_launcher_label(default_terminal_command);
+            let default_terminal_icon = configured_terminal_launcher_icon(default_terminal_command);
             let built_in_agent_ready = built_in_agent_is_ready(cx);
             let (built_in_agent_label, built_in_agent_icon) =
                 pane_built_in_agent_action_presentation(built_in_agent_ready);
@@ -5805,23 +5903,29 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                     )
                 } else if !has_workspace_root {
                     menu.header("Start with a Workspace")
-                        .action("Open Home", crate::welcome::ShowWelcome.boxed_clone())
-                        .action(
+                        .action_with_icon(
+                            "Open Home",
+                            crate::welcome::DEZ_HOME_ICON,
+                            crate::welcome::ShowWelcome.boxed_clone(),
+                        )
+                        .action_with_icon(
                             "Open Workspace…",
+                            IconName::FolderOpen,
                             crate::OpenFolder {
                                 create_new_window: Some(false),
                             }
                             .boxed_clone(),
                         )
-                        .action(
+                        .action_with_icon(
                             "Open Recent Workspaces…",
+                            IconName::HistoryRerun,
                             zed_actions::OpenRecent::default().boxed_clone(),
                         )
                 } else {
                     let menu = menu
                         .submenu("Open Terminal", move |menu, _, _| {
                             menu.action_with_icon(
-                                "Default Terminal",
+                                default_terminal_label,
                                 default_terminal_icon,
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
@@ -5903,23 +6007,23 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                     };
                     menu.separator()
                         .header("Sessions and Multiplexers")
-                        .action_with_icon(
-                            WORKSPACE_TMUX_LAUNCHER_LABEL,
-                            IconName::SplitAlt,
-                            zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
-                        )
+                        .when(cmux_handoff_applicable, |menu| {
+                            menu.action_with_icon(
+                                "Open Workspace in cmux",
+                                IconName::Screen,
+                                zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
+                            )
+                        })
                         .action_with_icon(
                             "Browse Running Sessions…",
                             IconName::ListTree,
                             BrowseRunningSessions.boxed_clone(),
                         )
-                        .when(cmux_handoff_applicable, |menu| {
-                            menu.action_with_icon(
-                                "Open Workspace in cmux",
-                                IconName::ArrowUpRight,
-                                zed_actions::dez::OpenWorkspaceInCmux.boxed_clone(),
-                            )
-                        })
+                        .action_with_icon(
+                            WORKSPACE_TMUX_LAUNCHER_LABEL,
+                            IconName::SplitAlt,
+                            zed_actions::terminal::OpenTmuxTerminal.boxed_clone(),
+                        )
                         .separator()
                         .header("Create and Find")
                         .action_with_icon(new_file, IconName::File, NewFile.boxed_clone())
@@ -5959,7 +6063,7 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
                         .separator()
                         .action_with_icon(
                             "Home",
-                            IconName::FolderOpen,
+                            crate::welcome::DEZ_HOME_ICON,
                             crate::welcome::ShowWelcome.boxed_clone(),
                         )
                         .action_with_icon(
@@ -5973,14 +6077,15 @@ fn render_new_surface_control(pane: &Pane) -> AnyElement {
         .into_any_element()
 }
 
-fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
+fn render_auxiliary_pane_hide_control(pane_kind: PaneKind, cx: &App) -> AnyElement {
     let label = pane_auxiliary_hide_control_copy(pane_kind)
         .expect("only auxiliary panes have dedicated hide controls");
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
 
     match pane_kind {
         PaneKind::Project => IconButton::new("hide-workspace-tools", IconName::Close)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label(label)
             .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleProjectPane, cx))
@@ -5989,8 +6094,8 @@ fn render_auxiliary_pane_hide_control(pane_kind: PaneKind) -> AnyElement {
             })
             .into_any_element(),
         PaneKind::Agent => IconButton::new("hide-agent", IconName::Close)
-            .size(ButtonSize::Medium)
-            .icon_size(IconSize::Small)
+            .size(control_size)
+            .icon_size(icon_size)
             .tab_index(0isize)
             .aria_label(label)
             .tooltip(move |_, cx| Tooltip::for_action(label, &ToggleAgentPane, cx))
@@ -6097,9 +6202,10 @@ fn pane_tab_end_control_is_keyboard_focusable(
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
     let zoomed = pane.is_zoomed();
     let label = if zoomed { "Zoom Out" } else { "Zoom In" };
+    let (control_size, icon_size) = canvas_tab_bar_control_metrics(cx);
     IconButton::new("toggle_zoom", IconName::Maximize)
-        .size(ButtonSize::Medium)
-        .icon_size(IconSize::Small)
+        .size(control_size)
+        .icon_size(icon_size)
         .tab_index(0isize)
         .aria_label(label)
         .toggle_state(zoomed)
@@ -6129,17 +6235,22 @@ impl Render for Pane {
             .contribute_context(&mut key_context, cx);
 
         let should_display_tab_bar = self.should_display_tab_bar.clone();
-        let auto_hide_single_tab_bar = PaneGridSettings::get_global(cx).auto_hide_single_tab_bar;
+        let auto_hide_single_tab_bar = pane_auto_hides_single_tab_bar(
+            paths::APP_NAME,
+            self.pane_kind,
+            PaneGridSettings::get_global(cx).auto_hide_single_tab_bar,
+        );
         let active_item_forces_tab_bar = self
             .active_item()
             .is_some_and(|item| item.force_show_tab_bar(cx));
         let keeps_empty_tab_bar = pane_keeps_tab_bar_when_empty(paths::APP_NAME, self.pane_kind)
             && self.active_item().is_none();
-        let display_tab_bar = should_display_tab_bar(window, cx)
-            && (keeps_empty_tab_bar
-                || !(auto_hide_single_tab_bar
-                    && self.items_len() <= 1
-                    && !active_item_forces_tab_bar));
+        let display_tab_bar = pane_tab_bar_visible(
+            paths::APP_NAME,
+            self.pane_kind,
+            should_display_tab_bar(window, cx),
+        ) && (keeps_empty_tab_bar
+            || !(auto_hide_single_tab_bar && self.items_len() <= 1 && !active_item_forces_tab_bar));
         let Some(project) = self.project.upgrade() else {
             return div()
                 .id(("detached-pane", cx.entity_id()))
@@ -6844,6 +6955,10 @@ impl Render for DraggedTab {
             .density(canvas_tab_density(cx))
             .radius(canvas_tab_radius(cx))
             .contrast(canvas_tab_contrast(cx))
+            .when_some(
+                pane_tab_selected_label_weight(paths::APP_NAME),
+                |tab, weight| tab.selected_label_weight(weight),
+            )
             .toggle_state(self.is_active)
             .children(icon)
             .child(label)
@@ -6913,6 +7028,23 @@ mod tests {
         assert!(pane_keeps_tab_bar_when_empty("Dez", PaneKind::Tabs));
         assert!(!pane_keeps_tab_bar_when_empty("Dez", PaneKind::Project));
         assert!(!pane_keeps_tab_bar_when_empty("Zed", PaneKind::Tabs));
+        assert!(pane_tab_bar_visible("Dez", PaneKind::Tabs, false));
+        assert!(pane_tab_bar_buttons_visible("Dez", PaneKind::Tabs, false));
+        assert!(!pane_auto_hides_single_tab_bar("Dez", PaneKind::Tabs, true));
+        assert!(!pane_tab_bar_visible("Dez", PaneKind::Project, false));
+        assert!(!pane_tab_bar_buttons_visible(
+            "Dez",
+            PaneKind::Project,
+            false
+        ));
+        assert!(pane_auto_hides_single_tab_bar(
+            "Dez",
+            PaneKind::Project,
+            true
+        ));
+        assert!(!pane_tab_bar_visible("Zed", PaneKind::Tabs, false));
+        assert!(!pane_tab_bar_buttons_visible("Zed", PaneKind::Tabs, false));
+        assert!(pane_auto_hides_single_tab_bar("Zed", PaneKind::Tabs, true));
         assert!(
             !pane_navigation_history_buttons_visible("Dez", false),
             "Dez should not repeat Back and Forward controls in every pane when the setting is off"
@@ -6937,6 +7069,14 @@ mod tests {
             "Start Terminal Session"
         );
         assert_eq!(
+            empty_main_work_area_terminal_destination_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex in Main Work Area"
+        );
+        assert_eq!(
+            empty_main_work_area_terminal_destination_label("Zed", Some("codex --yolo")),
+            "Start Terminal Session in Main Work Area"
+        );
+        assert_eq!(
             pane_new_surface_control_copy("Dez"),
             (
                 "Add to Main Work Area",
@@ -6944,6 +7084,7 @@ mod tests {
             )
         );
         assert_eq!(pane_new_surface_control_copy("Zed"), ("New Item", "New…"));
+        assert_eq!(crate::welcome::DEZ_HOME_ICON, IconName::Compass);
         assert_eq!(
             pane_built_in_agent_action_presentation(true),
             ("Open Built-in Agent", IconName::DezAgent)
@@ -7066,6 +7207,36 @@ mod tests {
             "Zed",
             PaneKind::Tabs
         ));
+    }
+
+    #[test]
+    fn dez_selected_tabs_use_interface_emphasis_without_changing_upstream_tabs() {
+        assert_eq!(
+            pane_tab_selected_label_weight("Dez"),
+            Some(gpui::FontWeight::MEDIUM)
+        );
+        assert_eq!(pane_tab_selected_label_weight("Zed"), None);
+        assert_eq!(
+            pane_chrome_menu_selected_style("Dez"),
+            Some(ButtonStyle::Filled)
+        );
+        assert_eq!(pane_chrome_menu_selected_style("Zed"), None);
+    }
+
+    #[test]
+    fn canvas_tab_bar_controls_follow_the_selected_density() {
+        assert!(
+            canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert!(
+            canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Balanced)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
+        assert!(
+            canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
+        );
     }
 
     // drop_call_count is a Cell here because `handle_drop` takes &self, not &mut self.

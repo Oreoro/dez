@@ -154,6 +154,29 @@ fn session_rail_keeps_the_main_work_area_primary_on_narrow_windows() {
 }
 
 #[test]
+fn narrow_workspace_rail_collapses_redundant_navigation_before_identity() {
+    assert!(workspace_layout_nested_rows_visible(MIN_WIDTH));
+    assert!(session_header_search_control_visible("Dez", 2, MIN_WIDTH));
+
+    assert!(
+        !workspace_layout_nested_rows_visible(RESPONSIVE_MIN_WIDTH),
+        "the native tab strip remains authoritative when the narrow rail cannot show complete rows"
+    );
+    assert!(
+        !session_header_search_control_visible("Dez", 2, RESPONSIVE_MIN_WIDTH),
+        "narrow Workspaces keeps Search in the overview menu instead of crowding the titlebar"
+    );
+    assert!(
+        !session_header_search_control_visible("Dez", 1, MIN_WIDTH),
+        "a single destination does not need a dedicated Search control"
+    );
+    assert!(
+        !session_header_search_control_visible("Zed", 4, MIN_WIDTH),
+        "official Zed retains its inherited sidebar header"
+    );
+}
+
+#[test]
 fn narrow_session_scope_uses_short_unambiguous_labels() {
     assert_eq!(
         session_scope_labels(px(200.0), 12, 3),
@@ -363,25 +386,25 @@ fn dez_only_projects_truthfully_backed_stored_terminals() {
     let host_session_id = TerminalSessionId::new();
 
     assert_eq!(
-        terminal_entry_source_kind("Dez", false, false, None),
+        terminal_entry_source_kind("Dez", false, false, None, None),
         None,
         "stale metadata must not appear as a resumable Dez Session"
     );
     assert_eq!(
-        terminal_entry_source_kind("Dez", false, true, None),
+        terminal_entry_source_kind("Dez", false, true, None, None),
         Some(TerminalEntrySourceKind::AgentPanel)
     );
     assert_eq!(
-        terminal_entry_source_kind("Dez", false, false, Some(host_session_id)),
+        terminal_entry_source_kind("Dez", false, false, Some(host_session_id), None),
         Some(TerminalEntrySourceKind::HostSession(host_session_id))
     );
     assert_eq!(
-        terminal_entry_source_kind("Dez", true, true, Some(host_session_id)),
+        terminal_entry_source_kind("Dez", true, true, Some(host_session_id), None),
         Some(TerminalEntrySourceKind::WorkspaceItem),
         "a live Main Work Area terminal must own the row before stored or Host projections"
     );
     assert_eq!(
-        terminal_entry_source_kind("Zed", true, false, None),
+        terminal_entry_source_kind("Zed", true, false, None, None),
         Some(TerminalEntrySourceKind::AgentPanel),
         "official Zed retains legacy Terminal Thread restoration"
     );
@@ -645,6 +668,22 @@ fn session_scope_accessibility_copy_keeps_control_names_stable() {
 }
 
 #[test]
+fn workspace_running_sessions_disclosure_announces_count_attention_and_state() {
+    assert_eq!(
+        workspace_running_sessions_disclosure_accessibility_label(false, 1, 0),
+        "Show running multiplexer sessions. 1 running session"
+    );
+    assert_eq!(
+        workspace_running_sessions_disclosure_accessibility_label(false, 2, 1),
+        "Show running multiplexer sessions. 2 running sessions. 1 needs attention"
+    );
+    assert_eq!(
+        workspace_running_sessions_disclosure_accessibility_label(true, 3, 2),
+        "Hide running multiplexer sessions. 3 running sessions. 2 need attention"
+    );
+}
+
+#[test]
 fn observed_machine_terminal_search_uses_visible_identity_and_context() {
     let terminal = ObservedMachineTerminal {
         id: "ttys004:410".to_owned(),
@@ -673,10 +712,10 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert!(!session_start_state_visible(false, 1, false, false, false));
     assert!(!session_start_state_visible(false, 0, true, false, false));
     assert!(!session_start_state_visible(false, 0, false, true, false));
-    assert_eq!(session_start_state_copy("Dez").0, "No Workspace open");
+    assert_eq!(session_start_state_copy("Dez").0, "No Workspace is open");
     assert_eq!(
         session_start_state_copy("Dez").1,
-        "Open a codebase. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
+        "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
     );
     assert_eq!(
         session_start_state_copy("Dez").2,
@@ -1763,6 +1802,9 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: true,
                 has_threads: true,
+                activity_count: 5,
+                activity_expanded: true,
+                activity_disclosure_available: false,
                 external_sessions: Vec::new(),
             },
             ListEntry::Thread(Arc::new(ThreadEntry {
@@ -1919,6 +1961,9 @@ async fn test_visible_entries_as_strings(cx: &mut TestAppContext) {
                 has_notifications: false,
                 is_active: false,
                 has_threads: false,
+                activity_count: 0,
+                activity_expanded: false,
+                activity_disclosure_available: false,
                 external_sessions: Vec::new(),
             },
         ];
@@ -2301,18 +2346,18 @@ async fn test_new_agent_thread_noops_without_open_project(cx: &mut TestAppContex
 
 #[test]
 fn session_rail_default_creation_is_terminal_first() {
-    assert_eq!(default_new_session_target(), NewEntryTarget::Terminal);
+    assert_eq!(default_new_session_target(), NewEntryTarget::Terminal(None));
 }
 
 #[test]
 fn workspace_header_accessibility_copy_is_state_complete_without_color() {
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", false, false, 0),
-        "Workspace dez, ready for a session"
+        "Workspace dez, ready to start work"
     );
     assert_eq!(
         workspace_header_accessibility_label("Dez", "dez", true, true, 2),
-        "Workspace dez, running work, 2 sessions need attention"
+        "Workspace dez, running work, 2 items need attention"
     );
 }
 
@@ -2493,6 +2538,113 @@ async fn test_plain_workspace_shell_is_promoted_only_after_agent_evidence(cx: &m
             "agent evidence should promote the existing terminal identity exactly once"
         );
         assert_eq!(sidebar.contents.session_count, 1);
+    });
+}
+
+#[gpui::test]
+async fn test_reselecting_active_workspace_keeps_active_terminal_projection(
+    cx: &mut TestAppContext,
+) {
+    let project = init_test_project_with_agent_panel("/my-project", cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace =
+        multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
+    let terminal_view = add_workspace_shell(&workspace, &project, cx);
+    terminal_view.update(cx, |terminal, cx| {
+        terminal.set_custom_title(Some("Codex".to_owned()), cx);
+    });
+    let terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &terminal_view, cx)
+    });
+    let group_key = workspace.read_with(cx, |workspace, cx| workspace.project_group_key(cx));
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
+    });
+
+    sidebar.update_in(cx, |sidebar, window, cx| {
+        sidebar.activate_or_open_workspace_for_group(&group_key, window, cx);
+    });
+    cx.run_until_parked();
+
+    assert_eq!(
+        multi_workspace.read_with(cx, |multi_workspace, _| {
+            multi_workspace.workspace().clone()
+        }),
+        workspace,
+        "reselecting a Workspace should keep its existing native owner active"
+    );
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
+        assert!(sidebar.contents.entries.iter().any(|entry| {
+            matches!(
+                entry,
+                ListEntry::Terminal(terminal)
+                    if terminal.metadata.terminal_id == terminal_id
+            )
+        }));
+    });
+}
+
+#[gpui::test]
+async fn test_opening_closed_workspace_keeps_current_activity_until_activation(
+    cx: &mut TestAppContext,
+) {
+    let (_fs, project) = init_multi_project_test(&["/project-a", "/project-b"], cx).await;
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+    let sidebar = setup_sidebar(&multi_workspace, cx);
+    let workspace =
+        multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
+    let terminal_view = add_workspace_shell(&workspace, &project, cx);
+    terminal_view.update(cx, |terminal, cx| {
+        terminal.set_custom_title(Some("Codex".to_owned()), cx);
+    });
+    let terminal_id = workspace.read_with(cx, |_workspace, cx| {
+        standalone_terminal_id(&workspace, &terminal_view, cx)
+    });
+
+    multi_workspace.update_in(cx, |_, _window, cx| cx.notify());
+    cx.run_until_parked();
+
+    let closed_workspace_key =
+        ProjectGroupKey::new(None, PathList::new(&[PathBuf::from("/project-b")]));
+    sidebar.update_in(cx, |sidebar, window, cx| {
+        sidebar.activate_or_open_workspace_for_group(&closed_workspace_key, window, cx);
+    });
+
+    assert_eq!(
+        multi_workspace.read_with(cx, |multi_workspace, _| {
+            multi_workspace.workspace().clone()
+        }),
+        workspace,
+        "the current native Workspace should remain authoritative while another opens"
+    );
+    sidebar.read_with(cx, |sidebar, _| {
+        assert!(matches!(
+            sidebar.active_entry,
+            Some(ActiveEntry::Terminal {
+                terminal_id: active_terminal_id,
+                ..
+            }) if active_terminal_id == terminal_id
+        ));
     });
 }
 
@@ -15758,4 +15910,92 @@ fn test_split_leading_icon_char() {
     assert_eq!(icon.as_ref(), "#");
     assert_eq!(trimmed.as_ref(), "abc");
     assert_eq!(positions, vec![0, 1]);
+}
+
+#[gpui::test]
+async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
+    cx: &mut TestAppContext,
+    server_cx: &mut TestAppContext,
+) {
+    let local_project = init_test_project("/local", cx).await;
+    cx.update(|cx| {
+        release_channel::init(semver::Version::new(0, 0, 0), cx);
+    });
+    server_cx.update(|cx| {
+        release_channel::init(semver::Version::new(0, 0, 0), cx);
+    });
+    let (multi_workspace, cx) =
+        cx.add_window_view(|window, cx| MultiWorkspace::test_new(local_project, window, cx));
+    let local_workspace = multi_workspace.read_with(cx, |multi_workspace, _cx| {
+        multi_workspace.workspace().clone()
+    });
+
+    let server_fs = FakeFs::new(server_cx.executor());
+    server_fs
+        .insert_tree("/remote-project", serde_json::json!({ "src": {} }))
+        .await;
+    let (options, server_session, _) = remote::RemoteClient::fake_server(cx, server_cx);
+    server_cx.update(remote_server::HeadlessProject::init);
+    let server_executor = server_cx.executor();
+    let _headless = server_cx.new(|cx| {
+        remote_server::HeadlessProject::new(
+            remote_server::HeadlessAppState {
+                session: server_session,
+                fs: server_fs.clone(),
+                http_client: Arc::new(http_client::BlockedHttpClient),
+                node_runtime: node_runtime::NodeRuntime::unavailable(),
+                languages: Arc::new(language::LanguageRegistry::new(server_executor)),
+                extension_host_proxy: Arc::new(extension::ExtensionHostProxy::new()),
+                startup_time: std::time::Instant::now(),
+            },
+            false,
+            cx,
+        )
+    });
+    let remote_client = remote::RemoteClient::connect_mock(options.clone(), cx).await;
+
+    multi_workspace.update_in(cx, |_, window, cx| {
+        let local_workspace = local_workspace.clone();
+        cx.subscribe_in(&cx.entity(), window, move |this, _, event, window, cx| {
+            if matches!(event, MultiWorkspaceEvent::WorkspaceAdded(_)) {
+                this.activate(local_workspace.clone(), None, window, cx);
+            }
+        })
+        .detach();
+    });
+
+    let created = multi_workspace
+        .update_in(cx, |multi_workspace, window, cx| {
+            let project_group_key = ProjectGroupKey::new(
+                Some(options.clone()),
+                PathList::new(&[PathBuf::from("/remote-project")]),
+            );
+            multi_workspace.find_or_create_workspace(
+                PathList::new(&[PathBuf::from("/remote-project")]),
+                Some(options),
+                Some(project_group_key),
+                move |_, _, _| Task::ready(Ok(Some(remote_client))),
+                &[],
+                None,
+                workspace::OpenMode::Activate,
+                window,
+                cx,
+            )
+        })
+        .await
+        .expect("opening the remote project should succeed");
+    cx.run_until_parked();
+
+    assert_eq!(
+        created.read_with(cx, |workspace, cx| PathList::new(&workspace.root_paths(cx))),
+        PathList::new(&[PathBuf::from("/remote-project")]),
+        "the returned workspace should be the remote workspace that was created"
+    );
+    assert_eq!(
+        multi_workspace.read_with(cx, |multi_workspace, _cx| {
+            multi_workspace.workspace().clone()
+        }),
+        local_workspace,
+        "the local Workspace should have reactivated during the remote open"
+    );
 }

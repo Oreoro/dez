@@ -1,4 +1,4 @@
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use collections::HashMap;
 use gpui::{App, AppContext as _, Context, Entity, Task, WeakEntity};
 

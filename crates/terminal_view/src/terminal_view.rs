@@ -6,8 +6,8 @@ pub mod terminal_scrollbar;
 
 use agent_settings::{AgentSettings, detect_terminal_agent_command};
 pub use agent_settings::{
-    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_icon,
-    configured_terminal_launcher_label, terminal_agent_icon,
+    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
 };
 use anyhow::{Result, anyhow};
 use collections::HashMap;
@@ -113,10 +113,14 @@ const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
 
 struct InstallationRequiredForTerminal;
 
-fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
-    if let Some(access_required) =
-        error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
-    {
+pub(crate) fn terminal_workspace_access_required(
+    error: &anyhow::Error,
+) -> Option<&project::terminals::TerminalWorkspaceAccessRequired> {
+    error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
+}
+
+pub(crate) fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
+    if let Some(access_required) = terminal_workspace_access_required(error) {
         workspace::mark_workspace_access_required(access_required.path().to_path_buf(), cx);
     }
 }
@@ -131,10 +135,38 @@ fn resolve_terminal_startup_command(
         .filter(|command| !command.trim().is_empty())
 }
 
-fn terminal_startup_command_input(command: String) -> Vec<u8> {
-    let mut input = command.into_bytes();
+fn terminal_startup_command_submission(command: String, app_name: &str) -> String {
+    if app_name == "Zed" || detect_terminal_agent_command(&command).is_none() {
+        return command;
+    }
+
+    #[cfg(unix)]
+    {
+        let script = format!(
+            "{command}\ndez_terminal_startup_status=$?\nif [ \"$dez_terminal_startup_status\" -ne 0 ] && [ \"$dez_terminal_startup_status\" -ne 130 ]; then\n  printf '\\n[Dez: startup command exited with status %s. Review the output above. This shell remains interactive; fix the tool configuration, then retry.]\\n' \"$dez_terminal_startup_status\"\nfi"
+        );
+        let quoted_script = script.replace('\'', "'\"'\"'");
+        format!("/bin/sh -c '{quoted_script}'")
+    }
+
+    #[cfg(not(unix))]
+    {
+        command
+    }
+}
+
+fn terminal_startup_command_input(command: String, app_name: &str) -> Vec<u8> {
+    let mut input = terminal_startup_command_submission(command, app_name).into_bytes();
     input.push(b'\x0d');
     input
+}
+
+fn terminal_startup_title(command: &str) -> Option<String> {
+    if command.split_whitespace().any(|word| word == "tmux") {
+        return Some(WORKSPACE_TMUX_LAUNCHER_LABEL.to_owned());
+    }
+
+    detect_terminal_agent_command(command).map(|agent_kind| agent_kind.display_name().to_owned())
 }
 
 #[cfg(test)]
@@ -169,8 +201,46 @@ mod startup_command_tests {
     #[test]
     fn terminal_agent_commands_submit_once_after_shell_startup() {
         assert_eq!(
-            terminal_startup_command_input("opencode".to_owned()),
+            terminal_startup_command_input("opencode".to_owned(), "Zed"),
             b"opencode\r"
+        );
+        assert_eq!(
+            terminal_startup_title("claude --continue").as_deref(),
+            Some("Claude Code")
+        );
+        assert_eq!(
+            terminal_startup_title("exec tmux new-session -A -s dez").as_deref(),
+            Some(WORKSPACE_TMUX_LAUNCHER_LABEL)
+        );
+        assert_eq!(terminal_startup_title("echo ready"), None);
+    }
+
+    #[test]
+    fn dez_keeps_agent_startup_failures_inside_the_interactive_terminal() {
+        let submission = terminal_startup_command_submission("codex".to_owned(), "Dez");
+
+        #[cfg(unix)]
+        {
+            assert!(submission.starts_with("/bin/sh -c 'codex\n"));
+            assert!(submission.contains("dez_terminal_startup_status=$?"));
+            assert!(submission.contains("-ne 130"));
+            assert!(submission.contains("Review the output above"));
+            assert!(submission.contains("This shell remains interactive"));
+        }
+
+        #[cfg(not(unix))]
+        assert_eq!(submission, "codex");
+
+        assert_eq!(
+            terminal_startup_command_submission("echo ready".to_owned(), "Dez"),
+            "echo ready"
+        );
+        assert_eq!(
+            terminal_startup_command_submission(
+                "exec tmux new-session -A -s dez".to_owned(),
+                "Dez",
+            ),
+            "exec tmux new-session -A -s dez"
         );
     }
 
@@ -195,15 +265,22 @@ mod startup_command_tests {
     fn tmux_startup_preserves_only_a_matching_legacy_workspace_session() {
         let command = tmux_startup_command_for_workspace(Some(Path::new("/workspace/Dez 3.0")));
 
-        assert!(command.contains("tmux has-session"));
+        assert!(command.starts_with("/bin/sh -c '"));
+        assert!(command.contains("/opt/homebrew/bin/tmux"));
+        assert!(command.contains("/usr/local/bin/tmux"));
+        assert!(command.contains("command -v tmux"));
+        assert!(command.contains("\"$dez_tmux_bin\" has-session"));
+        assert!(command.contains("Dez: tmux is not installed"));
         assert!(command.contains("#{pane_current_path}"));
         assert!(command.contains("\"$PWD\"|\"$PWD\"/*"));
-        assert!(command.contains("attach-session -t =Dez-3-0"));
+        assert!(command.contains("attach-session -t \"=Dez-3-0\""));
         assert!(command.contains("new-session -A -s Dez-3-0-"));
-        assert_eq!(
-            tmux_startup_command_for_workspace(None),
-            "exec tmux new-session -A -s dez"
-        );
+        assert_eq!(command.matches('\'').count(), 2);
+
+        let rootless_command = tmux_startup_command_for_workspace(None);
+        assert!(rootless_command.starts_with("/bin/sh -c '"));
+        assert!(rootless_command.contains("\"$dez_tmux_bin\" new-session -A -s dez"));
+        assert_eq!(rootless_command.matches('\'').count(), 2);
     }
 }
 
@@ -493,6 +570,69 @@ fn external_session_owner_from_task_id(task_id: &str) -> Option<&str> {
         .filter(|owner| !owner.is_empty())
 }
 
+fn external_session_attach_failed(task_id: &str, task_status: &TaskStatus) -> bool {
+    external_session_owner_from_task_id(task_id).is_some()
+        && matches!(task_status, TaskStatus::Completed { success: false })
+}
+
+fn terminal_external_attach_retry_label(
+    width: Pixels,
+    external_attach_failed: bool,
+) -> Option<&'static str> {
+    external_attach_failed.then_some(
+        if width >= TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH {
+            "Retry Attach"
+        } else {
+            ""
+        },
+    )
+}
+
+fn terminal_external_attach_new_shell_label(
+    width: Pixels,
+    external_attach_failed: bool,
+) -> Option<&'static str> {
+    external_attach_failed.then_some(
+        if width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH {
+            "New Shell"
+        } else {
+            ""
+        },
+    )
+}
+
+fn terminal_external_attach_retry_accessibility_label(
+    external_owner: &str,
+    workspace_label: &str,
+) -> String {
+    format!("Retry {external_owner} attach in Workspace {workspace_label}")
+}
+
+fn terminal_external_attach_new_shell_accessibility_label(
+    external_owner: &str,
+    workspace_label: &str,
+) -> String {
+    format!(
+        "Open a new native shell in Workspace {workspace_label}; {external_owner} remains external"
+    )
+}
+
+fn terminal_context_open_action_label(app_name: &str, configured_command: Option<&str>) -> String {
+    if app_name == "Zed" {
+        "Open Terminal".to_owned()
+    } else {
+        configured_terminal_launcher_action_label(configured_command)
+    }
+}
+
+fn terminal_unavailable_new_shell_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Start Fresh Terminal"
+    } else {
+        "Open New Shell Here"
+    }
+}
+
 fn terminal_details_ownership_note_with_external_owner(
     has_persistent_owner: bool,
     host_connection_verified: bool,
@@ -524,24 +664,74 @@ fn terminal_unavailable_description(reason: Option<&str>) -> String {
     let reason =
         reason.unwrap_or("The saved terminal process is no longer available on this Dez host.");
     format!(
-        "{reason} Dez did not start a replacement shell. Start fresh only when you want a separate computation."
+        "{reason} Dez did not start a replacement shell. Open a new shell only when you want separate computation."
     )
 }
 
-pub(crate) fn terminal_failed_to_start_guidance(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
+pub(crate) fn terminal_failed_to_start_guidance(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Workspace access is required before a terminal can start. Open Workspaces, then grant access to the blocked folder."
+    } else if app_name == "Zed" {
         "No terminal process was started. Review terminal settings, then use New Terminal to try again."
     } else {
         "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
     }
 }
 
-pub(crate) fn terminal_launch_failure_settings_label(app_name: &str) -> &'static str {
-    if app_name == "Zed" {
+pub(crate) fn terminal_launch_failure_primary_label(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Open Workspaces"
+    } else if app_name == "Zed" {
         "Edit Settings"
     } else {
         "Edit Terminal Settings"
     }
+}
+
+pub(crate) fn terminal_launch_failure_more_label(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "More Terminal Recovery Options"
+    } else {
+        "More Terminal Settings"
+    }
+}
+
+pub(crate) fn terminal_launch_failure_title(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Workspace access required"
+    } else {
+        "Terminal did not start"
+    }
+}
+
+pub(crate) fn terminal_launch_failure_tab_icon(app_name: &str) -> Option<IconName> {
+    (app_name != "Zed").then_some(IconName::Warning)
+}
+
+pub(crate) fn terminal_launch_failure_tab_tooltip(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> Option<SharedString> {
+    (app_name != "Zed").then(|| {
+        format!(
+            "{}. {}",
+            terminal_launch_failure_title(app_name, workspace_access_required),
+            terminal_failed_to_start_guidance(app_name, workspace_access_required),
+        )
+        .into()
+    })
 }
 
 pub(crate) fn terminal_launch_failure_is_top_anchored(app_name: &str) -> bool {
@@ -1037,7 +1227,7 @@ fn new_terminal(
 ) {
     let local = action.local;
     let working_directory = default_working_directory(workspace, cx);
-    add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+    add_terminal_to_active_pane(workspace, window, cx, None, move |project, cx| {
         if local {
             project.create_local_terminal(cx)
         } else {
@@ -1121,19 +1311,25 @@ pub fn tmux_session_name_from_workspace_root(root: Option<&Path>) -> String {
     format!("{legacy_name}-{hash:010x}")
 }
 
+const TMUX_EXECUTABLE_RESOLUTION: &str = "if [ -x /opt/homebrew/bin/tmux ]; then dez_tmux_bin=/opt/homebrew/bin/tmux; elif [ -x /usr/local/bin/tmux ]; then dez_tmux_bin=/usr/local/bin/tmux; elif command -v tmux >/dev/null 2>&1; then dez_tmux_bin=tmux; else printf \"%s\\n\" \"Dez: tmux is not installed. Install tmux or choose another Default Terminal.\"; exit 127; fi;";
+
 pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
     let legacy_name = tmux_session_name_from_workspace_label(
         root.and_then(Path::file_name)
             .and_then(|name| name.to_str()),
     );
     let session_name = tmux_session_name_from_workspace_root(root);
-    if session_name == legacy_name {
-        return format!("exec tmux new-session -A -s {session_name}");
-    }
+    let script = if session_name == legacy_name {
+        format!(
+            "{TMUX_EXECUTABLE_RESOLUTION} exec \"$dez_tmux_bin\" new-session -A -s {session_name}"
+        )
+    } else {
+        format!(
+            "{TMUX_EXECUTABLE_RESOLUTION} if \"$dez_tmux_bin\" has-session -t \"={session_name}\" 2>/dev/null; then exec \"$dez_tmux_bin\" attach-session -t \"={session_name}\"; elif \"$dez_tmux_bin\" has-session -t \"={legacy_name}\" 2>/dev/null; then dez_tmux_cwd=$(\"$dez_tmux_bin\" display-message -p -t \"={legacy_name}\" \"#{{pane_current_path}}\" 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec \"$dez_tmux_bin\" attach-session -t \"={legacy_name}\" ;; *) exec \"$dez_tmux_bin\" new-session -A -s {session_name} ;; esac; else exec \"$dez_tmux_bin\" new-session -A -s {session_name}; fi"
+        )
+    };
 
-    format!(
-        "if tmux has-session -t ={session_name} 2>/dev/null; then exec tmux attach-session -t ={session_name}; elif tmux has-session -t ={legacy_name} 2>/dev/null; then dez_tmux_cwd=$(tmux display-message -p -t ={legacy_name} '#{{pane_current_path}}' 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec tmux attach-session -t ={legacy_name} ;; *) exec tmux new-session -A -s {session_name} ;; esac; else exec tmux new-session -A -s {session_name}; fi"
-    )
+    format!("/bin/sh -c '{script}'")
 }
 
 fn open_tmux_terminal(
@@ -1310,7 +1506,7 @@ fn open_terminal(
 ) {
     let local = action.local;
     let working_directory = action.working_directory.clone();
-    add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+    add_terminal_to_active_pane(workspace, window, cx, None, move |project, cx| {
         if local {
             project.create_local_terminal(cx)
         } else {
@@ -1324,6 +1520,7 @@ fn add_terminal_to_active_pane<F>(
     workspace: &mut Workspace,
     window: &mut Window,
     cx: &mut Context<Workspace>,
+    initial_title: Option<String>,
     create_terminal: F,
 ) -> Task<Result<WeakEntity<Terminal>>>
 where
@@ -1353,14 +1550,29 @@ where
         workspace.update_in(cx, |workspace, window, cx| match terminal {
             Ok(terminal) => {
                 let pane = workspace.active_pane().clone();
-                attach_terminal_to_workspace(workspace, pane, terminal.clone(), true, window, cx);
+                let terminal_view = attach_terminal_to_workspace(
+                    workspace,
+                    pane,
+                    terminal.clone(),
+                    true,
+                    window,
+                    cx,
+                );
+                if let Some(initial_title) = initial_title {
+                    terminal_view.update(cx, |terminal_view, cx| {
+                        terminal_view.set_custom_title(Some(initial_title), cx);
+                    });
+                }
                 Ok(terminal.downgrade())
             }
             Err(error) => {
+                let workspace_access_required =
+                    terminal_workspace_access_required(&error).is_some();
                 record_terminal_workspace_access_required(&error, cx);
                 let pane = workspace.active_pane().clone();
                 let failed_to_spawn = Box::new(cx.new(|cx| FailedToSpawnTerminal {
                     error: error.to_string(),
+                    workspace_access_required,
                     focus_handle: cx.focus_handle(),
                 }));
                 workspace.add_item(pane, failed_to_spawn, None, true, true, window, cx);
@@ -1440,6 +1652,7 @@ async fn wait_for_terminals_tasks(
 
 struct FailedToSpawnTerminal {
     error: String,
+    workspace_access_required: bool,
     focus_handle: FocusHandle,
 }
 
@@ -1452,14 +1665,19 @@ impl Focusable for FailedToSpawnTerminal {
 impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
-        let settings_label = terminal_launch_failure_settings_label(paths::APP_NAME);
+        let workspace_access_required = is_dez && self.workspace_access_required;
+        let primary_label =
+            terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
+        let more_label =
+            terminal_launch_failure_more_label(paths::APP_NAME, workspace_access_required);
+        let title = terminal_launch_failure_title(paths::APP_NAME, workspace_access_required);
         let popover_menu = PopoverMenu::new("settings-popover")
             .trigger(
                 IconButton::new("icon-button-popover", IconName::ChevronDown)
                     .icon_size(IconSize::XSmall)
                     .tab_index(0isize)
-                    .aria_label("More Terminal Settings")
-                    .tooltip(Tooltip::text("More Terminal Settings")),
+                    .aria_label(more_label)
+                    .tooltip(Tooltip::text(more_label)),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, |context_menu, _, _| {
@@ -1480,7 +1698,7 @@ impl Render for FailedToSpawnTerminal {
         v_flex()
             .id("terminal-failed-to-start")
             .role(gpui::Role::Alert)
-            .aria_label("Terminal did not start")
+            .aria_label(title)
             .track_focus(&self.focus_handle)
             .size_full()
             .min_h_0()
@@ -1506,30 +1724,34 @@ impl Render for FailedToSpawnTerminal {
                                         .size(IconSize::Small)
                                         .color(Color::Warning),
                                 )
-                                .child(Headline::new("Terminal did not start")),
+                                .child(Headline::new(title)),
                         )
                     })
-                    .when(!is_dez, |this| {
-                        this.child(Label::new("Terminal did not start"))
-                    })
+                    .when(!is_dez, |this| this.child(Label::new(title)))
                     .child(
                         Label::new(format!(
                             "{}\n\n{}",
                             self.error,
-                            terminal_failed_to_start_guidance(paths::APP_NAME),
+                            terminal_failed_to_start_guidance(
+                                paths::APP_NAME,
+                                workspace_access_required,
+                            ),
                         ))
                         .size(LabelSize::Small)
                         .color(Color::Muted)
                         .mb_4(),
                     )
                     .child(SplitButton::new(
-                        ButtonLike::new("open-settings-ui")
-                            .child(Label::new(settings_label).size(LabelSize::Small))
+                        ButtonLike::new("terminal-launch-recovery")
+                            .child(Label::new(primary_label).size(LabelSize::Small))
                             .tab_index(0isize)
-                            .aria_label("Edit Terminal Settings")
-                            .tooltip(Tooltip::text("Edit Terminal Settings"))
+                            .aria_label(primary_label)
+                            .tooltip(Tooltip::text(primary_label))
                             .on_click(move |_, window, cx| {
-                                if is_dez {
+                                if workspace_access_required {
+                                    window
+                                        .dispatch_action(workspace::FocusSidebar.boxed_clone(), cx);
+                                } else if is_dez {
                                     window.dispatch_action(
                                         zed_actions::OpenSettingsAt {
                                             path: "agent.terminal_launcher".to_owned(),
@@ -1557,7 +1779,15 @@ impl workspace::Item for FailedToSpawnTerminal {
     type Event = ();
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        SharedString::new_static("Terminal did not start")
+        terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
+    }
+
+    fn tab_icon(&self, _cx: &App) -> Option<Icon> {
+        terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
+    }
+
+    fn tab_tooltip_text(&self, _cx: &App) -> Option<SharedString> {
+        terminal_launch_failure_tab_tooltip(paths::APP_NAME, self.workspace_access_required)
     }
 }
 
@@ -1674,18 +1904,24 @@ impl TerminalView {
             AgentSettings::get_global(cx).terminal_init_command.clone(),
             paths::APP_NAME,
         );
+        let initial_title = startup_command.as_deref().and_then(terminal_startup_title);
         let working_directory = action
             .working_directory
             .clone()
             .or_else(|| default_working_directory(workspace, cx));
-        let terminal_task =
-            add_terminal_to_active_pane(workspace, window, cx, move |project, cx| {
+        let terminal_task = add_terminal_to_active_pane(
+            workspace,
+            window,
+            cx,
+            initial_title,
+            move |project, cx| {
                 if local {
                     project.create_local_terminal(cx)
                 } else {
                     project.create_terminal_shell(working_directory, cx)
                 }
-            });
+            },
+        );
 
         let Some(startup_command) = startup_command else {
             terminal_task.detach_and_log_err(cx);
@@ -1697,7 +1933,7 @@ impl TerminalView {
                 .await?
                 .upgrade()
                 .ok_or_else(|| anyhow!("terminal closed before its startup command ran"))?;
-            let input = terminal_startup_command_input(startup_command);
+            let input = terminal_startup_command_input(startup_command, paths::APP_NAME);
             let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty());
 
             if !is_pty {
@@ -2065,6 +2301,12 @@ impl TerminalView {
         };
         let close_label = terminal_close_label(is_hosted);
         let terminate_label = terminal_terminate_label(paths::APP_NAME);
+        let terminal_context_open_label = terminal_context_open_action_label(
+            paths::APP_NAME,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        );
         let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
             menu.context(self.focus_handle.clone())
                 .when(self.shows_workspace_actions(), |menu| {
@@ -2076,8 +2318,11 @@ impl TerminalView {
                             )
                             .separator()
                     } else {
-                        menu.action("Open Terminal", Box::new(NewCenterTerminal::default()))
-                            .separator()
+                        menu.action(
+                            terminal_context_open_label.clone(),
+                            Box::new(OpenAgentTerminal),
+                        )
+                        .separator()
                     }
                 })
                 .when(has_selection, |menu| {
@@ -3179,6 +3424,30 @@ impl TerminalView {
             changed_files,
         );
 
+        let terminal_task = terminal.task();
+        let external_owner = terminal_task
+            .and_then(|task| external_session_owner_from_task_id(&task.spawned_task.id.0));
+        let external_attach_retry_task_id = terminal_task
+            .filter(|task| external_session_attach_failed(&task.spawned_task.id.0, &task.status))
+            .map(|task| task.spawned_task.id.clone());
+        let retry_attach_visible_label = terminal_external_attach_retry_label(
+            context_width,
+            external_attach_retry_task_id.is_some(),
+        );
+        let new_shell_visible_label = terminal_external_attach_new_shell_label(
+            context_width,
+            external_attach_retry_task_id.is_some(),
+        );
+        let external_owner_label = external_owner.unwrap_or("external session");
+        let retry_attach_accessibility_label = terminal_external_attach_retry_accessibility_label(
+            external_owner_label,
+            &workspace_label,
+        );
+        let new_shell_accessibility_label = terminal_external_attach_new_shell_accessibility_label(
+            external_owner_label,
+            &workspace_label,
+        );
+
         let details_status = format!("Status · {activity_accessibility_label}");
         let details_process = terminal_details_process_summary(
             foreground_agent.map(|agent| agent.display_name),
@@ -3215,9 +3484,6 @@ impl TerminalView {
             "Review {changed_files} changed {}",
             if changed_files == 1 { "file" } else { "files" }
         );
-        let external_owner = terminal
-            .task()
-            .and_then(|task| external_session_owner_from_task_id(&task.spawned_task.id.0));
         let ownership_note = terminal_details_ownership_note_with_external_owner(
             has_persistent_owner,
             host_connection_verified,
@@ -3232,6 +3498,7 @@ impl TerminalView {
         .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
         .tab_index(0isize)
         .aria_label(details_accessibility_label)
+        .aria_expanded(self.show_terminal_details)
         .tooltip(Tooltip::text(details_accessibility_label))
         .on_click(cx.listener(|this, _, _, cx| {
             this.show_terminal_details = !this.show_terminal_details;
@@ -3398,6 +3665,61 @@ impl TerminalView {
                     h_flex()
                         .flex_none()
                         .gap(terminal_context_strip_gap(density))
+                        .when_some(
+                            external_attach_retry_task_id
+                                .clone()
+                                .zip(retry_attach_visible_label),
+                            |this, (retry_task_id, visible_label)| {
+                                let accessibility_label =
+                                    retry_attach_accessibility_label.clone();
+                                let tooltip_label = accessibility_label.clone();
+                                this.child(
+                                    Button::new(
+                                        ("terminal-context-retry-attach", terminal_entity_id),
+                                        visible_label,
+                                    )
+                                    .size(ButtonSize::Compact)
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(IconName::Rerun).size(IconSize::XSmall))
+                                    .tab_index(0isize)
+                                    .aria_label(accessibility_label)
+                                    .tooltip(move |_, cx| {
+                                        Tooltip::for_action(tooltip_label.clone(), &RerunTask, cx)
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        window.dispatch_action(
+                                            Box::new(terminal_rerun_override(&retry_task_id)),
+                                            cx,
+                                        );
+                                    }),
+                                )
+                            },
+                        )
+                        .when_some(new_shell_visible_label, |this, visible_label| {
+                            let accessibility_label = new_shell_accessibility_label.clone();
+                            let tooltip_label = accessibility_label.clone();
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-new-shell", terminal_entity_id),
+                                    visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .tab_index(0isize)
+                                .aria_label(accessibility_label)
+                                .tooltip(move |_, cx| {
+                                    Tooltip::for_action(
+                                        tooltip_label.clone(),
+                                        &OpenShellTerminal,
+                                        cx,
+                                    )
+                                })
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(OpenShellTerminal.boxed_clone(), cx);
+                                }),
+                            )
+                        })
                         .when(has_workspace_files, |this| {
                             this.child(
                                 Button::new(
@@ -3503,6 +3825,16 @@ impl Render for TerminalView {
         };
         let unavailable_description =
             terminal_unavailable_description(self.session_unavailable_reason.as_deref());
+        let unavailable_new_shell_label = terminal_unavailable_new_shell_label(paths::APP_NAME);
+        let unavailable_new_shell_accessibility_label =
+            format!("{unavailable_new_shell_label} in Main Work Area");
+        let unavailable_new_shell_action: Box<dyn gpui::Action> = if paths::APP_NAME == "Zed" {
+            NewCenterTerminal::default().boxed_clone()
+        } else {
+            OpenShellTerminal.boxed_clone()
+        };
+        let unavailable_new_shell_tooltip_action = unavailable_new_shell_action.boxed_clone();
+        let unavailable_new_shell_tooltip_label = unavailable_new_shell_accessibility_label.clone();
         let session_context_strip = self.render_session_context_strip(cx);
         let terminal_container_background = if terminal_container_reuses_terminal_material(
             paths::APP_NAME,
@@ -3539,6 +3871,9 @@ impl Render for TerminalView {
                                 )
                                 .child(
                                     h_flex()
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label("Terminal unavailable")
                                         .gap_2()
                                         .child(
                                             Icon::new(IconName::Warning)
@@ -3557,24 +3892,21 @@ impl Render for TerminalView {
                             h_flex().w_full().flex_wrap().gap_2().child(
                                 Button::new(
                                     "new-terminal-from-unavailable",
-                                    "Start Fresh Terminal",
+                                    unavailable_new_shell_label,
                                 )
                                 .style(ButtonStyle::Filled)
                                 .start_icon(Icon::new(IconName::Terminal))
                                 .tab_index(0isize)
-                                .aria_label("Start Fresh Terminal in Main Work Area")
-                                .tooltip(|_, cx| {
+                                .aria_label(unavailable_new_shell_accessibility_label)
+                                .tooltip(move |_, cx| {
                                     Tooltip::for_action(
-                                        "Start Fresh Terminal in Main Work Area",
-                                        &NewCenterTerminal::default(),
+                                        unavailable_new_shell_tooltip_label.clone(),
+                                        &*unavailable_new_shell_tooltip_action,
                                         cx,
                                     )
                                 })
-                                .on_click(|_, window, cx| {
-                                    window.dispatch_action(
-                                        NewCenterTerminal::default().boxed_clone(),
-                                        cx,
-                                    );
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(&*unavailable_new_shell_action, cx);
                                 }),
                             ),
                         ),
@@ -4765,17 +5097,61 @@ mod tests {
         assert!(terminal_launch_failure_is_top_anchored("Dez"));
         assert!(!terminal_launch_failure_is_top_anchored("Zed"));
         assert_eq!(
-            terminal_failed_to_start_guidance("Dez"),
+            terminal_failed_to_start_guidance("Dez", false),
             "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
         );
         assert_eq!(
-            terminal_launch_failure_settings_label("Dez"),
+            terminal_launch_failure_primary_label("Dez", false),
             "Edit Terminal Settings"
         );
         assert_eq!(
-            terminal_launch_failure_settings_label("Zed"),
+            terminal_launch_failure_primary_label("Zed", true),
             "Edit Settings"
         );
+        assert_eq!(
+            terminal_failed_to_start_guidance("Dez", true),
+            "Workspace access is required before a terminal can start. Open Workspaces, then grant access to the blocked folder."
+        );
+        assert_eq!(
+            terminal_launch_failure_primary_label("Dez", true),
+            "Open Workspaces"
+        );
+        assert_eq!(
+            terminal_launch_failure_more_label("Dez", true),
+            "More Terminal Recovery Options"
+        );
+        assert_eq!(
+            terminal_launch_failure_more_label("Zed", true),
+            "More Terminal Settings"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Dez", true),
+            "Workspace access required"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Dez", false),
+            "Terminal did not start"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Zed", true),
+            "Terminal did not start"
+        );
+        assert_eq!(
+            terminal_launch_failure_tab_icon("Dez"),
+            Some(IconName::Warning)
+        );
+        assert_eq!(terminal_launch_failure_tab_icon("Zed"), None);
+
+        let access_tooltip = terminal_launch_failure_tab_tooltip("Dez", true)
+            .expect("Dez access failure should explain its tab state");
+        assert!(access_tooltip.contains("Workspace access required"));
+        assert!(access_tooltip.contains("Open Workspaces"));
+
+        let launch_tooltip = terminal_launch_failure_tab_tooltip("Dez", false)
+            .expect("Dez launch failure should explain its tab state");
+        assert!(launch_tooltip.contains("Terminal did not start"));
+        assert!(launch_tooltip.contains("Terminal Launch settings"));
+        assert_eq!(terminal_launch_failure_tab_tooltip("Zed", false), None);
     }
 
     #[test]
@@ -5020,6 +5396,63 @@ mod tests {
             Some("Herdr")
         );
         assert_eq!(external_session_owner_from_task_id("terminal:task"), None);
+        assert!(external_session_attach_failed(
+            "dez-external-session:tmux:$0",
+            &TaskStatus::Completed { success: false },
+        ));
+        assert!(!external_session_attach_failed(
+            "dez-external-session:tmux:$0",
+            &TaskStatus::Completed { success: true },
+        ));
+        assert!(!external_session_attach_failed(
+            "terminal:task",
+            &TaskStatus::Completed { success: false },
+        ));
+        assert_eq!(
+            terminal_external_attach_retry_label(px(479.), true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_attach_retry_label(px(480.), true),
+            Some("Retry Attach")
+        );
+        assert_eq!(terminal_external_attach_retry_label(px(920.), false), None);
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(719.), true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(720.), true),
+            Some("New Shell")
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(920.), false),
+            None
+        );
+        assert_eq!(
+            terminal_external_attach_retry_accessibility_label("tmux", "paykit"),
+            "Retry tmux attach in Workspace paykit"
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_accessibility_label("Herdr", "paykit"),
+            "Open a new native shell in Workspace paykit; Herdr remains external"
+        );
+        assert_eq!(
+            terminal_context_open_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            terminal_context_open_action_label("Zed", Some("codex --yolo")),
+            "Open Terminal"
+        );
+        assert_eq!(
+            terminal_unavailable_new_shell_label("Dez"),
+            "Open New Shell Here"
+        );
+        assert_eq!(
+            terminal_unavailable_new_shell_label("Zed"),
+            "Start Fresh Terminal"
+        );
         assert_eq!(
             terminal_details_ownership_note_with_external_owner(false, false, Some("tmux")),
             "Ownership · tmux remains external · This tab owns only the attach client."
@@ -6148,6 +6581,48 @@ mod tests {
             terminal.last_content().terminal_bounds.bounds
         });
         (bounds, draw_size)
+    }
+
+    #[gpui::test]
+    async fn test_inline_terminal_displays_all_of_its_lines(cx: &mut TestAppContext) {
+        let (project, workspace) = init_test(cx).await;
+        let terminal = cx.new(|cx| {
+            terminal::TerminalBuilder::new_display_only(
+                CursorShape::default(),
+                terminal::terminal_settings::AlternateScroll::On,
+                None,
+                0,
+                cx.background_executor(),
+                PathStyle::local(),
+            )
+            .subscribe(cx)
+        });
+        let (terminal_view, cx) = cx.add_window_view(|window, cx| {
+            let mut terminal_view = TerminalView::new(
+                terminal.clone(),
+                workspace.downgrade(),
+                None,
+                project.downgrade(),
+                window,
+                cx,
+            );
+            terminal_view.set_embedded_mode(None, cx);
+            terminal_view
+        });
+
+        for _ in 1..=20 {
+            terminal.update(cx, |terminal, cx| {
+                terminal.write_output(b"line\n", cx);
+            });
+            cx.draw(
+                gpui::Point::default(),
+                gpui::size(px(400.), px(100.)),
+                |_, _| terminal_view.clone().into_any_element(),
+            );
+            terminal.read_with(cx, |terminal, _| {
+                assert_eq!(terminal.viewport_lines(), terminal.total_lines());
+            })
+        }
     }
 
     #[gpui::test]

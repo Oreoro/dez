@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use gpui::{AnyElement, IntoElement, Stateful};
+use gpui::{AnyElement, FontWeight, IntoElement, Stateful};
 use smallvec::SmallVec;
 
 use crate::prelude::*;
@@ -108,6 +108,7 @@ pub struct Tab {
     density: TabDensity,
     radius: TabRadius,
     contrast: TabContrast,
+    selected_label_weight: Option<FontWeight>,
     insertion_indicator: Option<TabInsertionIndicator>,
     start_slot: Option<AnyElement>,
     end_slot: Option<AnyElement>,
@@ -127,6 +128,7 @@ impl Tab {
             density: TabDensity::default(),
             radius: TabRadius::default(),
             contrast: TabContrast::default(),
+            selected_label_weight: None,
             insertion_indicator: None,
             start_slot: None,
             end_slot: None,
@@ -156,6 +158,11 @@ impl Tab {
 
     pub fn contrast(mut self, contrast: TabContrast) -> Self {
         self.contrast = contrast;
+        self
+    }
+
+    pub fn selected_label_weight(mut self, weight: FontWeight) -> Self {
+        self.selected_label_weight = Some(weight);
         self
     }
 
@@ -213,6 +220,10 @@ impl RenderOnce for Tab {
     #[allow(refining_impl_trait)]
     fn render(self, _: &mut Window, cx: &mut App) -> Stateful<Div> {
         let insertion_indicator = self.insertion_indicator;
+        let selected_label_weight = self
+            .selected
+            .then_some(self.selected_label_weight)
+            .flatten();
         let colors = cx.theme().colors();
         let (text_color, tab_bg, tab_hover_bg, tab_active_bg) = match self.selected {
             false => (
@@ -239,7 +250,7 @@ impl RenderOnce for Tab {
                 .blend(colors.border_variant.opacity(0.12)),
             (TabContrast::High, true) => colors
                 .tab_active_background
-                .blend(colors.border_focused.opacity(0.12)),
+                .blend(colors.text.opacity(0.06)),
         };
         let border_color = match self.contrast {
             TabContrast::Low => colors.border.opacity(0.55),
@@ -280,6 +291,9 @@ impl RenderOnce for Tab {
             .when(self.selected && self.radius == TabRadius::Rounded, |this| {
                 this.rounded_t_md()
             })
+            .when(self.selected && self.radius != TabRadius::None, |this| {
+                this.border_t_1()
+            })
             .map(|this| match self.position {
                 TabPosition::First => {
                     if self.selected {
@@ -311,6 +325,9 @@ impl RenderOnce for Tab {
                     .pr(padding_right)
                     .gap(self.density.gap(cx))
                     .text_color(text_color)
+                    .when_some(selected_label_weight, |this, weight| {
+                        this.font_weight(weight)
+                    })
                     .children(start_slot)
                     .children(self.children)
                     .children(end_slot),

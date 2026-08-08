@@ -2096,3 +2096,524 @@ shell syntax, source identity, and diff hygiene. No local compilation, test
 binary, app launch, package, or installed-runtime claim is permitted. Exact
 compilation, tests, packaging, and rendered validation remain GitHub Actions
 and installed-candidate gates.
+
+## 2026-08-03: Apple M2 Preview baseline and shared chrome density
+
+GitHub Actions run
+[`30819926966`](https://github.com/Oreoro/dez/actions/runs/30819926966)
+completed for exact source `cdd4dcab1e616ddb70cad18691959179211fdfcf`.
+The optimized Apple M2 build, packaged entry-point checks, and artifact upload
+all passed. Artifact `Dez-preview-macOS-M2-cdd4dcab1e616ddb70cad18691959179211fdfcf`
+reported:
+
+- `Dez: v0.4.0+preview.91.cdd4dcab1e616ddb70cad18691959179211fdfcf
+  (Dez Preview)` from the packaged application;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, and version
+  `0.4.0`;
+- packaged `dez`, `cli`, `dez-terminal-host`, and Git helper executables; and
+- DMG checksum
+  `5f6a6e5deef02772a5ae127cd46eb43c986254a0be0790128c0f14a1ece5e064`.
+
+The manifest explicitly identifies the artifact as an ad-hoc signed Preview,
+not a notarized Stable release. Its runtime smoke proves packaged entry points
+and identity, not the complete installed UI, permission, terminal restoration,
+or visual acceptance matrix.
+
+Later source commits `6b6ef7944e`, `f2399aa569`, and `294d847114` make native
+pane, Workspace navigation, and status controls consume the shared Compact,
+Balanced, and Spacious metrics. Compact tab controls no longer exceed their
+24 px strip; Open rows and the labeled Workspaces recovery control scale with
+their owning chrome.
+
+GitHub Actions run
+[`30829212334`](https://github.com/Oreoro/dez/actions/runs/30829212334)
+subsequently completed for exact density source
+`294d8471145d5721bceb77ddc2439fff604f81a7`. Target and Dez source guards,
+the optimized Apple M2 build, package verification, and upload all passed.
+Artifact
+`Dez-preview-macOS-M2-294d8471145d5721bceb77ddc2439fff604f81a7`
+reported:
+
+- `Dez: v0.4.0+preview.93.294d8471145d5721bceb77ddc2439fff604f81a7
+  (Dez Preview)` from the packaged entry-point smoke test;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2` and release thin LTO,
+  one code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  and build `20260803.165857`;
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables; and
+- DMG checksum
+  `3fc1dca44b2c63356e27162be6cb619baadc91f4f70cba54d9b7025aa8e37819`.
+
+An independent downloaded-artifact audit matched the published SHA-256,
+verified the DMG partition checksums, mounted it read-only, and passed
+`codesign --verify --deep --strict`. The bundle is ad-hoc signed with no Team
+Identifier. The auditing Mac reported `override=security disabled`, so its
+local `spctl` acceptance is not Gatekeeper or Stable-release evidence. No
+downloaded application was installed or launched during this audit.
+
+This exact artifact now proves compilation, optimization, package structure,
+identity, architecture, helper inclusion, entry-point smoke, and ad-hoc
+signature integrity for the density source. It does not yet prove installed
+Home, Workspaces, pane tabs, adjacent Add, Settings, permission, terminal-host,
+tmux, Herdr, cmux, restart, keyboard, accessibility, or visual behavior. Those
+remain installed-runtime gates, and the Preview is not promoted as Stable.
+
+## 2026-08-03: running-session reveal candidate
+
+Source commit `fe4a48cf86307bdb7ffce447329638c878fafab0` corrects the
+Workspace projection without introducing a second navigation model. **Browse
+Running Sessions…** expands matching tmux, Herdr, and cmux groups both from the
+current discovery snapshot and after an in-flight refresh completes. A
+Workspace with one open item omits the redundant **Open** projection because
+the native tab strip remains the authoritative control; Workspaces continues
+to project multiple open tabs and panes when they provide useful navigation.
+
+GitHub Actions run
+[`30836170113`](https://github.com/Oreoro/dez/actions/runs/30836170113)
+completed successfully for that exact source in 1 hour 5 minutes. The Apple M2
+target guard, complete source and bundle guard, optimized application build,
+package verification, and artifact upload all passed. GitHub artifact
+`8866797253`, named
+`Dez-preview-macOS-M2-fe4a48cf86307bdb7ffce447329638c878fafab0`, is
+145,625,654 bytes and expires on 2026-08-17. Its manifest and packaged smoke
+reported:
+
+- `Dez: v0.4.0+preview.95.fe4a48cf86307bdb7ffce447329638c878fafab0
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.182255`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+The downloaded artifact's portable DMG SHA-256 is
+`d410cab8b445374c43d6f5ccb00f52198f0a694b1a324cf99bf4adf0f1774c70`.
+`hdiutil verify` passed every partition checksum. An independent read-only
+mount reproduced all four executable hashes from the manifest, and
+`codesign --verify --deep --strict` validated the complete application bundle.
+Its application Code Directory hash is
+`2653388d4229239fa4639998d0e3cea41e45d4f3`. The signature remains ad-hoc,
+has no Team Identifier, and is not notarized. The auditing Mac reported
+`override=security disabled`, so local `spctl` acceptance is not Gatekeeper or
+Stable-release evidence.
+
+No local compilation or tests were run for this candidate. The downloaded
+application was not installed or launched. Installed-runtime validation still
+must prove that running-session browsing reveals the expected rows, a one-tab
+Workspace remains uncluttered, native tabs and adjacent Add remain intact,
+the status bar is visible, protected-folder access is requested once, tmux and
+Herdr attach and Retry behave correctly, cmux hands off externally, durable
+terminal ownership survives restart, and keyboard and accessibility flows
+remain native. Until those checks pass, this artifact is a Preview candidate,
+not a v0.4 Stable release.
+
+## 2026-08-04: running-session discovery states and Apple M2 Preview
+
+Source commit `3c9cb14f11bc6795c9595c42eb88202c8c3eeec8` makes **Other
+Running Sessions** a keyboard-operable native disclosure and gives an explicit
+**Browse Running Sessions…** request a bounded result even when discovery
+returns no unmatched rows. The result distinguishes checking, access-required,
+failed, and all-sessions-already-in-Workspaces states. Failed or uninitialized
+discovery exposes a native **Retry** or **Refresh** action; the normal collapsed
+Workspace view still omits an empty external-session footer. The Main Work Area
+uses the same **Browse Running Sessions** noun.
+
+GitHub Actions run
+[`30842790884`](https://github.com/Oreoro/dez/actions/runs/30842790884)
+passed the Apple M2 target guard and complete Dez source/bundle guard for that
+exact source, then rejected the candidate during optimized compilation. The
+sidebar empty-state spinner returned `AnimationElement<Icon>` from a conditional
+builder that required `Icon` (`E0308` at `crates/sidebar/src/sidebar.rs:17692`).
+Packaging and upload were skipped, so the run produced no candidate artifact.
+
+Commit `ad6614dcaa206cd757d8fc069999b5c38f6021bd` fixes that concrete error by
+erasing the animated and static branches to the same native element type. The
+refresh indicator also respects Dez's reduced-motion setting. Source-only Rust
+formatting, shell syntax, full and source-only Dez identity checks, and diff
+hygiene passed locally. No local compilation or test binary was run.
+
+GitHub Actions run
+[`30847239718`](https://github.com/Oreoro/dez/actions/runs/30847239718)
+completed successfully for the repair source. The Apple M2 target guard, Dez
+source/bundle guard, optimized application build, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8871132314`,
+named
+`Dez-preview-macOS-M2-ad6614dcaa206cd757d8fc069999b5c38f6021bd`, is
+145,633,005 bytes and expires on 2026-08-17. Its manifest and packaged smoke
+reported:
+
+- `Dez: v0.4.0+preview.97.ad6614dcaa206cd757d8fc069999b5c38f6021bd
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.205530`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the portable DMG SHA-256
+`8151628d85d065ab51a63e67ed122a81118ab54a027b83f0cf6a0ba0d58e79f8`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+all four executable hashes from the build manifest and
+`codesign --verify --deep --strict` validated the complete bundle. The
+application Code Directory hash is
+`19e99e876282542107b2b6e6f1b9166ff68b15a7`. The signature is ad-hoc, has no
+Team Identifier, and is not notarized. The image was detached after inspection;
+the downloaded application was not installed or launched.
+
+This exact artifact proves compilation, optimization, package structure,
+identity, architecture, helper inclusion, entry-point smoke, and ad-hoc
+signature integrity for the running-session discovery polish. Installed-runtime
+validation must still prove Home and Workspace restoration, one-time protected
+folder access, native pane tabs and adjacent Add, status-line visibility,
+keyboard and screen-reader disclosure, bounded empty and failure results, tmux
+and Herdr attach/Retry, cmux handoff, and durable terminal ownership across a
+restart. Until those checks pass—and a Stable artifact is Developer ID signed
+and notarized—this remains a Preview candidate rather than a v0.4 Stable
+release.
+
+## 2026-08-04: Workspace Layout noun and accessible Running Sessions Preview
+
+Source commit `bad2c9876b9cc861b28c7bc3bdf3300d38abbd16` restores
+**Layout** as the final noun for the active Workspace's activation-only native
+pane/tab projection. It replaces the regressed **Open** label without changing
+pane ownership, tab lifecycle, split behavior, or the adjacent Add control.
+The nested **Running Sessions** disclosure now announces expanded state,
+natural singular or plural counts, and the number of sessions needing
+attention instead of relying on color.
+
+GitHub Actions run
+[`30853792138`](https://github.com/Oreoro/dez/actions/runs/30853792138)
+completed successfully for that exact source in 1 hour 4 minutes 17 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8873261829`,
+named
+`Dez-preview-macOS-M2-bad2c9876b9cc861b28c7bc3bdf3300d38abbd16`, is
+145,573,586 bytes, expires on 2026-08-17, and has archive digest
+`3e7f90d925099c1bf47edc47a22bfc507587b6d938619dbe0a7b5772a8545a64`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.98.bad2c9876b9cc861b28c7bc3bdf3300d38abbd16
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.221725`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive digest
+and the portable DMG SHA-256
+`53e263e8192de18e7c6df5e6760295980558471b145368106fb487d8944813de`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `012c4a079bb3f3dc3165dd6239ef32d51cb50a2ca95eb8611203b6a990420364`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`bb14ebabe5f14b1510986a42f1151fbc06f067e0`. The signature is ad-hoc, has no
+Team Identifier, and has no stapled notarization ticket. The auditing Mac
+reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and complete source identity
+checks. Installed-runtime validation must still prove the Layout label and
+activation flow, Running Sessions keyboard and screen-reader behavior, Home
+and Workspace restoration, one-time protected-folder access, native pane tabs
+and adjacent Add, status-line visibility, tmux and Herdr attach/Retry, cmux
+handoff, and durable terminal ownership across a restart. Until those checks
+pass—and a Stable artifact is Developer ID signed and notarized—this remains a
+Preview candidate rather than a v0.4 Stable release.
+
+## 2026-08-04: bounded Workspace Activity Preview
+
+Source commit `fe2f2a8a6b714feed9bb759cf532a600e91b42c3` names the
+active Workspace's bounded live projection **Activity** instead of the broad
+**Sessions** inventory noun. Existing authoritative lifecycle filters remain
+unchanged: current active, running, actionable, recoverable, or review-ready
+work appears in Activity; idle open content remains in **Layout**; inactive
+completed Agent Sessions remain in Agent History; and externally discovered
+work remains behind the explicit **Running Sessions** disclosure. Official
+Zed's existing Activity wording is preserved.
+
+GitHub Actions run
+[`30859189967`](https://github.com/Oreoro/dez/actions/runs/30859189967)
+completed successfully for that exact source in 1 hour 19 minutes 55 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8875443215`,
+named
+`Dez-preview-macOS-M2-fe2f2a8a6b714feed9bb759cf532a600e91b42c3`, is
+145,632,710 bytes, expires on 2026-08-17, and has archive digest
+`eeebe20ea98645282c6379221fda4f8b7ccf555d2e04fb434327cd2f6c787160`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.99.fe2f2a8a6b714feed9bb759cf532a600e91b42c3
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.235756`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive byte
+count and digest. The portable DMG SHA-256 is
+`f20dc5b881581ec996b01ac88b80bffadbc6397364b3a5ee53475de6e74633c7`,
+and `hdiutil verify` passed every partition checksum. A read-only mount
+reproduced the manifest's executable hashes:
+
+- `dez`: `4a6d26ec617a8f766a45a6ad77227f37e7ae9b183fb06a6ad5f19b1413aa80ed`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`7f9dce0c7112999394f8f4587915e068fc31f298`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The auditing
+Mac reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Installed-runtime validation must still prove the Activity heading and
+bounded-row behavior, Layout activation, Running Sessions disclosure, Home and
+Workspace restoration, one-time protected-folder access, native pane tabs and
+adjacent Add, status-line visibility, tmux and Herdr attach/Retry, cmux handoff,
+and durable terminal ownership across a restart. Until those checks pass—and a
+Stable artifact is Developer ID signed and notarized—this remains a Preview
+candidate rather than a v0.4 Stable release.
+
+## 2026-08-04: focused fresh Workspace Preview
+
+Source commit `1f05173dc72c15ec48a15e78e2647b451ddd7c6d` aligns the
+bundled Files startup default with the existing first-run profile. A fresh
+Workspace now begins in the Main Work Area instead of automatically opening a
+second Files column. Restored layouts and the explicit **Open Files
+Automatically** preference remain authoritative. The graphical setting names
+that result and explains the focused off state without inherited panel
+language.
+
+GitHub Actions run
+[`30864911736`](https://github.com/Oreoro/dez/actions/runs/30864911736)
+completed successfully for that exact source in 1 hour 5 minutes 8 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8876946905`,
+named
+`Dez-preview-macOS-M2-1f05173dc72c15ec48a15e78e2647b451ddd7c6d`, is
+145,631,741 bytes, expires on 2026-08-18, and has archive digest
+`4fdbc13b043e12ae1c06506bf1671ba82de58bc9a1821cd13308dbca50b87664`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.100.1f05173dc72c15ec48a15e78e2647b451ddd7c6d
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260804.011715`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive byte
+count and digest. The portable DMG SHA-256 is
+`b9e714f93282182256e0e10ee71ba746fddec3ba1c55af2450f7fe3d19fb472f`;
+`hdiutil` verified every partition checksum while attaching it read-only. The
+mounted application reproduced the manifest's executable hashes:
+
+- `dez`: `42e80396dcbe44dec1168bc9e3ba98204ad84690618c6a03f1b099068815c7ea`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`d4141ecf3b8e9411ef79ddafabf1bd67425dbd6f`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The disk image
+was detached after inspection; the downloaded application was not installed
+or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Installed-runtime validation must still prove a fresh Workspace opens
+without an unsolicited Files column, the explicit Files preference and restored
+layouts still open it, Activity and Layout navigation, Home and Workspace
+restoration, one-time protected-folder access, native pane tabs and adjacent
+Add, status-line visibility, tmux and Herdr attach/Retry, cmux handoff, and
+durable terminal ownership across a restart. Until those checks pass—and a
+Stable artifact is Developer ID signed and notarized—this remains a Preview
+candidate rather than a v0.4 Stable release.
+
+## 2026-08-04: final Workspace navigation-copy Preview
+
+Source commit `ed65b9fe889bd08bf47557aafdb90f6f3b0c800e` completes the
+public Workspace navigation vocabulary around activation-only **Layout** and
+bounded **Activity**. Empty Workspaces now says **No Workspace is open** and
+names a folder or repository as the required context. Public guides no longer
+teach the superseded **Open Tabs & Tools** or **Open/Sessions** hierarchy and no
+longer assign close or middle-click lifecycle to Workspaces; the native tab
+strip remains authoritative.
+
+GitHub Actions run
+[`30869297252`](https://github.com/Oreoro/dez/actions/runs/30869297252)
+completed successfully for that exact source in 54 minutes 14 seconds. The
+Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8878203066`,
+named
+`Dez-preview-macOS-M2-ed65b9fe889bd08bf47557aafdb90f6f3b0c800e`, is
+145,582,099 bytes, expires on 2026-08-18, and has archive digest
+`7e117a3a2b8ade48f3a7d3bbc2357308aa183778fe659afec524139d05c8fd3a`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.101.ed65b9fe889bd08bf47557aafdb90f6f3b0c800e
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260804.023014`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit reproduced the packaged DMG SHA-256
+`7a021a80836710bcb443d7306d9296f8db69f56ee7a4baf070586d2971fb521e`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `1642d17605df6404bfacec09fa670e1eb23f43226e1504101fd707aaede4b586`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`857948415d8ccfe4c44f52cb2e97143c1405e002`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The auditing
+Mac reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Installed-runtime validation must still prove the final empty
+Workspaces copy, Layout and Activity behavior, Home and Workspace restoration,
+one-time protected-folder access, native pane tabs and adjacent Add, status-line
+visibility, tmux and Herdr attach/Retry, cmux handoff, and durable terminal
+ownership across a restart. Until those checks pass—and a Stable artifact is
+Developer ID signed and notarized—this remains a Preview candidate rather than
+a v0.4 Stable release.
+
+## 2026-08-04: density-aligned Workspace chrome Preview
+
+Source commit `bed02b1238426b4edb471ab9a34b62a2088cd968` completes the
+shared density contract for native Workspace navigation. Compact, Balanced,
+and Spacious now drive the Workspaces title row, search row, search and dismiss
+marks, existing Workspace controls, Layout rows, native pane tabs, and the
+labeled status-bar destination instead of leaving the Workspaces title and
+search chrome at a fixed balanced height. Zed retains its upstream balanced
+Session Rail behavior.
+
+GitHub Actions run
+[`30876564794`](https://github.com/Oreoro/dez/actions/runs/30876564794)
+completed successfully for that exact source in 1 hour 16 minutes 20 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8881056181`,
+named
+`Dez-preview-macOS-M2-bed02b1238426b4edb471ab9a34b62a2088cd968`, is
+145,634,026 bytes, expires on 2026-08-18, and has archive digest
+`da3410e430c2f5f954652b66f1f97470ecdbed53cb30531b9408a519cd639942`.
+Streaming the published archive independently reproduced that digest. Its
+manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.102.bed02b1238426b4edb471ab9a34b62a2088cd968
+  (Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260804.051900`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit reproduced the packaged DMG SHA-256
+`ceb5b1dff2eb2d7ca399f42c8ce766c83dc8b50b45e89e58dc41fce535317b7e`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `a63ad39cf6291829f95e9ecc9d0f52a59f447e883cc5689ed86bc0fb380e09b3`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`34898b6f6436e169cd1c96dfceb9ebef4c4f1fb6`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The auditing
+Mac reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Follow-up public-copy, wireframe, cmux command-contract, and identity
+guard corrections do not change the packaged runtime validated at the source
+commit above. Installed-runtime validation must still prove Compact, Balanced,
+and Spacious Workspace chrome, Layout and Activity behavior, Agent and
+Subagent marks, Home and Workspace restoration, one-time protected-folder
+access, native pane tabs and adjacent Add, status-line visibility, tmux and
+Herdr attach/Retry, both cmux handoff routes, and durable terminal ownership
+across a restart. Until those checks pass—and a Stable artifact is Developer ID
+signed and notarized—this remains a Preview candidate rather than a v0.4 Stable
+release.
+
+## 2026-08-06: installed Lumin contrast correction
+
+Installed Preview `v0.4.0+preview.123` at source
+`2b3a66243a52b9888e6735e25275ee4a831fe768` preserved the intended native
+ownership: Home and Settings remained ordinary tabs or windows, Workspaces
+projected Layout and Activity, the native tab strip kept the adjacent Add
+control, and the status line remained visible. It also exposed a shared visual
+defect that source-only opacity checks had not caught. Against the active macOS
+desktop material, the Main Work Area, Workspaces, and Settings composited to a
+middle gray while muted labels and metadata nearly disappeared.
+
+The follow-up source keeps one native under-window material and no nested blur
+surfaces. It deepens the translucent dark structural layers, raises muted and
+placeholder text and icon roles, preserves neutral selection, and promotes the
+primary Workspace name to the small interface role even at Compact density.
+Section labels and metadata remain compact so hierarchy comes from type role,
+not extra chrome. The source theme gate now includes white, blue-gray, and warm
+light desktop backdrops for the dark blurred variant instead of validating it
+only over dark samples.
+
+No local build or test binary was run for this correction. The next exact-SHA
+Preview must prove the revised Lumin Blur hierarchy across Home, Workspaces,
+Settings, native tabs, terminal/editor content, and the status line before this
+entry can be treated as installed-runtime validation.
+
+GitHub Actions run
+[`31080153666`](https://github.com/Oreoro/dez/actions/runs/31080153666)
+for the preceding quit-persistence source stopped before tests or packaging
+because its new GPUI test called `VisualTestContext::update` with the
+one-argument `TestAppContext` closure shape. The follow-up source corrects that
+test-harness arity only; the background-queue persistence implementation is
+unchanged. The failed run produced no application artifact.

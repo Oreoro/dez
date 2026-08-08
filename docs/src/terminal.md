@@ -67,12 +67,15 @@ raw command field for another terminal-native tool or wrapper, and existing
 command-only configurations remain compatible. The dropdown shows the same
 provider or tmux mark used by native launch surfaces, with a separate trailing
 check for the current choice. The adjacent `+` after each native pane's tabs
-offers that default, Native Shell, **Workspace tmux**, Codex,
-Claude Code, and OpenCode as separate choices. Choosing a provider once does
-not rewrite the default. In **File → Open Terminal**, the first row makes the
-resolved choice explicit as **Default · Native Shell**, **Default · Codex**,
-**Default · Claude Code**, **Default · OpenCode**, or **Default · Custom
-Command**; the pane `+` retains **Default Terminal** for compactness.
+groups the configured default, Native Shell, Codex, Claude Code, OpenCode, and
+**More Agent CLIs** under **Open Terminal**. **Resume Existing Agent** remains a
+separate opt-in route, while **Sessions and Multiplexers** owns **Workspace
+tmux**, **Browse Running Sessions…**, and the applicable cmux handoff. Choosing a
+provider once does not rewrite the default. In **File → Open Terminal**, the
+first row makes the resolved choice explicit as **Default · Native Shell**,
+**Default · Codex**, **Default · Claude Code**, **Default · OpenCode**, or
+**Default · Custom Command**; the pane `+` retains **Default Terminal** for
+compactness.
 The chooser, Home, the empty Main Work Area, pane `+`, and Workspaces show the
 corresponding provider or tmux mark on that default action. Wrapped and
 absolute commands retain known provider identity; Native Shell and unknown
@@ -91,6 +94,7 @@ Choose the route by ownership, not by appearance:
 | **Default Terminal**                        | Opens the configured shell, agent TUI, tmux session, or custom command in a native terminal tab                   |
 | **Native Shell**                            | Opens the Workspace shell without starting an agent                                                               |
 | **Codex**, **Claude Code**, or **OpenCode** | Starts that CLI and keeps its real TUI in the native terminal                                                     |
+| **Resume Existing Agent**                   | Runs the selected provider's explicit last-session command without changing the normal start route               |
 | **Workspace tmux**                          | Attaches or creates the primary-root-scoped tmux session inside a native terminal                                 |
 | **Browse Running Sessions…**                | Refreshes Workspaces so a discovered tmux or Herdr row can be attached, or a cmux Workspace can be opened in cmux |
 | **Open Workspace in cmux**                  | Hands the Workspace path to the external cmux application and keeps Dez open                                      |
@@ -183,10 +187,19 @@ groups, and refreshes every source.
 tmux and Herdr open the documented attach command directly in an ordinary Main
 Work Area terminal. Opaque tmux identifiers such as `$0` and `$1` therefore
 reach tmux unchanged instead of being expanded by the user's login shell. A
-cmux Workspace opens in cmux through `select-workspace`; Dez does
-not manufacture an attachment terminal for it. The external application
-remains authoritative, closing a Dez tab detaches rather than terminates, and
-Dez never requests a Herdr takeover automatically.
+discovered cmux Workspace opens through `select-workspace --workspace <id>`;
+the independent **Open Workspace in cmux** path handoff uses
+native macOS folder handoff, with `cmux open <path>` as a compatibility
+fallback. Neither route manufactures an attachment terminal. The
+external application remains authoritative, closing a Dez tab detaches rather
+than terminates, and Dez never requests a Herdr takeover automatically.
+If an attach command starts and then exits unsuccessfully, the same terminal
+keeps its diagnostic output and exposes a keyboard-reachable **Retry Attach**
+button in the native context toolbar. That retry reuses the existing task tab;
+**Open New Shell Here** starts an independent native shell in the same Workspace
+without claiming to transfer or migrate the external Session. If Dez cannot
+create a terminal at all, Workspaces retains the only recovery notification
+instead. One failure never produces both controls.
 
 Dez also correlates the documented `list-notifications --json` result with the
 Workspace list. Unread notifications become **Needs Input**; the latest
@@ -229,6 +242,9 @@ endpoint snapshots run concurrently with an individual deadline for each
 session. A large or unresponsive endpoint set therefore becomes **Failed**
 instead of extending one refresh cycle indefinitely. A Retry requested while a
 scan is active queues one immediate follow-up scan rather than disappearing.
+The supported command and snapshot boundaries are documented in the official
+[Herdr CLI reference](https://herdr.dev/docs/cli-reference/) and [Herdr socket
+API reference](https://herdr.dev/docs/socket-api/).
 
 For the current local codebase, **Workspace: Open in cmux** in Command Palette
 hands the Workspace path to cmux and keeps the Dez window intact. It reports
@@ -379,9 +395,9 @@ warning names the concrete failure and confirms that Dez did not start a
 replacement shell. The inactive grid contains no synthetic output or fake
 cursor.
 
-Choose **Start Fresh Terminal** only when you want separate computation in the
-Main Work Area. It does not reconnect, replay, or replace the unavailable
-Session.
+Choose **Open New Shell Here** only when you want an independent native shell
+in the Main Work Area. It does not inherit the configured agent launcher and
+does not reconnect, replay, or replace the unavailable Session.
 
 ## Configuring the Shell
 
