@@ -3176,6 +3176,9 @@ require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_element.rs \
     'ContentMode::Inline.*?scale_factor = window\.scale_factor\(\)\.max\(1\.\).*?height = displayed_lines as f32 \* line_height.*?ceil\(\) / scale_factor' \
     'fractional display scaling can regress to clipping the first inline-terminal output row'
+require_multiline_pattern crates/terminal_view/src/terminal_element.rs \
+    'fn terminal_mouse_move_reaches_content\(mouse_mode: bool, focused: bool\).*?!mouse_mode \|\| focused.*?if hitbox\.is_hovered\(window\).*?terminal\.read\(cx\)\.mouse_mode\(e\.modifiers\.shift\).*?terminal_mouse_move_reaches_content\(mouse_mode, focus\.is_focused\(window\)\).*?fn tui_mouse_move_requires_terminal_focus.*?terminal_mouse_move_reaches_content\(true, true\).*?!terminal_mouse_move_reaches_content\(true, false\).*?terminal_mouse_move_reaches_content\(false, false\)' \
+    'an unfocused mouse-reporting TUI can regress to filling the Host input queue while another native surface owns focus'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'test_inline_terminal_displays_all_of_its_lines.*?write_output\(b"line\\n".*?viewport_lines\(\).*?total_lines\(\)' \
     'the native inline-terminal row-count regression can lose its source test'
