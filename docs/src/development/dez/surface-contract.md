@@ -90,6 +90,12 @@ when equivalent space returns. The native pane remains the width owner, saved
 geometry is unchanged, and official Zed keeps its inherited physical-width
 behavior.
 
+The native setup surface follows the same interface-scaled tab-width policy.
+Zooming in stacks its heading and **Finish Setup** action before they compete
+for space; zooming out restores the horizontal header only when equivalent tab
+width returns. The assigned pane remains the physical width owner, and official
+Zed retains its inherited physical-width onboarding behavior.
+
 ### 2. Run and active work
 
 ```text

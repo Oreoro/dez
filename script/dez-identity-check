@@ -3549,8 +3549,14 @@ reject_pattern crates/workspace/src/welcome.rs \
     'home_surface|dez-supported-terminal-agent|rounded_lg\(\).*?border_1\(\).*?bg\(home_' \
     'Dez Home can regress to prominent web-card framing or a redundant provider icon grid'
 require_multiline_pattern crates/onboarding/src/onboarding.rs \
-    'DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?fn dez_onboarding_uses_compact_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.bg\(onboarding_background\).*?780\..*?960\..*?when\(APP_NAME == "Zed", \|this\| this\.mx_auto\(\)\).*?when\(is_dez && compact_layout.*?this\.px_3\(\)\.py_4\(\).*?IconName::Settings.*?Headline::new\("Set up Dez"\).*?HeadlineSize::Large.*?when\(compact_layout, \|this\| this\.full_width\(\)\).*?fn dez_onboarding_collapses_before_controls_can_clip' \
+    'DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?fn onboarding_responsive_viewport_width.*?app_name == "Zed".*?interface_scale.*?fn dez_onboarding_uses_compact_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.bg\(onboarding_background\).*?container_query\(move \|available_size.*?onboarding_responsive_viewport_width\(.*?available_size\.width.*?workspace::interface_scale\(cx\).*?dez_onboarding_uses_compact_layout\(APP_NAME, responsive_width\).*?780\..*?960\..*?when\(APP_NAME == "Zed", \|this\| this\.mx_auto\(\)\).*?when\(is_dez && compact_layout.*?this\.px_3\(\)\.py_4\(\).*?IconName::Settings.*?Headline::new\("Set up Dez"\).*?HeadlineSize::Large.*?when\(compact_layout, \|this\| this\.full_width\(\)\).*?fn dez_onboarding_collapses_before_controls_can_clip' \
     'Dez setup can regress to an opaque centered overlay or clip its primary action at narrow widths'
+require_multiline_pattern docs/src/development/dez/surface-contract.md \
+    'native setup surface follows the same interface-scaled tab-width policy.*?Zooming in stacks its heading and.*?Finish Setup.*?assigned pane remains the physical width owner.*?official[[:space:]]+Zed retains its inherited physical-width onboarding behavior' \
+    'the native setup contract can regress from zoom-responsive tab ownership'
+reject_pattern crates/onboarding/src/onboarding.rs \
+    'window\.viewport_size\(\)\.width' \
+    'native setup can regress to choosing its layout from the whole window instead of its assigned tab width'
 require_multiline_pattern crates/ui/src/styles/typography.rs \
     'impl RenderOnce for Headline.*?font_weight\(FontWeight::SEMIBOLD\).*?text_color\(self\.color\.color\(cx\)\)' \
     'headline hierarchy can regress to regular-weight text or ignore semantic color requests'
