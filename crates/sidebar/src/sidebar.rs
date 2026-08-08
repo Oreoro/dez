@@ -4488,6 +4488,7 @@ fn external_session_attach_spawn(
     owner: &str,
     session_id: &str,
     working_directory: Option<PathBuf>,
+    takeover: bool,
     open: ExternalSessionCommand,
 ) -> SpawnInTerminal {
     let ExternalSessionCommand {
@@ -4496,8 +4497,15 @@ fn external_session_attach_spawn(
         label,
         ..
     } = open;
+    let input_ownership_intent = if takeover {
+        "request-takeover"
+    } else {
+        "preserve-external"
+    };
     SpawnInTerminal {
-        id: TaskId(format!("dez-external-session:{owner}:{session_id}")),
+        id: TaskId(format!(
+            "dez-external-session:v2:{owner}:{input_ownership_intent}:{session_id}"
+        )),
         full_label: label.clone(),
         label: label.clone(),
         command: None,
@@ -4644,6 +4652,7 @@ mod external_multiplexer_project_group_tests {
             "tmux",
             "tmux:$1",
             Some(PathBuf::from("/workspace/dez")),
+            false,
             ExternalSessionCommand {
                 program: "/opt/homebrew/bin/tmux".to_owned(),
                 args: vec![
@@ -4658,7 +4667,10 @@ mod external_multiplexer_project_group_tests {
 
         assert_eq!(spawn.command, None);
         assert!(spawn.args.is_empty());
-        assert_eq!(spawn.id, TaskId("dez-external-session:tmux:tmux:$1".into()));
+        assert_eq!(
+            spawn.id,
+            TaskId("dez-external-session:v2:tmux:preserve-external:tmux:$1".into())
+        );
         assert_eq!(spawn.cwd, Some(PathBuf::from("/workspace/dez")));
         assert_eq!(
             spawn.shell,
@@ -4671,6 +4683,39 @@ mod external_multiplexer_project_group_tests {
                 ],
                 title_override: Some("Attach compiler".to_owned()),
             }
+        );
+    }
+
+    #[test]
+    fn external_attach_records_input_ownership_intent() {
+        let command = ExternalSessionCommand {
+            program: "/opt/homebrew/bin/herdr".to_owned(),
+            args: vec!["agent".to_owned(), "attach".to_owned(), "pane-1".to_owned()],
+            label: "Attach Fix parser".to_owned(),
+            mode: ExternalSessionOpenMode::AttachInTerminal,
+        };
+        let observed = external_session_attach_spawn(
+            "Herdr",
+            "pane-1",
+            Some(PathBuf::from("/workspace/dez")),
+            false,
+            command.clone(),
+        );
+        let controlled = external_session_attach_spawn(
+            "Herdr",
+            "pane-1",
+            Some(PathBuf::from("/workspace/dez")),
+            true,
+            command,
+        );
+
+        assert_eq!(
+            observed.id,
+            TaskId("dez-external-session:v2:Herdr:preserve-external:pane-1".into())
+        );
+        assert_eq!(
+            controlled.id,
+            TaskId("dez-external-session:v2:Herdr:request-takeover:pane-1".into())
         );
     }
 
@@ -17503,6 +17548,7 @@ impl Sidebar {
             session.kind.display_name(),
             &session.id,
             session.working_directory.clone(),
+            takeover,
             open,
         );
 
