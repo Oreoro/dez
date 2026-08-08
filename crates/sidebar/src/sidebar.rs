@@ -1273,7 +1273,7 @@ fn workspace_open_row_metrics(
 }
 
 fn workspace_running_session_label_size(app_name: &str) -> LabelSize {
-    if app_name == "Zed" {
+    if app_name == "Dez" {
         LabelSize::XSmall
     } else {
         LabelSize::Small
@@ -1281,7 +1281,7 @@ fn workspace_running_session_label_size(app_name: &str) -> LabelSize {
 }
 
 fn workspace_primary_label_size(app_name: &str) -> LabelSize {
-    if app_name == "Zed" {
+    if app_name == "Dez" {
         LabelSize::Small
     } else {
         LabelSize::Default
