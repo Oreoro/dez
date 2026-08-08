@@ -51,6 +51,13 @@ fn terminal_mouse_move_reaches_content(mouse_mode: bool, focused: bool) -> bool 
     !mouse_mode || focused
 }
 
+fn terminal_scroll_wheel_reaches_content(mode: Modes, shift: bool, focused: bool) -> bool {
+    let writes_to_pty = !shift
+        && (mode.intersects(Modes::MOUSE_MODE)
+            || mode.contains(Modes::ALT_SCREEN | Modes::ALTERNATE_SCROLL));
+    !writes_to_pty || focused
+}
+
 /// Helper struct for converting terminal cursor points to displayed cursor points.
 #[derive(Copy, Clone)]
 struct DisplayCursor {
@@ -791,11 +798,16 @@ impl TerminalElement {
         if content_mode.is_scrollable() {
             self.interactivity.on_scroll_wheel({
                 let terminal_view = self.terminal_view.downgrade();
+                let terminal = terminal.clone();
                 move |e, window, cx| {
                     terminal_view
                         .update(cx, |terminal_view, cx| {
-                            if matches!(terminal_view.mode, TerminalMode::Standalone)
-                                || terminal_view.focus_handle.is_focused(window)
+                            let focused = terminal_view.focus_handle.is_focused(window);
+                            let mode = terminal.read(cx).last_content().mode;
+                            let scrollable =
+                                matches!(terminal_view.mode, TerminalMode::Standalone) || focused;
+                            if scrollable
+                                && terminal_scroll_wheel_reaches_content(mode, e.shift, focused)
                             {
                                 terminal_view.scroll_wheel(e, cx);
                                 cx.notify();
@@ -1796,6 +1808,35 @@ mod tests {
         assert!(terminal_mouse_move_reaches_content(true, true));
         assert!(!terminal_mouse_move_reaches_content(true, false));
         assert!(terminal_mouse_move_reaches_content(false, false));
+    }
+
+    #[test]
+    fn tui_scroll_wheel_requires_terminal_focus() {
+        assert!(terminal_scroll_wheel_reaches_content(
+            Modes::MOUSE_MODE,
+            false,
+            true
+        ));
+        assert!(!terminal_scroll_wheel_reaches_content(
+            Modes::MOUSE_MODE,
+            false,
+            false
+        ));
+        assert!(!terminal_scroll_wheel_reaches_content(
+            Modes::ALT_SCREEN | Modes::ALTERNATE_SCROLL,
+            false,
+            false
+        ));
+        assert!(terminal_scroll_wheel_reaches_content(
+            Modes::ALT_SCREEN | Modes::ALTERNATE_SCROLL,
+            true,
+            false
+        ));
+        assert!(terminal_scroll_wheel_reaches_content(
+            Modes::NONE,
+            false,
+            false
+        ));
     }
 
     #[test]

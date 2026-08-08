@@ -177,9 +177,10 @@ same terminal may share one bounded transport batch. Dez preserves their exact
 byte order and never combines input across a resize, lifecycle command, awaited
 request, or another terminal. This keeps mouse-reporting TUIs responsive without
 inventing a second input owner or allowing pointer traffic to starve keystrokes.
-Only the focused terminal emits TUI mouse reports. An unfocused terminal may
-still resolve native hyperlink hover, but pointer motion never enters its PTY
-input queue until the user returns focus to that terminal.
+Only the focused terminal emits TUI mouse or alternate-screen wheel reports.
+An unfocused terminal may still resolve native hyperlink hover and ordinary
+scrollback, but pointer input never enters its PTY queue until the user returns
+focus to that terminal.
 Retry and fresh-shell controls include the external owner and target Workspace
 in their accessible names. The fresh-shell description also repeats that tmux
 or Herdr remains external, so compact icon-only recovery does not obscure
