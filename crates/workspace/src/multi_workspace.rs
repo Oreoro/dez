@@ -1751,11 +1751,17 @@ impl MultiWorkspace {
             {
                 if let Some(group) = self.project_groups.get(index) {
                     let workspace_is_available = |workspace: &Entity<Workspace>| {
-                        !excluded_workspaces.contains(workspace)
-                            && !workspace.read(cx).project().read(cx).is_disconnected(cx)
+                        self.retained_workspace_is_available_for_fallback(
+                            workspace,
+                            &group.key,
+                            excluded_workspaces,
+                            cx,
+                        )
                     };
-                    let workspace = self
-                        .last_active_workspace_for_group(&group.key, cx)
+                    let workspace = group
+                        .last_active_workspace
+                        .as_ref()
+                        .and_then(WeakEntity::upgrade)
                         .filter(&workspace_is_available)
                         .or_else(|| {
                             self.workspaces_for_project_group(&group.key, cx)
@@ -1772,6 +1778,23 @@ impl MultiWorkspace {
         }
 
         None
+    }
+
+    fn retained_workspace_is_available_for_fallback(
+        &self,
+        workspace: &Entity<Workspace>,
+        group_key: &ProjectGroupKey,
+        excluded_workspaces: &[Entity<Workspace>],
+        cx: &App,
+    ) -> bool {
+        if excluded_workspaces.contains(workspace) || !self.is_workspace_retained(workspace) {
+            return false;
+        }
+
+        // ProjectGroupState already owns the last-active Workspace association,
+        // and local Workspaces have no disconnected state to validate. Avoid
+        // re-reading that entity while removal may originate from its update.
+        group_key.host().is_none() || !workspace.read(cx).project().read(cx).is_disconnected(cx)
     }
 
     /// Goes through sqlite: serialize -> close -> open new window
