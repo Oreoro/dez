@@ -1280,11 +1280,27 @@ fn workspace_running_session_label_size(app_name: &str) -> LabelSize {
     }
 }
 
-fn workspace_header_label_size(app_name: &str, density: settings::CanvasDensity) -> LabelSize {
-    if app_name != "Zed" || density != settings::CanvasDensity::Compact {
+fn workspace_primary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
         LabelSize::Small
     } else {
+        LabelSize::Default
+    }
+}
+
+fn workspace_secondary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
         LabelSize::XSmall
+    } else {
+        LabelSize::Small
+    }
+}
+
+fn workspace_header_label_size(app_name: &str, density: settings::CanvasDensity) -> LabelSize {
+    if app_name == "Zed" && density == settings::CanvasDensity::Compact {
+        LabelSize::XSmall
+    } else {
+        workspace_primary_label_size(app_name)
     }
 }
 
@@ -3128,9 +3144,13 @@ mod session_start_state_tests {
             workspace_running_session_label_size("Zed"),
             LabelSize::XSmall
         );
+        assert_eq!(workspace_primary_label_size("Dez"), LabelSize::Default);
+        assert_eq!(workspace_primary_label_size("Zed"), LabelSize::Small);
+        assert_eq!(workspace_secondary_label_size("Dez"), LabelSize::Small);
+        assert_eq!(workspace_secondary_label_size("Zed"), LabelSize::XSmall);
         assert_eq!(
             workspace_header_label_size("Dez", settings::CanvasDensity::Compact),
-            LabelSize::Small
+            LabelSize::Default
         );
         assert_eq!(
             workspace_header_label_size("Zed", settings::CanvasDensity::Compact),
@@ -9004,14 +9024,14 @@ impl Sidebar {
             .gap_1()
             .child(
                 Label::new(workspace_activity_section_title(APP_NAME))
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .weight(gpui::FontWeight::MEDIUM)
                     .color(Color::Muted),
             )
             .child(div().flex_1())
             .child(
                 Label::new(activity_count.to_string())
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .color(Color::Muted),
             );
 
@@ -17929,11 +17949,11 @@ impl Sidebar {
                                         Icon::new(icon).size(IconSize::Small).color(Color::Muted),
                                     ),
                             )
-                            .child(Label::new(title).size(LabelSize::Small)),
+                            .child(Label::new(title).size(workspace_primary_label_size(APP_NAME))),
                     )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(workspace_secondary_label_size(APP_NAME))
                             .color(Color::Muted),
                     )
                     .when(has_query, |this| {
@@ -18014,11 +18034,11 @@ impl Sidebar {
                                     .color(Color::Success),
                             ),
                     )
-                    .child(Label::new(title).size(LabelSize::Small)),
+                    .child(Label::new(title).size(workspace_primary_label_size(APP_NAME))),
             )
             .child(
                 Label::new(description)
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .color(Color::Muted),
             )
             .child(
@@ -18671,7 +18691,7 @@ impl Sidebar {
                         } else {
                             "Other Running Sessions"
                         })
-                        .size(LabelSize::Small)
+                        .size(workspace_primary_label_size(APP_NAME))
                         .weight(gpui::FontWeight::MEDIUM)
                         .truncate(),
                     )
@@ -18679,7 +18699,7 @@ impl Sidebar {
                     .when_some(count_label, |this, count_label| {
                         this.child(
                             Label::new(count_label)
-                                .size(LabelSize::XSmall)
+                                .size(workspace_secondary_label_size(APP_NAME))
                                 .color(Color::Muted),
                         )
                     }),
@@ -18800,6 +18820,9 @@ impl Sidebar {
     }
 
     fn render_empty_state(&self, cx: &mut Context<Self>) -> AnyElement {
+        let design_density = DesignSystemSettings::get_global(cx).density;
+        let (row_size, icon_size) = workspace_open_row_metrics(APP_NAME, design_density);
+
         if dez_installation_required(cx) {
             return v_flex()
                 .id("sidebar-installation-required")
@@ -18808,16 +18831,20 @@ impl Sidebar {
                 .flex_1()
                 .min_h_0()
                 .overflow_y_scroll()
-                .px_2()
-                .py_2()
+                .px_3()
+                .py_4()
                 .child(
                     v_flex()
                         .w_full()
-                        .gap_1()
-                        .child(Label::new("No Workspaces yet").size(LabelSize::Small))
+                        .gap_2()
+                        .child(
+                            Label::new("No Workspaces yet")
+                                .size(workspace_primary_label_size(APP_NAME))
+                                .weight(gpui::FontWeight::MEDIUM),
+                        )
                         .child(
                             Label::new("Install Dez to get started.")
-                                .size(LabelSize::XSmall)
+                                .size(workspace_secondary_label_size(APP_NAME))
                                 .color(Color::Muted),
                         ),
                 )
@@ -18834,23 +18861,38 @@ impl Sidebar {
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
-            .px_2()
-            .py_2()
+            .px_3()
+            .py_4()
             .child(
                 v_flex()
                     .w_full()
-                    .gap_2()
-                    .child(Label::new(title).size(LabelSize::Small))
+                    .gap_3()
+                    .child(
+                        Label::new(title)
+                            .size(workspace_primary_label_size(APP_NAME))
+                            .weight(gpui::FontWeight::MEDIUM),
+                    )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(workspace_secondary_label_size(APP_NAME))
                             .color(Color::Muted),
                     )
                     .child(
                         Button::new("start-open", open_workspace_label)
                             .full_width()
                             .style(ButtonStyle::Filled)
-                            .start_icon(Icon::new(IconName::FolderOpen).size(IconSize::Small))
+                            .when(APP_NAME != "Zed", |button| {
+                                button
+                                    .size(row_size)
+                                    .label_size(workspace_primary_label_size(APP_NAME))
+                            })
+                            .start_icon(Icon::new(IconName::FolderOpen).size(
+                                if APP_NAME == "Zed" {
+                                    IconSize::Small
+                                } else {
+                                    icon_size
+                                },
+                            ))
                             .tab_index(0isize)
                             .aria_label(open_workspace_label)
                             .tooltip(move |_, cx| {
@@ -18877,7 +18919,18 @@ impl Sidebar {
                             Button::new("start-terminal", scratch_terminal_label)
                                 .full_width()
                                 .style(ButtonStyle::OutlinedCustom(cx.theme().colors().border))
-                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .when(APP_NAME != "Zed", |button| {
+                                    button
+                                        .size(row_size)
+                                        .label_size(workspace_primary_label_size(APP_NAME))
+                                })
+                                .start_icon(Icon::new(IconName::Terminal).size(
+                                    if APP_NAME == "Zed" {
+                                        IconSize::XSmall
+                                    } else {
+                                        icon_size
+                                    },
+                                ))
                                 .tab_index(0isize)
                                 .aria_label(terminal_launch_in_main_work_area_label(APP_NAME))
                                 .tooltip(|_, cx| {
@@ -19494,7 +19547,7 @@ impl Sidebar {
                                     .child(icon)
                                     .child(
                                         Label::new(label)
-                                            .size(LabelSize::Small)
+                                            .size(workspace_primary_label_size(APP_NAME))
                                             .weight(if is_focused {
                                                 gpui::FontWeight::MEDIUM
                                             } else {
@@ -19538,14 +19591,14 @@ impl Sidebar {
             .pb_1()
             .child(
                 Label::new(workspace_tabs_section_title(APP_NAME))
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .weight(gpui::FontWeight::MEDIUM)
                     .color(Color::Muted)
                     .flex_1(),
             )
             .child(
                 Label::new(workspace_tab_layout_label(APP_NAME, tab_count, pane_count))
-                    .size(LabelSize::XSmall)
+                    .size(workspace_secondary_label_size(APP_NAME))
                     .color(Color::Muted),
             );
         let has_rows = !rows.is_empty();
@@ -19710,7 +19763,7 @@ impl Sidebar {
                                 .flex_none()
                                 .child(
                                     Label::new(session_rail_title(APP_NAME))
-                                        .size(LabelSize::Small)
+                                        .size(workspace_primary_label_size(APP_NAME))
                                         .weight(gpui::FontWeight::MEDIUM)
                                         .flex_none()
                                         .truncate(),

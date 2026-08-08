@@ -82,7 +82,7 @@ impl RenderOnce for SectionHeader {
                     Label::new(title)
                         .when(APP_NAME == "Zed", |label| label.buffer_font(cx))
                         .color(Color::Muted)
-                        .size(LabelSize::XSmall),
+                        .size(welcome_secondary_label_size(APP_NAME)),
                 ),
             )
             .when(APP_NAME == "Zed", |this| {
@@ -193,7 +193,7 @@ impl RenderOnce for SectionButton {
                                         div().max_w(rems_from_px(220.)).overflow_hidden().child(
                                             Label::new(meta)
                                                 .truncate()
-                                                .size(LabelSize::XSmall)
+                                                .size(welcome_secondary_label_size(APP_NAME))
                                                 .color(Color::Muted),
                                         ),
                                     )
@@ -313,6 +313,22 @@ fn welcome_surface_label(app_name: &str) -> &'static str {
 
 fn welcome_identity_label(app_name: &str) -> Option<&'static str> {
     (app_name != "Zed").then_some("Dez")
+}
+
+fn welcome_primary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
+        LabelSize::Small
+    } else {
+        LabelSize::Default
+    }
+}
+
+fn welcome_secondary_label_size(app_name: &str) -> LabelSize {
+    if app_name == "Zed" {
+        LabelSize::XSmall
+    } else {
+        LabelSize::Small
+    }
 }
 
 fn welcome_forces_tab_bar(app_name: &str) -> bool {
@@ -824,10 +840,10 @@ impl WelcomePage {
                         v_flex()
                             .min_w_0()
                             .gap_0p5()
-                            .child(Label::new(title).size(LabelSize::Small))
+                            .child(Label::new(title).size(welcome_primary_label_size(APP_NAME)))
                             .child(
                                 Label::new(description)
-                                    .size(LabelSize::XSmall)
+                                    .size(welcome_secondary_label_size(APP_NAME))
                                     .color(Color::Muted),
                             ),
                     ),
@@ -1225,7 +1241,7 @@ impl Render for WelcomePage {
                                             )
                                             .child(
                                                 Label::new(identity)
-                                                    .size(LabelSize::XSmall)
+                                                    .size(welcome_secondary_label_size(APP_NAME))
                                                     .color(Color::Muted)
                                                     .weight(FontWeight::MEDIUM),
                                             ),
@@ -1243,7 +1259,7 @@ impl Render for WelcomePage {
                                 .when(!installation_required, |this| {
                                     this.child(
                                         Label::new(page_summary)
-                                            .size(LabelSize::Small)
+                                            .size(welcome_primary_label_size(APP_NAME))
                                             .color(Color::Muted),
                                     )
                                 })
@@ -1533,6 +1549,10 @@ mod tests {
         assert_eq!(welcome_title("Dez", true), "Continue in this Workspace");
         assert_eq!(welcome_identity_label("Dez"), Some("Dez"));
         assert_eq!(welcome_identity_label("Zed"), None);
+        assert_eq!(welcome_primary_label_size("Dez"), LabelSize::Default);
+        assert_eq!(welcome_primary_label_size("Zed"), LabelSize::Small);
+        assert_eq!(welcome_secondary_label_size("Dez"), LabelSize::Small);
+        assert_eq!(welcome_secondary_label_size("Zed"), LabelSize::XSmall);
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");
