@@ -68,7 +68,9 @@ impl RenderOnce for SectionHeader {
             self.title
         };
         h_flex()
-            .id(("home-section-heading", accessibility_title.clone()))
+            .id(SharedString::from(format!(
+                "home-section-heading-{accessibility_title}"
+            )))
             .role(gpui::Role::Heading)
             .aria_level(2)
             .aria_label(accessibility_title)
@@ -1573,21 +1575,21 @@ mod tests {
         assert_eq!(welcome_primary_label_size("Zed"), LabelSize::Small);
         assert_eq!(welcome_secondary_label_size("Dez"), LabelSize::Small);
         assert_eq!(welcome_secondary_label_size("Zed"), LabelSize::XSmall);
-        assert_eq!(
-            welcome_action_control_metrics("Dez", settings::CanvasDensity::Compact),
-            (ButtonSize::Default, IconSize::XSmall)
+        assert!(
+            welcome_action_control_metrics("Dez", settings::CanvasDensity::Compact)
+                == (ButtonSize::Default, IconSize::XSmall)
         );
-        assert_eq!(
-            welcome_action_control_metrics("Dez", settings::CanvasDensity::Balanced),
-            (ButtonSize::Medium, IconSize::Small)
+        assert!(
+            welcome_action_control_metrics("Dez", settings::CanvasDensity::Balanced)
+                == (ButtonSize::Medium, IconSize::Small)
         );
-        assert_eq!(
-            welcome_action_control_metrics("Dez", settings::CanvasDensity::Spacious),
-            (ButtonSize::Large, IconSize::Small)
+        assert!(
+            welcome_action_control_metrics("Dez", settings::CanvasDensity::Spacious)
+                == (ButtonSize::Large, IconSize::Small)
         );
-        assert_eq!(
-            welcome_action_control_metrics("Zed", settings::CanvasDensity::Spacious),
-            (ButtonSize::Medium, IconSize::Small)
+        assert!(
+            welcome_action_control_metrics("Zed", settings::CanvasDensity::Spacious)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");

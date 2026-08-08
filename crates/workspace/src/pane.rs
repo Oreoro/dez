@@ -5924,7 +5924,7 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                     let menu = menu
                         .submenu("Open Terminal", move |menu, _, _| {
                             menu.action_with_icon(
-                                default_terminal_label,
+                                default_terminal_label.clone(),
                                 default_terminal_icon,
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
