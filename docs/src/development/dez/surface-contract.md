@@ -225,8 +225,8 @@ their tabs, and the focused Main Work Area item.
                          Compact        Balanced       Spacious
 Platform title bar      baseline       baseline + 4   baseline + 8
 Main pane tab strip     24 px          32 px          40 px
-Pane chrome target      22 px          28 px          28 px
-Status line             24 px          26 px          30 px
+Pane chrome target      22 px          28 px          32 px
+Status line             24 px          28 px          32 px
 
 ┌ native window title / traffic-light region ─────────────────────────┐
 ├ native pane tabs ─ adjacent + ─ overflow ─ split ─ zoom ────────────┤
@@ -245,6 +245,10 @@ the platform title bar, pane tabs, Workspaces, the Workspace-owned notification
 shelf, and the status line together; the shell must not wait for a Workspace,
 terminal, notification, or focus event before those native owners agree on the
 new metrics.
+
+The native Home actions, Workspaces controls, pane controls, and status-line
+navigation use one 22/28/32 px control-target ladder across Compact, Balanced,
+and Spacious density; their marks remain 12/14/14 px.
 
 The table records the 14 px interface-font scaling baseline. Fresh Dez profiles
 start at 16 px so native tabs, Workspaces, Home, and the status line are
@@ -938,7 +942,7 @@ status; those remain explicit native status-line controls.
   rows, and status-bar controls. Compact navigation uses 22px targets with
   12px marks; Balanced uses 22–28px targets with 14px marks; Spacious uses
   28–32px targets with 14px marks. Status type remains supporting text and the
-  Dez status bar scales from 24–30px.
+  Dez status bar scales from 24–32px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
 - Keep repeated Saved Workspace Layout actions distinguishable. Save, Restore,

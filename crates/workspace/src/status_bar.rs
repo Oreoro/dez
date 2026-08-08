@@ -173,8 +173,8 @@ fn status_bar_height(
     (app_name != "Zed").then(|| {
         let base_height = match density {
             settings::CanvasDensity::Compact => 24.0,
-            settings::CanvasDensity::Balanced => 26.0,
-            settings::CanvasDensity::Spacious => 30.0,
+            settings::CanvasDensity::Balanced => 28.0,
+            settings::CanvasDensity::Spacious => 32.0,
         };
         px(base_height * interface_scale)
     })
@@ -636,11 +636,11 @@ mod tests {
         );
         assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Balanced, 1.0),
-            Some(px(26.0))
+            Some(px(28.0))
         );
         assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Spacious, 1.0),
-            Some(px(30.0))
+            Some(px(32.0))
         );
         assert_eq!(
             status_bar_height("Zed", settings::CanvasDensity::Balanced, 1.5),
@@ -648,7 +648,7 @@ mod tests {
         );
         assert_eq!(
             status_bar_height("Dez", settings::CanvasDensity::Spacious, 1.5),
-            Some(px(45.0))
+            Some(px(48.0))
         );
         assert_eq!(
             status_bar_responsive_viewport_width("Dez", px(1200.0), 1.5),

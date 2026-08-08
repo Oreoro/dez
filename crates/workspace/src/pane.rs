@@ -120,9 +120,8 @@ fn canvas_tab_bar_control_metrics_for_density(
 ) -> (ButtonSize, IconSize) {
     match density {
         settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
-        settings::CanvasDensity::Balanced | settings::CanvasDensity::Spacious => {
-            (ButtonSize::Medium, IconSize::Small)
-        }
+        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::Small),
+        settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
     }
 }
 
@@ -7235,7 +7234,7 @@ mod tests {
         );
         assert!(
             canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Spacious)
-                == (ButtonSize::Medium, IconSize::Small)
+                == (ButtonSize::Large, IconSize::Small)
         );
     }
 

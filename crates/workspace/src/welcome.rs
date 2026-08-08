@@ -1,7 +1,7 @@
 use crate::{
-    BrowseRunningSessions, MultiWorkspace, NewFile, Open, OpenFolder, OpenMode, PathList,
-    RecentWorkspace, RevealFiles, RevealGitChanges, SerializedWorkspaceLocation, Workspace,
-    WorkspaceId, WorkspaceSettings,
+    BrowseRunningSessions, DesignSystemSettings, MultiWorkspace, NewFile, Open, OpenFolder,
+    OpenMode, PathList, RecentWorkspace, RevealFiles, RevealGitChanges,
+    SerializedWorkspaceLocation, Workspace, WorkspaceId, WorkspaceSettings,
     item::{Item, ItemEvent},
     persistence::WorkspaceDb,
 };
@@ -81,6 +81,7 @@ impl RenderOnce for SectionHeader {
                 div().flex_none().child(
                     Label::new(title)
                         .when(APP_NAME == "Zed", |label| label.buffer_font(cx))
+                        .when(APP_NAME != "Zed", |label| label.weight(FontWeight::MEDIUM))
                         .color(Color::Muted)
                         .size(welcome_secondary_label_size(APP_NAME)),
                 ),
@@ -149,11 +150,15 @@ impl RenderOnce for SectionButton {
             (false, Some(meta)) => Some(SharedString::from(meta.to_owned())),
             (false, None) => None,
         };
-        let icon_color = if self.primary {
+        let icon_color = if APP_NAME != "Zed" {
+            Color::Default
+        } else if self.primary {
             Color::Accent
         } else {
             Color::Muted
         };
+        let (control_size, icon_size) =
+            welcome_action_control_metrics(APP_NAME, DesignSystemSettings::get_global(cx).density);
 
         ButtonLike::new(id)
             .tab_index(self.tab_index as isize)
@@ -165,7 +170,7 @@ impl RenderOnce for SectionButton {
             })
             .when_some(meta.clone(), |this, meta| this.tooltip(Tooltip::text(meta)))
             .full_width()
-            .size(ButtonSize::Medium)
+            .size(control_size)
             .child(
                 h_flex()
                     .w_full()
@@ -176,7 +181,7 @@ impl RenderOnce for SectionButton {
                             .min_w_0()
                             .flex_1()
                             .gap_2()
-                            .child(Icon::new(self.icon).color(icon_color).size(IconSize::Small))
+                            .child(Icon::new(self.icon).color(icon_color).size(icon_size))
                             .child(
                                 Label::new(self.label)
                                     .truncate()
@@ -328,6 +333,21 @@ fn welcome_secondary_label_size(app_name: &str) -> LabelSize {
         LabelSize::XSmall
     } else {
         LabelSize::Small
+    }
+}
+
+fn welcome_action_control_metrics(
+    app_name: &str,
+    density: settings::CanvasDensity,
+) -> (ButtonSize, IconSize) {
+    if app_name == "Zed" {
+        return (ButtonSize::Medium, IconSize::Small);
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
+        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::Small),
+        settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
     }
 }
 
@@ -1553,6 +1573,22 @@ mod tests {
         assert_eq!(welcome_primary_label_size("Zed"), LabelSize::Small);
         assert_eq!(welcome_secondary_label_size("Dez"), LabelSize::Small);
         assert_eq!(welcome_secondary_label_size("Zed"), LabelSize::XSmall);
+        assert_eq!(
+            welcome_action_control_metrics("Dez", settings::CanvasDensity::Compact),
+            (ButtonSize::Default, IconSize::XSmall)
+        );
+        assert_eq!(
+            welcome_action_control_metrics("Dez", settings::CanvasDensity::Balanced),
+            (ButtonSize::Medium, IconSize::Small)
+        );
+        assert_eq!(
+            welcome_action_control_metrics("Dez", settings::CanvasDensity::Spacious),
+            (ButtonSize::Large, IconSize::Small)
+        );
+        assert_eq!(
+            welcome_action_control_metrics("Zed", settings::CanvasDensity::Spacious),
+            (ButtonSize::Medium, IconSize::Small)
+        );
         assert_eq!(welcome_title("Zed", false), "Terminal-native development");
         assert_eq!(welcome_surface_label("Dez"), "Home");
         assert_eq!(welcome_surface_label("Zed"), "Welcome");

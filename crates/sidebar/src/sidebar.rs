@@ -3098,11 +3098,11 @@ mod session_start_state_tests {
         );
         assert!(
             workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Balanced)
-                == (ButtonSize::Default, IconSize::Small)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert!(
             workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Spacious)
-                == (ButtonSize::Medium, IconSize::Small)
+                == (ButtonSize::Large, IconSize::Small)
         );
         assert!(
             workspace_navigation_control_metrics("Zed", settings::CanvasDensity::Compact)
@@ -3130,11 +3130,11 @@ mod session_start_state_tests {
         );
         assert!(
             workspace_open_row_metrics("Dez", settings::CanvasDensity::Balanced)
-                == (ButtonSize::Default, IconSize::Small)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert!(
             workspace_open_row_metrics("Dez", settings::CanvasDensity::Spacious)
-                == (ButtonSize::Medium, IconSize::Small)
+                == (ButtonSize::Large, IconSize::Small)
         );
         assert_eq!(
             workspace_running_session_label_size("Dez"),

@@ -315,8 +315,8 @@ pub fn sidebar_header_control_metrics(
 
     match density {
         settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
-        settings::CanvasDensity::Balanced => (ButtonSize::Default, IconSize::Small),
-        settings::CanvasDensity::Spacious => (ButtonSize::Medium, IconSize::Small),
+        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::Small),
+        settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
     }
 }
 
@@ -412,7 +412,7 @@ mod sidebar_chrome_tests {
         assert!(!project_pane_toggle_visible_in_header("Dez", false, false));
         assert!(matches!(
             sidebar_header_control_metrics("Dez", settings::CanvasDensity::Balanced),
-            (ButtonSize::Default, IconSize::Small)
+            (ButtonSize::Medium, IconSize::Small)
         ));
         assert!(matches!(
             sidebar_header_control_metrics("Zed", settings::CanvasDensity::Balanced),
