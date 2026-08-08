@@ -377,7 +377,7 @@ struct QueuedTerminalHostCommand {
     commands: Vec<TerminalSessionCommand>,
     response_tx:
         Option<futures::channel::oneshot::Sender<Result<TerminalHostResponse, anyhow::Error>>>,
-    _input_reservation: Option<TerminalHostInputReservation>,
+    _input_reservations: Vec<TerminalHostInputReservation>,
 }
 
 struct TerminalHostInputBudget {
@@ -443,7 +443,7 @@ impl QueuedTerminalHostCommand {
         Self {
             commands: vec![command],
             response_tx,
-            _input_reservation: None,
+            _input_reservations: Vec::new(),
         }
     }
 
@@ -474,8 +474,74 @@ impl QueuedTerminalHostCommand {
                 })
                 .collect(),
             response_tx: None,
-            _input_reservation: Some(input_reservation),
+            _input_reservations: vec![input_reservation],
         }))
+    }
+
+    fn input_session_and_byte_count(&self) -> Option<(super::TerminalSessionId, usize)> {
+        if self.response_tx.is_some() {
+            return None;
+        }
+
+        let mut session_id = None;
+        let mut byte_count = 0usize;
+        for command in &self.commands {
+            let TerminalSessionCommand::Input {
+                session_id: command_session_id,
+                bytes,
+            } = command
+            else {
+                return None;
+            };
+            if session_id.is_some_and(|session_id| session_id != *command_session_id) {
+                return None;
+            }
+            session_id = Some(*command_session_id);
+            byte_count = byte_count.checked_add(bytes.len())?;
+        }
+        session_id.map(|session_id| (session_id, byte_count))
+    }
+
+    fn try_append_adjacent_input(&mut self, mut adjacent: Self) -> Result<(), Self> {
+        let Some((session_id, byte_count)) = self.input_session_and_byte_count() else {
+            return Err(adjacent);
+        };
+        let Some((adjacent_session_id, adjacent_byte_count)) =
+            adjacent.input_session_and_byte_count()
+        else {
+            return Err(adjacent);
+        };
+        if session_id != adjacent_session_id
+            || byte_count
+                .checked_add(adjacent_byte_count)
+                .is_none_or(|byte_count| byte_count > MAX_TERMINAL_HOST_INPUT_BATCH_BYTES)
+        {
+            return Err(adjacent);
+        }
+
+        let adjacent_commands = std::mem::take(&mut adjacent.commands);
+        for command in adjacent_commands {
+            let TerminalSessionCommand::Input { session_id, bytes } = command else {
+                log::error!("validated terminal input batch contained another command");
+                return Err(adjacent);
+            };
+            if let Some(TerminalSessionCommand::Input {
+                session_id: previous_session_id,
+                bytes: previous_bytes,
+            }) = self.commands.last_mut()
+                && *previous_session_id == session_id
+                && previous_bytes.len().saturating_add(bytes.len())
+                    <= MAX_TERMINAL_HOST_INPUT_CHUNK_BYTES
+            {
+                previous_bytes.extend(bytes);
+            } else {
+                self.commands
+                    .push(TerminalSessionCommand::Input { session_id, bytes });
+            }
+        }
+        self._input_reservations
+            .append(&mut adjacent._input_reservations);
+        Ok(())
     }
 }
 
@@ -875,11 +941,29 @@ impl TerminalHostConnection {
         let executor = background_executor.clone();
         let transport_task = background_executor.spawn(async move {
             let mut client = Some(client);
-            while let Ok(queued) = command_rx.recv().await {
+            let mut deferred_queued = None;
+            loop {
+                let mut queued = match deferred_queued.take() {
+                    Some(queued) => queued,
+                    None => {
+                        let Ok(queued) = command_rx.recv().await else {
+                            break;
+                        };
+                        queued
+                    }
+                };
+                if queued.input_session_and_byte_count().is_some() {
+                    while let Ok(adjacent) = command_rx.try_recv() {
+                        if let Err(adjacent) = queued.try_append_adjacent_input(adjacent) {
+                            deferred_queued = Some(adjacent);
+                            break;
+                        }
+                    }
+                }
                 let QueuedTerminalHostCommand {
                     commands,
                     response_tx,
-                    _input_reservation,
+                    _input_reservations,
                 } = queued;
                 if response_tx
                     .as_ref()
@@ -980,10 +1064,7 @@ impl TerminalHostConnection {
                 if let Some(failure_message) = failure_message.as_ref() {
                     let queued_at_failure = command_rx.len();
                     let mut discarded_count = 0usize;
-                    for _ in 0..queued_at_failure {
-                        let Ok(pending) = command_rx.try_recv() else {
-                            break;
-                        };
+                    let mut discard = |pending: QueuedTerminalHostCommand| {
                         discarded_count = discarded_count.saturating_add(1);
                         if let Some(response_tx) = pending.response_tx
                             && !response_tx.is_canceled()
@@ -997,6 +1078,15 @@ impl TerminalHostConnection {
                                 "terminal host queued command response receiver was dropped"
                             );
                         }
+                    };
+                    if let Some(pending) = deferred_queued.take() {
+                        discard(pending);
+                    }
+                    for _ in 0..queued_at_failure {
+                        let Ok(pending) = command_rx.try_recv() else {
+                            break;
+                        };
+                        discard(pending);
                     }
                     if discarded_count > 0 {
                         log::warn!(
@@ -1022,6 +1112,7 @@ impl TerminalHostConnection {
                         Ok(None) => {}
                     }
                 }
+                drop(_input_reservations);
             }
         });
         Ok(Self {
@@ -1813,6 +1904,87 @@ mod tests {
         assert_eq!(second_session_id, session_id);
         assert_eq!(first_bytes.len(), MAX_TERMINAL_HOST_INPUT_CHUNK_BYTES);
         assert_eq!(second_bytes.len(), 1);
+    }
+
+    #[test]
+    fn adjacent_hosted_input_for_one_session_coalesces_without_reordering() {
+        let session_id = super::super::TerminalSessionId::new();
+        let input_budget = Arc::new(TerminalHostInputBudget::new(32));
+        let Some(mut first) =
+            QueuedTerminalHostCommand::input(session_id, vec![0x1b, b'[', b'M'], &input_budget)
+                .expect("first input should fit the queue budget")
+        else {
+            panic!("non-empty first input should create a queued command");
+        };
+        let Some(second) = QueuedTerminalHostCommand::input(session_id, vec![b'k'], &input_budget)
+            .expect("second input should fit the queue budget")
+        else {
+            panic!("non-empty second input should create a queued command");
+        };
+
+        if first.try_append_adjacent_input(second).is_err() {
+            panic!("adjacent input for one session should coalesce");
+        }
+        assert_eq!(first.commands.len(), 1);
+        assert_eq!(first._input_reservations.len(), 2);
+        assert_eq!(input_budget.queued_bytes(), 4);
+        let Some(TerminalSessionCommand::Input {
+            session_id: queued_session_id,
+            bytes,
+        }) = first.commands.first()
+        else {
+            panic!("coalesced command should remain terminal input");
+        };
+        assert_eq!(*queued_session_id, session_id);
+        assert_eq!(bytes, &[0x1b, b'[', b'M', b'k']);
+
+        drop(first);
+        assert_eq!(input_budget.queued_bytes(), 0);
+    }
+
+    #[test]
+    fn hosted_input_coalescing_preserves_session_and_command_boundaries() {
+        let session_id = super::super::TerminalSessionId::new();
+        let other_session_id = super::super::TerminalSessionId::new();
+        let input_budget = Arc::new(TerminalHostInputBudget::new(32));
+        let Some(mut first) =
+            QueuedTerminalHostCommand::input(session_id, vec![b'a'], &input_budget)
+                .expect("first input should fit the queue budget")
+        else {
+            panic!("non-empty first input should create a queued command");
+        };
+        let Some(other_session) =
+            QueuedTerminalHostCommand::input(other_session_id, vec![b'b'], &input_budget)
+                .expect("other-session input should fit the queue budget")
+        else {
+            panic!("non-empty other-session input should create a queued command");
+        };
+
+        let Err(other_session) = first.try_append_adjacent_input(other_session) else {
+            panic!("input from another session must remain a separate queue item");
+        };
+        assert_eq!(first.commands.len(), 1);
+        assert_eq!(other_session.commands.len(), 1);
+
+        let resize = QueuedTerminalHostCommand::single(
+            TerminalSessionCommand::Resize {
+                session_id,
+                columns: 120,
+                rows: 40,
+            },
+            None,
+        );
+        let Err(resize) = first.try_append_adjacent_input(resize) else {
+            panic!("resize must remain an ordering boundary for terminal input");
+        };
+        assert!(matches!(
+            resize.commands.first(),
+            Some(TerminalSessionCommand::Resize {
+                session_id: resize_session_id,
+                columns: 120,
+                rows: 40,
+            }) if *resize_session_id == session_id
+        ));
     }
 
     #[gpui::test]

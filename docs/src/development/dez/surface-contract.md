@@ -164,6 +164,11 @@ current Herdr pane. That deliberate action runs Herdr's documented `--takeover`
 path; ordinary row activation, discovery, retry, restore, and startup never add
 it. The label names both the pane and ownership transfer before execution, and
 the resulting attach client remains an ordinary native terminal tab.
+Within a Host-owned terminal, consecutive mouse and keyboard packets for that
+same terminal may share one bounded transport batch. Dez preserves their exact
+byte order and never combines input across a resize, lifecycle command, awaited
+request, or another terminal. This keeps mouse-reporting TUIs responsive without
+inventing a second input owner or allowing pointer traffic to starve keystrokes.
 Retry and fresh-shell controls include the external owner and target Workspace
 in their accessible names. The fresh-shell description also repeats that tmux
 or Herdr remains external, so compact icon-only recovery does not obscure
