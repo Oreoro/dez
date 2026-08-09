@@ -3498,6 +3498,9 @@ require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'pub fn remove_project_group.*?active_workspace.*?retain_workspace\(active_workspace, group_key\.clone\(\), cx\).*?fallback_workspace\(group_index, &excluded_workspaces.*?fn fallback_workspace.*?nearest_retained_workspace.*?key\.host\(\)\.is_none\(\).*?create_durable_empty_local_workspace.*?fn nearest_retained_workspace.*?retained_workspace_is_available_for_fallback.*?last_active_workspace.*?WeakEntity::upgrade.*?fn retained_workspace_is_available_for_fallback.*?excluded_workspaces\.contains\(workspace\).*?!self\.is_workspace_retained\(workspace\).*?group_key\.host\(\)\.is_none\(\).*?!workspace\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\)' \
     'removing the active Workspace can regress to a no-op, a disconnected fallback, or a remote path opened as local'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
+    'active_workspace_database_id: Option<WorkspaceId>.*?let active_workspace_database_id = workspace\.read\(cx\)\.database_id\(\).*?active_workspace_database_id,.*?let workspace_database_id = workspace\.read\(cx\)\.database_id\(\).*?self\.active_workspace_database_id = workspace_database_id.*?fn persistence_state.*?active_workspace_id: self\.active_workspace_database_id.*?pub fn database_id.*?self\.active_workspace_database_id' \
+    'durable MultiWorkspace identity can regress to re-reading its active Workspace while that Workspace holds an update lease'
+require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'pub fn close_workspace.*?workspaces_for_project_group\(&group_key, cx\).*?candidate != &excluded_workspace.*?!candidate\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\).*?fallback_workspace' \
     'closing a Workspace can regress to selecting a disconnected sibling'
 require_multiline_pattern crates/workspace/src/workspace.rs \

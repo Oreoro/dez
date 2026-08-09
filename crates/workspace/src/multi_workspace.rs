@@ -752,6 +752,10 @@ pub struct MultiWorkspace {
     /// chrome ownership, as that might cause a double lease. Kept in sync with
     /// `active_workspace`.
     active_workspace_id: Rc<Cell<EntityId>>,
+    /// Kept with `active_workspace` so persistence can identify the active
+    /// durable Workspace while that Workspace holds an update lease during
+    /// close or session removal.
+    active_workspace_database_id: Option<WorkspaceId>,
     sidebar: Option<Box<dyn SidebarHandle>>,
     sidebar_open: bool,
     /// A restored-open `visibility = "auto"` Sessions region may close once
@@ -806,6 +810,7 @@ impl MultiWorkspace {
         Self::subscribe_to_workspace(&workspace, window, cx);
         let weak_self = cx.weak_entity();
         let active_workspace_id = Rc::new(Cell::new(workspace.entity_id()));
+        let active_workspace_database_id = workspace.read(cx).database_id();
         workspace.update(cx, |workspace, cx| {
             workspace.set_multi_workspace(weak_self, active_workspace_id.clone(), cx);
         });
@@ -815,6 +820,7 @@ impl MultiWorkspace {
             project_groups: Vec::new(),
             active_workspace: workspace,
             active_workspace_id,
+            active_workspace_database_id,
             sidebar: None,
             sidebar_open: false,
             sidebar_auto_close_pending: false,
@@ -2195,6 +2201,7 @@ impl MultiWorkspace {
             return;
         }
 
+        let workspace_database_id = workspace.read(cx).database_id();
         let old_active_workspace = self.active_workspace.clone();
         let old_active_was_retained = self.active_workspace_is_retained();
         let workspace_was_retained = self.is_workspace_retained(&workspace);
@@ -2215,6 +2222,7 @@ impl MultiWorkspace {
         }
 
         self.active_workspace = workspace;
+        self.active_workspace_database_id = workspace_database_id;
         // Publish the new active workspace before anyone reads the shared cell
         // to decide who owns the window chrome.
         self.active_workspace_id
@@ -2353,7 +2361,7 @@ impl MultiWorkspace {
 
     fn persistence_state(&self, cx: &App) -> MultiWorkspaceState {
         MultiWorkspaceState {
-            active_workspace_id: self.workspace().read(cx).database_id(),
+            active_workspace_id: self.active_workspace_database_id,
             project_groups: self
                 .project_groups
                 .iter()
@@ -2485,8 +2493,8 @@ impl MultiWorkspace {
         self.workspace().read(cx).items_of_type::<T>(cx)
     }
 
-    pub fn database_id(&self, cx: &App) -> Option<WorkspaceId> {
-        self.workspace().read(cx).database_id()
+    pub fn database_id(&self, _cx: &App) -> Option<WorkspaceId> {
+        self.active_workspace_database_id
     }
 
     pub fn take_pending_removal_tasks(&mut self) -> Vec<Task<()>> {
@@ -2527,8 +2535,9 @@ impl MultiWorkspace {
 
     #[cfg(any(test, feature = "test-support"))]
     pub fn set_random_database_id(&mut self, cx: &mut Context<Self>) {
-        self.workspace().update(cx, |workspace, _cx| {
+        self.active_workspace_database_id = self.workspace().update(cx, |workspace, _cx| {
             workspace.set_random_database_id();
+            workspace.database_id()
         });
     }
 

@@ -921,7 +921,14 @@ async fn test_remove_project_group_prefers_already_loaded_neighboring_workspace(
         multi_workspace.test_add_workspace(project_b, window, cx)
     });
     multi_workspace.update_in(cx, |multi_workspace, window, cx| {
-        multi_workspace.activate(workspace_a, None, window, cx);
+        multi_workspace.activate(workspace_a.clone(), None, window, cx);
+    });
+    workspace_a.update(cx, |_workspace, cx| {
+        assert_eq!(
+            multi_workspace.read(cx).database_id(cx),
+            None,
+            "durable MultiWorkspace identity must not re-read its active Workspace during an update"
+        );
     });
 
     let removed = multi_workspace
