@@ -9062,6 +9062,7 @@ impl Sidebar {
             DesignSystemSettings::get_global(cx).density,
         );
         let content = h_flex()
+            .id(format!("workspace-activity-heading-{ix}"))
             .role(gpui::Role::Heading)
             .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
@@ -18038,7 +18039,7 @@ impl Sidebar {
                                     )
                                 })
                                 .on_click(move |_, window, cx| {
-                                    window.dispatch_action(&*terminal_action, cx);
+                                    window.dispatch_action(terminal_action.boxed_clone(), cx);
                                 }),
                         )
                     }),
@@ -19493,6 +19494,7 @@ impl Sidebar {
             {
                 rows.push(
                     h_flex()
+                        .id(format!("workspace-pane-heading-{pane_index}"))
                         .role(gpui::Role::Heading)
                         .aria_level(WORKSPACE_PANE_HEADING_LEVEL)
                         .aria_label(workspace_pane_header_accessibility_label(
@@ -19628,6 +19630,7 @@ impl Sidebar {
             }
         }
         let section_header = h_flex()
+            .id("workspace-tabs-heading")
             .role(gpui::Role::Heading)
             .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
@@ -19804,6 +19807,7 @@ impl Sidebar {
                         .gap_1()
                         .child(
                             div()
+                                .id("workspaces-navigation-heading")
                                 .role(gpui::Role::Heading)
                                 .aria_level(WORKSPACES_NAVIGATION_HEADING_LEVEL)
                                 .flex_none()
@@ -19907,6 +19911,7 @@ impl Sidebar {
             title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
+            ui::utils::platform_title_bar_height(window),
         )
     }
 
