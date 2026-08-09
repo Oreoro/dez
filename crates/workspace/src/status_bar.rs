@@ -9,7 +9,7 @@ use gpui::{
     WeakEntity, Window,
 };
 use paths::APP_NAME;
-use project::git_store::{GitStoreEvent, RepositoryEvent};
+use project::git_store::{GitStore, GitStoreEvent, RepositoryEvent};
 use settings::{Settings as _, SettingsContent, SettingsStore, update_settings_file};
 use std::{any::TypeId, path::Path, sync::Arc};
 use theme::CLIENT_SIDE_DECORATION_ROUNDING;
@@ -971,12 +971,12 @@ pub fn add_hide_button_entry(menu: ContextMenu, hide: HideStatusItem) -> Context
 impl StatusBar {
     fn observe_workspace(
         workspace: &WeakEntity<Workspace>,
+        git_store: &Entity<GitStore>,
         cx: &mut Context<Self>,
     ) -> Vec<Subscription> {
         let Some(workspace) = workspace.upgrade() else {
             return Vec::new();
         };
-        let git_store = workspace.read(cx).project().read(cx).git_store().clone();
         vec![
             cx.observe(&workspace, |_, _, cx| cx.notify()),
             cx.subscribe(&workspace, |_, _, event: &WorkspaceEvent, cx| {
@@ -987,7 +987,7 @@ impl StatusBar {
                     cx.notify();
                 }
             }),
-            cx.subscribe(&git_store, |_, _, event, cx| {
+            cx.subscribe(git_store, |_, _, event, cx| {
                 if matches!(
                     event,
                     GitStoreEvent::ActiveRepositoryChanged(_)
@@ -1019,12 +1019,13 @@ impl StatusBar {
     pub fn new(
         active_pane: &Entity<Pane>,
         workspace: WeakEntity<Workspace>,
+        git_store: &Entity<GitStore>,
         multi_workspace: Option<WeakEntity<MultiWorkspace>>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
         let settings_subscription = cx.observe_global::<SettingsStore>(|_, cx| cx.notify());
-        let workspace_subscriptions = Self::observe_workspace(&workspace, cx);
+        let workspace_subscriptions = Self::observe_workspace(&workspace, git_store, cx);
         let observe_multi_workspace = multi_workspace
             .as_ref()
             .and_then(|multi_workspace| Self::observe_multi_workspace(multi_workspace, cx));

@@ -3967,10 +3967,12 @@ impl Workspace {
             .root::<MultiWorkspace>()
             .flatten()
             .map(|mw| mw.downgrade());
+        let git_store = project.read(cx).git_store().clone();
         let status_bar = cx.new(|cx| {
             StatusBar::new(
                 &center_pane.clone(),
                 weak_handle.clone(),
+                &git_store,
                 multi_workspace.clone(),
                 window,
                 cx,
