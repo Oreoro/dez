@@ -462,6 +462,7 @@ impl<T: 'static> Entity<T> {
 
     /// Grab a reference to this entity from the context.
     #[inline]
+    #[track_caller]
     pub fn read<'a>(&self, cx: &'a App) -> &'a T {
         cx.entities.read(self)
     }
