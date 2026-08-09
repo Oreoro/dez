@@ -153,6 +153,7 @@ impl EntityMap {
         self.entities.insert(lease.id, lease.entity.take().unwrap());
     }
 
+    #[track_caller]
     pub fn read<T: 'static>(&self, entity: &Entity<T>) -> &T {
         self.assert_valid_context(entity);
         let mut accessed_entities = self.accessed_entities.borrow_mut();
