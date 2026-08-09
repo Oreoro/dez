@@ -19712,6 +19712,7 @@ impl Sidebar {
             APP_NAME,
             DesignSystemSettings::get_global(cx).density,
         );
+        let header_height = header_tab_density.container_height(cx);
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let header_status_label = session_header_status_label(
             APP_NAME,
@@ -19772,12 +19773,12 @@ impl Sidebar {
 
         h_flex()
             .flex_none()
-            .h(header_tab_density.container_height(cx))
+            .h(header_height)
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .when(left_window_controls, |this| {
-                this.children(Self::render_left_window_controls(window, cx))
+                this.children(Self::render_left_window_controls(window, cx, header_height))
             })
             .when(traffic_lights, |this| {
                 this.child(ui::utils::traffic_light_spacer_with_child(
@@ -19902,24 +19903,37 @@ impl Sidebar {
             })
             .when_some(right_header_buttons, |this, buttons| this.child(buttons))
             .when(right_window_controls, |this| {
-                this.children(Self::render_right_window_controls(window, cx))
+                this.children(Self::render_right_window_controls(
+                    window,
+                    cx,
+                    header_height,
+                ))
             })
     }
 
-    fn render_left_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
+    fn render_left_window_controls(
+        window: &Window,
+        cx: &mut App,
+        height: Pixels,
+    ) -> Option<AnyElement> {
         platform_title_bar::render_left_window_controls(
             title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
-            ui::utils::platform_title_bar_height(window),
+            height,
         )
     }
 
-    fn render_right_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
+    fn render_right_window_controls(
+        window: &Window,
+        cx: &mut App,
+        height: Pixels,
+    ) -> Option<AnyElement> {
         platform_title_bar::render_right_window_controls(
             title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
+            height,
         )
     }
 
