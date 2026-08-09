@@ -159,10 +159,14 @@ impl EntityMap {
         let mut accessed_entities = self.accessed_entities.borrow_mut();
         accessed_entities.insert(entity.entity_id);
 
-        self.entities
+        let Some(entity) = self
+            .entities
             .get(entity.entity_id)
             .and_then(|entity| entity.downcast_ref())
-            .unwrap_or_else(|| double_lease_panic::<T>("read"))
+        else {
+            double_lease_panic::<T>("read")
+        };
+        entity
     }
 
     fn assert_valid_context(&self, entity: &AnyEntity) {
