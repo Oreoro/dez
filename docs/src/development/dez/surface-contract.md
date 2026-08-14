@@ -164,6 +164,23 @@ current Herdr pane. That deliberate action runs Herdr's documented `--takeover`
 path; ordinary row activation, discovery, retry, restore, and startup never add
 it. The label names both the pane and ownership transfer before execution, and
 the resulting attach client remains an ordinary native terminal tab.
+The terminal task records whether that client preserved Herdr ownership or was
+started from the explicit takeover path. While live, a standard attach keeps a native
+**Input in Herdr** control in the terminal context strip; its full accessible
+name explains that Herdr owns input and opens the existing Running Sessions
+list so the user can deliberately choose **Take Control**. Terminal Details
+repeats the same ownership and recovery path. A takeover-created client instead
+states that Dez requested control; neither state is inferred from focus,
+transcript output, or a later lifecycle event.
+Within a Host-owned terminal, consecutive mouse and keyboard packets for that
+same terminal may share one bounded transport batch. Dez preserves their exact
+byte order and never combines input across a resize, lifecycle command, awaited
+request, or another terminal. This keeps mouse-reporting TUIs responsive without
+inventing a second input owner or allowing pointer traffic to starve keystrokes.
+Only the focused terminal emits TUI mouse or alternate-screen wheel reports.
+An unfocused terminal may still resolve native hyperlink hover and ordinary
+scrollback, but pointer input never enters its PTY queue until the user returns
+focus to that terminal.
 Retry and fresh-shell controls include the external owner and target Workspace
 in their accessible names. The fresh-shell description also repeats that tmux
 or Herdr remains external, so compact icon-only recovery does not obscure
@@ -208,8 +225,8 @@ their tabs, and the focused Main Work Area item.
                          Compact        Balanced       Spacious
 Platform title bar      baseline       baseline + 4   baseline + 8
 Main pane tab strip     24 px          32 px          40 px
-Pane chrome target      22 px          28 px          28 px
-Status line             24 px          26 px          30 px
+Pane chrome target      22 px          28 px          32 px
+Status line             24 px          28 px          32 px
 
 ┌ native window title / traffic-light region ─────────────────────────┐
 ├ native pane tabs ─ adjacent + ─ overflow ─ split ─ zoom ────────────┤
@@ -228,6 +245,10 @@ the platform title bar, pane tabs, Workspaces, the Workspace-owned notification
 shelf, and the status line together; the shell must not wait for a Workspace,
 terminal, notification, or focus event before those native owners agree on the
 new metrics.
+
+The native Home actions, Workspaces controls, pane controls, and status-line
+navigation use one 22/28/32 px control-target ladder across Compact, Balanced,
+and Spacious density; their marks remain 12/14/14 px.
 
 The table records the 14 px interface-font scaling baseline. Fresh Dez profiles
 start at 16 px so native tabs, Workspaces, Home, and the status line are
@@ -885,7 +906,7 @@ native tool, honest ownership, inline recovery**.
 | Layout | activation-only Workspaces projection | return to an existing pane or tab | active Workspace header | appears once there are at least two open tabs and then includes every open tab; single-pane headings are omitted; split-pane focus is explicit; tab ownership and overflow stay pane-scoped |
 | Activity | bounded Workspaces projection | observe active, running, actionable, recoverable, or review-ready agents, terminals, tasks, tmux, Herdr, and cmux | Browse Running Sessions or select a row | absent when empty; default preview is at most five top-level rows and prioritizes the current and attention-required destinations; external work begins as one Running Sessions disclosure; native expansion, Search, and Attention scope reveal the complete relevant set; completed history remains in Agent History; sources retain truthful Missing, Empty, Failed, Ready, or last-known state |
 | Terminal | Main Work Area tab | run shell, TUI, task, or attach command | Home, tab `+`, File, Workspace menu | preserves output; launch failure deep-links to Terminal Launch settings; attach failure offers Retry or a fresh shell |
-| Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux and Herdr remain external owners while the tab owns only its attach client; terminal output remains authoritative and unobscured |
+| Terminal Details | inline Terminal disclosure | inspect authoritative status, Agent or process, path, Git context, and ownership | terminal context strip | connection uncertainty never claims process death; tmux remains external, standard Herdr attach names Herdr as the input owner and routes to explicit takeover, and a takeover client names only the control request; terminal output remains authoritative and unobscured |
 | Editor, diff, Files, Search, Diagnostics | Main Work Area tabs | inspect and modify the codebase | native Zed actions, tab `+`, Workspaces projection | inline idle/loading/no-match states; Diagnostics keeps keyboard actions and explicit Refresh |
 | Tasks | Main Work Area terminal tab | run a saved task or a one-shot command | tab `+`, command palette, pane Add | loading names Workspace inventory; empty and unmatched states explain the one-shot command path |
 | Agent Review | Main Work Area tab | inspect and decide agent edits | Review Changes, changed-file Review | pending edits disable decisions with an explanation; no custom overlay |
@@ -921,7 +942,7 @@ status; those remain explicit native status-line controls.
   rows, and status-bar controls. Compact navigation uses 22px targets with
   12px marks; Balanced uses 22–28px targets with 14px marks; Spacious uses
   28–32px targets with 14px marks. Status type remains supporting text and the
-  Dez status bar scales from 24–30px.
+  Dez status bar scales from 24–32px.
 - Keep labels beside navigation icons. Provider glyphs identify a tool; state
   text identifies lifecycle.
 - Keep repeated Saved Workspace Layout actions distinguishable. Save, Restore,
@@ -1072,6 +1093,10 @@ status; those remain explicit native status-line controls.
 - Terminal Details expands inline, exposes its expanded or collapsed state to
   assistive navigation, summarizes Status, Agent or Process, Path, Git, and
   Ownership, and never obscures or re-renders terminal output.
+- A live standard Herdr attach exposes **Input in Herdr** in native terminal chrome,
+  names Herdr as the current input owner at compact widths, and opens Running
+  Sessions without taking control. A takeover-created attach records and names
+  the explicit control request instead of showing the observational recovery.
 - Provider and subagent glyphs use the shared icon family; lifecycle remains
   readable without color.
 - Empty, loading, permission, attach-failure, disconnected-host, and legacy

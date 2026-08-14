@@ -1363,7 +1363,7 @@ impl workspace::Item for FailedToSpawnTerminal {
         terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
     }
 
-    fn tab_icon(&self, _cx: &App) -> Option<Icon> {
+    fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
         terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
     }
 

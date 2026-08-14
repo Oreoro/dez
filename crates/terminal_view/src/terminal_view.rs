@@ -69,9 +69,9 @@ use ui::{
 };
 use util::ResultExt;
 use workspace::{
-    CloseActiveItem, DesignSystemSettings, DraggedSelection, DraggedTab, NewCenterTerminal,
-    NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles, Toast,
-    ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
+    BrowseRunningSessions, CloseActiveItem, DesignSystemSettings, DraggedSelection, DraggedTab,
+    NewCenterTerminal, NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles,
+    Toast, ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
@@ -562,12 +562,78 @@ fn terminal_details_ownership_note(
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ExternalSessionInputOwnershipIntent {
+    PreserveExternal,
+    RequestTakeover,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ExternalSessionTaskMetadata<'a> {
+    owner: &'a str,
+    input_ownership_intent: ExternalSessionInputOwnershipIntent,
+}
+
+fn external_session_task_metadata(task_id: &str) -> Option<ExternalSessionTaskMetadata<'_>> {
+    let metadata = task_id.strip_prefix("dez-external-session:")?;
+    let (first_field, remainder) = metadata.split_once(':')?;
+    if first_field != "v2" {
+        return (!first_field.is_empty() && !remainder.is_empty()).then_some(
+            ExternalSessionTaskMetadata {
+                owner: first_field,
+                input_ownership_intent: ExternalSessionInputOwnershipIntent::PreserveExternal,
+            },
+        );
+    }
+
+    let (owner, remainder) = remainder.split_once(':')?;
+    let (input_ownership_intent, session_id) = remainder.split_once(':')?;
+    if owner.is_empty() || session_id.is_empty() {
+        return None;
+    }
+    let input_ownership_intent = match input_ownership_intent {
+        "preserve-external" => ExternalSessionInputOwnershipIntent::PreserveExternal,
+        "request-takeover" => ExternalSessionInputOwnershipIntent::RequestTakeover,
+        _ => return None,
+    };
+    Some(ExternalSessionTaskMetadata {
+        owner,
+        input_ownership_intent,
+    })
+}
+
 fn external_session_owner_from_task_id(task_id: &str) -> Option<&str> {
-    task_id
-        .strip_prefix("dez-external-session:")?
-        .split_once(':')
-        .map(|(owner, _)| owner)
-        .filter(|owner| !owner.is_empty())
+    external_session_task_metadata(task_id).map(|metadata| metadata.owner)
+}
+
+fn herdr_preserves_external_input_ownership(
+    metadata: Option<ExternalSessionTaskMetadata<'_>>,
+) -> bool {
+    metadata.is_some_and(|metadata| {
+        metadata.owner.eq_ignore_ascii_case("Herdr")
+            && metadata.input_ownership_intent
+                == ExternalSessionInputOwnershipIntent::PreserveExternal
+    })
+}
+
+fn terminal_external_input_owner_action_label(
+    width: Pixels,
+    metadata: Option<ExternalSessionTaskMetadata<'_>>,
+    task_running: bool,
+) -> Option<&'static str> {
+    (task_running && herdr_preserves_external_input_ownership(metadata)).then_some(
+        if width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH {
+            "Input in Herdr"
+        } else {
+            ""
+        },
+    )
+}
+
+fn terminal_external_input_owner_action_accessibility_label(workspace_label: &str) -> String {
+    format!(
+        "Herdr owns input for this pane; open Running Sessions for Workspace {workspace_label} to choose Take Control in Dez"
+    )
 }
 
 fn external_session_attach_failed(task_id: &str, task_status: &TaskStatus) -> bool {
@@ -636,11 +702,21 @@ fn terminal_unavailable_new_shell_label(app_name: &str) -> &'static str {
 fn terminal_details_ownership_note_with_external_owner(
     has_persistent_owner: bool,
     host_connection_verified: bool,
-    external_owner: Option<&str>,
+    external_session: Option<ExternalSessionTaskMetadata<'_>>,
 ) -> String {
-    if let Some(external_owner) = external_owner {
+    if herdr_preserves_external_input_ownership(external_session) {
+        "Input · Herdr owns this pane · Open Running Sessions and choose Take Control to interact in Dez."
+            .to_owned()
+    } else if external_session.is_some_and(|metadata| {
+        metadata.owner.eq_ignore_ascii_case("Herdr")
+            && metadata.input_ownership_intent
+                == ExternalSessionInputOwnershipIntent::RequestTakeover
+    }) {
+        "Input · Dez requested control from Herdr for this attach.".to_owned()
+    } else if let Some(external_session) = external_session {
         format!(
-            "Ownership · {external_owner} remains external · This tab owns only the attach client."
+            "Ownership · {} remains external · This tab owns only the attach client.",
+            external_session.owner
         )
     } else {
         terminal_details_ownership_note(has_persistent_owner, host_connection_verified).to_owned()
@@ -1782,7 +1858,7 @@ impl workspace::Item for FailedToSpawnTerminal {
         terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
     }
 
-    fn tab_icon(&self, _cx: &App) -> Option<Icon> {
+    fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
         terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
     }
 
@@ -3425,8 +3501,9 @@ impl TerminalView {
         );
 
         let terminal_task = terminal.task();
-        let external_owner = terminal_task
-            .and_then(|task| external_session_owner_from_task_id(&task.spawned_task.id.0));
+        let external_session =
+            terminal_task.and_then(|task| external_session_task_metadata(&task.spawned_task.id.0));
+        let external_owner = external_session.map(|metadata| metadata.owner);
         let external_attach_retry_task_id = terminal_task
             .filter(|task| external_session_attach_failed(&task.spawned_task.id.0, &task.status))
             .map(|task| task.spawned_task.id.clone());
@@ -3447,6 +3524,13 @@ impl TerminalView {
             external_owner_label,
             &workspace_label,
         );
+        let external_input_owner_visible_label = terminal_external_input_owner_action_label(
+            context_width,
+            external_session,
+            terminal_task.is_some_and(|task| task.status == TaskStatus::Running),
+        );
+        let external_input_owner_accessibility_label =
+            terminal_external_input_owner_action_accessibility_label(&workspace_label);
 
         let details_status = format!("Status · {activity_accessibility_label}");
         let details_process = terminal_details_process_summary(
@@ -3487,7 +3571,7 @@ impl TerminalView {
         let ownership_note = terminal_details_ownership_note_with_external_owner(
             has_persistent_owner,
             host_connection_verified,
-            external_owner,
+            external_session,
         );
         let details_toggle = Button::new(
             ("terminal-session-details-trigger", terminal_entity_id),
@@ -3720,6 +3804,34 @@ impl TerminalView {
                                 }),
                             )
                         })
+                        .when_some(
+                            external_input_owner_visible_label,
+                            |this, visible_label| {
+                                let accessibility_label =
+                                    external_input_owner_accessibility_label.clone();
+                                let tooltip_label = accessibility_label.clone();
+                                this.child(
+                                    Button::new(
+                                        ("terminal-context-herdr-input-owner", terminal_entity_id),
+                                        visible_label,
+                                    )
+                                    .size(ButtonSize::Compact)
+                                    .style(ButtonStyle::Subtle)
+                                    .start_icon(
+                                        Icon::new(IconName::Inception).size(IconSize::XSmall),
+                                    )
+                                    .tab_index(0isize)
+                                    .aria_label(accessibility_label)
+                                    .tooltip(Tooltip::text(tooltip_label))
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            BrowseRunningSessions.boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                                )
+                            },
+                        )
                         .when(has_workspace_files, |this| {
                             this.child(
                                 Button::new(
@@ -3871,6 +3983,7 @@ impl Render for TerminalView {
                                 )
                                 .child(
                                     h_flex()
+                                        .id("terminal-unavailable-heading")
                                         .role(gpui::Role::Heading)
                                         .aria_level(1)
                                         .aria_label("Terminal unavailable")
@@ -3906,7 +4019,10 @@ impl Render for TerminalView {
                                     )
                                 })
                                 .on_click(move |_, window, cx| {
-                                    window.dispatch_action(&*unavailable_new_shell_action, cx);
+                                    window.dispatch_action(
+                                        unavailable_new_shell_action.boxed_clone(),
+                                        cx,
+                                    );
                                 }),
                             ),
                         ),
@@ -5395,6 +5511,38 @@ mod tests {
             external_session_owner_from_task_id("dez-external-session:Herdr:session-1"),
             Some("Herdr")
         );
+        let observed_herdr = external_session_task_metadata(
+            "dez-external-session:v2:Herdr:preserve-external:session-1",
+        );
+        let controlled_herdr = external_session_task_metadata(
+            "dez-external-session:v2:Herdr:request-takeover:session-1",
+        );
+        assert_eq!(
+            observed_herdr,
+            Some(ExternalSessionTaskMetadata {
+                owner: "Herdr",
+                input_ownership_intent: ExternalSessionInputOwnershipIntent::PreserveExternal,
+            })
+        );
+        assert_eq!(
+            controlled_herdr,
+            Some(ExternalSessionTaskMetadata {
+                owner: "Herdr",
+                input_ownership_intent: ExternalSessionInputOwnershipIntent::RequestTakeover,
+            })
+        );
+        assert_eq!(
+            external_session_owner_from_task_id(
+                "dez-external-session:v2:tmux:preserve-external:tmux:$0"
+            ),
+            Some("tmux")
+        );
+        assert_eq!(
+            external_session_task_metadata(
+                "dez-external-session:v2:Herdr:unknown-intent:session-1"
+            ),
+            None
+        );
         assert_eq!(external_session_owner_from_task_id("terminal:task"), None);
         assert!(external_session_attach_failed(
             "dez-external-session:tmux:$0",
@@ -5438,6 +5586,26 @@ mod tests {
             "Open a new native shell in Workspace paykit; Herdr remains external"
         );
         assert_eq!(
+            terminal_external_input_owner_action_label(px(719.), observed_herdr, true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(720.), observed_herdr, true),
+            Some("Input in Herdr")
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(920.), controlled_herdr, true),
+            None
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(920.), observed_herdr, false),
+            None
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_accessibility_label("paykit"),
+            "Herdr owns input for this pane; open Running Sessions for Workspace paykit to choose Take Control in Dez"
+        );
+        assert_eq!(
             terminal_context_open_action_label("Dez", Some("codex --yolo")),
             "Open Terminal · Codex"
         );
@@ -5454,8 +5622,20 @@ mod tests {
             "Start Fresh Terminal"
         );
         assert_eq!(
-            terminal_details_ownership_note_with_external_owner(false, false, Some("tmux")),
+            terminal_details_ownership_note_with_external_owner(
+                false,
+                false,
+                external_session_task_metadata("dez-external-session:tmux:$0"),
+            ),
             "Ownership · tmux remains external · This tab owns only the attach client."
+        );
+        assert_eq!(
+            terminal_details_ownership_note_with_external_owner(false, false, observed_herdr,),
+            "Input · Herdr owns this pane · Open Running Sessions and choose Take Control to interact in Dez."
+        );
+        assert_eq!(
+            terminal_details_ownership_note_with_external_owner(false, false, controlled_herdr,),
+            "Input · Dez requested control from Herdr for this attach."
         );
         assert_eq!(
             terminal_surface_tab_label("Dez", "Codex"),

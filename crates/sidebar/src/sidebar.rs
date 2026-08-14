@@ -3098,11 +3098,11 @@ mod session_start_state_tests {
         );
         assert!(
             workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Balanced)
-                == (ButtonSize::Default, IconSize::Small)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert!(
             workspace_navigation_control_metrics("Dez", settings::CanvasDensity::Spacious)
-                == (ButtonSize::Medium, IconSize::Small)
+                == (ButtonSize::Large, IconSize::Small)
         );
         assert!(
             workspace_navigation_control_metrics("Zed", settings::CanvasDensity::Compact)
@@ -3130,11 +3130,11 @@ mod session_start_state_tests {
         );
         assert!(
             workspace_open_row_metrics("Dez", settings::CanvasDensity::Balanced)
-                == (ButtonSize::Default, IconSize::Small)
+                == (ButtonSize::Medium, IconSize::Small)
         );
         assert!(
             workspace_open_row_metrics("Dez", settings::CanvasDensity::Spacious)
-                == (ButtonSize::Medium, IconSize::Small)
+                == (ButtonSize::Large, IconSize::Small)
         );
         assert_eq!(
             workspace_running_session_label_size("Dez"),
@@ -4488,6 +4488,7 @@ fn external_session_attach_spawn(
     owner: &str,
     session_id: &str,
     working_directory: Option<PathBuf>,
+    takeover: bool,
     open: ExternalSessionCommand,
 ) -> SpawnInTerminal {
     let ExternalSessionCommand {
@@ -4496,8 +4497,15 @@ fn external_session_attach_spawn(
         label,
         ..
     } = open;
+    let input_ownership_intent = if takeover {
+        "request-takeover"
+    } else {
+        "preserve-external"
+    };
     SpawnInTerminal {
-        id: TaskId(format!("dez-external-session:{owner}:{session_id}")),
+        id: TaskId(format!(
+            "dez-external-session:v2:{owner}:{input_ownership_intent}:{session_id}"
+        )),
         full_label: label.clone(),
         label: label.clone(),
         command: None,
@@ -4644,6 +4652,7 @@ mod external_multiplexer_project_group_tests {
             "tmux",
             "tmux:$1",
             Some(PathBuf::from("/workspace/dez")),
+            false,
             ExternalSessionCommand {
                 program: "/opt/homebrew/bin/tmux".to_owned(),
                 args: vec![
@@ -4658,7 +4667,10 @@ mod external_multiplexer_project_group_tests {
 
         assert_eq!(spawn.command, None);
         assert!(spawn.args.is_empty());
-        assert_eq!(spawn.id, TaskId("dez-external-session:tmux:tmux:$1".into()));
+        assert_eq!(
+            spawn.id,
+            TaskId("dez-external-session:v2:tmux:preserve-external:tmux:$1".into())
+        );
         assert_eq!(spawn.cwd, Some(PathBuf::from("/workspace/dez")));
         assert_eq!(
             spawn.shell,
@@ -4671,6 +4683,39 @@ mod external_multiplexer_project_group_tests {
                 ],
                 title_override: Some("Attach compiler".to_owned()),
             }
+        );
+    }
+
+    #[test]
+    fn external_attach_records_input_ownership_intent() {
+        let command = ExternalSessionCommand {
+            program: "/opt/homebrew/bin/herdr".to_owned(),
+            args: vec!["agent".to_owned(), "attach".to_owned(), "pane-1".to_owned()],
+            label: "Attach Fix parser".to_owned(),
+            mode: ExternalSessionOpenMode::AttachInTerminal,
+        };
+        let observed = external_session_attach_spawn(
+            "Herdr",
+            "pane-1",
+            Some(PathBuf::from("/workspace/dez")),
+            false,
+            command.clone(),
+        );
+        let controlled = external_session_attach_spawn(
+            "Herdr",
+            "pane-1",
+            Some(PathBuf::from("/workspace/dez")),
+            true,
+            command,
+        );
+
+        assert_eq!(
+            observed.id,
+            TaskId("dez-external-session:v2:Herdr:preserve-external:pane-1".into())
+        );
+        assert_eq!(
+            controlled.id,
+            TaskId("dez-external-session:v2:Herdr:request-takeover:pane-1".into())
         );
     }
 
@@ -9017,6 +9062,7 @@ impl Sidebar {
             DesignSystemSettings::get_global(cx).density,
         );
         let content = h_flex()
+            .id(format!("workspace-activity-heading-{ix}"))
             .role(gpui::Role::Heading)
             .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
@@ -17503,6 +17549,7 @@ impl Sidebar {
             session.kind.display_name(),
             &session.id,
             session.working_directory.clone(),
+            takeover,
             open,
         );
 
@@ -17992,7 +18039,7 @@ impl Sidebar {
                                     )
                                 })
                                 .on_click(move |_, window, cx| {
-                                    window.dispatch_action(&*terminal_action, cx);
+                                    window.dispatch_action(terminal_action.boxed_clone(), cx);
                                 }),
                         )
                     }),
@@ -19447,6 +19494,7 @@ impl Sidebar {
             {
                 rows.push(
                     h_flex()
+                        .id(format!("workspace-pane-heading-{pane_index}"))
                         .role(gpui::Role::Heading)
                         .aria_level(WORKSPACE_PANE_HEADING_LEVEL)
                         .aria_label(workspace_pane_header_accessibility_label(
@@ -19582,6 +19630,7 @@ impl Sidebar {
             }
         }
         let section_header = h_flex()
+            .id("workspace-tabs-heading")
             .role(gpui::Role::Heading)
             .aria_level(WORKSPACE_SECTION_HEADING_LEVEL)
             .w_full()
@@ -19663,6 +19712,7 @@ impl Sidebar {
             APP_NAME,
             DesignSystemSettings::get_global(cx).density,
         );
+        let header_height = header_tab_density.container_height(cx);
         let is_restoring = self.workspace_restore_status_is_visible(cx);
         let header_status_label = session_header_status_label(
             APP_NAME,
@@ -19723,7 +19773,7 @@ impl Sidebar {
 
         h_flex()
             .flex_none()
-            .h(header_tab_density.container_height(cx))
+            .h(header_height)
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)
@@ -19758,6 +19808,7 @@ impl Sidebar {
                         .gap_1()
                         .child(
                             div()
+                                .id("workspaces-navigation-heading")
                                 .role(gpui::Role::Heading)
                                 .aria_level(WORKSPACES_NAVIGATION_HEADING_LEVEL)
                                 .flex_none()
@@ -19852,7 +19903,11 @@ impl Sidebar {
             })
             .when_some(right_header_buttons, |this, buttons| this.child(buttons))
             .when(right_window_controls, |this| {
-                this.children(Self::render_right_window_controls(window, cx))
+                this.children(Self::render_right_window_controls(
+                    window,
+                    cx,
+                    header_height,
+                ))
             })
     }
 
@@ -19864,11 +19919,16 @@ impl Sidebar {
         )
     }
 
-    fn render_right_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
+    fn render_right_window_controls(
+        window: &Window,
+        cx: &mut App,
+        height: Pixels,
+    ) -> Option<AnyElement> {
         platform_title_bar::render_right_window_controls(
             title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
+            height,
         )
     }
 

@@ -120,9 +120,8 @@ fn canvas_tab_bar_control_metrics_for_density(
 ) -> (ButtonSize, IconSize) {
     match density {
         settings::CanvasDensity::Compact => (ButtonSize::Default, IconSize::XSmall),
-        settings::CanvasDensity::Balanced | settings::CanvasDensity::Spacious => {
-            (ButtonSize::Medium, IconSize::Small)
-        }
+        settings::CanvasDensity::Balanced => (ButtonSize::Medium, IconSize::Small),
+        settings::CanvasDensity::Spacious => (ButtonSize::Large, IconSize::Small),
     }
 }
 
@@ -5925,7 +5924,7 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                     let menu = menu
                         .submenu("Open Terminal", move |menu, _, _| {
                             menu.action_with_icon(
-                                default_terminal_label,
+                                default_terminal_label.clone(),
                                 default_terminal_icon,
                                 zed_actions::terminal::OpenAgentTerminal.boxed_clone(),
                             )
@@ -7235,7 +7234,7 @@ mod tests {
         );
         assert!(
             canvas_tab_bar_control_metrics_for_density(settings::CanvasDensity::Spacious)
-                == (ButtonSize::Medium, IconSize::Small)
+                == (ButtonSize::Large, IconSize::Small)
         );
     }
 
