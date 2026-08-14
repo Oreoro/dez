@@ -3846,6 +3846,27 @@ reject_pattern crates/system_specs/src/system_specs.rs \
     '"Zed: v\{\}' \
     'system diagnostics still label the running product as Zed'
 
+require_file .github/workflows/dez-release.yml \
+    'the Dez multi-platform release pipeline is missing'
+require_multiline_pattern .github/workflows/dez-release.yml \
+    'name: Dez release.*?DEZ_RELEASE_KIND.*?DEZ_BUNDLE_CHANNEL.*?release-artifacts/Dez-macOS-M2\.dmg.*?release-artifacts/dez-linux-x86_64\.tar\.gz.*?release-artifacts/dez-linux-aarch64\.tar\.gz.*?release-artifacts/Dez-x86_64\.exe.*?release-artifacts/Dez-aarch64\.exe.*?--repo="\$GITHUB_REPOSITORY"' \
+    'the Dez release pipeline can regress to Zed-named assets or an upstream repo target'
+reject_pattern .github/workflows/dez-release.yml \
+    'namespace-profile|zed-industries/zed|github\.repository_owner == .zed-industries.' \
+    'the Dez release pipeline can regress to upstream-owned runners, repo targets, or owner gating that never runs for the fork'
+require_pattern script/bundle-linux \
+    'release/dez' \
+    'the Linux bundle can regress to packaging the removed upstream zed binary'
+require_multiline_pattern script/bundle-linux \
+    'DEZ_BUNDLE_CHANNEL:-\$channel.*?case "\$channel" in.*?dev\|nightly\|preview\|stable.*?export ZED_RELEASE_CHANNEL' \
+    'the Linux bundle can regress to ignoring the Dez channel override'
+require_pattern script/bundle-windows.ps1 \
+    '\$CargoOutDir\\dez\.exe' \
+    'the Windows bundle can regress to copying the removed upstream zed binary'
+require_multiline_pattern script/bundle-windows.ps1 \
+    'DEZ_BUNDLE_CHANNEL.*?\$channel = \$env:DEZ_BUNDLE_CHANNEL.*?\$env:ZED_RELEASE_CHANNEL = \$channel' \
+    'the Windows bundle can regress to ignoring the Dez channel override'
+
 node script/dez-theme-check
 
 echo "Dez identity checks passed"
