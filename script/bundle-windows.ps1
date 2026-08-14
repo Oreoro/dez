@@ -58,6 +58,11 @@ if ($Help) {
 
 Push-Location -Path crates/zed
 $channel = Get-Content "RELEASE_CHANNEL"
+if ($env:DEZ_BUNDLE_CHANNEL) {
+    # Manual fork builds may select one of the existing Dez bundle identities
+    # without rewriting the checked-in development channel.
+    $channel = $env:DEZ_BUNDLE_CHANNEL
+}
 $env:ZED_RELEASE_CHANNEL = $channel
 $env:RELEASE_CHANNEL = $channel
 Pop-Location
@@ -117,7 +122,7 @@ function BuildZedAndItsFriends {
     Write-Output "Building Zed and its friends, for channel: $channel"
     # Build zed.exe, cli.exe and auto_update_helper.exe
     cargo build --release --package zed --package cli --package auto_update_helper --target $target
-    Copy-Item -Path ".\$CargoOutDir\zed.exe" -Destination "$innoDir\Zed.exe" -Force
+    Copy-Item -Path ".\$CargoOutDir\dez.exe" -Destination "$innoDir\Zed.exe" -Force
     Copy-Item -Path ".\$CargoOutDir\cli.exe" -Destination "$innoDir\cli.exe" -Force
     Copy-Item -Path ".\$CargoOutDir\auto_update_helper.exe" -Destination "$innoDir\auto_update_helper.exe" -Force
     # Build explorer_command_injector.dll

@@ -1,0 +1,924 @@
+name: Dez release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_kind:
+        description: Artifact release policy
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - stable
+      platforms:
+        description: Platforms to build
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - macos-arm64
+          - linux-x86_64
+          - linux-aarch64
+          - windows-x86_64
+          - windows-aarch64
+      release_tag:
+        description: >-
+          Optional tag to assemble a draft GitHub Release from the built
+          artifacts (for example v0.4.0). Leave empty to keep the artifacts
+          on the workflow run.
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dez-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+  # workflow_dispatch picks the release_kind input; a tag push derives it from
+  # the tag name (v*-pre is a preview, anything else is a stable candidate).
+  DEZ_RELEASE_KIND: ${{ inputs.release_kind || (endsWith(github.ref, '-pre') && 'preview') || 'stable' }}
+  DEZ_BUNDLE_CHANNEL: ${{ inputs.release_kind || (endsWith(github.ref, '-pre') && 'preview') || 'stable' }}
+
+jobs:
+  guards:
+    name: Dez identity and bundle script guards
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Install guard prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
+
+      - name: Verify Dez identity and bundle scripts
+        run: |
+          set -euo pipefail
+          bash -n script/bundle-mac
+          bash -n script/bundle-linux
+          ./script/dez-identity-check
+
+  build_macos_arm64:
+    name: macOS Apple M2 app
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJson('["all", "macos-arm64"]'), inputs.platforms)
+    needs: guards
+    runs-on: macos-15
+    timeout-minutes: 360
+    env:
+      CARGO_PROFILE_RELEASE_DEBUG: "0"
+      CARGO_PROFILE_RELEASE_STRIP: symbols
+      CARGO_PROFILE_RELEASE_PACKAGE_ZED_CODEGEN_UNITS: "1"
+      DEZ_BUNDLE_SKIP_REMOTE_SERVER: "true"
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+      APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+      APPLE_NOTARIZATION_ISSUER_ID: ${{ secrets.APPLE_NOTARIZATION_ISSUER_ID }}
+      RUSTFLAGS: "-C symbol-mangling-version=v0 --cfg tokio_unstable -C target-cpu=apple-m2"
+
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          check-latest: true
+          package-manager-cache: false
+
+      - name: Install guard prerequisites
+        run: command -v rg >/dev/null || brew install ripgrep
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bundle
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-macos-arm64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-macos-arm64-
+
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-apple-darwin/release/.fingerprint
+            target/aarch64-apple-darwin/release/build
+            target/aarch64-apple-darwin/release/deps
+          key: dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-
+
+      - name: Verify the Apple M2 build target
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "arm64"
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "aarch64-apple-darwin"
+          mkdir -p target
+          printf 'fn main() {}\n' |
+            rustc \
+              --target aarch64-apple-darwin \
+              -C target-cpu=apple-m2 \
+              --emit=metadata \
+              -o target/apple-m2-target-check.rmeta \
+              -
+          echo "Runner CPU: $(sysctl -n machdep.cpu.brand_string)"
+          echo "Dez target CPU: apple-m2"
+
+      - name: Verify Dez source and bundle guards
+        run: |
+          set -euo pipefail
+          bash -n script/bundle-mac
+          ./script/dez-identity-check
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            for credential in \
+              MACOS_SIGNING_IDENTITY \
+              MACOS_CERTIFICATE \
+              MACOS_CERTIFICATE_PASSWORD \
+              APPLE_NOTARIZATION_KEY \
+              APPLE_NOTARIZATION_KEY_ID \
+              APPLE_NOTARIZATION_ISSUER_ID
+            do
+              if [[ -z "${!credential:-}" ]]; then
+                echo "::error::Stable Dez builds require $credential"
+                exit 1
+              fi
+            done
+          fi
+
+      - name: Run focused Workspace, terminal, and integration regressions
+        run: |
+          set -euo pipefail
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package workspace \
+            test_remove_project_group_prefers_already_loaded_neighboring_workspace \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package terminal_view \
+            test_inline_terminal_displays_all_of_its_lines \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package terminal_view \
+            startup_command_tests \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package sidebar \
+            test_find_or_create_workspace_returns_the_created_remote_workspace \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package agent_ui \
+            multiplexer_session_store::tests \
+            -- \
+            --nocapture
+
+      - name: Build the optimized Dez application bundle
+        id: build-dez
+        run: |
+          set -euo pipefail
+          ./script/bundle-mac aarch64-apple-darwin
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez.outcome == 'success' || steps.build-dez.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-apple-darwin/release/.fingerprint
+            target/aarch64-apple-darwin/release/build
+            target/aarch64-apple-darwin/release/deps
+          key: dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and package the launchable application
+        run: |
+          set -euo pipefail
+          dmg=target/aarch64-apple-darwin/release/Dez-aarch64.dmg
+          test -f "$dmg"
+          hdiutil verify "$dmg"
+
+          mount_dir="${RUNNER_TEMP}/dez-m2-dmg"
+          mkdir -p "$mount_dir"
+          hdiutil attach \
+            -readonly \
+            -nobrowse \
+            -mountpoint "$mount_dir" \
+            "$dmg" \
+            >target/dez-dmg-attach.txt
+          trap 'hdiutil detach "$mount_dir" >/dev/null' EXIT
+
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            expected_name=Dez
+            expected_bundle_id=dev.dez.Dez
+            artifact_label=Dez
+          else
+            expected_name="Dez Preview"
+            expected_bundle_id=dev.dez.Dez-Preview
+            artifact_label=Dez-Preview
+          fi
+          expected_version="$(
+            sed -n 's/^version = "\([^"]*\)"/\1/p' crates/zed/Cargo.toml |
+              head -n 1
+          )"
+          test -n "$expected_version"
+          app="$mount_dir/${expected_name}.app"
+          plist="$app/Contents/Info.plist"
+          main="$app/Contents/MacOS/dez"
+          cli="$app/Contents/MacOS/cli"
+          terminal_host="$app/Contents/MacOS/dez-terminal-host"
+          git_binary="$app/Contents/MacOS/git"
+
+          test -d "$app"
+          test -f "$plist"
+          plutil -lint "$plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = "$expected_name"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = "$expected_bundle_id"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")" = "dez"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = "$expected_version"
+
+          for binary in "$main" "$cli" "$terminal_host" "$git_binary"; do
+            test -x "$binary"
+            test "$(lipo -archs "$binary")" = "arm64"
+          done
+
+          codesign --verify --deep --strict --verbose=2 "$app"
+          signature_details="$(codesign -dv --verbose=4 "$app" 2>&1)"
+          if grep -q '^Authority=Developer ID Application:' <<<"$signature_details"; then
+            release_signed=true
+            spctl --assess --type execute --verbose=2 "$app"
+          else
+            release_signed=false
+          fi
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            if [[ "$release_signed" != true ]]; then
+              echo "::error::Stable Dez artifacts require a Developer ID Application signature"
+              exit 1
+            fi
+            if ! grep -Eq '^TeamIdentifier=[A-Z0-9]+$' <<<"$signature_details"; then
+              echo "::error::Stable Dez artifacts require a stable signing TeamIdentifier"
+              exit 1
+            fi
+            xcrun stapler validate "$dmg"
+          fi
+
+          artifact_dir="target/dez-macos-m2-${DEZ_RELEASE_KIND}"
+          mkdir -p "$artifact_dir"
+          artifact_dmg="${artifact_label}-macOS-M2.dmg"
+          cp "$dmg" "$artifact_dir/$artifact_dmg"
+
+          system_specs="$("$main" --system-specs)"
+          if ! grep -F "(${expected_name})" <<<"$system_specs"; then
+            echo "::error::Packaged binary release channel does not match $expected_name"
+            printf '%s\n' "$system_specs"
+            exit 1
+          fi
+
+          {
+            echo "Packaged entry-point smoke test"
+            echo "================================"
+            echo
+            printf '%s\n' "$system_specs"
+            echo
+            "$cli" --dez "$app" --version
+            echo
+            "$terminal_host" --help
+          } >"$artifact_dir/runtime-smoke.txt"
+          grep -F "$expected_name" "$artifact_dir/runtime-smoke.txt"
+          grep -F "$expected_version" "$artifact_dir/runtime-smoke.txt"
+          grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
+
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "release_kind=$DEZ_RELEASE_KIND"
+            echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
+            echo "target=aarch64-apple-darwin"
+            echo "target_cpu=apple-m2"
+            echo "optimization=release thin-LTO single-codegen-unit stripped"
+            echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
+            echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
+            echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            echo "binary_channel=$expected_name"
+            if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+              echo "signature=Developer ID (notarized)"
+            elif [[ "$release_signed" = true ]]; then
+              echo "signature=Developer ID Preview (not a stable release)"
+            else
+              echo "signature=ad-hoc Preview (not notarized; not a stable release)"
+            fi
+            rustc --version
+            cargo --version
+            file "$main" "$cli" "$terminal_host" "$git_binary"
+            codesign -dv --verbose=4 "$app" 2>&1
+            shasum -a 256 "$main" "$cli" "$terminal_host" "$git_binary"
+          } >"$artifact_dir/build-manifest.txt"
+
+          {
+            echo "$expected_name for Apple M2"
+            echo "================================"
+            echo
+            echo "1. Open $artifact_dmg."
+            echo "2. Drag ${expected_name}.app to Applications."
+            echo
+            if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+              echo "3. Open Dez from Applications."
+              echo
+              echo "This Dez $expected_version stable release has a Developer ID signature and notarization."
+              echo "macOS can therefore retain protected-folder decisions across"
+              echo "upgrades that keep the same Dez signing identity."
+            else
+              echo "3. Control-click ${expected_name} in Applications, choose Open, then Open."
+              echo
+              echo "This is a Dez $expected_version Preview artifact, not a stable release."
+              echo "It may be ad-hoc signed and not notarized."
+              echo "Because rebuilt ad-hoc apps do not have a stable Apple signing"
+              echo "identity, macOS can ask again before accessing protected folders"
+              echo "such as Documents. Keep active code under ~/Developer to avoid"
+              echo "that protected-folder prompt, or use a Developer ID signed build."
+              echo
+              echo "If Finder reports that this exact trusted build is damaged, run:"
+              echo
+              echo "    xattr -dr com.apple.quarantine \"/Applications/${expected_name}.app\""
+            fi
+            echo
+            echo "The application, CLI, terminal host, Git helper, resources, bundle"
+            echo "identifier, arm64 architecture, deep signature, and packaged"
+            echo "entry points were verified in GitHub Actions before upload."
+          } >"$artifact_dir/INSTALL.txt"
+
+          (
+            cd "$artifact_dir"
+            shasum -a 256 "$artifact_dmg" >SHA256SUMS.txt
+            shasum -a 256 -c SHA256SUMS.txt
+          )
+
+          hdiutil detach "$mount_dir"
+          trap - EXIT
+
+      - name: Upload the launchable Dez application
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Dez-${{ env.DEZ_RELEASE_KIND }}-macOS-M2-${{ github.sha }}
+          path: target/dez-macos-m2-${{ env.DEZ_RELEASE_KIND }}/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  build_linux_x86_64:
+    name: Linux x86_64 bundle
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJson('["all", "linux-x86_64"]'), inputs.platforms)
+    needs: guards
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Install Linux build dependencies
+        run: ./script/linux
+
+      - name: Download the WASI SDK
+        run: ./script/download-wasi-sdk
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bundle
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-linux-x86_64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-linux-x86_64-
+
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/x86_64-unknown-linux-gnu/release/.fingerprint
+            target/x86_64-unknown-linux-gnu/release/build
+            target/x86_64-unknown-linux-gnu/release/deps
+          key: dez-rust-release-linux-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-linux-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-linux-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-linux-x86_64-${{ hashFiles('rust-toolchain.toml') }}-
+
+      - name: Build the Dez Linux bundle
+        id: build-dez-linux
+        run: |
+          set -euo pipefail
+          bash -n script/bundle-linux
+          ./script/bundle-linux
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez-linux.outcome == 'success' || steps.build-dez-linux.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/x86_64-unknown-linux-gnu/release/.fingerprint
+            target/x86_64-unknown-linux-gnu/release/build
+            target/x86_64-unknown-linux-gnu/release/deps
+          key: dez-rust-release-linux-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and rename the Dez Linux bundle
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          archive="target/release/zed-linux-${arch}.tar.gz"
+          test -f "$archive"
+          file "$archive"
+          binary="target/${arch}-unknown-linux-gnu/release/dez"
+          test -f "$binary"
+          file "$binary"
+          if [[ "$arch" = x86_64 ]]; then
+            file -b "$binary" | grep -q 'x86-64'
+          else
+            file -b "$binary" | grep -q 'aarch64'
+          fi
+          suffix=""
+          if [[ "$DEZ_BUNDLE_CHANNEL" != stable ]]; then
+            suffix="-$DEZ_BUNDLE_CHANNEL"
+          fi
+          tar -tzf "$archive" | grep -q "zed${suffix}\.app/libexec/zed-editor$"
+
+          # Smoke-test the packaged entry points when the headless runner can
+          # start them; the archive and ELF checks above are the hard gates.
+          tmpdir="$(mktemp -d)"
+          tar -xzf "$archive" -C "$tmpdir"
+          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' | head -n 1)"
+          (
+            cd "$app_dir"
+            timeout 30 ./libexec/zed-editor --version || true
+            timeout 30 ./bin/zed --version || true
+          )
+
+          dez_archive="target/release/dez-linux-${arch}.tar.gz"
+          cp "$archive" "$dez_archive"
+          shasum -a 256 "$dez_archive"
+          echo "Staged Dez artifact: $dez_archive"
+
+      - name: Upload the Dez Linux artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Dez-${{ env.DEZ_RELEASE_KIND }}-linux-x86_64-${{ github.sha }}
+          path: target/release/dez-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  build_linux_aarch64:
+    name: Linux aarch64 bundle
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJson('["all", "linux-aarch64"]'), inputs.platforms)
+    needs: guards
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 360
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Install Linux build dependencies
+        run: ./script/linux
+
+      - name: Download the WASI SDK
+        run: ./script/download-wasi-sdk
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bundle
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-linux-aarch64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-linux-aarch64-
+
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-unknown-linux-gnu/release/.fingerprint
+            target/aarch64-unknown-linux-gnu/release/build
+            target/aarch64-unknown-linux-gnu/release/deps
+          key: dez-rust-release-linux-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-linux-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-linux-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-linux-aarch64-${{ hashFiles('rust-toolchain.toml') }}-
+
+      - name: Build the Dez Linux bundle
+        id: build-dez-linux
+        run: |
+          set -euo pipefail
+          bash -n script/bundle-linux
+          ./script/bundle-linux
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez-linux.outcome == 'success' || steps.build-dez-linux.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-unknown-linux-gnu/release/.fingerprint
+            target/aarch64-unknown-linux-gnu/release/build
+            target/aarch64-unknown-linux-gnu/release/deps
+          key: dez-rust-release-linux-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and rename the Dez Linux bundle
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          archive="target/release/zed-linux-${arch}.tar.gz"
+          test -f "$archive"
+          file "$archive"
+          binary="target/${arch}-unknown-linux-gnu/release/dez"
+          test -f "$binary"
+          file "$binary"
+          if [[ "$arch" = x86_64 ]]; then
+            file -b "$binary" | grep -q 'x86-64'
+          else
+            file -b "$binary" | grep -q 'aarch64'
+          fi
+          suffix=""
+          if [[ "$DEZ_BUNDLE_CHANNEL" != stable ]]; then
+            suffix="-$DEZ_BUNDLE_CHANNEL"
+          fi
+          tar -tzf "$archive" | grep -q "zed${suffix}\.app/libexec/zed-editor$"
+
+          # Smoke-test the packaged entry points when the headless runner can
+          # start them; the archive and ELF checks above are the hard gates.
+          tmpdir="$(mktemp -d)"
+          tar -xzf "$archive" -C "$tmpdir"
+          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' | head -n 1)"
+          (
+            cd "$app_dir"
+            timeout 30 ./libexec/zed-editor --version || true
+            timeout 30 ./bin/zed --version || true
+          )
+
+          dez_archive="target/release/dez-linux-${arch}.tar.gz"
+          cp "$archive" "$dez_archive"
+          shasum -a 256 "$dez_archive"
+          echo "Staged Dez artifact: $dez_archive"
+
+      - name: Upload the Dez Linux artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Dez-${{ env.DEZ_RELEASE_KIND }}-linux-aarch64-${{ github.sha }}
+          path: target/release/dez-linux-aarch64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  build_windows_x86_64:
+    name: Windows x86_64 bundle
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJson('["all", "windows-x86_64"]'), inputs.platforms)
+    needs: guards
+    runs-on: windows-2022
+    timeout-minutes: 360
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Install the pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Ensure Inno Setup is installed
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --yes --no-progress
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup 6 is required at $iscc"
+          }
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bundle
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-windows-x86_64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-windows-x86_64-
+
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/x86_64-pc-windows-msvc/release/.fingerprint
+            target/x86_64-pc-windows-msvc/release/build
+            target/x86_64-pc-windows-msvc/release/deps
+          key: dez-rust-release-windows-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-windows-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-windows-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-windows-x86_64-${{ hashFiles('rust-toolchain.toml') }}-
+
+      - name: Build the Dez Windows bundle
+        id: build-dez-windows
+        shell: pwsh
+        run: |
+          script/bundle-windows.ps1 -Architecture x86_64
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez-windows.outcome == 'success' || steps.build-dez-windows.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/x86_64-pc-windows-msvc/release/.fingerprint
+            target/x86_64-pc-windows-msvc/release/build
+            target/x86_64-pc-windows-msvc/release/deps
+          key: dez-rust-release-windows-x86_64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and rename the Dez Windows bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = "target\Zed-x86_64.exe"
+          if (-not (Test-Path $setup)) {
+            throw "Missing Windows installer: $setup"
+          }
+          $size = (Get-Item $setup).Length
+          if ($size -eq 0) {
+            throw "Windows installer is empty: $setup"
+          }
+          Write-Output "Windows installer bytes: $size"
+          Copy-Item -Path $setup -Destination "target\Dez-x86_64.exe" -Force
+
+      - name: Upload the Dez Windows artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Dez-${{ env.DEZ_RELEASE_KIND }}-windows-x86_64-${{ github.sha }}
+          path: target/Dez-x86_64.exe
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  build_windows_aarch64:
+    name: Windows aarch64 bundle
+    if: >-
+      github.event_name == 'push' ||
+      contains(fromJson('["all", "windows-aarch64"]'), inputs.platforms)
+    needs: guards
+    runs-on: windows-11-arm
+    timeout-minutes: 360
+    steps:
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Install the pinned Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Ensure Inno Setup is installed
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --yes --no-progress
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup 6 is required at $iscc"
+          }
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bundle
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-windows-aarch64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-windows-aarch64-
+
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-pc-windows-msvc/release/.fingerprint
+            target/aarch64-pc-windows-msvc/release/build
+            target/aarch64-pc-windows-msvc/release/deps
+          key: dez-rust-release-windows-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-windows-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-windows-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-windows-aarch64-${{ hashFiles('rust-toolchain.toml') }}-
+
+      - name: Build the Dez Windows bundle
+        id: build-dez-windows
+        shell: pwsh
+        run: |
+          script/bundle-windows.ps1 -Architecture aarch64
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez-windows.outcome == 'success' || steps.build-dez-windows.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-pc-windows-msvc/release/.fingerprint
+            target/aarch64-pc-windows-msvc/release/build
+            target/aarch64-pc-windows-msvc/release/deps
+          key: dez-rust-release-windows-aarch64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and rename the Dez Windows bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = "target\Zed-aarch64.exe"
+          if (-not (Test-Path $setup)) {
+            throw "Missing Windows installer: $setup"
+          }
+          $size = (Get-Item $setup).Length
+          if ($size -eq 0) {
+            throw "Windows installer is empty: $setup"
+          }
+          Write-Output "Windows installer bytes: $size"
+          Copy-Item -Path $setup -Destination "target\Dez-aarch64.exe" -Force
+
+      - name: Upload the Dez Windows artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Dez-${{ env.DEZ_RELEASE_KIND }}-windows-aarch64-${{ github.sha }}
+          path: target/Dez-aarch64.exe
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  assemble_release:
+    name: Assemble Dez GitHub Release
+    if: github.event_name == 'push' || inputs.release_tag != ''
+    needs:
+      - build_macos_arm64
+      - build_linux_x86_64
+      - build_linux_aarch64
+      - build_windows_x86_64
+      - build_windows_aarch64
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      DEZ_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag }}
+    steps:
+      - name: Download built artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          path: ./artifacts/
+
+      - name: Stage Dez-named release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts/
+          # Every platform job uploads exactly one Dez-named file; normalize
+          # them to stable release asset names regardless of release kind.
+          find ./artifacts -name '*.dmg' -exec cp {} release-artifacts/Dez-macOS-M2.dmg \;
+          find ./artifacts -name 'dez-linux-x86_64.tar.gz' -exec cp {} release-artifacts/dez-linux-x86_64.tar.gz \;
+          find ./artifacts -name 'dez-linux-aarch64.tar.gz' -exec cp {} release-artifacts/dez-linux-aarch64.tar.gz \;
+          find ./artifacts -name 'Dez-x86_64.exe' -exec cp {} release-artifacts/Dez-x86_64.exe \;
+          find ./artifacts -name 'Dez-aarch64.exe' -exec cp {} release-artifacts/Dez-aarch64.exe \;
+          (cd release-artifacts && shasum -a 256 * > SHA256SUMS.txt)
+          ls -l release-artifacts/
+
+      - name: Create or update the draft Dez release
+        run: |
+          set -euo pipefail
+          notes="Dez ${DEZ_TAG} (${DEZ_RELEASE_KIND}) — build evidence: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          if gh release create "$DEZ_TAG" --repo="$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "Dez $DEZ_TAG" --notes "$notes"; then
+            echo "Created draft release $DEZ_TAG"
+          else
+            gh release edit "$DEZ_TAG" --repo="$GITHUB_REPOSITORY" --draft --title "Dez $DEZ_TAG" --notes "$notes"
+            echo "Updated draft release $DEZ_TAG"
+          fi
+
+      - name: Upload Dez release assets
+        run: |
+          set -euo pipefail
+          gh release upload "$DEZ_TAG" --repo="$GITHUB_REPOSITORY" --clobber release-artifacts/*
+
+      - name: Validate Dez release assets
+        run: |
+          set -euo pipefail
+          staged="$(ls release-artifacts | sort)"
+          uploaded="$(gh release view "$DEZ_TAG" --repo="$GITHUB_REPOSITORY" --json assets -q '[.assets[].name]' | jq -r '.[]' | sort)"
+          missing="$(comm -23 <(printf '%s\n' "$staged") <(printf '%s\n' "$uploaded"))"
+          if [ -n "$missing" ]; then
+            echo "::error::Assets missing from release $DEZ_TAG:"
+            printf '%s\n' "$missing"
+            exit 1
+          fi
+          echo "All staged Dez assets are present in release $DEZ_TAG."
