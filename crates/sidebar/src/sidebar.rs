@@ -19778,7 +19778,7 @@ impl Sidebar {
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .when(left_window_controls, |this| {
-                this.children(Self::render_left_window_controls(window, cx, header_height))
+                this.children(Self::render_left_window_controls(window, cx))
             })
             .when(traffic_lights, |this| {
                 this.child(ui::utils::traffic_light_spacer_with_child(
@@ -19911,16 +19911,11 @@ impl Sidebar {
             })
     }
 
-    fn render_left_window_controls(
-        window: &Window,
-        cx: &mut App,
-        height: Pixels,
-    ) -> Option<AnyElement> {
+    fn render_left_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
         platform_title_bar::render_left_window_controls(
             title_bar::sidebar_button_layout(cx).or_else(|| cx.button_layout()),
             Box::new(CloseWindow),
             window,
-            height,
         )
     }
 
