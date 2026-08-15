@@ -478,7 +478,8 @@ impl DebugPanel {
                 if let Err(error) = task.await {
                     let redacted_error = redact_command(&format!("{error:#}"));
                     log::error!("{redacted_error}");
-                    let should_report_failure = !session.read(cx).is_terminated();
+                    let should_report_failure =
+                        session.read_with(cx, |session, _| !session.is_terminated());
                     if should_report_failure {
                         let reason = redacted_error.clone().into();
                         this.update(cx, |this, cx| {
