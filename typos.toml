@@ -107,6 +107,20 @@ extend-ignore-re = [
     # Mermaid CSS class name for state diagram composites
     "composit",
     # Used in truncating tests to ensure byte-length vs char like in café
-    "caf…"
+    "caf…",
+    # Git commit hashes in Dez docs and changelogs are not typos.
+    "[0-9a-f]{7,40}",
+    # iTerm2 terminal name
+    "iterm",
+    # Mis-scoping is a legitimate hyphenated word in the identity check.
+    "mis-scoping",
+    # The scap crate (screen capture) and its capitalized form
+    "[Ss]cap",
+    # Common spelling variant used in writeable_path_from_extension et al.
+    "writeable",
+    # Vim command abbreviations like :bd[elete]
+    "elete",
+    # Test fixture string in text::tests
+    "GHIzJ"
 ]
 check-filename = true

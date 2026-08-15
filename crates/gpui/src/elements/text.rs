@@ -944,7 +944,7 @@ impl TextLayout {
             && element_state.wrap_width != Some(bounds.size.width)
         {
             log::warn!(
-                "text layed out at width {:?} is being painted into narrower bounds {:?}: {text:?}",
+                "text laid out at width {:?} is being painted into narrower bounds {:?}: {text:?}",
                 size.width,
                 bounds.size.width
             );
