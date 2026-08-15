@@ -416,7 +416,9 @@ jobs:
       github.event_name == 'push' ||
       contains(fromJson('["all", "linux-x86_64"]'), inputs.platforms)
     needs: guards
-    runs-on: ubuntu-22.04
+    # Ubuntu 22.04 ships GCC 11, which hard-errors on webrtc-sys source
+    # (its -Wno-changes-meaning flag is GCC 13+); 24.04 ships GCC 13.
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - name: Check out Dez
