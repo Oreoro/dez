@@ -415,7 +415,7 @@ fn enable_automerge_if_staff(
         let isStaff = false;
         try {
             const response = await github.rest.teams.getMembershipForUserInOrg({
-                org: 'zed-industries',
+                org: context.repo.owner,
                 team_slug: 'staff',
                 username: author
             });
@@ -435,7 +435,7 @@ fn enable_automerge_if_staff(
         const pullNumber = parseInt(prNumber);
 
         await github.rest.issues.addAssignees({
-            owner: 'zed-industries',
+            owner: context.repo.owner,
             repo: 'extensions',
             issue_number: pullNumber,
             assignees: [author]
@@ -444,7 +444,7 @@ fn enable_automerge_if_staff(
 
         // Get the GraphQL node ID
         const { data: pr } = await github.rest.pulls.get({
-            owner: 'zed-industries',
+            owner: context.repo.owner,
             repo: 'extensions',
             pull_number: pullNumber
         });
