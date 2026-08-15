@@ -486,6 +486,7 @@ fn saved_layout_preservation_copy(app_name: &str) -> &'static str {
     }
 }
 
+#[cfg(target_os = "macos")]
 pub(crate) fn title_bar_visible(_cx: &App) -> bool {
     false
 }

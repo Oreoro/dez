@@ -664,7 +664,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: release::send_slack_message
-      run: 'curl -X POST -H ''Content-type: application/json'' --data "$(jq -n --arg text "$SLACK_MESSAGE" ''{"text": $text}'')" "$SLACK_WEBHOOK"'
+      run: |
+        if [ -z "$SLACK_WEBHOOK" ]; then
+          echo "SLACK_WEBHOOK_WORKFLOW_FAILURES secret is not set; skipping Slack notification."
+          exit 0
+        fi
+        curl -X POST -H 'Content-type: application/json' --data "$(jq -n --arg text "$SLACK_MESSAGE" '{"text": $text}')" "$SLACK_WEBHOOK"
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_WORKFLOW_FAILURES }}
         SLACK_MESSAGE: '❌ ${{ github.workflow }} failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
