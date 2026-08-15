@@ -18,7 +18,7 @@ permissions:
   contents: read
 jobs:
   fetch_extension_repos:
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions') && (github.ref == 'refs/tags/extension-workflows' || github.ref == 'refs/heads/main')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && (github.ref == 'refs/tags/extension-workflows' || github.ref == 'refs/heads/main')
     runs-on: namespace-profile-2x4-ubuntu-2404
     steps:
     - name: checkout_zed_repo

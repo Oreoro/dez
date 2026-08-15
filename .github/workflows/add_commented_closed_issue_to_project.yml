@@ -11,7 +11,7 @@ permissions:
 jobs:
   add-to-project:
     if: >
-      github.repository == 'zed-industries/zed' &&
+      (github.repository == 'zed-industries/zed' || github.repository == 'Oreoro/dez') &&
       github.event.issue.state == 'closed' &&
       github.event.issue.pull_request == null &&
       github.event.issue.type != null &&
@@ -39,8 +39,8 @@ jobs:
         with:
           app-id: ${{ secrets.ZED_COMMUNITY_BOT_APP_ID }}
           private-key: ${{ secrets.ZED_COMMUNITY_BOT_PRIVATE_KEY }}
-          owner: zed-industries
-          repositories: zed
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
           permission-members: read
           permission-organization-projects: write
 
@@ -52,7 +52,7 @@ jobs:
           script: |
             try {
               const response = await github.rest.teams.getMembershipForUserInOrg({
-                org: 'zed-industries',
+                org: context.repo.owner,
                 team_slug: 'staff',
                 username: context.payload.comment.user.login
               });
