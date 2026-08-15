@@ -29,15 +29,15 @@ documents according to their authority, not their age.
    do not promote deferred work into the current release without a product
    decision.
 10. [v0.0.2 Completion Plan](./v0.0.2-completion-plan.md),
-   [v0.0.2 Source Ledger](./v0.0.2-active-plan.md), and
-   [Installed-build UX Audit](./v0.0.2-runtime-ux-recovery-plan.md) preserve the
-   previous train's source claims and installed-build findings. They are
-   historical inputs, not competing execution orders.
+    [v0.0.2 Source Ledger](./v0.0.2-active-plan.md), and
+    [Installed-build UX Audit](./v0.0.2-runtime-ux-recovery-plan.md) preserve the
+    previous train's source claims and installed-build findings. They are
+    historical inputs, not competing execution orders.
 11. [Product Strategy](./product-strategy.md) records the market hypothesis,
-   initial customer, product loop, and measures of product fit. These are
-   hypotheses and should change when evidence contradicts them.
+    initial customer, product loop, and measures of product fit. These are
+    hypotheses and should change when evidence contradicts them.
 12. [Upstream Synchronization](./upstream-sync.md) defines the permanent merge
-   train and release provenance requirements.
+    train and release provenance requirements.
 13. [Upstream Feature Ledger](./upstream-ledger.md) records the current merge
     target, conflict inventory, and capability treatment.
 14. [Architecture Baseline](./architecture-baseline.md) maps the current code to

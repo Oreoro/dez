@@ -154,23 +154,23 @@ Workspaces** without removing the durable status line.
 
 ## Annotation ledger
 
-| # | Owner | Action | Invariant | Failure rule |
-| --- | --- | --- | --- | --- |
-| 01 | MultiWorkspace and Workspaces | switch codebases | one global navigator | stays reachable from status when closed |
-| 02 | Workspace | activate durable codebase context | Workspace is not a terminal list | access/install state replaces background failure loops |
-| 03 | native pane entities | activate existing pane/tab | no close, pin, reorder, drag, preview, or split ownership | visible for every open tab; hidden while search owns the list |
-| 04 | trusted agent/task/terminal stores | focus an actionable owner | no transcript preview or guessed success | absent when empty; stale external state is named |
-| 05 | native pane tab strip | create content through native Add | adjacent `+` remains visible per pane; files stay open by default | disabled action explains missing capability |
-| 06 | native pane group | focus a pane | focus is text plus treatment, never color alone | narrow mode preserves pane identity before tab rows |
-| 07 | TerminalView and terminal host | interact with the provider TUI | Dez does not wrap TUIs in custom chat chrome | output remains visible under lifecycle recovery |
-| 08 | native status bar | expose durable target and repository context | one status line; Workspaces remains labeled while open or closed | explicit preference may hide it; recovery route remains labeled |
-| 09 | Home/Workspace open action | open one codebase | one primary empty-state action | install-first or root grant stays native and inline |
-| 10 | active Workspace | start named Terminal/agent work | launch names its destination | missing command routes to Terminal Launch settings |
-| 11 | Workspace navigation action namespace | enter one-shot target mode | no content-covering overlay | one action or Escape exits and restores normal status |
-| 12 | owning pane | review a trusted return recap | one-time and event-backed | no recap when evidence is incomplete |
-| 13 | failed Terminal tab | retry attach or start separate work | new shell never claims migration | repeated failure remains inline with diagnostics |
-| 14 | Workspace access preflight | grant one exact folder | one prompt and one aggregated root state | Git/Search/LSP/agent startup waits without flooding logs |
-| 15 | cmux external owner | hand the Workspace to cmux | cmux owns its tabs, splits, browser, hooks, and actions | handoff failure leaves the Workspace open in Dez |
+| #   | Owner                                 | Action                                       | Invariant                                                         | Failure rule                                                    |
+| --- | ------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------- |
+| 01  | MultiWorkspace and Workspaces         | switch codebases                             | one global navigator                                              | stays reachable from status when closed                         |
+| 02  | Workspace                             | activate durable codebase context            | Workspace is not a terminal list                                  | access/install state replaces background failure loops          |
+| 03  | native pane entities                  | activate existing pane/tab                   | no close, pin, reorder, drag, preview, or split ownership         | visible for every open tab; hidden while search owns the list   |
+| 04  | trusted agent/task/terminal stores    | focus an actionable owner                    | no transcript preview or guessed success                          | absent when empty; stale external state is named                |
+| 05  | native pane tab strip                 | create content through native Add            | adjacent `+` remains visible per pane; files stay open by default | disabled action explains missing capability                     |
+| 06  | native pane group                     | focus a pane                                 | focus is text plus treatment, never color alone                   | narrow mode preserves pane identity before tab rows             |
+| 07  | TerminalView and terminal host        | interact with the provider TUI               | Dez does not wrap TUIs in custom chat chrome                      | output remains visible under lifecycle recovery                 |
+| 08  | native status bar                     | expose durable target and repository context | one status line; Workspaces remains labeled while open or closed  | explicit preference may hide it; recovery route remains labeled |
+| 09  | Home/Workspace open action            | open one codebase                            | one primary empty-state action                                    | install-first or root grant stays native and inline             |
+| 10  | active Workspace                      | start named Terminal/agent work              | launch names its destination                                      | missing command routes to Terminal Launch settings              |
+| 11  | Workspace navigation action namespace | enter one-shot target mode                   | no content-covering overlay                                       | one action or Escape exits and restores normal status           |
+| 12  | owning pane                           | review a trusted return recap                | one-time and event-backed                                         | no recap when evidence is incomplete                            |
+| 13  | failed Terminal tab                   | retry attach or start separate work          | new shell never claims migration                                  | repeated failure remains inline with diagnostics                |
+| 14  | Workspace access preflight            | grant one exact folder                       | one prompt and one aggregated root state                          | Git/Search/LSP/agent startup waits without flooding logs        |
+| 15  | cmux external owner                   | hand the Workspace to cmux                   | cmux owns its tabs, splits, browser, hooks, and actions           | handoff failure leaves the Workspace open in Dez                |
 
 ## Implementation order
 
