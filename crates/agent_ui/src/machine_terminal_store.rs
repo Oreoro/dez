@@ -11,8 +11,11 @@ use anyhow::{Context as _, Result};
 use gpui::{App, AppContext as _, Context, Entity, Global, Task};
 use paths::APP_NAME;
 
+use crate::terminal_thread_metadata_store::TerminalAgentKind;
+
+#[cfg(any(target_os = "macos", test))]
 use crate::terminal_thread_metadata_store::{
-    TerminalAgentKind, detect_terminal_agent_command, detect_terminal_agent_kind,
+    detect_terminal_agent_command, detect_terminal_agent_kind,
 };
 
 const MACHINE_TERMINAL_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
