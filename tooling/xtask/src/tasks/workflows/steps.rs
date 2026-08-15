@@ -218,6 +218,9 @@ pub fn cargo_install_nextest() -> Step<Use> {
 pub fn setup_cargo_config(platform: Platform) -> Step<Run> {
     match platform {
         Platform::Windows => named::pwsh(indoc::indoc! {r#"
+            # Let cargo's git backend write long checkout paths; its default
+            # home would put deep git dependencies past the 260-char limit.
+            git config --system core.longpaths true
             New-Item -ItemType Directory -Path "./../.cargo" -Force
             Copy-Item -Path "./.cargo/ci-config.toml" -Destination "./../.cargo/config.toml"
         "#}),
@@ -266,12 +269,13 @@ pub fn install_rustup_target(target: &str) -> Step<Run> {
 
 pub fn cache_rust_dependencies_namespace() -> Step<Use> {
     named::uses(
-        "namespacelabs",
-        "nscloud-cache-action",
-        "a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9", // v1
+        "actions",
+        "cache",
+        "0057852bfaa89a56745cba8c7296529d2fc39830", // v4
     )
-    .add_with(("cache", "rust"))
     .add_with(("path", "~/.rustup"))
+    .add_with(("key", "dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}"))
+    .add_with(("restore-keys", "dez-rust-deps-${{ runner.os }}-"))
 }
 
 pub fn setup_sccache(platform: Platform) -> Step<Run> {
@@ -299,23 +303,27 @@ pub fn show_sccache_stats(platform: Platform) -> Step<Run> {
 
 pub fn cache_nix_dependencies_namespace() -> Step<Use> {
     named::uses(
-        "namespacelabs",
-        "nscloud-cache-action",
-        "a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9", // v1
+        "actions",
+        "cache",
+        "0057852bfaa89a56745cba8c7296529d2fc39830", // v4
     )
-    .add_with(("cache", "nix"))
+    .add_with(("path", "/nix/store"))
+    .add_with(("key", "dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}"))
+    .add_with(("restore-keys", "dez-nix-store-${{ runner.os }}-"))
 }
 
 pub fn cache_nix_store_macos() -> Step<Use> {
-    // On macOS, `/nix` is on a read-only root filesystem so nscloud's `cache: nix`
-    // cannot mount or symlink there. Instead we cache a user-writable directory and
-    // use nix-store --import/--export in separate steps to transfer store paths.
+    // On macOS, `/nix` is on a read-only root filesystem so we cache a
+    // user-writable directory and use nix-store --import/--export in
+    // separate steps to transfer store paths.
     named::uses(
-        "namespacelabs",
-        "nscloud-cache-action",
-        "a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9", // v1
+        "actions",
+        "cache",
+        "0057852bfaa89a56745cba8c7296529d2fc39830", // v4
     )
     .add_with(("path", "~/nix-cache"))
+    .add_with(("key", "dez-nix-macos-${{ hashFiles('flake.lock') }}"))
+    .add_with(("restore-keys", "dez-nix-macos-"))
 }
 
 pub fn setup_linux() -> Step<Run> {

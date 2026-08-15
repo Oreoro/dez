@@ -51,10 +51,11 @@ jobs:
         mkdir -p ./../.cargo
         cp ./.cargo/ci-config.toml ./../.cargo/config.toml
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: steps::setup_linux
       run: ./script/linux
     - name: steps::download_wasi_sdk
@@ -111,10 +112,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: run_bundling::set_release_channel_to_nightly
       run: |
         set -eu
@@ -160,10 +162,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: run_bundling::set_release_channel_to_nightly
       run: |
         set -eu
@@ -199,9 +202,11 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
     - name: steps::cache_nix_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: nix
+        path: /nix/store
+        key: dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-store-${{ runner.os }}-
     - name: run_bundling::build_static_bwrap
       uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
       with:
@@ -232,9 +237,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: steps::cache_nix_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: nix
+        path: /nix/store
+        key: dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-store-${{ runner.os }}-
     - name: run_bundling::build_static_bwrap
       uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
       with:
@@ -278,10 +285,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: run_bundling::set_release_channel_to_nightly
       run: |
         set -eu
@@ -334,10 +342,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: run_bundling::set_release_channel_to_nightly
       run: |
         set -eu
@@ -495,9 +504,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_nix_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: nix
+        path: /nix/store
+        key: dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-store-${{ runner.os }}-
     - name: nix_build::build_nix::install_nix
       uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
       with:
@@ -528,9 +539,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_nix_store_macos
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
         path: ~/nix-cache
+        key: dez-nix-macos-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-macos-
     - name: nix_build::build_nix::install_nix
       uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
       with:
