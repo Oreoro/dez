@@ -45,16 +45,16 @@ mouse input, keyboard input, and TUI layout therefore remain their own. Dez
 adds native tab ownership, Workspace context, durable terminal ownership where
 eligible, attention projection, and routes back to Files and Git review.
 
-| Route           | Start new                            | Continue or attach                                      | Ownership                                 |
-| --------------- | ------------------------------------ | ------------------------------------------------------- | ----------------------------------------- |
-| **Codex**       | `codex`                              | `codex resume --last`                                   | Native Dez terminal                       |
-| **Claude Code** | `claude`                             | `claude --continue`                                     | Native Dez terminal                       |
-| **OpenCode**    | `opencode`                           | `opencode --continue`                                   | Native Dez terminal                       |
-| **Gemini CLI**  | `gemini`                             | Start a new terminal-owned CLI session                  | Native Dez terminal                       |
-| **Aider**       | `aider`                              | Start a new terminal-owned CLI session                  | Native Dez terminal                       |
-| **tmux**        | `tmux new-session -A -s <workspace>-<root-id>` | The same root-scoped command attaches when the named session exists | tmux process inside a native Dez terminal |
-| **Herdr**       | `herdr`                              | Select a discovered pane in Workspaces                  | Herdr; Dez attaches explicitly            |
-| **cmux**        | Start work in cmux                   | **Open Workspace in cmux** uses its native macOS folder handoff, with `cmux open <path>` as a compatibility fallback | cmux remains the external app             |
+| Route           | Start new                                      | Continue or attach                                                                                                   | Ownership                                 |
+| --------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Codex**       | `codex`                                        | `codex resume --last`                                                                                                | Native Dez terminal                       |
+| **Claude Code** | `claude`                                       | `claude --continue`                                                                                                  | Native Dez terminal                       |
+| **OpenCode**    | `opencode`                                     | `opencode --continue`                                                                                                | Native Dez terminal                       |
+| **Gemini CLI**  | `gemini`                                       | Start a new terminal-owned CLI session                                                                               | Native Dez terminal                       |
+| **Aider**       | `aider`                                        | Start a new terminal-owned CLI session                                                                               | Native Dez terminal                       |
+| **tmux**        | `tmux new-session -A -s <workspace>-<root-id>` | The same root-scoped command attaches when the named session exists                                                  | tmux process inside a native Dez terminal |
+| **Herdr**       | `herdr`                                        | Select a discovered pane in Workspaces                                                                               | Herdr; Dez attaches explicitly            |
+| **cmux**        | Start work in cmux                             | **Open Workspace in cmux** uses its native macOS folder handoff, with `cmux open <path>` as a compatibility fallback | cmux remains the external app             |
 
 The Start and Continue routes are available from the pane **+**, **File**, a
 Workspace's options menu, and Command Palette. They create a normal Main Work
@@ -1164,18 +1164,18 @@ objects, registers, macros, marks, command mode, and Workspace-aware navigation.
 
 The default tab model follows familiar browser behavior:
 
-| Intent                     | macOS              | Linux and Windows               | Vim                      |
-| -------------------------- | ------------------ | ------------------------------- | ------------------------ |
-| Open tab 1–8 / last tab    | `⌘1`–`⌘8` / `⌘9`   | `Alt+1`–`Alt+8` / `Alt+9`       | `[b`, `]b`, `gt`, `gT`   |
-| Recent-tab switcher        | `Ctrl+Tab`         | `Ctrl+Tab`                      | `[b` / `]b`              |
-| Previous / next tab        | `⌘{` / `⌘}`        | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt`              |
-| Move between split panes   | `⌘K`, then arrow   | `Ctrl+K`, then arrow            | `Ctrl+W`, then `h/j/k/l` |
-| Show or hide Workspaces    | `⌘B`               | `Ctrl+B`                        | Command Palette          |
-| Search / cycle Workspaces  | View → Navigate Workspaces | View → Navigate Workspaces | `[p` / `]p`         |
-| Files                      | `⌘⇧E`              | `Ctrl+Shift+E`                  | `Space f`                |
-| Open configured terminal   | `` Ctrl+` ``       | `` Ctrl+` ``                    | `Space t`                |
-| Open native shell terminal | `` Ctrl+Shift+` `` | `` Ctrl+Shift+` ``              | `Space T`                |
-| Edit shortcuts             | `⌘K ⌘S`            | `Ctrl+K Ctrl+S`                 | Command Palette          |
+| Intent                     | macOS                      | Linux and Windows               | Vim                      |
+| -------------------------- | -------------------------- | ------------------------------- | ------------------------ |
+| Open tab 1–8 / last tab    | `⌘1`–`⌘8` / `⌘9`           | `Alt+1`–`Alt+8` / `Alt+9`       | `[b`, `]b`, `gt`, `gT`   |
+| Recent-tab switcher        | `Ctrl+Tab`                 | `Ctrl+Tab`                      | `[b` / `]b`              |
+| Previous / next tab        | `⌘{` / `⌘}`                | `Ctrl+PageUp` / `Ctrl+PageDown` | `gT` / `gt`              |
+| Move between split panes   | `⌘K`, then arrow           | `Ctrl+K`, then arrow            | `Ctrl+W`, then `h/j/k/l` |
+| Show or hide Workspaces    | `⌘B`                       | `Ctrl+B`                        | Command Palette          |
+| Search / cycle Workspaces  | View → Navigate Workspaces | View → Navigate Workspaces      | `[p` / `]p`              |
+| Files                      | `⌘⇧E`                      | `Ctrl+Shift+E`                  | `Space f`                |
+| Open configured terminal   | `` Ctrl+` ``               | `` Ctrl+` ``                    | `Space t`                |
+| Open native shell terminal | `` Ctrl+Shift+` ``         | `` Ctrl+Shift+` ``              | `Space T`                |
+| Edit shortcuts             | `⌘K ⌘S`                    | `Ctrl+K Ctrl+S`                 | Command Palette          |
 
 Number shortcuts activate tabs in the focused native pane; deliberate split
 navigation remains on the pane-navigation chords. This keeps one-pane work as

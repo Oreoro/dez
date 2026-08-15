@@ -2107,7 +2107,7 @@ all passed. Artifact `Dez-preview-macOS-M2-cdd4dcab1e616ddb70cad18691959179211fd
 reported:
 
 - `Dez: v0.4.0+preview.91.cdd4dcab1e616ddb70cad18691959179211fdfcf
-  (Dez Preview)` from the packaged application;
+(Dez Preview)` from the packaged application;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, and version
   `0.4.0`;
@@ -2136,7 +2136,7 @@ Artifact
 reported:
 
 - `Dez: v0.4.0+preview.93.294d8471145d5721bceb77ddc2439fff604f81a7
-  (Dez Preview)` from the packaged entry-point smoke test;
+(Dez Preview)` from the packaged entry-point smoke test;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2` and release thin LTO,
   one code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2180,7 +2180,7 @@ package verification, and artifact upload all passed. GitHub artifact
 reported:
 
 - `Dez: v0.4.0+preview.95.fe4a48cf86307bdb7ffce447329638c878fafab0
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2244,7 +2244,7 @@ named
 reported:
 
 - `Dez: v0.4.0+preview.97.ad6614dcaa206cd757d8fc069999b5c38f6021bd
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2295,7 +2295,7 @@ named
 Its manifest and packaged entry-point smoke reported:
 
 - `Dez: v0.4.0+preview.98.bad2c9876b9cc861b28c7bc3bdf3300d38abbd16
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2358,7 +2358,7 @@ named
 Its manifest and packaged entry-point smoke reported:
 
 - `Dez: v0.4.0+preview.99.fe2f2a8a6b714feed9bb759cf532a600e91b42c3
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2420,7 +2420,7 @@ named
 Its manifest and packaged entry-point smoke reported:
 
 - `Dez: v0.4.0+preview.100.1f05173dc72c15ec48a15e78e2647b451ddd7c6d
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2482,7 +2482,7 @@ named
 Its manifest and packaged entry-point smoke reported:
 
 - `Dez: v0.4.0+preview.101.ed65b9fe889bd08bf47557aafdb90f6f3b0c800e
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
@@ -2544,7 +2544,7 @@ Streaming the published archive independently reproduced that digest. Its
 manifest and packaged entry-point smoke reported:
 
 - `Dez: v0.4.0+preview.102.bed02b1238426b4edb471ab9a34b62a2088cd968
-  (Dez Preview)`;
+(Dez Preview)`;
 - `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
   code-generation unit, and stripped binaries;
 - bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,

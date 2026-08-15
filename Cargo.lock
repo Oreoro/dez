@@ -519,7 +519,6 @@ dependencies = [
  "parking_lot",
  "paths",
  "picker",
- "platform_title_bar",
  "postage",
  "pretty_assertions",
  "project",
@@ -5216,7 +5215,6 @@ dependencies = [
  "anyhow",
  "async-channel 2.5.0",
  "clap",
- "futures-lite 1.13.0",
  "net",
  "serde",
  "serde_json",
@@ -9179,7 +9177,6 @@ name = "install_cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "client",
  "gpui",
  "log",
  "release_channel",
@@ -12341,7 +12338,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "client",
- "cloud_api_types",
  "collections",
  "component",
  "db",
@@ -13752,7 +13748,6 @@ name = "platform_title_bar"
 version = "0.1.0"
 dependencies = [
  "gpui",
- "project",
  "settings",
  "smallvec",
  "theme",
@@ -18956,7 +18951,6 @@ version = "0.1.0"
 dependencies = [
  "agent_settings",
  "anyhow",
- "arrayvec",
  "auto_update",
  "call",
  "channel",

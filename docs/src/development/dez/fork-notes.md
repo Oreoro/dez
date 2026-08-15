@@ -1765,12 +1765,12 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   transcript store, or external lifecycle database.
 - **2026-07-29: cmux integration preserves external Workspace ownership.**
   Dez discovers cmux Workspaces through the current `cmux workspace list
-  --json` namespace and retains `cmux list-workspaces --json` only as an older
+--json` namespace and retains `cmux list-workspaces --json` only as an older
   release fallback. It correlates the public notification list to project
   **Needs Input**, latest activity, agent identity, and listening ports without
   mutating cmux state. Dez matches only Workspaces with a working directory
   inside a Workspace and opens the selected Workspace through `cmux
-  select-workspace`. It does not spawn an attachment terminal, copy cmux's pane
+select-workspace`. It does not spawn an attachment terminal, copy cmux's pane
   grid, inspect terminal content, or claim ownership of the external Workspace.
 - **2026-07-29: Workspaces renders a Workspace-first activity tree.** Local Agent
   Sessions and path-matched tmux, Herdr, and cmux activity sit beneath the
@@ -1972,6 +1972,7 @@ are future options only if they strengthen the terminal-to-IDE review loop.
   discovered external work. cmux remains an external owner and receives an
   explicit `cmux open <path>` handoff; hook setup remains a deliberate
   cmux/provider configuration action.
+
 - **2026-08-05: cmux path handoff is native and socket-independent.** **Open
   Workspace in cmux** asks macOS LaunchServices to deliver the folder to the
   registered stable or nightly cmux bundle before using `cmux open <path>` as

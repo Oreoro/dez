@@ -13,8 +13,8 @@ Use **Panel Layout > Agentic** from the user menu in the title bar (or the {#act
 
 By default, when you open a folder in Zed, it opens as a new project in your current window's sidebar rather than creating a new window. This keeps related work together and preserves your agent threads and layout.
 
-| Action             | Result                                    |
-| ------------------ | ----------------------------------------- |
+| Action             | Result                            |
+| ------------------ | --------------------------------- |
 | File > Open        | Opens in current window (sidebar) |
 | File > Open Recent | Opens in current window (sidebar) |
 | Drag folder to Zed | Opens in current window (sidebar) |
@@ -55,7 +55,7 @@ Other CLI options for controlling window behavior:
 | Flag            | Behavior                                           |
 | --------------- | -------------------------------------------------- |
 | `-n`, `--new`   | Always open in a new window                        |
-| `-a`, `--add`   | Add to the current window's sidebar        |
+| `-a`, `--add`   | Add to the current window's sidebar                |
 | `-r`, `--reuse` | Replace the current project in the existing window |
 
 See [CLI Reference](./reference/cli.md) for full details.

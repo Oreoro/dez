@@ -94,7 +94,7 @@ Choose the route by ownership, not by appearance:
 | **Default Terminal**                        | Opens the configured shell, agent TUI, tmux session, or custom command in a native terminal tab                   |
 | **Native Shell**                            | Opens the Workspace shell without starting an agent                                                               |
 | **Codex**, **Claude Code**, or **OpenCode** | Starts that CLI and keeps its real TUI in the native terminal                                                     |
-| **Resume Existing Agent**                   | Runs the selected provider's explicit last-session command without changing the normal start route               |
+| **Resume Existing Agent**                   | Runs the selected provider's explicit last-session command without changing the normal start route                |
 | **Workspace tmux**                          | Attaches or creates the primary-root-scoped tmux session inside a native terminal                                 |
 | **Browse Running Sessions…**                | Refreshes Workspaces so a discovered tmux or Herdr row can be attached, or a cmux Workspace can be opened in cmux |
 | **Open Workspace in cmux**                  | Hands the Workspace path to the external cmux application and keeps Dez open                                      |

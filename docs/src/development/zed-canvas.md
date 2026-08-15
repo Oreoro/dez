@@ -275,7 +275,7 @@ Rules:
   intent by pane kind and occurrence order, and the matching restore action
   applies that snapshot to panes that still exist. Saved snapshots now include
   a display label derived from the active Canvas recipe or `Custom Canvas
-  Layout`, pane tree shape with split axes and flex weights, tab titles,
+Layout`, pane tree shape with split axes and flex weights, tab titles,
   serializable item kind/id when available, tab active, preview, dirty, pinned,
   project-path metadata, and explicit restore-planning intent for serializable,
   project-path, or live-only tabs. The Panel Layout menu shows the derived
