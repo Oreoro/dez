@@ -506,13 +506,15 @@ jobs:
           if [[ "$DEZ_BUNDLE_CHANNEL" != stable ]]; then
             suffix="-$DEZ_BUNDLE_CHANNEL"
           fi
-          tar -tzf "$archive" | grep -q "zed${suffix}\.app/libexec/zed-editor$"
+          # grep -q would exit on the first match and SIGPIPE the tar pipe,
+          # so consume the listing fully and rely on grep's exit status.
+          tar -tzf "$archive" | grep "zed${suffix}\.app/libexec/zed-editor$" >/dev/null
 
           # Smoke-test the packaged entry points when the headless runner can
           # start them; the archive and ELF checks above are the hard gates.
           tmpdir="$(mktemp -d)"
           tar -xzf "$archive" -C "$tmpdir"
-          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' | head -n 1)"
+          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' -print -quit)"
           (
             cd "$app_dir"
             timeout 30 ./libexec/zed-editor --version || true
@@ -627,13 +629,15 @@ jobs:
           if [[ "$DEZ_BUNDLE_CHANNEL" != stable ]]; then
             suffix="-$DEZ_BUNDLE_CHANNEL"
           fi
-          tar -tzf "$archive" | grep -q "zed${suffix}\.app/libexec/zed-editor$"
+          # grep -q would exit on the first match and SIGPIPE the tar pipe,
+          # so consume the listing fully and rely on grep's exit status.
+          tar -tzf "$archive" | grep "zed${suffix}\.app/libexec/zed-editor$" >/dev/null
 
           # Smoke-test the packaged entry points when the headless runner can
           # start them; the archive and ELF checks above are the hard gates.
           tmpdir="$(mktemp -d)"
           tar -xzf "$archive" -C "$tmpdir"
-          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' | head -n 1)"
+          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' -print -quit)"
           (
             cd "$app_dir"
             timeout 30 ./libexec/zed-editor --version || true
