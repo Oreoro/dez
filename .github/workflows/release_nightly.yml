@@ -13,7 +13,7 @@ permissions:
 jobs:
   check_nightly_tag:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -37,7 +37,7 @@ jobs:
     needs:
     - check_nightly_tag
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && needs.check_nightly_tag.outputs.skip != 'true'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       CC: clang
       CXX: clang++
@@ -98,7 +98,7 @@ jobs:
   bundle_linux_aarch64:
     needs:
     - run_tests_linux
-    runs-on: namespace-profile-8x32-ubuntu-2004-arm-m4
+    runs-on: ubuntu-24.04-arm
     env:
       CARGO_INCREMENTAL: 0
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
@@ -147,7 +147,7 @@ jobs:
   bundle_linux_x86_64:
     needs:
     - run_tests_linux
-    runs-on: namespace-profile-32x64-ubuntu-2004
+    runs-on: ubuntu-24.04
     env:
       CARGO_INCREMENTAL: 0
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
@@ -196,7 +196,7 @@ jobs:
   build_static_bwrap_linux_aarch64:
     needs:
     - run_tests_linux
-    runs-on: namespace-profile-8x32-ubuntu-2004-arm-m4
+    runs-on: ubuntu-24.04-arm
     steps:
     - name: steps::cache_nix_dependencies_namespace
       uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
@@ -229,7 +229,7 @@ jobs:
   build_static_bwrap_linux_x86_64:
     needs:
     - run_tests_linux
-    runs-on: namespace-profile-32x64-ubuntu-2004
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::cache_nix_dependencies_namespace
       uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
@@ -262,7 +262,7 @@ jobs:
   bundle_mac_aarch64:
     needs:
     - run_tests_linux
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     env:
       CARGO_INCREMENTAL: 0
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
@@ -318,7 +318,7 @@ jobs:
   bundle_mac_x86_64:
     needs:
     - run_tests_linux
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     env:
       CARGO_INCREMENTAL: 0
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
@@ -374,7 +374,7 @@ jobs:
   bundle_windows_aarch64:
     needs:
     - run_tests_linux
-    runs-on: self-32vcpu-windows-2022
+    runs-on: windows-2022
     env:
       CARGO_INCREMENTAL: 0
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
@@ -428,7 +428,7 @@ jobs:
   bundle_windows_x86_64:
     needs:
     - run_tests_linux
-    runs-on: self-32vcpu-windows-2022
+    runs-on: windows-2022
     env:
       CARGO_INCREMENTAL: 0
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
@@ -483,7 +483,7 @@ jobs:
     needs:
     - run_tests_linux
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-32x64-ubuntu-2004
+    runs-on: ubuntu-24.04
     env:
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
       ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
@@ -516,7 +516,7 @@ jobs:
     needs:
     - run_tests_linux
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     env:
       ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
       ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
@@ -571,7 +571,7 @@ jobs:
     - bundle_windows_aarch64
     - bundle_windows_x86_64
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-4x8-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::authenticate_as_zippy
@@ -648,7 +648,7 @@ jobs:
     - bundle_windows_aarch64
     - bundle_windows_x86_64
     if: failure()
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: release::send_slack_message
       run: 'curl -X POST -H ''Content-type: application/json'' --data "$(jq -n --arg text "$SLACK_MESSAGE" ''{"text": $text}'')" "$SLACK_WEBHOOK"'

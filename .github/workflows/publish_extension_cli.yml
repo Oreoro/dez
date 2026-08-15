@@ -16,7 +16,7 @@ permissions:
 jobs:
   publish_job:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.ref == 'refs/heads/main'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -61,7 +61,7 @@ jobs:
     needs:
     - publish_job
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.ref == 'refs/heads/main'
-    runs-on: namespace-profile-8x16-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -118,7 +118,7 @@ jobs:
     needs:
     - publish_job
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.ref == 'refs/heads/main'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -138,7 +138,7 @@ jobs:
     - name: publish_extension_cli::update_sha_in_extensions::checkout_extensions_repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        repository: zed-industries/extensions
+        repository: ${{ github.repository_owner }}/extensions
         token: ${{ steps.generate-token.outputs.token }}
     - name: publish_extension_cli::update_sha_in_extensions::replace_sha
       run: |
@@ -149,7 +149,7 @@ jobs:
       with:
         title: Bump extension CLI version to `${{ steps.short-sha.outputs.sha_short }}`
         body: |
-          This PR bumps the extension CLI version to https://github.com/zed-industries/zed/commit/${{ github.sha }}.
+          This PR bumps the extension CLI version to https://github.com/${{ github.repository }}/commit/${{ github.sha }}.
 
           ${{ inputs.message }}
         commit-message: Bump extension CLI version to `${{ steps.short-sha.outputs.sha_short }}`

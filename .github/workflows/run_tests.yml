@@ -19,7 +19,7 @@ permissions:
 jobs:
   orchestrate:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::harden_runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
@@ -141,7 +141,7 @@ jobs:
       changed_extensions: ${{ steps.filter.outputs.changed_extensions }}
   check_style:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-4x8-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::harden_runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
@@ -192,7 +192,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: self-32vcpu-windows-2022
+    runs-on: windows-2022
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -222,7 +222,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       CC: clang
       CXX: clang++
@@ -264,7 +264,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -295,7 +295,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -328,7 +328,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: self-32vcpu-windows-2022
+    runs-on: windows-2022
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -372,7 +372,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       CC: clang
       CXX: clang++
@@ -438,7 +438,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -485,7 +485,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::harden_runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
@@ -517,7 +517,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       CC: clang
       CXX: clang++
@@ -565,7 +565,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-8x16-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       CC: clang
       CXX: clang++
@@ -613,7 +613,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -638,7 +638,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-8x16-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::harden_runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
@@ -682,7 +682,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     env:
       CC: clang
       CXX: clang++
@@ -718,7 +718,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_docs == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       DOCS_AMPLITUDE_API_KEY: ${{ secrets.DOCS_AMPLITUDE_API_KEY }}
       DOCS_CONSENT_IO_INSTANCE: ${{ secrets.DOCS_CONSENT_IO_INSTANCE }}
@@ -776,7 +776,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_licenses == 'true' && github.event_name != 'merge_group'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::harden_runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
@@ -799,7 +799,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_action_checks == 'true'
-    runs-on: namespace-profile-8x16-ubuntu-2204
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::harden_runner
       uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411
@@ -842,7 +842,7 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.run_tests == 'true'
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     env:
       GIT_AUTHOR_NAME: Protobuf Action
       GIT_AUTHOR_EMAIL: ci@zed.dev
@@ -919,7 +919,7 @@ jobs:
     - check_scripts
     - extension_tests
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && always()
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: run_tests::tests_pass
       run: |

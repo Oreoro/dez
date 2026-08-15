@@ -31,7 +31,7 @@ jobs:
       && github.event.workflow_run.head_repository.full_name == github.repository
       && contains(fromJSON('["issues","issue_comment","pull_request","pull_request_target","schedule","workflow_dispatch"]'), github.event.workflow_run.event)
       && github.event.workflow_run.conclusion == 'failure'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Build Slack message payload

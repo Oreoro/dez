@@ -21,7 +21,7 @@ concurrency:
 jobs:
   sweep:
     if: (github.repository == 'zed-industries/zed' || github.repository == 'Oreoro/dez')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:

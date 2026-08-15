@@ -12,7 +12,7 @@ permissions:
 jobs:
   scheduled_compliance_check:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -59,7 +59,7 @@ jobs:
             MESSAGE=$(printf "%s\n\nReport: %s" "$STATUS" "$ARTIFACT_URL")
         else
             STATUS="⚠️ Scheduled compliance check failed for $COMPLIANCE_TAG"
-            MESSAGE=$(printf "%s\n\nReport: %s\nPRs needing review: %s" "$STATUS" "$ARTIFACT_URL" "https://github.com/${{ github.repository }}/pulls?q=is%3Apr+is%3Aclosed+label%3A%22PR+state%3Aneeds+review%22")
+            MESSAGE=$(printf "%s\n\nReport: %s\nPRs needing review: %s" "$STATUS" "$ARTIFACT_URL" "https://github.com/$GITHUB_REPOSITORY/pulls?q=is%3Apr+is%3Aclosed+label%3A%22PR+state%3Aneeds+review%22")
         fi
 
         curl -X POST -H 'Content-type: application/json' \

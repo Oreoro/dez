@@ -10,7 +10,7 @@ permissions:
 jobs:
   check-author:
     if: ${{ (github.repository_owner == 'zed-industries' || github.repository_owner == 'Oreoro') }}
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     outputs:
       should_congratulate: ${{ steps.check.outputs.should_congratulate }}
     steps:

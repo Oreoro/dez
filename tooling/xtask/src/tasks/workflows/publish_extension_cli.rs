@@ -153,7 +153,7 @@ fn create_pull_request_zed(
 }
 
 fn update_sha_in_extensions(publish_job: &NamedJob, message: &WorkflowInput) -> NamedJob {
-    let extensions_repo = RepositoryTarget::new("zed-industries", &["extensions"]);
+    let extensions_repo = RepositoryTarget::new("${{ github.repository_owner }}", &["extensions"]);
     let (generate_token, generated_token) =
         generate_token(vars::ZED_ZIPPY_APP_ID, vars::ZED_ZIPPY_APP_PRIVATE_KEY)
             .for_repository(extensions_repo)
@@ -170,7 +170,7 @@ fn update_sha_in_extensions(publish_job: &NamedJob, message: &WorkflowInput) -> 
             "checkout",
             "11bd71901bbe5b1630ceea73d27597364c9af683", // v4
         )
-        .add_with(("repository", "zed-industries/extensions"))
+        .add_with(("repository", "${{ github.repository_owner }}/extensions"))
         .add_with(("token", token.to_string()))
     }
 
@@ -208,7 +208,7 @@ fn create_pull_request_extensions(
     let title = format!("Bump extension CLI version to `{}`", short_sha);
 
     let body = formatdoc! {r#"
-        This PR bumps the extension CLI version to https://github.com/zed-industries/zed/commit/${{{{ github.sha }}}}.
+        This PR bumps the extension CLI version to https://github.com/${{{{ github.repository }}}}/commit/${{{{ github.sha }}}}.
 
         {message}
     "#};

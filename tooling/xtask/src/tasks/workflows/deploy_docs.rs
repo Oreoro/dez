@@ -234,7 +234,7 @@ fn docs_job(channel_expr: impl Into<String>, checkout_ref: Option<String>) -> Na
             docs_build_steps(
                 release_job(&[])
                     .cond(Expression::new(
-                        "github.repository_owner == 'zed-industries'",
+                        "(github.repository_owner == 'zed-industries' || github.repository_owner == 'Oreoro')",
                     ))
                     .name("Build and Deploy Docs")
                     .add_step(resolve_step),
@@ -254,14 +254,8 @@ pub(crate) fn deploy_docs_workflow_call(
     let job = Job::default()
         .with_repository_owner_guard()
         .permissions(Permissions::default().contents(Level::Read))
-        .uses(
-            "zed-industries",
-            "zed",
-            ".github/workflows/deploy_docs.yml",
-            // Pinned to a commit rather than the mutable `main` ref (supply-chain hardening).
-            // Same-repo reusable workflow; bump via Dependabot or alongside deploy_docs.yml changes.
-            "3f16f7b9082f8828e4d6ae207d2349b1ef932517",
-        )
+        // Same-repo reusable workflow so forks can deploy their own docs.
+        .uses_local(".github/workflows/deploy_docs.yml")
         .with(
             Input::default()
                 .add("channel", channel.into())

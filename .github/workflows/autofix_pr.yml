@@ -17,7 +17,7 @@ permissions:
   contents: read
 jobs:
   run_autofix:
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: read
@@ -96,7 +96,7 @@ jobs:
     needs:
     - run_autofix
     if: needs.run_autofix.outputs.has_changes == 'true'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::authenticate_as_zippy

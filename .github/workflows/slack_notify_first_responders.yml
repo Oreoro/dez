@@ -16,7 +16,7 @@ env:
 jobs:
   notify-slack:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'Oreoro') && github.event.issue.state == 'open'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       # For the issue reaction used to dedupe notifications.

@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   update_top_ranking_issues:
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     if: (github.repository == 'zed-industries/zed' || github.repository == 'Oreoro/dez')
     permissions:
       contents: read
