@@ -241,16 +241,6 @@ impl ApplicationMenu {
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn open_menu(
-        &mut self,
-        action: &OpenApplicationMenu,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) {
-        self.open_menu_name(action.0.clone());
-    }
-
-    #[cfg(not(target_os = "macos"))]
     pub fn open_menu_name(&mut self, menu_name: String) {
         self.pending_menu_open =
             Some(application_menu_name_for_product(&menu_name, paths::APP_NAME).to_owned());

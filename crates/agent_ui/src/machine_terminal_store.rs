@@ -1,9 +1,11 @@
 use std::{
-    collections::{HashMap, HashSet},
     path::PathBuf,
     process::Command,
     time::Duration,
 };
+
+#[cfg(any(target_os = "macos", test))]
+use std::collections::{HashMap, HashSet};
 
 use anyhow::{Context as _, Result};
 use gpui::{App, AppContext as _, Context, Entity, Global, Task};
@@ -162,6 +164,7 @@ mod product_tests {
     }
 }
 
+#[cfg(any(target_os = "macos", test))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ProcessRecord {
     pid: u32,
@@ -211,6 +214,7 @@ fn scan_machine_terminals() -> Result<Vec<ObservedMachineTerminal>> {
     }
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn parse_ps_output(output: &str) -> Vec<ProcessRecord> {
     output
         .lines()
@@ -236,6 +240,7 @@ fn parse_ps_output(output: &str) -> Vec<ProcessRecord> {
         .collect()
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn observed_terminals_from_processes(
     processes: &[ProcessRecord],
     current_process_id: u32,
@@ -316,6 +321,7 @@ fn observed_terminals_from_processes(
         .collect()
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn process_is_terminal_helper(process: &ProcessRecord) -> bool {
     let executable =
         process_executable_name(&process.command, &process.command_line).to_ascii_lowercase();
@@ -332,6 +338,7 @@ fn process_is_terminal_helper(process: &ProcessRecord) -> bool {
         )
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn process_is_descendant_of(
     process_id: u32,
     ancestor_id: u32,
@@ -354,6 +361,7 @@ fn process_is_descendant_of(
     false
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn process_depth(process_id: u32, processes_by_pid: &HashMap<u32, &ProcessRecord>) -> usize {
     let mut process_id = process_id;
     let mut depth = 0usize;
@@ -371,6 +379,7 @@ fn process_depth(process_id: u32, processes_by_pid: &HashMap<u32, &ProcessRecord
     depth
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn terminal_root_process_id(
     process_id: u32,
     tty: &str,
@@ -394,6 +403,7 @@ fn terminal_root_process_id(
     root_process_id
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn process_belongs_to_dez(
     process_id: u32,
     processes_by_pid: &HashMap<u32, &ProcessRecord>,
@@ -416,6 +426,7 @@ fn process_belongs_to_dez(
     false
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn terminal_application_for(
     process_id: u32,
     processes_by_pid: &HashMap<u32, &ProcessRecord>,
@@ -437,6 +448,7 @@ fn terminal_application_for(
     None
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn known_terminal_application(command: &str, command_line: &str) -> Option<&'static str> {
     let identity = format!("{command} {command_line}").to_ascii_lowercase();
     [
@@ -456,6 +468,7 @@ fn known_terminal_application(command: &str, command_line: &str) -> Option<&'sta
     .find_map(|(needle, application)| identity.contains(needle).then_some(application))
 }
 
+#[cfg(target_os = "macos")]
 fn working_directories_for(process_ids: Vec<u32>) -> HashMap<u32, PathBuf> {
     #[cfg(target_os = "macos")]
     {
@@ -483,6 +496,7 @@ fn working_directories_for(process_ids: Vec<u32>) -> HashMap<u32, PathBuf> {
     }
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn parse_lsof_working_directories(output: &str) -> HashMap<u32, PathBuf> {
     let mut working_directories = HashMap::new();
     let mut current_process_id = None;
@@ -516,6 +530,7 @@ fn display_process_name(command: &str) -> &str {
         .unwrap_or("Terminal")
 }
 
+#[cfg(any(target_os = "macos", test))]
 fn process_executable_name(command: &str, command_line: &str) -> String {
     let executable = command_line
         .split_whitespace()
