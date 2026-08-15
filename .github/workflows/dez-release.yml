@@ -416,7 +416,9 @@ jobs:
       github.event_name == 'push' ||
       contains(fromJson('["all", "linux-x86_64"]'), inputs.platforms)
     needs: guards
-    runs-on: ubuntu-22.04
+    # Ubuntu 22.04 ships GCC 11, which hard-errors on webrtc-sys source
+    # (its -Wno-changes-meaning flag is GCC 13+); 24.04 ships GCC 13.
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
     steps:
       - name: Check out Dez
@@ -504,13 +506,15 @@ jobs:
           if [[ "$DEZ_BUNDLE_CHANNEL" != stable ]]; then
             suffix="-$DEZ_BUNDLE_CHANNEL"
           fi
-          tar -tzf "$archive" | grep -q "zed${suffix}\.app/libexec/zed-editor$"
+          # grep -q would exit on the first match and SIGPIPE the tar pipe,
+          # so consume the listing fully and rely on grep's exit status.
+          tar -tzf "$archive" | grep "zed${suffix}\.app/libexec/zed-editor$" >/dev/null
 
           # Smoke-test the packaged entry points when the headless runner can
           # start them; the archive and ELF checks above are the hard gates.
           tmpdir="$(mktemp -d)"
           tar -xzf "$archive" -C "$tmpdir"
-          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' | head -n 1)"
+          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' -print -quit)"
           (
             cd "$app_dir"
             timeout 30 ./libexec/zed-editor --version || true
@@ -625,13 +629,15 @@ jobs:
           if [[ "$DEZ_BUNDLE_CHANNEL" != stable ]]; then
             suffix="-$DEZ_BUNDLE_CHANNEL"
           fi
-          tar -tzf "$archive" | grep -q "zed${suffix}\.app/libexec/zed-editor$"
+          # grep -q would exit on the first match and SIGPIPE the tar pipe,
+          # so consume the listing fully and rely on grep's exit status.
+          tar -tzf "$archive" | grep "zed${suffix}\.app/libexec/zed-editor$" >/dev/null
 
           # Smoke-test the packaged entry points when the headless runner can
           # start them; the archive and ELF checks above are the hard gates.
           tmpdir="$(mktemp -d)"
           tar -xzf "$archive" -C "$tmpdir"
-          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' | head -n 1)"
+          app_dir="$(find "$tmpdir" -maxdepth 1 -name '*.app' -print -quit)"
           (
             cd "$app_dir"
             timeout 30 ./libexec/zed-editor --version || true
@@ -660,6 +666,10 @@ jobs:
     needs: guards
     runs-on: windows-2022
     timeout-minutes: 360
+    # Use a short CARGO_HOME so cargo git checkouts stay under the Windows
+    # 260-character path limit (the runner's default home pushes them over).
+    env:
+      CARGO_HOME: C:\cargo
     steps:
       - name: Check out Dez
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -668,6 +678,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Let cargo's git backend write long checkout paths (its default
+          # home would put deep git dependencies past the 260-char limit).
+          git config --system core.longpaths true
           toolchain=$(
             sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
           )
@@ -764,6 +777,10 @@ jobs:
     needs: guards
     runs-on: windows-11-arm
     timeout-minutes: 360
+    # Use a short CARGO_HOME so cargo git checkouts stay under the Windows
+    # 260-character path limit (the runner's default home pushes them over).
+    env:
+      CARGO_HOME: C:\cargo
     steps:
       - name: Check out Dez
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -772,6 +789,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Let cargo's git backend write long checkout paths (its default
+          # home would put deep git dependencies past the 260-char limit).
+          git config --system core.longpaths true
           toolchain=$(
             sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
           )

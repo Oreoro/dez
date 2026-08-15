@@ -40,8 +40,25 @@ function Get-VSArch {
     }
 }
 
+# Locate the Visual Studio installation through vswhere so the script works
+# on both GitHub-hosted runners (which ship Visual Studio Enterprise) and
+# developer machines (which commonly install the Community edition).
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (-not (Test-Path $vswhere)) {
+    throw "vswhere is required to locate Visual Studio: $vswhere"
+}
+$vsInstallationPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath | Select-Object -First 1
+if (-not $vsInstallationPath) {
+    throw "Visual Studio with the C++ toolset was not found."
+}
+$vsDevShell = Join-Path $vsInstallationPath "Common7\Tools\Launch-VsDevShell.ps1"
+if (-not (Test-Path $vsDevShell)) {
+    throw "Launch-VsDevShell.ps1 was not found at $vsDevShell"
+}
 Push-Location
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1" -Arch (Get-VSArch -Arch $Architecture) -HostArch (Get-VSArch -Arch $OSArchitecture)
+# VsDevShell validates -HostArch against {x86, amd64} only; on ARM64
+# hosts the x64 dev shell runs under emulation, so always use amd64.
+& $vsDevShell -Arch (Get-VSArch -Arch $Architecture) -HostArch amd64
 Pop-Location
 
 $target = "$Architecture-pc-windows-msvc"
@@ -161,7 +178,7 @@ function BuildRemoteServer {
 
 function ZipZedAndItsFriendsDebug {
     $items = @(
-        ".\$CargoOutDir\zed.pdb",
+        ".\$CargoOutDir\dez.pdb",
         ".\$CargoOutDir\cli.pdb",
         ".\$CargoOutDir\auto_update_helper.pdb",
         ".\$CargoOutDir\explorer_command_injector.pdb",

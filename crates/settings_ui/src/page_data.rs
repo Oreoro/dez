@@ -11,9 +11,9 @@ use theme::SystemAppearance;
 use ui::{IconName, IntoElement};
 
 use crate::{
-    ActionLink, AnySettingField, DynamicItem, PROJECT, SettingField, SettingFieldRenderer,
-    SettingItem, SettingsFieldMetadata, SettingsPage, SettingsPageItem, SettingsUiFile,
-    SubPageLink, USER, active_language, all_language_names,
+    ActionLink, ActionLinkScope, AnySettingField, DynamicItem, PROJECT, SettingField,
+    SettingFieldRenderer, SettingItem, SettingsFieldMetadata, SettingsPage, SettingsPageItem,
+    SettingsUiFile, SubPageLink, USER, active_language, all_language_names,
     pages::{
         open_audio_test_window, render_edit_prediction_setup_page, render_external_agents_page,
         render_llm_providers_page, render_mcp_servers_page, render_sandbox_settings_page,

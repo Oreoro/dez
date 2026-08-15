@@ -5688,11 +5688,9 @@ pub(crate) fn persistent_settings_popover_handle<M: gpui::ManagedView>(
 ) -> ui::PopoverMenuHandle<M> {
     let owner_id = owner_id.into();
     window
-        .use_keyed_state(
-            (gpui::ElementId::from("settings-popover-handle"), owner_id),
-            cx,
-            |_, _| ui::PopoverMenuHandle::default(),
-        )
+        .use_keyed_state((owner_id, "settings-popover-handle"), cx, |_, _| {
+            ui::PopoverMenuHandle::default()
+        })
         .read(cx)
         .clone()
 }
@@ -5822,7 +5820,7 @@ fn render_subagent_model_picker(
 
     let selected_effort_label = selected_effort.name.clone();
     let selected_effort_value = selected_effort.value.clone();
-    let effort_menu = ContextMenu::build(_window, cx, move |mut menu, _window, _cx| {
+    let effort_menu = ContextMenu::build(window, cx, move |mut menu, _window, _cx| {
         for effort_level in effort_levels {
             let is_selected = effort_level.value == selected_effort_value;
             let effort_value = effort_level.value.clone();

@@ -184,10 +184,11 @@ fn fail_to_open_window(e: anyhow::Error, _cx: &mut App) {
             };
 
             let notification_id = format!("{}.Oops", release_channel::RELEASE_CHANNEL.app_id());
+            let message = format!("{} failed to launch", paths::APP_NAME);
             proxy
                 .add_notification(
                     &notification_id,
-                    Notification::new(format!("{} failed to launch", paths::APP_NAME))
+                    Notification::new(&message)
                         .body(Some(
                             format!(
                                 "{e:?}. See the upstream Linux compatibility notes at https://zed.dev/docs/linux."
