@@ -186,8 +186,7 @@ pub(crate) const COMPLIANCE_REPORT_PATH: &str = "compliance-report-${GITHUB_REF_
 pub(crate) const COMPLIANCE_REPORT_ARTIFACT_PATH: &str =
     "compliance-report-${{ github.ref_name }}.md";
 pub(crate) const COMPLIANCE_STEP_ID: &str = "run-compliance-check";
-const NEEDS_REVIEW_PULLS_URL: &str =
-    "https://github.com/$GITHUB_REPOSITORY/pulls?q=is%3Apr+is%3Aclosed+label%3A%22PR+state%3Aneeds+review%22";
+const NEEDS_REVIEW_PULLS_URL: &str = "https://github.com/$GITHUB_REPOSITORY/pulls?q=is%3Apr+is%3Aclosed+label%3A%22PR+state%3Aneeds+review%22";
 
 pub(crate) enum ComplianceContext {
     Release { non_blocking_outcome: JobOutput },

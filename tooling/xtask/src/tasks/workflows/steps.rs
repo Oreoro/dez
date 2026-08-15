@@ -274,7 +274,10 @@ pub fn cache_rust_dependencies_namespace() -> Step<Use> {
         "0057852bfaa89a56745cba8c7296529d2fc39830", // v4
     )
     .add_with(("path", "~/.rustup"))
-    .add_with(("key", "dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}"))
+    .add_with((
+        "key",
+        "dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}",
+    ))
     .add_with(("restore-keys", "dez-rust-deps-${{ runner.os }}-"))
 }
 
@@ -308,7 +311,10 @@ pub fn cache_nix_dependencies_namespace() -> Step<Use> {
         "0057852bfaa89a56745cba8c7296529d2fc39830", // v4
     )
     .add_with(("path", "/nix/store"))
-    .add_with(("key", "dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}"))
+    .add_with((
+        "key",
+        "dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}",
+    ))
     .add_with(("restore-keys", "dez-nix-store-${{ runner.os }}-"))
 }
 
@@ -360,8 +366,7 @@ pub struct NamedJob<J: JobType = RunJob> {
 //     }
 // }
 
-pub(crate) const DEFAULT_REPOSITORY_OWNER_GUARD: &str =
-    "(github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')";
+pub(crate) const DEFAULT_REPOSITORY_OWNER_GUARD: &str = "(github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')";
 
 pub fn repository_owner_guard_expression(trigger_always: bool) -> Expression {
     Expression::new(format!(
