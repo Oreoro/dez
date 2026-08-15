@@ -19,7 +19,7 @@ permissions: {}
 jobs:
   identify-duplicates:
     # For manual testing, allow running on any branch; for automatic runs, only on main repo
-    if: github.event_name == 'workflow_dispatch' || github.repository == 'zed-industries/zed'
+    if: github.event_name == 'workflow_dispatch' || (github.repository == 'zed-industries/zed' || github.repository == 'Oreoro/dez')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -40,8 +40,8 @@ jobs:
         with:
           app-id: ${{ secrets.ZED_COMMUNITY_BOT_APP_ID }}
           private-key: ${{ secrets.ZED_COMMUNITY_BOT_PRIVATE_KEY }}
-          owner: zed-industries
-          repositories: zed
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
           permission-issues: write
 
       - name: Set up Python

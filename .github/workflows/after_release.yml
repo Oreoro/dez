@@ -26,7 +26,7 @@ permissions:
   contents: read
 jobs:
   rebuild_releases_page:
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
     runs-on: namespace-profile-2x4-ubuntu-2404
     steps:
     - name: after_release::rebuild_releases_page::refresh_cloud_releases
@@ -36,10 +36,10 @@ jobs:
       env:
         ZED_DEV_REVALIDATE_TOKEN: ${{ secrets.ZED_DEV_REVALIDATE_TOKEN }}
   deploy_docs:
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
     permissions:
       contents: read
-    uses: zed-industries/zed/.github/workflows/deploy_docs.yml@3f16f7b9082f8828e4d6ae207d2349b1ef932517
+    uses: ./.github/workflows/deploy_docs.yml
     secrets:
       DOCS_AMPLITUDE_API_KEY: ${{ secrets.DOCS_AMPLITUDE_API_KEY }}
       DOCS_CONSENT_IO_INSTANCE: ${{ secrets.DOCS_CONSENT_IO_INSTANCE }}
@@ -51,7 +51,7 @@ jobs:
   post_to_discord:
     needs:
     - rebuild_releases_page
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
     runs-on: namespace-profile-2x4-ubuntu-2404
     steps:
     - id: get-release-url
@@ -120,7 +120,7 @@ jobs:
         max-versions-to-keep: 5
         token: ${{ secrets.WINGET_TOKEN }}
   create_sentry_release:
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
     runs-on: namespace-profile-2x4-ubuntu-2404
     steps:
     - name: steps::checkout_repo

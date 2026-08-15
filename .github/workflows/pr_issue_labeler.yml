@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   check-authorship-and-label:
-    if: github.repository == 'zed-industries/zed'
+    if: (github.repository == 'zed-industries/zed' || github.repository == 'Oreoro/dez')
     runs-on: namespace-profile-2x4-ubuntu-2404
     timeout-minutes: 5
     steps:
@@ -32,8 +32,8 @@ jobs:
         with:
           app-id: ${{ secrets.ZED_COMMUNITY_BOT_APP_ID }}
           private-key: ${{ secrets.ZED_COMMUNITY_BOT_PRIVATE_KEY }}
-          owner: zed-industries
-          repositories: zed
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
           permission-issues: write
           permission-members: read
           permission-pull-requests: write
@@ -133,7 +133,7 @@ jobs:
             const isTeamMember = async (teamSlug, author) => {
               try {
                 const response = await github.rest.teams.getMembershipForUserInOrg({
-                  org: 'zed-industries',
+                  org: context.repo.owner,
                   team_slug: teamSlug,
                   username: author
                 });
@@ -151,8 +151,8 @@ jobs:
             const isGuildMember = async (author) => {
               try {
                 const response = await github.rest.repos.getCollaboratorPermissionLevel({
-                  owner: 'zed-industries',
-                  repo: 'zed',
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
                   username: author
                 });
                 // role_name is the effective (highest) role; for cohort outside

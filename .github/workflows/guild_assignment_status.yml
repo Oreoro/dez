@@ -21,7 +21,7 @@ concurrency:
 jobs:
   handle-event:
     if: >-
-      github.repository == 'zed-industries/zed' &&
+      (github.repository == 'zed-industries/zed' || github.repository == 'Oreoro/dez') &&
       (github.event_name != 'issue_comment' || github.event.issue.pull_request == null)
     runs-on: namespace-profile-2x4-ubuntu-2404
     timeout-minutes: 5
@@ -33,8 +33,8 @@ jobs:
         with:
           app-id: ${{ secrets.ZED_COMMUNITY_BOT_APP_ID }}
           private-key: ${{ secrets.ZED_COMMUNITY_BOT_PRIVATE_KEY }}
-          owner: zed-industries
-          repositories: zed
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
           permission-issues: write
           permission-members: read
           permission-organization-projects: write
