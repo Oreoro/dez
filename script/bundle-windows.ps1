@@ -56,7 +56,9 @@ if (-not (Test-Path $vsDevShell)) {
     throw "Launch-VsDevShell.ps1 was not found at $vsDevShell"
 }
 Push-Location
-& $vsDevShell -Arch (Get-VSArch -Arch $Architecture) -HostArch (Get-VSArch -Arch $OSArchitecture)
+# VsDevShell validates -HostArch against {x86, amd64} only; on ARM64
+# hosts the x64 dev shell runs under emulation, so always use amd64.
+& $vsDevShell -Arch (Get-VSArch -Arch $Architecture) -HostArch amd64
 Pop-Location
 
 $target = "$Architecture-pc-windows-msvc"
