@@ -660,6 +660,10 @@ jobs:
     needs: guards
     runs-on: windows-2022
     timeout-minutes: 360
+    # Use a short CARGO_HOME so cargo git checkouts stay under the Windows
+    # 260-character path limit (the runner's default home pushes them over).
+    env:
+      CARGO_HOME: C:\cargo
     steps:
       - name: Check out Dez
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -668,6 +672,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Let cargo's git backend write long checkout paths (its default
+          # home would put deep git dependencies past the 260-char limit).
+          git config --system core.longpaths true
           toolchain=$(
             sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
           )
@@ -764,6 +771,10 @@ jobs:
     needs: guards
     runs-on: windows-11-arm
     timeout-minutes: 360
+    # Use a short CARGO_HOME so cargo git checkouts stay under the Windows
+    # 260-character path limit (the runner's default home pushes them over).
+    env:
+      CARGO_HOME: C:\cargo
     steps:
       - name: Check out Dez
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -772,6 +783,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Let cargo's git backend write long checkout paths (its default
+          # home would put deep git dependencies past the 260-char limit).
+          git config --system core.longpaths true
           toolchain=$(
             sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
           )
