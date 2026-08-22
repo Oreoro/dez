@@ -1204,7 +1204,7 @@ mod tests {
         request_tx.unbounded_send(1).unwrap();
 
         let dispatched_for_task = dispatched.clone();
-        let dispatch_task = cx.background_executor().spawn(async move {
+        let dispatch_task = cx.background_executor.spawn(async move {
             dispatch_open_requests_after_startup(
                 async move {
                     // Success and failure recovery both release the same
