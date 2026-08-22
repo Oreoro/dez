@@ -4444,6 +4444,7 @@ fn external_multiplexer_session_matches_query(
             .is_some_and(|path| path.to_string_lossy().to_ascii_lowercase().contains(&query))
 }
 
+#[cfg(test)]
 fn external_multiplexer_project_match_score(
     session: &ExternalMultiplexerSession,
     project_group_key: &ProjectGroupKey,
