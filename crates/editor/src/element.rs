@@ -6653,7 +6653,7 @@ struct Gutter<'a> {
     range: Range<DisplayRow>,
     scroll_position: gpui::Point<ScrollOffset>,
     dimensions: &'a GutterDimensions,
-    hitbox: &'a Hitbox,
+    hitbox: Hitbox,
     snapshot: &'a EditorSnapshot,
     row_infos: &'a [RowInfo],
 }
@@ -8473,7 +8473,7 @@ impl Element for EditorElement {
                         range: start_row..end_row,
                         scroll_position,
                         dimensions: &gutter_dimensions,
-                        hitbox: &gutter_hitbox,
+                        hitbox: gutter_hitbox.clone(),
                         snapshot: &snapshot,
                         row_infos: &row_infos,
                     };
@@ -10813,13 +10813,12 @@ mod tests {
             row_info(5),
         ];
 
-        let hitbox = placeholder_hitbox();
         Gutter {
             line_height,
             range: DisplayRow(0)..DisplayRow(6),
             scroll_position: gpui::Point::default(),
             dimensions: &DIMENSIONS,
-            hitbox: &hitbox,
+            hitbox: placeholder_hitbox(),
             snapshot: snapshot,
             row_infos: &ROW_INFOS,
         }
