@@ -4444,14 +4444,6 @@ fn external_multiplexer_session_matches_query(
             .is_some_and(|path| path.to_string_lossy().to_ascii_lowercase().contains(&query))
 }
 
-#[cfg(test)]
-fn external_multiplexer_project_match_score(
-    session: &ExternalMultiplexerSession,
-    project_group_key: &ProjectGroupKey,
-) -> Option<usize> {
-    local_project_group_match_score(session.working_directory.as_deref()?, project_group_key)
-}
-
 fn local_project_group_match_score(
     working_directory: &Path,
     project_group_key: &ProjectGroupKey,
@@ -5859,26 +5851,6 @@ impl ListEntry {
         match self {
             ListEntry::Thread(thread_entry) => thread_entry.metadata.session_id.as_ref(),
             ListEntry::Terminal(_) | ListEntry::ProjectHeader { .. } => None,
-        }
-    }
-
-    fn reachable_workspaces<'a>(
-        &'a self,
-        multi_workspace: &'a workspace::MultiWorkspace,
-        cx: &'a App,
-    ) -> Vec<Entity<Workspace>> {
-        match self {
-            ListEntry::Thread(thread) => match &thread.workspace {
-                ThreadEntryWorkspace::Open(ws) => vec![ws.clone()],
-                ThreadEntryWorkspace::Closed { .. } => Vec::new(),
-            },
-            ListEntry::Terminal(terminal) => match &terminal.workspace {
-                ThreadEntryWorkspace::Open(workspace) => vec![workspace.clone()],
-                ThreadEntryWorkspace::Closed { .. } => Vec::new(),
-            },
-            ListEntry::ProjectHeader { key, .. } => multi_workspace
-                .workspaces_for_project_group(key, cx)
-                .unwrap_or_default(),
         }
     }
 }
