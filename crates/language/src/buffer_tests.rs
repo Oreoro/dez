@@ -249,7 +249,8 @@ fn test_dez_and_legacy_superzed_config_files_use_jsonc(cx: &mut App) {
             matcher: LanguageMatcher {
                 path_suffixes: vec!["json".to_string()],
                 ..Default::default()
-            },
+            }
+            .into(),
             ..Default::default()
         },
         LanguageConfig {
@@ -275,7 +276,7 @@ fn test_dez_and_legacy_superzed_config_files_use_jsonc(cx: &mut App) {
         assert_eq!(
             registry
                 .language_for_file(&file(path), None, cx)
-                .map(|language| language.name()),
+                .and_then(|id| registry.language_name_for_id(id)),
             Some("JSONC".into()),
             "{path}"
         );
