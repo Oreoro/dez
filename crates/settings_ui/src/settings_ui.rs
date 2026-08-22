@@ -6870,7 +6870,7 @@ pub mod test {
         let notify_count = Rc::new(RefCell::new(0usize));
         let notify_counter = notify_count.clone();
         let _notify_subscription = settings_window.update(cx, |settings_window, cx| {
-            cx.observe(settings_window, move |_, _| {
+            cx.observe_self(move |_, _| {
                 *notify_counter.borrow_mut() += 1;
             })
         });
