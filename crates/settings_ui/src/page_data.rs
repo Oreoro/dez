@@ -127,6 +127,7 @@ fn dez_curated_setting_path_visible(app_name: &str, json_path: Option<&str>) -> 
         )
 }
 
+#[cfg(test)]
 fn curate_dez_settings_page(app_name: &str, page: SettingsPage) -> SettingsPage {
     curate_dez_settings_page_with_field_visibility(app_name, page, |_| true)
 }
