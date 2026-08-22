@@ -10272,6 +10272,8 @@ pub(crate) fn drag_entries_onto(
         let drag = DraggedSelection {
             active_selection,
             marked_selections: Arc::from(selections),
+            source_pane: None,
+            active_selection_is_file: target_is_file,
         };
         panel.drag_onto(&drag, target_entry_id, target_is_file, window, cx);
     });
