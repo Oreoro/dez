@@ -10762,7 +10762,7 @@ mod tests {
             .collect()
     }
 
-    const fn placeholder_hitbox() -> Hitbox {
+    fn placeholder_hitbox() -> Hitbox {
         use gpui::HitboxId;
         let zero_bounds = Bounds {
             origin: point(Pixels::ZERO, Pixels::ZERO),
@@ -10813,13 +10813,13 @@ mod tests {
             row_info(5),
         ];
 
-        const HITBOX: Hitbox = placeholder_hitbox();
+        let hitbox = placeholder_hitbox();
         Gutter {
             line_height,
             range: DisplayRow(0)..DisplayRow(6),
             scroll_position: gpui::Point::default(),
             dimensions: &DIMENSIONS,
-            hitbox: &HITBOX,
+            hitbox: &hitbox,
             snapshot: snapshot,
             row_infos: &ROW_INFOS,
         }
