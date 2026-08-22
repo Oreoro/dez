@@ -6867,14 +6867,11 @@ pub mod test {
             );
         });
 
-        let settings_entity = settings_window
-            .root(cx)
-            .expect("Settings window should keep its root view");
         let notify_count = Rc::new(RefCell::new(0usize));
-        let _notify_subscription = cx.update(|cx| {
-            let notify_count = notify_count.clone();
-            cx.observe(&settings_entity, move |_, _| {
-                *notify_count.borrow_mut() += 1;
+        let notify_counter = notify_count.clone();
+        let _notify_subscription = settings_window.update(cx, |settings_window, _, cx| {
+            cx.observe(settings_window, move |_, _| {
+                *notify_counter.borrow_mut() += 1;
             })
         });
         cx.run_until_parked();

@@ -987,7 +987,10 @@ impl EventEmitter<StackFrameListEvent> for StackFrameList {}
 
 #[cfg(test)]
 mod product_copy_tests {
-    use super::{StackFrameFilter, stack_frame_filter_action_label};
+    use super::{
+        StackFrameFilter, stack_frame_filter_action_label,
+        stack_frame_restart_is_persistently_visible,
+    };
 
     #[test]
     fn dez_names_and_reverses_the_workspace_stack_frame_filter() {
