@@ -79,7 +79,7 @@ require_multiline_pattern .agents/skills/dez-workspace-design/SKILL.md \
     '^name: dez-workspace-design.*?Require an annotated monochrome wireframe before structural UI changes.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?Wireframe before structural edits.*?cargo fmt --all -- --check.*?GitHub Actions' \
     'the Dez Workspace design skill can regress from its wireframe, ownership, or remote-validation contract'
 require_multiline_pattern docs/src/development/dez/annotated-workspace-workflow-wireframe.md \
-    'Layout and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?No Workspace is open.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 \| cmux external owner \|' \
+    'Layout and bounded Activity are implemented.*?dez-native-navigation-wireframe-v4\.png.*?## A\. Begin without an overlay.*?No Workspace is open.*?## B\. Focused work.*?## C\. Navigate without covering work.*?## D\. Return to supervised work.*?## E\. Recover with content preserved.*?## F\. Open Files and return without losing tabs.*?\| 15 +\| cmux external owner +\|' \
     'the annotated Workspace workflow can regress to an incomplete or unowned visual proposal'
 require_multiline_pattern docs/src/development/dez/tmux-claude-navigation-wireframe.md \
     'activation-only.*?\*\*Layout\*\*.*?bounded \*\*Activity\*\*.*?Temporary navigation.*?return recap remain design work.*?Workspace is session-level identity\. Pane is target\. Tab is content\..*?Activity is signal\..*?The activation-only \*\*Layout\*\* and bounded \*\*Activity\*\* slices are implemented\.' \
@@ -100,11 +100,11 @@ require_pattern assets/settings/default.json \
     '^  "restore_on_startup": "launchpad",$' \
     'fresh Dez can regress to touching a protected recent Workspace before the user opens it'
 require_pattern crates/zed/Cargo.toml \
-    '^version = "0\.4\.0"$' \
-    'application version is not 0.4.0'
+    '^version = "0\.6\.0"$' \
+    'application version is not 0.6.0'
 require_multiline_pattern Cargo.lock \
-    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.4\.0"' \
-    'the locked Dez package version does not match 0.4.0'
+    '\[\[package\]\][[:space:]]*name = "zed"[[:space:]]*version = "0\.6\.0"' \
+    'the locked Dez package version does not match 0.6.0'
 require_pattern crates/zed/Cargo.toml \
     '^description = "A native IDE for terminal-native developers\."$' \
     'the package description no longer communicates the Dez product identity'
@@ -265,7 +265,7 @@ require_multiline_pattern assets/settings/default.json \
     '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "Lilex",$' \
     'the terminal no longer shares the polished Lilex coding profile'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"ui_font_family": "IBM Plex Sans".*?"ui_font_size": 16.*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "high".*?"terminal": \{.*?"font_family": "Lilex".*?"font_size": 14' \
+    '"ui_font_family": "IBM Plex Sans".*?"ui_font_size": 13.*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "standard".*?"terminal": \{.*?"font_family": "Lilex".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
 require_pattern assets/settings/initial_user_settings.json \
     'Workspaces stays closed until cross-Workspace supervision is useful' \
@@ -280,7 +280,7 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
     '"project_panel": \{.*?"starts_open": false.*?"tab_bar"' \
     'fresh Dez profiles can regress to opening Files before the Main Work Area'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": false.*?"active_language_button": true.*?"cursor_position_button": true.*?"line_endings_button": false.*?"active_encoding_button": "non_utf8"' \
+    '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"active_language_button": true.*?"cursor_position_button": true.*?"line_endings_button": true.*?"active_encoding_button": "non_utf8"' \
     'first-run Dez can regress to duplicating editor identity or hiding actionable status context'
 require_multiline_pattern assets/settings/initial_user_settings.json \
     '"terminal": \{.*?"font_family": "Lilex".*?"line_height": "standard".*?"alternate_scroll": "on".*?"button": true.*?"toolbar": \{.*?"breadcrumbs": false' \

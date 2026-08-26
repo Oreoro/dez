@@ -2,18 +2,30 @@
 //
 // Dez starts with one native Main Work Area for files, terminals, tools, and
 // review. Workspaces stays closed until cross-Workspace supervision is useful.
-// Rounded, high-contrast Lumin chrome, comfortable 16 px IBM Plex Sans
-// interface text, and Lilex code and terminal text keep those native surfaces
-// visually coherent.
+// These first-run values mirror the validated local Dez profile: comfortable
+// line height, agentic Workspace starts, an open supervision sidebar, wheel
+// zoom, and compact 13 px text on the bundled IBM Plex Sans and Lilex faces.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "buffer_line_height": "comfortable",
+  "startup_intent": "agentic",
+  "sidebar": {
+    "starts_open": true
+  },
+  "cursor_blink": true,
+  "cursor_shape": "bar",
+  "accessible_mode": true,
+  "mouse_wheel_zoom": true,
+  "hide_mouse": "never",
+  "vim_mode": false,
   "ui_font_family": "IBM Plex Sans",
-  "ui_font_size": 16,
+  "ui_font_size": 13,
   "buffer_font_family": "Lilex",
-  "buffer_font_size": 14,
+  "buffer_font_size": 13,
+  "markdown_preview_font_size": 13.0,
   "theme": {
     "mode": "system",
     "light": "Lumin Light",
@@ -22,13 +34,13 @@
   "design_system": {
     "density": "spacious",
     "radius": "rounded",
-    "contrast": "high"
+    "contrast": "standard"
   },
   "icon_theme": "Dez (Default)",
+  "markdown_preview_code_font_family": "Lilex",
   "project_panel": {
     "starts_open": false
   },
-  "startup_intent": "focus",
   "tab_bar": {
     "show": true,
     "show_nav_history_buttons": true,
@@ -36,21 +48,26 @@
   },
   "status_bar": {
     "experimental.show": true,
-    "show_active_file": false,
+    "show_active_file": true,
     "active_language_button": true,
     "cursor_position_button": true,
-    "line_endings_button": false,
+    "line_endings_button": true,
     "active_encoding_button": "non_utf8"
   },
-  "markdown_preview_code_font_family": "Lilex",
   "terminal": {
     "font_family": "Lilex",
     "font_size": 14,
     "line_height": "standard",
     "alternate_scroll": "on",
     "button": true,
+    "scrollback": 100000,
+    "blinking": "on",
+    "cursor_shape": "block",
+    "persistent_sessions": false,
+    "open_links_in_mouse_mode": false,
     "toolbar": {
-      "breadcrumbs": false
+      "breadcrumbs": false,
+      "title": false
     }
   }
 }

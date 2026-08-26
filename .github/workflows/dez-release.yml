@@ -26,7 +26,7 @@ on:
       release_tag:
         description: >-
           Optional tag to assemble a draft GitHub Release from the built
-          artifacts (for example v0.4.0). Leave empty to keep the artifacts
+          artifacts (for example v0.6.0). Leave empty to keep the artifacts
           on the workflow run.
         required: false
         type: string
@@ -882,7 +882,6 @@ jobs:
 
   assemble_release:
     name: Assemble Dez GitHub Release
-    if: github.event_name == 'push' || inputs.release_tag != ''
     needs:
       - build_macos_arm64
       - build_linux_x86_64
@@ -892,9 +891,28 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-    env:
-      DEZ_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag }}
     steps:
+      - name: Resolve the Dez release tag
+        id: dez-tag
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            tag="${{ github.ref_name }}"
+          elif [[ -n "${{ inputs.release_tag }}" ]]; then
+            tag="${{ inputs.release_tag }}"
+          else
+            version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/zed/Cargo.toml | head -n 1)"
+            test -n "$version"
+            suffix=""
+            if [[ "$DEZ_RELEASE_KIND" != stable ]]; then
+              suffix="-pre"
+            fi
+            tag="v${version}${suffix}"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "DEZ_TAG=${tag}" >> "$GITHUB_ENV"
+          echo "Resolved Dez release tag: ${tag}"
+
       - name: Download built artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
