@@ -249,11 +249,7 @@ fn test_dez_and_legacy_superzed_config_files_use_jsonc(cx: &mut App) {
             matcher: (LanguageMatcher {
                 path_suffixes: vec!["json".to_string()],
                 ..Default::default()
-<<<<<<< HEAD
-            }
-=======
             })
->>>>>>> 66816c5ed0 (Clean up clippy warnings across UI crates)
             .into(),
             ..Default::default()
         },

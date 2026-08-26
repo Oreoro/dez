@@ -1982,6 +1982,7 @@ mod tests {
     use language::{Buffer, DiskState, Point};
     use project::Project;
     use serde_json::json;
+    use settings::{MarkdownPreviewOpenMode, update_settings_file};
     use std::path::PathBuf;
     use std::sync::Arc;
     use std::time::Duration;
@@ -1989,7 +1990,6 @@ mod tests {
     use util::rel_path::{RelPath, rel_path};
     use util::test::TempTree;
     use workspace::item::SerializableItem;
-    use settings::{MarkdownPreviewOpenMode, update_settings_file};
     use workspace::{
         AppState, ItemId, MultiWorkspace, SaveIntent, Workspace, WorkspaceId, open_paths,
     };
@@ -2055,9 +2055,9 @@ mod tests {
                 let preview = workspace
                     .active_item_as::<MarkdownPreviewView>(cx)
                     .ok_or_else(|| {
-                        let item = workspace.active_item(cx).map(|item| {
-                            format!("{:?}", item.item_id())
-                        });
+                        let item = workspace
+                            .active_item(cx)
+                            .map(|item| format!("{:?}", item.item_id()));
                         let editors = workspace.items_of_type::<Editor>(cx).count();
                         anyhow::anyhow!(
                             "Markdown files should open as previews by default \
@@ -2436,9 +2436,7 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn preview_serialized_path_updates_when_source_file_is_renamed(
-        cx: &mut TestAppContext,
-    ) {
+    async fn preview_serialized_path_updates_when_source_file_is_renamed(cx: &mut TestAppContext) {
         let app_state = init_test(cx);
         set_default_open_mode_to_source(&app_state, cx);
         app_state

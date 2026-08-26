@@ -10,8 +10,8 @@ use std::{
 
 use crate::table_data_engine::{DisplayToDataMapping, TableDataEngine};
 use ui::{
-    AbsoluteLength, FluentBuilder as _, ResizableColumnsState, SharedString,
-    TableInteractionState, TableResizeBehavior, prelude::*,
+    AbsoluteLength, FluentBuilder as _, ResizableColumnsState, SharedString, TableInteractionState,
+    TableResizeBehavior, prelude::*,
 };
 use workspace::{Item, Pane, Workspace};
 
