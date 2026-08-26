@@ -505,10 +505,46 @@ impl WorktreeStore {
     ) -> Task<Result<(Entity<Worktree>, Arc<RelPath>)>> {
         let abs_path = abs_path.as_ref();
         if let Some((tree, relative_path)) = self.find_worktree(abs_path, cx) {
-            Task::ready(Ok((tree, relative_path)))
-        } else {
-            let worktree = self.create_worktree(abs_path, visible, cx);
-            cx.background_spawn(async move { Ok((worktree.await?, RelPath::empty_arc())) })
+            return Task::ready(Ok((tree, relative_path)));
+        }
+
+        match &self.state {
+            WorktreeStoreState::Local { fs } => {
+                let fs = fs.clone();
+                let abs_path = abs_path.to_path_buf();
+                cx.spawn(async move |this, cx| {
+                    // Root a lone file at its containing directory so the file
+                    // keeps a meaningful relative path instead of becoming an
+                    // empty-path worktree root.
+                    let is_file = fs
+                        .metadata(&abs_path)
+                        .await
+                        .ok()
+                        .flatten()
+                        .is_some_and(|metadata| !metadata.is_dir);
+                    let (root_path, relative_path) = if is_file {
+                        let file_name = abs_path.file_name().context("file has no name")?;
+                        let parent = abs_path
+                            .parent()
+                            .context("file has no parent directory")?
+                            .to_path_buf();
+                        let relative_path = Arc::from(
+                            RelPath::new(Path::new(file_name), PathStyle::local())?.as_ref(),
+                        );
+                        (parent, relative_path)
+                    } else {
+                        (abs_path.clone(), RelPath::empty_arc())
+                    };
+                    let worktree = this
+                        .update(cx, |this, cx| this.create_worktree(root_path, visible, cx))?
+                        .await?;
+                    Ok((worktree, relative_path))
+                })
+            }
+            _ => {
+                let worktree = self.create_worktree(abs_path, visible, cx);
+                cx.background_spawn(async move { Ok((worktree.await?, RelPath::empty_arc())) })
+            }
         }
     }
 

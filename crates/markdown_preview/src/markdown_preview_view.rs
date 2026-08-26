@@ -101,9 +101,22 @@ impl project::ProjectItem for MarkdownPreviewProjectItem {
         path: &ProjectPath,
         cx: &mut App,
     ) -> Option<Task<Result<Entity<Self>>>> {
+        let rel_path = path.path.as_std_path();
+        let is_markdown = if rel_path.as_os_str().is_empty() {
+            // A lone file opens as its own worktree root with an empty
+            // relative path, so check the root entry's name instead.
+            project
+                .read(cx)
+                .worktree_for_id(path.worktree_id, cx)
+                .is_some_and(|worktree| {
+                    MarkdownPreviewView::is_markdown_path(worktree.read(cx).root_name_str())
+                })
+        } else {
+            MarkdownPreviewView::is_markdown_path(rel_path)
+        };
         if MarkdownPreviewSettings::get_global(cx).default_open_mode
             == MarkdownPreviewOpenMode::Source
-            || !MarkdownPreviewView::is_markdown_path(path.path.as_std_path())
+            || !is_markdown
         {
             return None;
         }
@@ -1364,12 +1377,12 @@ impl Item for MarkdownPreviewView {
 
     fn for_each_project_item(
         &self,
-        cx: &App,
-        f: &mut dyn FnMut(gpui::EntityId, &dyn project::ProjectItem),
+        _: &App,
+        _: &mut dyn FnMut(gpui::EntityId, &dyn project::ProjectItem),
     ) {
-        if let Some(active_editor) = &self.active_editor {
-            active_editor.editor.read(cx).for_each_project_item(cx, f);
-        }
+        // Deliberately a no-op: forwarding the source editor's project item
+        // makes the preview report the same project entry as the editor tab,
+        // so Pane::add_item deduplicates it away instead of opening a tab.
     }
 
     fn is_dirty(&self, cx: &App) -> bool {
@@ -1976,6 +1989,7 @@ mod tests {
     use util::rel_path::{RelPath, rel_path};
     use util::test::TempTree;
     use workspace::item::SerializableItem;
+    use settings::{MarkdownPreviewOpenMode, update_settings_file};
     use workspace::{
         AppState, ItemId, MultiWorkspace, SaveIntent, Workspace, WorkspaceId, open_paths,
     };
@@ -2040,7 +2054,17 @@ mod tests {
                 let workspace = multi_workspace.workspace().read(cx);
                 let preview = workspace
                     .active_item_as::<MarkdownPreviewView>(cx)
-                    .expect("Markdown files should open as previews by default");
+                    .ok_or_else(|| {
+                        let item = workspace.active_item(cx).map(|item| {
+                            format!("{:?}", item.item_id())
+                        });
+                        let editors = workspace.items_of_type::<Editor>(cx).count();
+                        anyhow::anyhow!(
+                            "Markdown files should open as previews by default \
+                             (active_item={item:?}, editor_count={editors})"
+                        )
+                    })
+                    .unwrap();
                 let editor = preview
                     .read(cx)
                     .active_editor
@@ -2049,10 +2073,11 @@ mod tests {
                     .editor
                     .clone();
 
-                assert_eq!(
-                    editor_source_path(cx, &editor).as_ref(),
-                    rel_path("note.md")
-                );
+                let editor_source_path = editor.read_with(cx, |editor, cx| {
+                    let buffer = editor.buffer().read(cx).as_singleton().unwrap();
+                    buffer.read(cx).file().unwrap().path().clone()
+                });
+                assert_eq!(editor_source_path.as_ref(), rel_path("note.md"));
                 assert!(
                     workspace.items_of_type::<Editor>(cx).next().is_none(),
                     "preview-first open should not create a separate source tab"
@@ -2105,6 +2130,7 @@ mod tests {
     #[gpui::test]
     async fn toggles_task_checkbox_and_saves_when_preview_is_active(cx: &mut TestAppContext) {
         let app_state = init_test(cx);
+        set_default_open_mode_to_source(&app_state, cx);
         app_state
             .fs
             .as_fake()
@@ -2157,6 +2183,7 @@ mod tests {
             .update(cx, |multi_workspace, window, cx| {
                 let workspace: Entity<Workspace> = multi_workspace.workspace().clone();
                 let view_handle = preview.downgrade();
+                window.focus(&preview.focus_handle(cx), cx);
                 assert!(preview.read(cx).focus_handle.contains_focused(window, cx));
                 preview.update(cx, |preview, cx| {
                     let editor = preview.active_editor.as_ref().unwrap().editor.clone();
@@ -2259,6 +2286,7 @@ mod tests {
     #[gpui::test]
     async fn force_closing_preview_preserves_source_editor_changes(cx: &mut TestAppContext) {
         let app_state = init_test(cx);
+        set_default_open_mode_to_source(&app_state, cx);
         app_state
             .fs
             .as_fake()
@@ -2312,6 +2340,7 @@ mod tests {
         multi_workspace
             .update(cx, |_, window, cx| {
                 let view_handle = preview.downgrade();
+                window.focus(&preview.focus_handle(cx), cx);
                 assert!(preview.read(cx).focus_handle.contains_focused(window, cx));
                 MarkdownPreviewView::apply_checkbox_toggle_to_editor(&editor, 2..5, true, cx);
                 MarkdownPreviewView::refresh_preview(view_handle, window, cx);
@@ -2380,6 +2409,7 @@ mod tests {
 
         multi_workspace
             .update(cx, |multi_workspace, window, cx| {
+                window.focus(&preview.focus_handle(cx), cx);
                 let workspace = multi_workspace.workspace().read(cx);
                 assert!(
                     preview.read(cx).focus_handle.contains_focused(window, cx),
@@ -2406,8 +2436,11 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn preview_serialized_path_updates_when_source_file_is_renamed(cx: &mut TestAppContext) {
+    async fn preview_serialized_path_updates_when_source_file_is_renamed(
+        cx: &mut TestAppContext,
+    ) {
         let app_state = init_test(cx);
+        set_default_open_mode_to_source(&app_state, cx);
         app_state
             .fs
             .as_fake()
@@ -2752,6 +2785,20 @@ mod tests {
         );
     }
 
+    /// Opts a test into source-mode opens so files open as editors even
+    /// though previews are the default; these tests build previews manually.
+    fn set_default_open_mode_to_source(app_state: &Arc<AppState>, cx: &mut TestAppContext) {
+        cx.update(|cx| {
+            update_settings_file(app_state.fs.clone(), cx, |settings, _| {
+                settings
+                    .markdown_preview
+                    .get_or_insert_default()
+                    .default_open_mode = Some(MarkdownPreviewOpenMode::Source);
+            });
+        });
+        cx.run_until_parked();
+    }
+
     async fn open_markdown_file(
         cx: &mut TestAppContext,
         file_name: &str,
@@ -2765,6 +2812,7 @@ mod tests {
             .as_fake()
             .insert_tree(path!("/dir"), serde_json::Value::Object(entries))
             .await;
+        set_default_open_mode_to_source(&app_state, cx);
 
         cx.update(|cx| {
             open_paths(
@@ -2817,6 +2865,7 @@ mod tests {
     ) {
         multi_workspace
             .update(cx, |_, window, cx| {
+                window.focus(&preview.focus_handle(cx), cx);
                 assert!(
                     preview.read(cx).focus_handle.contains_focused(window, cx),
                     "preview must be focused for the keyboard action to dispatch to it"
