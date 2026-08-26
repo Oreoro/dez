@@ -209,7 +209,7 @@ fn render_sidebar_header_controls_for_state(
         DesignSystemSettings::get_global(cx).density,
     );
     let on_right = sidebar_side == SidebarSide::Right;
-    let sidebar_multi_workspace = multi_workspace.clone();
+    let sidebar_multi_workspace = multi_workspace;
     let project_pane_visible = project_pane_visible.or_else(|| {
         active_workspace.as_ref().map(|workspace| {
             let workspace = workspace.read(cx);

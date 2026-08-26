@@ -4854,7 +4854,7 @@ impl OutlinePanel {
                                     .size(LabelSize::Small)
                                     .color(Color::Muted),
                             )
-                            .when_some(query.clone(), |this, query| {
+                            .when_some(query, |this, query| {
                                 this.child(
                                     h_flex()
                                         .min_w_0()

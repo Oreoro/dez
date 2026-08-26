@@ -1,8 +1,4 @@
-use std::{
-    path::PathBuf,
-    process::Command,
-    time::Duration,
-};
+use std::{path::PathBuf, process::Command, time::Duration};
 
 #[cfg(any(target_os = "macos", test))]
 use std::collections::{HashMap, HashSet};
@@ -70,6 +66,7 @@ impl ObservedMachineTerminal {
         details
     }
 
+    #[allow(clippy::disallowed_methods, reason = "one-shot Finder reveal with no async context")]
     pub fn reveal_owning_application(&self) -> Result<()> {
         let application = self
             .owning_application
@@ -179,6 +176,7 @@ struct ProcessRecord {
     command_line: String,
 }
 
+#[allow(clippy::disallowed_methods, reason = "short-lived ps scan with no async context")]
 fn scan_machine_terminals() -> Result<Vec<ObservedMachineTerminal>> {
     #[cfg(target_os = "macos")]
     {
@@ -472,6 +470,7 @@ fn known_terminal_application(command: &str, command_line: &str) -> Option<&'sta
 }
 
 #[cfg(target_os = "macos")]
+#[allow(clippy::disallowed_methods, reason = "short-lived lsof scan with no async context")]
 fn working_directories_for(process_ids: Vec<u32>) -> HashMap<u32, PathBuf> {
     #[cfg(target_os = "macos")]
     {

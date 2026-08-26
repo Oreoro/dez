@@ -1121,7 +1121,7 @@ impl Render for WelcomePage {
         h_flex()
             .id("welcome-page")
             .role(gpui::Role::Region)
-            .aria_label(welcome_label.clone())
+            .aria_label(welcome_label)
             .key_context("Welcome")
             .track_focus(&self.focus_handle(cx))
             .on_action(cx.listener(Self::select_previous))

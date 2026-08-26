@@ -718,7 +718,7 @@ pub fn init(
     }
     agent_panel::init(cx);
     register_serializable_item::<AgentThreadItem>(cx);
-    context_server_configuration::init(language_registry.clone(), fs.clone(), cx);
+    context_server_configuration::init(language_registry, fs.clone(), cx);
     thread_metadata_store::init(cx);
     terminal_thread_metadata_store::init(cx);
     machine_terminal_store::init(cx);

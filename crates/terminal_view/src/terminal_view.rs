@@ -3750,9 +3750,7 @@ impl TerminalView {
                         .flex_none()
                         .gap(terminal_context_strip_gap(density))
                         .when_some(
-                            external_attach_retry_task_id
-                                .clone()
-                                .zip(retry_attach_visible_label),
+                            external_attach_retry_task_id.zip(retry_attach_visible_label),
                             |this, (retry_task_id, visible_label)| {
                                 let accessibility_label =
                                     retry_attach_accessibility_label.clone();

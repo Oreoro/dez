@@ -9921,7 +9921,7 @@ impl Workspace {
             return;
         }
 
-        let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel.clone());
+        let panel_handle: Arc<dyn PanelHandle> = Arc::new(panel);
         self.add_panel_handle_to_panel_pane(panel_handle, starts_open, window, cx);
     }
 

@@ -43,6 +43,7 @@ where
     F: Future<Output = Result<T, TerminalHostTransportError>>,
 {
     smol::future::race(future, async move {
+        #[allow(clippy::disallowed_methods)]
         smol::Timer::after(timeout).await;
         Err(TerminalHostTransportError::TimedOut { operation, timeout })
     })
@@ -144,6 +145,7 @@ where
     F: Future<Output = Result<T, TerminalHostTransportError>>,
 {
     smol::future::race(future, async move {
+        #[allow(clippy::disallowed_methods)]
         smol::Timer::after(AGENT_HOOK_TRANSPORT_TIMEOUT).await;
         Err(TerminalHostTransportError::TimedOut {
             operation,
@@ -761,6 +763,7 @@ async fn serve_event_stream(
                 Ok::<_, anyhow::Error>(true)
             },
             async {
+                #[allow(clippy::disallowed_methods)]
                 smol::Timer::after(TERMINAL_HOST_EVENT_HEARTBEAT_INTERVAL).await;
                 Ok(false)
             },
@@ -806,6 +809,7 @@ async fn execute_command(
                             }
                         },
                         async {
+                            #[allow(clippy::disallowed_methods)]
                             smol::Timer::after(TERMINAL_PTY_TERMINATION_TIMEOUT).await;
                             Completion::TimedOut
                         },

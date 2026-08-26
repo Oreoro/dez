@@ -6453,7 +6453,7 @@ impl GitPanel {
                     s.bg(cx.theme().colors().tab_inactive_background)
                         .border_color(cx.theme().colors().border.opacity(0.6))
                 })
-                .child(Label::new(label.clone()).when(!active, |this| this.color(Color::Muted)))
+                .child(Label::new(label).when(!active, |this| this.color(Color::Muted)))
                 .when(show_changes && self.changes_count > 0, |this| {
                     this.child(
                         Label::new(format!("({})", self.changes_count))
