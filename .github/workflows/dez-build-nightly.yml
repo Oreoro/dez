@@ -246,14 +246,28 @@ jobs:
           clean: false
           fetch-tags: true
 
-      - name: Update the nightly tag
+      - name: Create or update the nightly tag
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
-            github.rest.git.updateRef({
+            try {
+              await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'tags/nightly'
+              });
+              await github.rest.git.updateRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: 'tags/nightly',
                 sha: context.sha,
                 force: true
-            })
+              });
+            } catch (e) {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/tags/nightly',
+                sha: context.sha
+              });
+            }
