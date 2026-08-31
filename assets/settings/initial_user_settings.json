@@ -3,8 +3,8 @@
 // Dez starts with one native Main Work Area for files, terminals, tools, and
 // review. Workspaces stays closed until cross-Workspace supervision is useful.
 // These first-run values mirror the validated local Dez profile: comfortable
-// line height, agentic Workspace starts, an open supervision sidebar, wheel
-// zoom, and compact 13 px text on the bundled IBM Plex Sans and Lilex faces.
+// line height, agentic Workspace starts, an open supervision sidebar, and
+// compact 13 px text on the bundled IBM Plex Sans and Lilex faces.
 //
 // To see every Dez default without changing your custom settings, run
 // `dez: open default settings` from the
@@ -17,8 +17,6 @@
   },
   "cursor_blink": true,
   "cursor_shape": "bar",
-  "accessible_mode": true,
-  "mouse_wheel_zoom": true,
   "hide_mouse": "never",
   "vim_mode": false,
   "ui_font_family": "IBM Plex Sans",
