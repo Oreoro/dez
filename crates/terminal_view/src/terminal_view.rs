@@ -3541,8 +3541,8 @@ impl TerminalView {
         );
         let details_git =
             terminal_details_git_summary(has_workspace_files, &repository_label, &changes_label);
-        let details_working_directory = working_directory.clone();
-        let details_session_id = session_id.clone();
+        let details_working_directory = working_directory;
+        let details_session_id = session_id;
         let details_visible_label = terminal_details_disclosure_label(
             self.show_terminal_details,
             action_label_visibility.details,

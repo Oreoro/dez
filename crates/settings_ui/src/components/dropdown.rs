@@ -120,10 +120,7 @@ where
         let menu_icon_for_value = icon_for_value.clone();
         let popover_handle = window
             .use_keyed_state(
-                (
-                    ElementId::from("enum-variant-dropdown-handle"),
-                    id.clone().to_string(),
-                ),
+                (ElementId::from("enum-variant-dropdown-handle"), id.clone()),
                 cx,
                 |_, _| ui::PopoverMenuHandle::<ContextMenu>::default(),
             )

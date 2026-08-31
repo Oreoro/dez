@@ -5819,7 +5819,7 @@ fn render_subagent_model_picker(
     };
 
     let selected_effort_label = selected_effort.name.clone();
-    let selected_effort_value = selected_effort.value.clone();
+    let selected_effort_value = selected_effort.value;
     let effort_menu = ContextMenu::build(window, cx, move |mut menu, _window, _cx| {
         for effort_level in effort_levels {
             let is_selected = effort_level.value == selected_effort_value;

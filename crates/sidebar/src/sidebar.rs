@@ -3983,7 +3983,7 @@ mod terminal_runtime_label_tests {
             terminal_agent_state_label(
                 Some(&TerminalAgentSnapshot {
                     state: TerminalAgentState::Running,
-                    ..structured.clone()
+                    ..structured
                 }),
                 Some(&missing),
                 true,
@@ -9908,7 +9908,7 @@ impl Sidebar {
         .selected_style(workspace_navigation_selected_style(APP_NAME))
         .icon_size(icon_size)
         .tab_index(0isize)
-        .aria_label(new_terminal_label.clone())
+        .aria_label(new_terminal_label)
         .when(
             !workspace_new_terminal_action_persistent(is_active, is_focused, is_menu_open),
             |this| this.visible_on_hover(group_name),
@@ -9922,7 +9922,6 @@ impl Sidebar {
 
         if open_workspaces.is_empty() {
             let key = key.clone();
-            let terminal_tooltip_label = terminal_tooltip_label.clone();
             return button
                 .tooltip(move |_, cx| {
                     Tooltip::for_action_in(
@@ -10236,7 +10235,7 @@ impl Sidebar {
                     .selected_style(workspace_navigation_selected_style(APP_NAME))
                     .icon_size(icon_size)
                     .tab_index(0isize)
-                    .aria_label(workspace_options_label.clone())
+                    .aria_label(workspace_options_label)
                     .aria_expanded(is_menu_open)
                     .tooltip(Tooltip::text(workspace_options_tooltip_label()))
                     .when(
@@ -11560,6 +11559,7 @@ impl Sidebar {
         self.serialize(cx);
     }
 
+    #[allow(clippy::never_loop)]
     fn manual_order_target_index(&self, selected_index: usize, up: bool) -> Option<usize> {
         if up {
             for index in (0..selected_index).rev() {
@@ -12905,7 +12905,7 @@ impl Sidebar {
                     &NewCenterTerminal {
                         local: false,
                         startup_command: None,
-                        working_directory: metadata.working_directory.clone(),
+                        working_directory: metadata.working_directory,
                     },
                     window,
                     cx,
@@ -12919,7 +12919,7 @@ impl Sidebar {
             ) => {
                 self.open_workspace_and_create_entry(
                     &project_group_key,
-                    NewEntryTarget::LegacyTerminal(metadata.working_directory.clone()),
+                    NewEntryTarget::LegacyTerminal(metadata.working_directory),
                     window,
                     cx,
                 );
@@ -14921,7 +14921,7 @@ impl Sidebar {
                 self.activate_terminal_entry(
                     terminal.metadata.clone(),
                     owner_workspace,
-                    terminal.source.clone(),
+                    terminal.source,
                     false,
                     window,
                     cx,
@@ -15915,9 +15915,9 @@ impl Sidebar {
                 let thread_id = thread.metadata.thread_id;
                 let markdown_title = Some(thread.metadata.display_title());
                 let rename_title = title;
-                let review_brief = review_brief.clone();
-                let review_owner_workspace = review_owner_workspace.clone();
-                let review_metadata = review_metadata.clone();
+                let review_brief = review_brief;
+                let review_owner_workspace = review_owner_workspace;
+                let review_metadata = review_metadata;
                 move |_window, cx| {
                     let session_id = session_id.clone();
                     let sidebar = sidebar.clone();
@@ -18538,10 +18538,7 @@ impl Sidebar {
                 .labels_visible(labels_visible)
                 .action_slot(
                     IconButton::new(
-                        (
-                            ElementId::from("external-session-attach"),
-                            session.id.clone(),
-                        ),
+                        (ElementId::from("external-session-attach"), session.id),
                         action_icon,
                     )
                     .size(navigation_control_size)
@@ -18552,6 +18549,7 @@ impl Sidebar {
                     .on_click(move |_, window, cx| {
                         cx.stop_propagation();
                         window.prevent_default();
+
                         action_sidebar
                             .update(cx, |sidebar, cx| {
                                 sidebar.open_external_multiplexer_session(
@@ -18579,90 +18577,84 @@ impl Sidebar {
             .collect::<Vec<_>>();
 
         if self.external_activity_expanded {
-            rows.extend(
-                self.contents
-                    .machine_terminals
-                    .iter()
-                    .cloned()
-                    .map(|terminal| {
-                        let title = terminal.display_title();
-                        let project_label = terminal.working_directory.as_ref().and_then(|cwd| {
-                            project_roots
-                                .iter()
-                                .filter(|(root, _)| cwd.starts_with(root))
-                                .max_by_key(|(root, _)| root.components().count())
-                                .map(|(_, label)| label.clone())
-                        });
-                        let state = project_label
-                            .as_ref()
-                            .map(|project| format!("{project} · read-only"))
-                            .unwrap_or_else(|| format!("{} · read-only", terminal.tty));
-                        let owner = terminal.owner_label().to_owned();
-                        let location = terminal
-                            .working_directory
-                            .as_ref()
-                            .map(|path| path.to_string_lossy().into_owned())
-                            .unwrap_or_else(|| "This Mac".to_owned());
-                        let action_label = terminal
-                            .owning_application
-                            .as_ref()
-                            .map(|application| format!("Reveal in {application}"))
-                            .unwrap_or_else(|| "Copy observed terminal details".to_owned());
-                        let action_icon = if terminal.owning_application.is_some() {
-                            IconName::ArrowUpRight
-                        } else {
-                            IconName::Copy
-                        };
-                        let row_terminal = terminal.clone();
-                        let action_terminal = terminal.clone();
+            rows.extend(self.contents.machine_terminals.iter().map(|terminal| {
+                let title = terminal.display_title();
+                let project_label = terminal.working_directory.as_ref().and_then(|cwd| {
+                    project_roots
+                        .iter()
+                        .filter(|(root, _)| cwd.starts_with(root))
+                        .max_by_key(|(root, _)| root.components().count())
+                        .map(|(_, label)| label.clone())
+                });
+                let state = project_label
+                    .as_ref()
+                    .map(|project| format!("{project} · read-only"))
+                    .unwrap_or_else(|| format!("{} · read-only", terminal.tty));
+                let owner = terminal.owner_label().to_owned();
+                let location = terminal
+                    .working_directory
+                    .as_ref()
+                    .map(|path| path.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "This Mac".to_owned());
+                let action_label = terminal
+                    .owning_application
+                    .as_ref()
+                    .map(|application| format!("Reveal in {application}"))
+                    .unwrap_or_else(|| "Copy observed terminal details".to_owned());
+                let action_icon = if terminal.owning_application.is_some() {
+                    IconName::ArrowUpRight
+                } else {
+                    IconName::Copy
+                };
+                let row_terminal = terminal.clone();
+                let action_terminal = terminal.clone();
 
-                        canvas_thread_item_style(
-                            ThreadItem::new(
-                                ElementId::from(format!("machine-terminal-{}", terminal.id)),
-                                title,
-                            ),
-                            &design_system,
-                        )
-                        .icon(
-                            terminal
-                                .detected_agent_kind
-                                .map(terminal_agent_icon)
-                                .unwrap_or(IconName::Terminal),
-                        )
-                        .actor_label(owner)
-                        .actor_label_visible(supplemental_metadata_visible)
-                        .state_label(state)
-                        .host_label(location)
-                        .host_label_visible(supplemental_metadata_visible)
-                        .labels_visible(labels_visible)
-                        .action_slot(
-                            IconButton::new(
-                                (
-                                    ElementId::from("machine-terminal-action"),
-                                    terminal.id.clone(),
-                                ),
-                                action_icon,
-                            )
-                            .size(navigation_control_size)
-                            .icon_size(navigation_icon_size)
-                            .tab_index(0isize)
-                            .aria_label(action_label.clone())
-                            .tooltip(Tooltip::text(action_label))
-                            .on_click(move |_, window, cx| {
-                                cx.stop_propagation();
-                                window.prevent_default();
-                                activate_observed_machine_terminal(action_terminal.clone(), cx);
-                            }),
-                        )
-                        .on_click(move |_, _window, cx| {
-                            activate_observed_machine_terminal(row_terminal.clone(), cx);
-                        })
-                        .into_any_element()
+                canvas_thread_item_style(
+                    ThreadItem::new(
+                        ElementId::from(format!("machine-terminal-{}", terminal.id)),
+                        title,
+                    ),
+                    &design_system,
+                )
+                .icon(
+                    terminal
+                        .detected_agent_kind
+                        .map(terminal_agent_icon)
+                        .unwrap_or(IconName::Terminal),
+                )
+                .actor_label(owner)
+                .actor_label_visible(supplemental_metadata_visible)
+                .state_label(state)
+                .host_label(location)
+                .host_label_visible(supplemental_metadata_visible)
+                .labels_visible(labels_visible)
+                .action_slot(
+                    IconButton::new(
+                        (
+                            ElementId::from("machine-terminal-action"),
+                            terminal.id.clone(),
+                        ),
+                        action_icon,
+                    )
+                    .size(navigation_control_size)
+                    .icon_size(navigation_icon_size)
+                    .tab_index(0isize)
+                    .aria_label(action_label.clone())
+                    .tooltip(Tooltip::text(action_label))
+                    .on_click(move |_, window, cx| {
+                        cx.stop_propagation();
+                        window.prevent_default();
+                        activate_observed_machine_terminal(action_terminal.clone(), cx);
                     }),
-            );
+                )
+                .on_click(move |_, _window, cx| {
+                    activate_observed_machine_terminal(row_terminal.clone(), cx);
+                })
+                .into_any_element()
+            }));
         }
 
-        let disclosure_sidebar = sidebar.clone();
+        let disclosure_sidebar = sidebar;
         let disclosure_label = if APP_NAME != "Zed" {
             if self.external_activity_expanded {
                 "Hide Other Running Sessions"
@@ -19161,7 +19153,7 @@ impl Sidebar {
             .join(" ");
         let retry_accessibility_label = external_activity_retry_accessibility_label(&source_names);
         let retry_tooltip = external_activity_retry_tooltip(&source_names);
-        let retry_store = store.clone();
+        let retry_store = store;
 
         Some(
             Callout::new()
@@ -20221,7 +20213,7 @@ impl Sidebar {
                             }
                         }
                         if supports_logout {
-                            if let Some(conversation_view) = active_conversation_view.clone() {
+                            if let Some(conversation_view) = active_conversation_view {
                                 menu = menu.entry("Log Out", None, move |window, cx| {
                                     conversation_view.update(cx, |conversation_view, cx| {
                                         conversation_view.logout(window, cx)

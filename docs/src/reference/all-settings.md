@@ -44,49 +44,7 @@ Non-negative `float` values
 - Setting: `inactive_opacity`
 - Default: `1.0`
 
-**Options**
-
-`float` values
-
-## Bottom Dock Layout
-
-- Description: Control the layout of the bottom dock, relative to the left and right docks.
-- Setting: `bottom_dock_layout`
-- Default: `"contained"`
-
-**Options**
-
-1. Contain the bottom dock, giving the full height of the window to the left and right docks.
-
-```json [settings]
-{
-  "bottom_dock_layout": "contained"
-}
-```
-
-2. Give the bottom dock the full width of the window, truncating the left and right docks.
-
-```json [settings]
-{
-  "bottom_dock_layout": "full"
-}
-```
-
-3. Left align the bottom dock, truncating the left dock and giving the right dock the full height of the window.
-
-```json [settings]
-{
-  "bottom_dock_layout": "left_aligned"
-}
-```
-
-4. Right align the bottom dock, giving the left dock the full height of the window and truncating the right dock.
-
-```json [settings]
-{
-  "bottom_dock_layout": "right_aligned"
-}
-```
+**Options**`float` values
 
 ## Agent Buffer Font Size
 

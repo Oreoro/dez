@@ -344,6 +344,32 @@ pub(crate) fn install_linux_dependencies(job: Job) -> Job {
     job.add_step(setup_linux()).add_step(download_wasi_sdk())
 }
 
+/// Free disk space on GitHub-hosted Linux runners by removing pre-installed
+/// toolchains that are not needed for this build.  The ubuntu-24.04 image
+/// ships ~30 GB of Android SDK, .NET, GraalVM, and other toolchains that
+/// exhaust the runner's disk during full-workspace debug compilation.
+pub(crate) fn free_disk_space_linux() -> Step<Run> {
+    named::bash(indoc::indoc! {r#"
+        set -euo pipefail
+        echo "Before cleanup:"
+        df -h /
+        sudo rm -rf /usr/local/lib/android 2>/dev/null || true
+        sudo rm -rf /opt/hostedtoolcache 2>/dev/null || true
+        sudo rm -rf /usr/share/dotnet 2>/dev/null || true
+        sudo rm -rf /usr/local/graalvm 2>/dev/null || true
+        sudo rm -rf /usr/local/share/powershell 2>/dev/null || true
+        sudo rm -rf /usr/local/share/chromium 2>/dev/null || true
+        sudo rm -rf /usr/local/julia* 2>/dev/null || true
+        sudo rm -rf /opt/ghc 2>/dev/null || true
+        sudo rm -rf /usr/local/.ghcup 2>/dev/null || true
+        docker image prune --all --force 2>/dev/null || true
+        sudo apt-get clean
+        echo "After cleanup:"
+        df -h /
+    "#})
+    .id("free_disk_space")
+}
+
 pub fn script(name: &str) -> Step<Run> {
     if name.ends_with(".ps1") {
         Step::new(name).run(name).shell(PWSH_SHELL)

@@ -46,6 +46,25 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
+    - id: free_disk_space
+      name: steps::free_disk_space_linux
+      run: |
+        set -euo pipefail
+        echo "Before cleanup:"
+        df -h /
+        sudo rm -rf /usr/local/lib/android 2>/dev/null || true
+        sudo rm -rf /opt/hostedtoolcache 2>/dev/null || true
+        sudo rm -rf /usr/share/dotnet 2>/dev/null || true
+        sudo rm -rf /usr/local/graalvm 2>/dev/null || true
+        sudo rm -rf /usr/local/share/powershell 2>/dev/null || true
+        sudo rm -rf /usr/local/share/chromium 2>/dev/null || true
+        sudo rm -rf /usr/local/julia* 2>/dev/null || true
+        sudo rm -rf /opt/ghc 2>/dev/null || true
+        sudo rm -rf /usr/local/.ghcup 2>/dev/null || true
+        docker image prune --all --force 2>/dev/null || true
+        sudo apt-get clean
+        echo "After cleanup:"
+        df -h /
     - name: steps::setup_cargo_config
       run: |
         mkdir -p ./../.cargo
@@ -664,12 +683,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
     - name: release::send_slack_message
-      run: |
-        if [ -z "$SLACK_WEBHOOK" ]; then
-          echo "SLACK_WEBHOOK_WORKFLOW_FAILURES secret is not set; skipping Slack notification."
-          exit 0
-        fi
-        curl -X POST -H 'Content-type: application/json' --data "$(jq -n --arg text "$SLACK_MESSAGE" '{"text": $text}')" "$SLACK_WEBHOOK"
+      run: 'curl -X POST -H ''Content-type: application/json'' --data "$(jq -n --arg text "$SLACK_MESSAGE" ''{"text": $text}'')" "$SLACK_WEBHOOK"'
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_WORKFLOW_FAILURES }}
         SLACK_MESSAGE: '❌ ${{ github.workflow }} failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'

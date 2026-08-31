@@ -894,12 +894,16 @@ jobs:
     steps:
       - name: Resolve the Dez release tag
         id: dez-tag
+        env:
+          INPUT_EVENT_NAME: ${{ github.event_name }}
+          INPUT_REF_NAME: ${{ github.ref_name }}
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            tag="${{ github.ref_name }}"
-          elif [[ -n "${{ inputs.release_tag }}" ]]; then
-            tag="${{ inputs.release_tag }}"
+          if [[ "$INPUT_EVENT_NAME" == "push" ]]; then
+            tag="$INPUT_REF_NAME"
+          elif [[ -n "$INPUT_RELEASE_TAG" ]]; then
+            tag="$INPUT_RELEASE_TAG"
           else
             version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' crates/zed/Cargo.toml | head -n 1)"
             test -n "$version"

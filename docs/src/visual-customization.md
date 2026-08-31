@@ -159,9 +159,6 @@ To disable this behavior use:
     "inactive_opacity": 1.0
   },
 
-  // Layout mode of the bottom dock: contained, full, left_aligned, right_aligned
-  "bottom_dock_layout": "contained",
-
   // Whether to resize all the panels in a dock when resizing the dock.
   // Can be a combination of "left", "right" and "bottom".
   "resize_all_panels_in_dock": ["left"]

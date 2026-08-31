@@ -618,6 +618,9 @@ fn run_platform_tests_impl(platform: Platform, filter_packages: bool, harden: bo
                 this.add_step(steps::harden_runner())
             })
             .add_step(steps::checkout_repo())
+            .when(platform == Platform::Linux, |this| {
+                this.add_step(steps::free_disk_space_linux())
+            })
             .add_step(steps::setup_cargo_config(platform))
             .when(platform == Platform::Mac, |this| {
                 this.add_step(steps::cache_rust_dependencies_namespace())

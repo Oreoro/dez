@@ -68,6 +68,25 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
+    - id: free_disk_space
+      name: steps::free_disk_space_linux
+      run: |
+        set -euo pipefail
+        echo "Before cleanup:"
+        df -h /
+        sudo rm -rf /usr/local/lib/android 2>/dev/null || true
+        sudo rm -rf /opt/hostedtoolcache 2>/dev/null || true
+        sudo rm -rf /usr/share/dotnet 2>/dev/null || true
+        sudo rm -rf /usr/local/graalvm 2>/dev/null || true
+        sudo rm -rf /usr/local/share/powershell 2>/dev/null || true
+        sudo rm -rf /usr/local/share/chromium 2>/dev/null || true
+        sudo rm -rf /usr/local/julia* 2>/dev/null || true
+        sudo rm -rf /opt/ghc 2>/dev/null || true
+        sudo rm -rf /usr/local/.ghcup 2>/dev/null || true
+        docker image prune --all --force 2>/dev/null || true
+        sudo apt-get clean
+        echo "After cleanup:"
+        df -h /
     - name: steps::setup_cargo_config
       run: |
         mkdir -p ./../.cargo

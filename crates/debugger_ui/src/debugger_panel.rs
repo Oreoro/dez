@@ -472,7 +472,7 @@ impl DebugPanel {
 
         let boot_task = cx.spawn({
             let session = session.clone();
-            let launch_request = launch_request.clone();
+            let launch_request = launch_request;
 
             async move |this, cx| {
                 if let Err(error) = task.await {
