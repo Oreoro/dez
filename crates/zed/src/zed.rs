@@ -1957,6 +1957,12 @@ fn open_about_window(cx: &mut App) {
             let ui_font = theme_settings::setup_ui_font(window, cx);
             let ok_is_focused = self.ok_entry.focus_handle.contains_focused(window, cx);
             let copy_is_focused = self.copy_entry.focus_handle.contains_focused(window, cx);
+            // Standalone OS window: nothing renders behind it, so a translucent
+            // editor background (e.g. the Lumin glass themes) would show the
+            // desktop through and make the page look broken. Keep the hue, drop
+            // the transparency.
+            let mut background = cx.theme().colors().editor_background;
+            background.a = 1.0;
 
             Navigable::new(
                 v_flex()
@@ -1968,7 +1974,7 @@ fn open_about_window(cx: &mut App) {
                     }))
                     .min_w_0()
                     .size_full()
-                    .bg(cx.theme().colors().editor_background)
+                    .bg(background)
                     .text_color(cx.theme().colors().text)
                     .p_4()
                     .when(cfg!(target_os = "macos"), |this| this.pt_10())
