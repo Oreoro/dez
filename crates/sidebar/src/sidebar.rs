@@ -15915,9 +15915,6 @@ impl Sidebar {
                 let thread_id = thread.metadata.thread_id;
                 let markdown_title = Some(thread.metadata.display_title());
                 let rename_title = title;
-                let review_brief = review_brief;
-                let review_owner_workspace = review_owner_workspace;
-                let review_metadata = review_metadata;
                 move |_window, cx| {
                     let session_id = session_id.clone();
                     let sidebar = sidebar.clone();
