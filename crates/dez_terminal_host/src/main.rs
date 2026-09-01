@@ -121,6 +121,7 @@ fn run_server(arguments: ServeArguments) -> Result<()> {
     let listener = UnixListener::bind(&arguments.socket)
         .with_context(|| format!("bind terminal host socket {}", arguments.socket.display()))?;
     make_socket_private(&arguments.socket)?;
+    #[cfg(unix)]
     let socket_guard = BoundSocketGuard::new(arguments.socket)?;
     let result = smol::block_on(serve(
         listener,
@@ -128,6 +129,7 @@ fn run_server(arguments: ServeArguments) -> Result<()> {
         auth_token,
         arguments.replay_limit_bytes,
     ));
+    #[cfg(unix)]
     drop(socket_guard);
     result
 }
@@ -453,12 +455,14 @@ fn bounded_text(value: &str) -> String {
     format!("{}…", &value[..end])
 }
 
+#[cfg(unix)]
 struct BoundSocketGuard {
     path: PathBuf,
     device: u64,
     inode: u64,
 }
 
+#[cfg(unix)]
 impl BoundSocketGuard {
     fn new(path: PathBuf) -> Result<Self> {
         use std::os::unix::fs::{FileTypeExt as _, MetadataExt as _};
@@ -477,6 +481,7 @@ impl BoundSocketGuard {
     }
 }
 
+#[cfg(unix)]
 impl Drop for BoundSocketGuard {
     fn drop(&mut self) {
         use std::os::unix::fs::{FileTypeExt as _, MetadataExt as _};
