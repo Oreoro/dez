@@ -77,9 +77,7 @@ impl TerminalHostRuntime {
                             let message = format!("{error:#}");
                             log::error!("durable terminal host startup failed: {message}");
                             TerminalHostStartupStatus::set(
-                                TerminalHostStartupState::Failed {
-                                    message: message.clone(),
-                                },
+                                TerminalHostStartupState::Failed { message },
                                 cx,
                             );
                         }
@@ -141,17 +139,21 @@ async fn connect_or_launch(
         .arg("--token-file")
         .arg(endpoint.token_file_path())
         .arg("--host-id")
-        .arg(host_id.to_string())
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .arg(host_id.to_string());
     // The host owns the terminal processes, so it must not share the GUI's process session.
     // In particular, quitting a foreground development build must not let its launcher reap the
     // host and every terminal beneath it.
     util::set_pre_exec_to_start_new_session(&mut helper_command);
-    let mut helper_process = helper_command
+    // stdio must be configured on the smol wrapper: its `From` conversion drops stdio state.
+    let mut helper_command = smol::process::Command::from(helper_command);
+    helper_command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let helper_process = helper_command
         .spawn()
-        .with_context(|| format!("launch terminal host helper {}", helper.display()))?;
+        .with_context(|| format!("launch terminal host helper {}", helper.display()))?
+        .into_inner();
     std::thread::Builder::new()
         .name("dez terminal host monitor".to_owned())
         .spawn(move || {
