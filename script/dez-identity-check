@@ -427,7 +427,7 @@ require_multiline_pattern crates/settings_ui/src/components/ollama_model_picker.
     'persistent_settings_popover_handle::<OllamaModelPicker>.*?field\.json_path\.unwrap_or\("edit_predictions\.ollama\.model"\).*?with_handle\(popover_handle\.clone\(\)\).*?wire_settings_popover_trigger_a11y.*?aria_label\(title\).*?aria_value\(trigger_value\).*?popover_handle' \
     'the Ollama model picker can regress to a transient handle or hide its current and expanded state from assistive technology'
 require_multiline_pattern crates/settings_ui/src/components/dropdown.rs \
-    'let popover_handle = window.*?use_keyed_state\(.*?enum-variant-dropdown-handle.*?id\.clone\(\).*?PopoverMenuHandle::<ContextMenu>::default\(\).*?dropdown.*?handle\(popover_handle\).*?aria_label.*?aria_description' \
+    'let popover_handle = window.*?use_keyed_state\(.*?id\.clone\(\).*?enum-variant-dropdown-handle.*?PopoverMenuHandle::<ContextMenu>::default\(\).*?dropdown.*?handle\(popover_handle\).*?aria_label.*?aria_description' \
     'curated enum Settings controls can regress to transient dropdown owners that conceal their expanded state'
 require_multiline_pattern crates/settings_ui/src/pages/audio_input_output_setup.rs \
     'let dropdown_id = dropdown_id\.into\(\).*?let current_device_label.*?persistent_settings_popover_handle::<ContextMenu>\(dropdown_id\.clone\(\).*?DropdownMenu::new\(dropdown_id, current_device_label\.clone\(\), menu\).*?aria_value\(current_device_label\).*?handle\(popover_handle\)' \
