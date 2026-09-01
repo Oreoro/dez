@@ -97,7 +97,7 @@ fn docs_build_steps(
             .add_step(steps::cache_rust_dependencies_namespace())
             .map(steps::install_linux_dependencies)
             .add_step(steps::script("./script/generate-action-metadata"))
-            .add_step(lychee_link_check("./docs/src/**/*"))
+            .add_step(lychee_link_check("./docs/src/**/*.md"))
             .add_step(install_mdbook())
             .add_step(build_docs_book(docs_channel, site_url))
             .add_step(lychee_link_check(&format!("{BUILD_OUTPUT_DIR}/docs"))),
