@@ -150,14 +150,15 @@ async fn connect_or_launch(
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    let helper_process = helper_command
+    let mut helper_process = helper_command
         .spawn()
-        .with_context(|| format!("launch terminal host helper {}", helper.display()))?
-        .into_inner();
+        .with_context(|| format!("launch terminal host helper {}", helper.display()))?;
     std::thread::Builder::new()
         .name("dez terminal host monitor".to_owned())
         .spawn(move || {
-            if let Err(error) = helper_process.wait() {
+            // The forked async-process Child exposes only an async status; a dedicated
+            // thread may block on it.
+            if let Err(error) = futures::executor::block_on(helper_process.status()) {
                 log::warn!("failed to wait for terminal host helper: {error}");
             }
         })
