@@ -586,6 +586,7 @@ fn session_row_primary_action_button(
             .start_icon(Icon::new(icon).size(IconSize::Small))
             .size(ButtonSize::Medium)
             .when_some(style, |this, style| this.style(style))
+            .truncate(true)
             .tab_index(0isize)
             .aria_label(aria_label)
             .when_some(aria_keyshortcuts, |this, shortcut| {
@@ -8904,6 +8905,10 @@ impl Sidebar {
             return div().into_any_element();
         };
         let is_focused = self.focus_handle.is_focused(window);
+        // Header controls must stay reachable by keyboard, not only by hover:
+        // while they are hidden, their hitboxes and accessibility nodes are
+        // never registered, so Tab cannot reach them.
+        let rail_contains_focus = self.focus_handle.contains_focused(window, cx);
         // is_selected means the keyboard selector is here.
         let is_selected = is_focused && self.selection == Some(ix);
 
@@ -9326,6 +9331,7 @@ impl Sidebar {
                                 .icon_size(workspace_icon_size)
                                 .tab_index(0isize)
                                 .aria_label(disclosure_label.clone())
+                                .aria_expanded(!is_collapsed)
                                 .tooltip(Tooltip::text(disclosure_label))
                                 .on_click(cx.listener(
                                     move |this, _, window, cx| {
@@ -9469,7 +9475,7 @@ impl Sidebar {
                                 &group_name,
                                 &workspace_name,
                                 is_active,
-                                is_focused,
+                                rail_contains_focus,
                                 cx,
                             )
                         }),
@@ -9479,7 +9485,7 @@ impl Sidebar {
                         id_prefix,
                         key,
                         is_active,
-                        is_focused,
+                        rail_contains_focus,
                         &group_name,
                         &workspace_name,
                         cx,
@@ -9516,11 +9522,15 @@ impl Sidebar {
             (APP_NAME != "Zed" && is_active && !is_sticky && !is_collapsed && !has_filter)
                 .then(|| self.render_active_workspace_tabs(window, cx))
                 .flatten();
+        // Gate on the rendered Activity row count, not on `has_threads`:
+        // stored-but-unloaded threads count toward `has_threads` but produce no
+        // Activity rows, which would otherwise render an empty "Activity 0"
+        // heading.
         let workspace_activity_visible = workspace_activity_section_visible(
             APP_NAME,
             is_sticky,
             is_collapsed,
-            has_threads || !external_sessions.is_empty(),
+            activity_count > 0,
         );
 
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
@@ -18293,7 +18303,7 @@ impl Sidebar {
                                         ))
                                         .tab_index(0isize)
                                         .aria_label(all_scope_aria_label)
-                                        .aria_keyshortcuts("Shift+A")
+                                        .aria_keyshortcuts("Shift+A (toggle)")
                                         .aria_description(all_scope_description)
                                         .tooltip(move |_window, cx| {
                                             Tooltip::for_action_in(

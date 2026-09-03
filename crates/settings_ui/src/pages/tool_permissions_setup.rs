@@ -892,6 +892,7 @@ fn render_invalid_patterns_section(
                                     IconButton::new(delete_id, IconName::Trash)
                                         .icon_size(IconSize::Small)
                                         .icon_color(Color::Muted)
+                                        .aria_label("Delete Invalid Pattern")
                                         .tooltip(Tooltip::text("Delete Invalid Pattern"))
                                         .on_click(cx.listener(move |_, _, _, cx| {
                                             delete_pattern(
@@ -998,6 +999,7 @@ fn render_user_pattern_row(
             IconButton::new(delete_id, IconName::Trash)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
+                .aria_label("Delete Pattern")
                 .tooltip(Tooltip::text("Delete Pattern"))
                 .on_click(cx.listener(move |_, _, _, cx| {
                     delete_pattern(&tool_id_for_delete, rule_type, &pattern_for_delete, cx);

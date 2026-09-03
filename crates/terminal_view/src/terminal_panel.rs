@@ -148,7 +148,9 @@ impl TerminalPanel {
                     .child(
                         PopoverMenu::new("terminal-tab-bar-popover-menu")
                             .trigger_with_tooltip(
-                                IconButton::new("plus", IconName::Plus).icon_size(IconSize::Small),
+                                IconButton::new("plus", IconName::Plus)
+                                    .icon_size(IconSize::Small)
+                                    .aria_label("New…"),
                                 Tooltip::text("New…"),
                             )
                             .anchor(Anchor::TopRight)
@@ -182,7 +184,8 @@ impl TerminalPanel {
                         PopoverMenu::new("terminal-pane-tab-bar-split")
                             .trigger_with_tooltip(
                                 IconButton::new("terminal-pane-split", IconName::Split)
-                                    .icon_size(IconSize::Small),
+                                    .icon_size(IconSize::Small)
+                                    .aria_label("Split Pane"),
                                 Tooltip::text("Split Pane"),
                             )
                             .anchor(Anchor::TopRight)
@@ -209,6 +212,7 @@ impl TerminalPanel {
                             .icon_size(IconSize::Small)
                             .toggle_state(zoomed)
                             .selected_icon(IconName::Minimize)
+                            .aria_label(if zoomed { "Zoom Out" } else { "Zoom In" })
                             .on_click(cx.listener(|pane, _, window, cx| {
                                 pane.toggle_zoom(&workspace::ToggleZoom, window, cx);
                             }))

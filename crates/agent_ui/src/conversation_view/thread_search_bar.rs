@@ -956,6 +956,7 @@ fn nav_button(
     IconButton::new(id, icon)
         .shape(IconButtonShape::Square)
         .disabled(disabled)
+        .aria_label(tooltip)
         .on_click({
             let focus_handle = focus_handle.clone();
             move |_, window, cx| {

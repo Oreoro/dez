@@ -4009,6 +4009,8 @@ impl SettingsWindow {
             .items_center()
             .justify_center()
             .gap_1()
+            .role(Role::Status)
+            .aria_label(format!("No settings match \"{search_query}\""))
             .child(Label::new("No Results"))
             .child(
                 Label::new(format!("No settings match \"{}\"", search_query))
@@ -4185,7 +4187,15 @@ impl SettingsWindow {
             page_content
                 .when(self.sub_page_stack.is_empty(), |this| {
                     this.when_some(root_nav_label, |this, title| {
-                        this.child(Label::new(title).size(LabelSize::Large).mt_2().mb_3())
+                        this.child(
+                            Label::new(title)
+                                .size(LabelSize::Large)
+                                .mt_2()
+                                .mb_3()
+                                .role(Role::Heading)
+                                .aria_level(1)
+                                .aria_label(title),
+                        )
                     })
                 })
                 .children(items.clone().into_iter().enumerate().map(
@@ -4245,6 +4255,9 @@ impl SettingsWindow {
                             IconButton::new("back-btn", IconName::ArrowLeft)
                                 .icon_size(IconSize::Small)
                                 .shape(IconButtonShape::Square)
+                                .tab_index(0isize)
+                                .aria_label("Back")
+                                .tooltip(Tooltip::text("Back"))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.pop_sub_page(window, cx);
                                 })),

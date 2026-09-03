@@ -7,7 +7,7 @@ use crate::{
 };
 use agent_settings::{
     AgentSettings, WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
-    configured_terminal_launcher_icon,
+    configured_terminal_launcher_destination_label, configured_terminal_launcher_icon,
 };
 use git::Clone as GitClone;
 use gpui::WeakEntity;
@@ -374,6 +374,18 @@ fn welcome_terminal_action_label(
 ) -> Option<String> {
     (app_name != "Zed" && has_workspace)
         .then(|| configured_terminal_launcher_action_label(configured_command))
+}
+
+// The static Home copy describes the first entry as "Default terminal"; when a
+// specific launcher is configured, the meta must name that destination too so
+// the row's secondary text never contradicts the launcher it opens.
+fn welcome_terminal_action_meta(
+    app_name: &str,
+    has_workspace: bool,
+    configured_command: Option<&str>,
+) -> Option<String> {
+    (app_name != "Zed" && has_workspace)
+        .then(|| configured_terminal_launcher_destination_label(configured_command).to_owned())
 }
 
 fn welcome_terminal_action_icon(
@@ -1113,6 +1125,14 @@ impl Render for WelcomePage {
                 .terminal_init_command
                 .as_deref(),
         );
+        let first_entry_meta_override = welcome_terminal_action_meta(
+            APP_NAME,
+            has_workspace,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        )
+        .map(SharedString::from);
         let show_onboarding_return = APP_NAME == "Zed" && !self.fallback_to_recent_projects;
         let content_welcome_label = welcome_label.clone();
         let page_title = welcome_title(APP_NAME, has_workspace);
@@ -1163,7 +1183,7 @@ impl Render for WelcomePage {
                                     welcome_emphasizes_first_action(APP_NAME),
                                     true,
                                     first_entry_label_override.clone(),
-                                    None,
+                                    first_entry_meta_override.clone(),
                                     first_entry_icon_override,
                                     local_workspace,
                                 )),
@@ -1195,7 +1215,7 @@ impl Render for WelcomePage {
                             welcome_emphasizes_first_action(APP_NAME),
                             !compact_spacing,
                             first_entry_label_override.clone(),
-                            None,
+                            first_entry_meta_override.clone(),
                             first_entry_icon_override,
                             local_workspace,
                         ))
@@ -1662,6 +1682,30 @@ mod tests {
         );
         assert_eq!(
             welcome_terminal_action_icon("Zed", true, Some("codex")),
+            None
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, None).as_deref(),
+            Some("Default terminal")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("codex --yolo")).as_deref(),
+            Some("Codex")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("tmux")).as_deref(),
+            Some("tmux Session")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", true, Some("my-agent")).as_deref(),
+            Some("Custom Command")
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Dez", false, Some("codex")),
+            None
+        );
+        assert_eq!(
+            welcome_terminal_action_meta("Zed", true, Some("codex")),
             None
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.0.title, "Start with a tool");

@@ -127,6 +127,8 @@ impl<T: 'static> Render for PromptEditor<T> {
         let add_context_button = IconButton::new("add-context", IconName::AtSign)
             .icon_size(IconSize::Small)
             .icon_color(Color::Muted)
+            .tab_index(0isize)
+            .aria_label("Add Context")
             .when(!menu_visible, |this| {
                 this.tooltip(move |_window, cx| {
                     Tooltip::with_meta("Add Context", None, "Or type @ to include context", cx)

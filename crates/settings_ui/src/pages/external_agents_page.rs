@@ -211,6 +211,7 @@ fn render_agent(
             .icon_size(IconSize::Small)
             .size(ButtonSize::Medium)
             .tab_index(0isize)
+            .aria_label("Configure Agent")
             .tooltip(Tooltip::text("Configure Agent"))
             .on_click(cx.listener({
                 let id = id.clone();
@@ -232,6 +233,7 @@ fn render_agent(
         .icon_size(IconSize::Small)
         .size(ButtonSize::Medium)
         .tab_index(0isize)
+        .aria_label(remove_tooltip)
         .tooltip(Tooltip::text(remove_tooltip))
         .on_click(move |_event, _window, cx| {
             remove_agent(&id, source, cx);
@@ -630,6 +632,7 @@ fn render_env_section(
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
                             .tab_index(0isize)
+                            .aria_label("Remove")
                             .tooltip(Tooltip::text("Remove"))
                             .on_click(cx.listener(move |this, _, _window, cx| {
                                 if let Some(form) = this.custom_agent_form.as_mut()

@@ -394,6 +394,7 @@ impl SidebarChrome {
                     .child(
                         IconButton::new("leave-call", IconName::Exit)
                             .tooltip(Tooltip::text("Leave Call"))
+                            .aria_label("Leave Call")
                             .icon_size(IconSize::Small)
                             .on_click(move |_, _window, cx| {
                                 ActiveCall::global(cx)
@@ -407,6 +408,7 @@ impl SidebarChrome {
                 IconButton::new("call-quality", signal_icon)
                     .icon_size(IconSize::Small)
                     .when_some(signal_color, |button, color| button.icon_color(color))
+                    .aria_label(format!("Connection quality: {quality_label}"))
                     .tooltip(Tooltip::element(move |window, cx| {
                         let quality_label = quality_label.clone();
                         let latency = format_stat(stats.latency_ms, |v| format!("{:.0}ms", v));
@@ -452,6 +454,11 @@ impl SidebarChrome {
                     }),
             )
             .when(can_use_microphone, |this| {
+                let microphone_label = if is_muted {
+                    "Unmute Microphone"
+                } else {
+                    "Mute Microphone"
+                };
                 this.child(
                     IconButton::new(
                         "mute-microphone",
@@ -477,13 +484,19 @@ impl SidebarChrome {
                             Tooltip::simple("Mute Microphone", cx)
                         }
                     })
+                    .aria_label(microphone_label)
                     .icon_size(IconSize::Small)
                     .toggle_state(is_muted)
                     .selected_style(ButtonStyle::Tinted(TintColor::Error))
                     .on_click(move |_, _window, cx| toggle_mute(cx)),
                 )
             })
-            .child(
+            .child({
+                let audio_label = if is_deafened {
+                    "Unmute Audio"
+                } else {
+                    "Mute Audio"
+                };
                 IconButton::new(
                     "mute-sound",
                     if is_deafened {
@@ -495,6 +508,7 @@ impl SidebarChrome {
                 .selected_style(ButtonStyle::Tinted(TintColor::Error))
                 .icon_size(IconSize::Small)
                 .toggle_state(is_deafened)
+                .aria_label(audio_label)
                 .tooltip(move |_window, cx| {
                     if is_deafened {
                         let label = "Unmute Audio";
@@ -514,8 +528,8 @@ impl SidebarChrome {
                         }
                     }
                 })
-                .on_click(move |_, _, cx| toggle_deafen(cx)),
-            )
+                .on_click(move |_, _, cx| toggle_deafen(cx))
+            })
             .when(
                 is_local && can_share_projects && !is_connecting_to_project,
                 |this| {
@@ -555,13 +569,19 @@ impl SidebarChrome {
                         .collect::<Vec<_>>();
                     let folder_list = folder_names.join(", ");
 
+                    let (unshare_label, share_label, project_or_workspace) =
+                        if paths::APP_NAME == "Zed" {
+                            ("Unshare Project", "Share Project", "project")
+                        } else {
+                            ("Unshare Workspace", "Share Workspace", "Workspace")
+                        };
                     let unshare_meta: SharedString = if folder_list.is_empty() {
-                        "Stop sharing project with call participants".into()
+                        format!("Stop sharing {project_or_workspace} with call participants").into()
                     } else {
                         format!("Stop sharing {folder_list} with call participants").into()
                     };
                     let share_meta: SharedString = if folder_list.is_empty() {
-                        "Share active project with call participants".into()
+                        format!("Share active {project_or_workspace} with call participants").into()
                     } else {
                         format!("Share {folder_list} with call participants").into()
                     };
@@ -575,12 +595,13 @@ impl SidebarChrome {
                                 if is_shared {
                                     this.tooltip(move |_, cx| {
                                         Tooltip::with_meta(
-                                            "Unshare Project",
+                                            unshare_label,
                                             None,
                                             unshare_meta.clone(),
                                             cx,
                                         )
                                     })
+                                    .aria_label(unshare_label)
                                     .on_click(cx.listener(
                                         move |this, _, window, cx| {
                                             this.unshare_project(window, cx);
@@ -588,17 +609,22 @@ impl SidebarChrome {
                                     ))
                                 } else if is_sharing_disabled {
                                     this.disabled(true).tooltip(Tooltip::text(
-                                        "This project may not be shared in a public channel.",
+                                        if paths::APP_NAME == "Zed" {
+                                            "This project may not be shared in a public channel."
+                                        } else {
+                                            "This workspace may not be shared in a public channel."
+                                        },
                                     ))
                                 } else {
                                     this.tooltip(move |_, cx| {
                                         Tooltip::with_meta(
-                                            "Share Project",
+                                            share_label,
                                             None,
                                             share_meta.clone(),
                                             cx,
                                         )
                                     })
+                                    .aria_label(share_label)
                                     .on_click(cx.listener(
                                         move |this, _, _, cx| {
                                             this.share_project(cx);
@@ -620,6 +646,11 @@ impl SidebarChrome {
                     .icon_size(IconSize::Small)
                     .toggle_state(is_screen_sharing)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                    .aria_label(if is_screen_sharing {
+                        "Stop Sharing Screen"
+                    } else {
+                        "Share Screen"
+                    })
                     .tooltip(Tooltip::text(if is_screen_sharing {
                         "Stop Sharing Screen"
                     } else {
@@ -691,6 +722,7 @@ impl SidebarChrome {
             .with_handle(self.screen_share_popover_handle.clone())
             .trigger(
                 ui::ButtonLike::new_rounded_right("screen-share-screen-list-trigger")
+                    .aria_label("Choose Screen to Share")
                     .child(
                         h_flex()
                             .mx_neg_0p5()

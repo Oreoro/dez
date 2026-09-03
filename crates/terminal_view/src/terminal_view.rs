@@ -391,6 +391,17 @@ fn terminal_context_strip_padding_x(density: CanvasDensity) -> Pixels {
     }
 }
 
+// Horizontal gutter for inline recovery regions (launch failure, terminal
+// unavailable). Keeps the content column aligned with the density system
+// instead of a single hard-coded value.
+fn terminal_recovery_padding_x(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(24.),
+        CanvasDensity::Balanced => px(32.),
+        CanvasDensity::Spacious => px(40.),
+    }
+}
+
 fn terminal_context_strip_background(cx: &App) -> Hsla {
     let colors = cx.theme().colors();
     match DesignSystemSettings::get_global(cx).contrast {
@@ -1742,6 +1753,8 @@ impl Render for FailedToSpawnTerminal {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
         let workspace_access_required = is_dez && self.workspace_access_required;
+        let density = DesignSystemSettings::get_global(cx).density;
+        let recovery_padding_x = terminal_recovery_padding_x(density);
         let primary_label =
             terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
         let more_label =
@@ -1780,7 +1793,11 @@ impl Render for FailedToSpawnTerminal {
             .min_h_0()
             .overflow_y_scroll()
             .when(is_dez, |this| {
-                this.px_8().pt_10().pb_8().items_start().justify_start()
+                this.px(recovery_padding_x)
+                    .pt_10()
+                    .pb_8()
+                    .items_start()
+                    .justify_start()
             })
             .when(!is_dez, |this| this.p_4().items_center().justify_center())
             .bg(cx.theme().colors().terminal_background)
@@ -3955,6 +3972,8 @@ impl Render for TerminalView {
             cx.theme().colors().editor_background
         };
         let terminal_surface = if self.session_unavailable {
+            let density = DesignSystemSettings::get_global(cx).density;
+            let recovery_padding_x = terminal_recovery_padding_x(density);
             div()
                 .id("terminal-unavailable-state")
                 .role(gpui::Role::Alert)
@@ -3963,7 +3982,7 @@ impl Render for TerminalView {
                 .min_h_0()
                 .overflow_y_scroll()
                 .bg(cx.theme().colors().terminal_background)
-                .px_8()
+                .px(recovery_padding_x)
                 .pt_10()
                 .pb_8()
                 .child(

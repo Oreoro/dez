@@ -158,6 +158,8 @@ impl Render for OnboardingBanner {
                 div().border_l_1().border_color(border_color).child(
                     IconButton::new("close", IconName::Close)
                         .icon_size(IconSize::Indicator)
+                        .tab_index(0isize)
+                        .aria_label("Close Announcement Banner")
                         .on_click(cx.listener(|this, _, _window, cx| {
                             telemetry::event!("Banner Dismissed", source = this.source);
                             this.dismiss(cx)

@@ -734,6 +734,11 @@ impl VisibleOnHover for ButtonLike {
         self.base = self.base.visible_on_hover(group_name);
         self
     }
+
+    fn visible_on_hover_or_focus(mut self, group_name: impl Into<SharedString>) -> Self {
+        self.base = self.base.visible_on_hover_or_focus(group_name);
+        self
+    }
 }
 
 impl ParentElement for ButtonLike {

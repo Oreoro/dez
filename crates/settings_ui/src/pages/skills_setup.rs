@@ -155,8 +155,10 @@ fn render_skill_row(
             .shape(ui::IconButtonShape::Square)
             .icon_size(IconSize::Small)
             .icon_color(share_icon_color)
+            .aria_label("Copy Share Link")
             .tooltip(Tooltip::text("Copy Share Link"))
-            .visible_on_hover(&group)
+            // Kept visible (not hover-revealed) so the action stays reachable
+            // by keyboard and assistive technology, matching the delete button.
             .on_click(cx.listener(move |_settings_window, _event, _window, cx| {
                 let skill_file_path = share_skill_file_path.clone();
                 let directory_path = share_directory_path.clone();
@@ -225,6 +227,7 @@ fn render_skill_row(
                     )
                     .tab_index(0_isize)
                     .icon_size(IconSize::Small)
+                    .aria_label("Delete Skill")
                     .tooltip(Tooltip::text("Delete Skill"))
                     .on_click(cx.listener(
                         move |settings_window, _event, window, cx| {

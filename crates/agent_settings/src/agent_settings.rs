@@ -330,7 +330,7 @@ pub fn configured_terminal_launcher_icon(command: Option<&str>) -> IconName {
 
 pub const WORKSPACE_TMUX_LAUNCHER_LABEL: &str = "Workspace tmux · fallback";
 
-fn configured_terminal_launcher_destination_label(command: Option<&str>) -> &'static str {
+pub fn configured_terminal_launcher_destination_label(command: Option<&str>) -> &'static str {
     match configured_terminal_launcher(command) {
         ConfiguredTerminalLauncher::NativeShell => "Native Shell",
         ConfiguredTerminalLauncher::Tmux => "tmux Session",

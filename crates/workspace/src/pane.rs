@@ -3801,10 +3801,12 @@ impl Pane {
                                     .group_hover("", |this| this.invisible())
                                     .child(indicator),
                             )
-                            .child(end_slot_control.visible_on_hover(""))
+                            .child(end_slot_control.visible_on_hover_or_focus(""))
                             .into_any_element()
                     } else {
-                        end_slot_control.visible_on_hover("").into_any_element()
+                        end_slot_control
+                            .visible_on_hover_or_focus("")
+                            .into_any_element()
                     }
                 } else {
                     end_slot_control.into_any_element()

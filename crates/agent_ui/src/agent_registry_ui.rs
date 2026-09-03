@@ -415,6 +415,8 @@ impl AgentRegistryPage {
                 IconName::Github,
             )
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
+            .aria_label("Visit Agent Repository")
             .tooltip(move |_, cx| {
                 Tooltip::with_meta(
                     "Visit Agent Repository",
@@ -436,6 +438,8 @@ impl AgentRegistryPage {
                 IconName::Link,
             )
             .icon_size(IconSize::Small)
+            .tab_index(0isize)
+            .aria_label("Visit Agent Website")
             .tooltip(move |_, cx| {
                 Tooltip::with_meta("Visit Agent Website", None, website.clone(), cx)
             })

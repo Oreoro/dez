@@ -2013,6 +2013,31 @@ code, all launch gates pass, and known limitations are documented.
       bounded vertical scrolling plus bottom breathing room. A pure invariant
       test and static guards protect the height cap and all three overflow
       paths. Compiled and rendered short-window proof remains deferred.
+- [x] 2026-09-02: Product-wide accessibility and visual-system polish slice.
+      Lumin themes gain distinct terminal ANSI blue and magenta plus brighter
+      bright variants, an information/hint color split, an icon hierarchy step
+      (Lumin opaque and Lumin Light), a de-emphasized Lumin Blur line number
+      and dim terminal foreground, a corrected Lumin Light success background,
+      and full `terminal.ansi.dim_*` coverage derived from each variant's own
+      palette. Icon-only controls across the title bar call controls,
+      onboarding banner, Settings pages (MCP servers, external agents, skills,
+      sandbox, tool permissions), terminal panel tab strip, thread search, and
+      agent conversation surfaces now carry accessible names, with the
+      sharing copy and expanded states aligned to the surface contract.
+      Session Rail header controls now stay visible whenever keyboard focus is
+      anywhere in the rail, so Tab and assistive navigation can reach them
+      without a pointer. Home's first tool entry now derives its secondary
+      meta from the configured launcher, so a Codex or tmux destination never
+      carries a stale "Default terminal" caption; the identity guard was
+      extended to lock that meta override in place. Token-usage context rings
+      announce "Context almost full" with the percentage label tinted at the
+      warning threshold instead of relying on ring color alone. Terminal
+      launch-failure and unavailable-session recovery regions now derive their
+      horizontal gutter from a density-aware helper shared with the context
+      strip. `cargo fmt`, `script/dez-theme-check`,
+      `script/dez-identity-check --source-only`, and `git diff --check` pass;
+      compiled, rendered, and screen-reader proof remains deferred to the
+      consolidated gate.
 - [ ] Complete durable app-session ownership.
 - [x] Persist Host/Session references in terminal items and metadata.
 - [x] Persist local terminal Host/Session references and implement authenticated

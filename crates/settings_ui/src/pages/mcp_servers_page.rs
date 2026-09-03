@@ -311,6 +311,7 @@ fn render_configure_button(
     )
     .icon_size(IconSize::Small)
     .tab_index(0isize)
+    .aria_label("Configure MCP Server")
     .tooltip(Tooltip::text("Configure MCP Server"))
     .on_click(move |_event, window, cx| {
         let transport = match &server_settings {
@@ -340,6 +341,7 @@ fn render_uninstall_button(
     )
     .icon_size(IconSize::Small)
     .tab_index(0isize)
+    .aria_label("Uninstall MCP Server")
     .tooltip(Tooltip::text("Uninstall MCP Server"))
     .on_click(move |_event, _window, cx| {
         uninstall_server(&context_server_id, provided_by_extension, cx);
@@ -365,6 +367,7 @@ fn render_toggle_switch(
     )
     .disabled(is_transitioning)
     .tab_index(0isize)
+    .aria_label(format!("Enable {}", context_server_id.0))
     .on_click({
         move |state, _window, cx| {
             let is_enabled = match state {
@@ -1084,6 +1087,8 @@ fn render_kv_section(
                             IconButton::new((kind.remove_id(), ix), IconName::Close)
                                 .icon_size(IconSize::Small)
                                 .icon_color(Color::Muted)
+                                .tab_index(0isize)
+                                .aria_label("Remove")
                                 .tooltip(Tooltip::text("Remove"))
                                 .on_click(cx.listener(move |this, _, _window, cx| {
                                     if let Some(form) = this.mcp_server_form.as_mut() {

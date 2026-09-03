@@ -14,6 +14,7 @@ pub struct Disclosure {
     closed_icon: IconName,
     shape: Option<IconButtonShape>,
     visible_on_hover: Option<SharedString>,
+    visible_on_focus: Option<bool>,
     tooltip: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyView + 'static>>,
     aria_label: Option<SharedString>,
     tab_index: Option<isize>,
@@ -33,6 +34,7 @@ impl Disclosure {
             closed_icon: IconName::ChevronRight,
             shape: None,
             visible_on_hover: None,
+            visible_on_focus: None,
             tooltip: None,
             aria_label: None,
             tab_index: None,
@@ -105,6 +107,12 @@ impl VisibleOnHover for Disclosure {
         self.visible_on_hover = Some(group_name.into());
         self
     }
+
+    fn visible_on_hover_or_focus(mut self, group_name: impl Into<SharedString>) -> Self {
+        self.visible_on_hover = Some(group_name.into());
+        self.visible_on_focus = Some(true);
+        self
+    }
 }
 
 impl RenderOnce for Disclosure {
@@ -131,7 +139,11 @@ impl RenderOnce for Disclosure {
         .when_some(self.shape, |this, shape| this.shape(shape))
         .toggle_state(self.selected)
         .when_some(self.visible_on_hover.clone(), |this, group_name| {
-            this.visible_on_hover(group_name)
+            if self.visible_on_focus == Some(true) {
+                this.visible_on_hover_or_focus(group_name)
+            } else {
+                this.visible_on_hover(group_name)
+            }
         })
         .when_some(self.tooltip, |this, tooltip| this.tooltip(tooltip))
         .when_some(self.on_toggle_expanded, move |this, on_toggle| {

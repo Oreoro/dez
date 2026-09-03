@@ -3797,6 +3797,9 @@ impl ConversationView {
                                                     .style(ButtonStyle::Filled)
                                                     .disabled(true)
                                                     .icon_color(Color::Muted)
+                                                    .aria_label(
+                                                        "Send Message — Agent is still loading",
+                                                    )
                                                     .tooltip(Tooltip::text(
                                                         "Agent is still loading",
                                                     )),

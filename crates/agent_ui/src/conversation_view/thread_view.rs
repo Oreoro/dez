@@ -4157,6 +4157,9 @@ impl ThreadView {
                                             IconName::ChevronUp,
                                         )
                                         .full_width()
+                                        .tab_index(0isize)
+                                        .aria_label("Collapse Compaction Summary")
+                                        .tooltip(Tooltip::text("Collapse Compaction Summary"))
                                         .on_click(
                                             cx.listener(
                                                 move |this, _event: &ClickEvent, window, cx| {
@@ -4444,10 +4447,24 @@ impl ThreadView {
                                 )
                                 .child(self.title_editor.clone())
                                 .when(is_done && is_canceled_or_failed, |this| {
-                                    this.child(Icon::new(IconName::Close).color(Color::Error))
+                                    this.child(
+                                        div()
+                                            .id("subagent-failed-status")
+                                            .role(gpui::Role::Image)
+                                            .aria_label("Subagent failed or canceled")
+                                            .child(Icon::new(IconName::Close).color(Color::Error)),
+                                    )
                                 })
                                 .when(is_done && !is_canceled_or_failed, |this| {
-                                    this.child(Icon::new(IconName::Check).color(Color::Success))
+                                    this.child(
+                                        div()
+                                            .id("subagent-completed-status")
+                                            .role(gpui::Role::Image)
+                                            .aria_label("Subagent completed")
+                                            .child(
+                                                Icon::new(IconName::Check).color(Color::Success),
+                                            ),
+                                    )
                                 }),
                         )
                         .child(
@@ -5101,6 +5118,7 @@ impl ThreadView {
         let stroke_width = px(2.);
 
         let percentage = format!("{}%", (progress_ratio * 100.0).round() as u32);
+        let context_almost_full = progress_ratio >= 0.85;
 
         let tooltip_separator_color = Color::Custom(cx.theme().colors().text_disabled.opacity(0.6));
 
@@ -5155,6 +5173,7 @@ impl ThreadView {
                     input_max: input_max_label,
                     output_max: output_max_label,
                     show_split,
+                    context_almost_full,
                     cost_label,
                     separator_color: tooltip_separator_color,
                     global_agents_md_loaded,
@@ -5187,6 +5206,7 @@ impl ThreadView {
                     .flex_shrink_0()
                     .gap_1p5()
                     .mr_1()
+                    .aria_label(format!("Context: {percentage} used"))
                     .child(
                         h_flex()
                             .gap_0p5()
@@ -5234,6 +5254,11 @@ impl ThreadView {
                     .id("circular_progress_tokens")
                     .mt_px()
                     .mr_1()
+                    .aria_label(if context_almost_full {
+                        format!("Context almost full: {percentage} used")
+                    } else {
+                        format!("Context: {percentage} used")
+                    })
                     .child(
                         CircularProgress::new(
                             usage.used_tokens as f32,
@@ -6156,6 +6181,7 @@ struct TokenUsageTooltip {
     input_max: String,
     output_max: String,
     show_split: bool,
+    context_almost_full: bool,
     cost_label: Option<String>,
     separator_color: Color,
     global_agents_md_loaded: bool,
@@ -6193,7 +6219,12 @@ impl Render for TokenUsageTooltip {
                     this.child(
                         h_flex()
                             .gap_0p5()
-                            .child(Label::new(percentage.clone()))
+                            .child(
+                                Label::new(percentage.clone())
+                                    .when(self.context_almost_full, |label| {
+                                        label.color(Color::Warning)
+                                    }),
+                            )
                             .child(Label::new("\u{2022}").color(separator_color).mx_1())
                             .child(Label::new(used.clone()))
                             .child(Label::new("/").color(separator_color))
@@ -6777,6 +6808,10 @@ impl ThreadView {
                                         base_container
                                             .border_dashed()
                                             .child(IconButton::new("non_editable", IconName::PencilUnavailable)
+                                                .tab_index(0isize)
+                                                .aria_label(format!(
+                                                    "Editing unavailable for {agent_name}"
+                                                ))
                                                 .icon_size(IconSize::Small)
                                                 .icon_color(Color::Muted)
                                                 .style(ButtonStyle::Transparent)
@@ -9123,6 +9158,9 @@ impl ThreadView {
                                         .full_width()
                                         .style(ButtonStyle::Outlined)
                                         .icon_color(Color::Muted)
+                                        .tab_index(0isize)
+                                        .aria_label("Collapse tool output")
+                                        .tooltip(Tooltip::text("Collapse tool output"))
                                         .on_click(cx.listener({
                                             move |this: &mut Self,
                                                   _,
