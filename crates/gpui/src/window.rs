@@ -5804,41 +5804,6 @@ impl Window {
                     accepts
                 });
 
-<<<<<<< HEAD
-            currently_pending.needs_timeout |=
-                match_result.pending_has_binding || text_input_requires_timeout;
-
-            let timeout = currently_pending
-                .needs_timeout
-                .then(|| pending_input_timeout(cx))
-                .flatten();
-            if let Some(timeout) = timeout {
-                currently_pending.timer = Some(self.spawn(cx, async move |cx| {
-                    cx.background_executor.timer(timeout).await;
-                    cx.update(move |window, cx| {
-                        let Some(currently_pending) = window
-                            .pending_input
-                            .take()
-                            .filter(|pending| pending.focus == window.focus)
-                        else {
-                            return;
-                        };
-
-                        let node_id = window.focus_node_id_in_rendered_frame(window.focus);
-                        let dispatch_path =
-                            window.rendered_frame.dispatch_tree.dispatch_path(node_id);
-
-                        let to_replay = window
-                            .rendered_frame
-                            .dispatch_tree
-                            .flush_dispatch(currently_pending.keystrokes, &dispatch_path);
-
-                        window.pending_input_changed(cx);
-                        window.replay_pending_input(to_replay, cx)
-                    })
-                    .log_err();
-                }));
-=======
             let needs_timeout = previous_timeout.is_some()
                 || match_result.pending_has_binding
                 || text_input_requires_timeout;
@@ -5853,7 +5818,6 @@ impl Window {
                         Some(self.new_pending_input_timeout(PENDING_INPUT_TIMEOUT, cx))
                     }
                 }
->>>>>>> upstream/main
             } else {
                 None
             };
