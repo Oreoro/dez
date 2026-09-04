@@ -195,16 +195,15 @@ impl TerminalThreadMetadata {
         )
     }
 
-<<<<<<< HEAD
     pub fn detected_agent_kind(&self) -> Option<TerminalAgentKind> {
         detect_terminal_agent_kind(self.display_title().as_ref())
             .or_else(|| detect_terminal_agent_kind(self.title.as_ref()))
-=======
+    }
+
     pub fn editable_title(&self) -> SharedString {
         self.custom_title.clone().unwrap_or_else(|| {
             SharedString::from(terminal_title_without_prefix(self.title.as_ref()).to_string())
         })
->>>>>>> upstream/main
     }
 }
 
@@ -226,8 +225,6 @@ pub(crate) fn compose_terminal_thread_title(
     }
 }
 
-<<<<<<< HEAD
-=======
 pub(crate) fn terminal_title_without_prefix(title: &str) -> &str {
     terminal_title_prefix(title)
         .map(|prefix| &title[prefix.len()..])
@@ -419,7 +416,6 @@ impl TerminalThreadMetadataStore {
         cx.notify();
     }
 
-<<<<<<< HEAD
     pub fn acknowledge_attention(&mut self, terminal_id: TerminalId, cx: &mut Context<Self>) {
         self.update_attention(terminal_id, |attention, now| attention.acknowledge(now));
         cx.notify();
@@ -462,7 +458,9 @@ impl TerminalThreadMetadataStore {
         };
         mutate(&mut metadata.attention, Utc::now());
         self.save_internal(metadata);
-=======
+        cx.notify();
+    }
+
     pub fn rename_terminal(
         &mut self,
         terminal_id: TerminalId,
@@ -480,7 +478,6 @@ impl TerminalThreadMetadataStore {
         metadata.custom_title = custom_title;
         self.save_internal(metadata);
         cx.notify();
->>>>>>> upstream/main
     }
 
     pub fn change_worktree_paths(

@@ -5218,6 +5218,7 @@ impl ThreadView {
         let output_max_label = crate::humanize_token_count(max_output_tokens);
 
         let build_tooltip = {
+            let percentage = percentage.clone();
             move |_window: &mut Window, cx: &mut App| {
                 let percentage = percentage.clone();
                 let used = used.clone();

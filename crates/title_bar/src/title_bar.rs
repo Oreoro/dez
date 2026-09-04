@@ -8,12 +8,8 @@ mod update_version;
 use crate::application_menu::{ApplicationMenu, show_menus};
 use crate::plan_chip::PlanChip;
 use agent_settings::{AgentSettings, WindowLayout};
-<<<<<<< HEAD
-use git_ui::worktree_picker::WorktreePicker;
-=======
 use arrayvec::ArrayVec;
 use git_ui_core::worktree_picker::WorktreePicker;
->>>>>>> upstream/main
 pub use platform_title_bar::{
     self, DraggedWindowTab, MergeAllWindows, MoveTabToNewWindow, PlatformTitleBar,
     ShowNextWindowTab, ShowPreviousWindowTab,
@@ -46,11 +42,8 @@ use settings::{KeybindSource, Settings as _, SettingsStore};
 
 use sidebar_chrome_settings::{SidebarChromeSettings, WorkspaceBarSettings};
 use std::any::TypeId;
-<<<<<<< HEAD
-use std::rc::Rc;
-=======
 use std::path::Path;
->>>>>>> upstream/main
+use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
 use theme::ActiveTheme;
@@ -2336,7 +2329,6 @@ impl SidebarChrome {
 }
 
 #[cfg(test)]
-<<<<<<< HEAD
 mod dez_sidebar_chrome_tests {
     use super::{
         CanvasLayoutCommandSet, canvas_layout_command_set, canvas_layout_menu_visible,
@@ -2409,7 +2401,8 @@ mod dez_sidebar_chrome_tests {
         assert!(canvas_layout_menu_visible("Dez", true, true));
         assert!(!canvas_layout_menu_visible("Dez", false, false));
         assert!(!canvas_layout_menu_visible("Zed", true, true));
-=======
+    }
+
 mod tests {
     use super::*;
     use util::paths::PathStyle;
@@ -2451,6 +2444,5 @@ mod tests {
             }),
             Some("plum-warbler".into())
         );
->>>>>>> upstream/main
     }
 }

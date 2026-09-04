@@ -73,7 +73,6 @@ mod test_context;
 #[cfg(all(target_os = "macos", any(test, feature = "test-support")))]
 mod visual_test_context;
 
-<<<<<<< HEAD
 /// The duration for which futures returned from [Context::on_app_quit] can run before the application fully quits.
 ///
 /// Shutdown observers flush window/session state and terminate ordinary PTY
@@ -82,11 +81,6 @@ mod visual_test_context;
 /// incomplete. Windows are already cleared before this wait, so the larger
 /// correctness budget does not keep application chrome visible.
 pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(2);
-=======
-/// The duration for which native applications wait for futures returned from
-/// [Context::on_app_quit] before fully quitting.
-pub const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(200);
->>>>>>> upstream/main
 
 /// Temporary(?) wrapper around [`RefCell<App>`] to help us debug any double borrows.
 /// Strongly consider removing after stabilization.

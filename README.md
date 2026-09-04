@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Remove this line to confirm you've reviewed this PR before submitting.
+
 # Dez
 
 **A native IDE for developers and AI-native builders who edit directly, run

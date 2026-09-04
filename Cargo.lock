@@ -4506,24 +4506,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-name = "csv_preview"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "editor",
- "feature_flags",
- "gpui",
- "log",
- "settings",
- "text",
- "ui",
- "workspace",
-]
-
-[[package]]
-=======
->>>>>>> upstream/main
 name = "ctor"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -18158,6 +18140,7 @@ dependencies = [
  "paths",
  "picker",
  "project",
+ "serde",
  "serde_json",
  "settings",
  "task",
@@ -18648,11 +18631,8 @@ dependencies = [
  "gpui",
  "icons",
  "livekit_client",
-<<<<<<< HEAD
  "notifications",
  "paths",
-=======
->>>>>>> upstream/main
  "platform_title_bar",
  "project",
  "recent_projects",
@@ -22797,11 +22777,7 @@ dependencies = [
 
 [[package]]
 name = "zed"
-<<<<<<< HEAD
 version = "0.6.0"
-=======
-version = "1.20.0"
->>>>>>> upstream/main
 dependencies = [
  "acp_thread",
  "acp_tools",
