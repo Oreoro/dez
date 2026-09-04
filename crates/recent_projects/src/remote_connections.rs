@@ -6,7 +6,6 @@ use std::{
 use anyhow::{Context as _, Result};
 use askpass::EncryptedPassword;
 use editor::Editor;
-use extension_host::ExtensionStore;
 use futures::{FutureExt as _, channel::oneshot, select};
 use gpui::{AppContext, AsyncApp, PromptLevel, WindowHandle};
 
@@ -413,8 +412,12 @@ pub async fn open_remote_project(
                 });
             }
 
+<<<<<<< HEAD
             Ok((workspace, items)) => {
                 remote_workspace = workspace;
+=======
+            Ok((_, items)) => {
+>>>>>>> upstream/main
                 navigate_to_positions(&window, items, &paths_with_positions, cx);
             }
         }
@@ -422,6 +425,7 @@ pub async fn open_remote_project(
         break;
     }
 
+<<<<<<< HEAD
     if let Some(remote_workspace) = remote_workspace {
         remote_workspace.update(cx, |workspace, cx| {
             if let Some(client) = workspace.project().read(cx).remote_client()
@@ -431,6 +435,8 @@ pub async fn open_remote_project(
             }
         });
     }
+=======
+>>>>>>> upstream/main
     Ok(window)
 }
 

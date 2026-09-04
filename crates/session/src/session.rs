@@ -186,6 +186,7 @@ impl AppSession {
                     let mut current_window_stack = Vec::new();
                     loop {
                         if let Some(windows) = cx.update(|cx| window_stack(cx))
+                            && !windows.is_empty()
                             && windows != current_window_stack
                         {
                             store_window_stack(db.clone(), &windows).await;
@@ -214,6 +215,7 @@ impl AppSession {
     }
 
     fn app_will_quit(&mut self, cx: &mut Context<Self>) -> Task<()> {
+<<<<<<< HEAD
         let window_stack = window_stack(cx);
         let state = self.durable_workspace_state();
         let db = KeyValueStore::global(cx);
@@ -223,6 +225,16 @@ impl AppSession {
             }
             store_durable_workspace_state(db, &state).await;
         })
+=======
+        if let Some(window_stack) = window_stack(cx)
+            && !window_stack.is_empty()
+        {
+            let db = KeyValueStore::global(cx);
+            cx.background_spawn(async move { store_window_stack(db, &window_stack).await })
+        } else {
+            Task::ready(())
+        }
+>>>>>>> upstream/main
     }
 
     pub fn id(&self) -> &str {

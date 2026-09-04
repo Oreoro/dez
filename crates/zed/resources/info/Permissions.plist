@@ -22,3 +22,5 @@
 <string>A developer tool you launched from Dez requested access to speech recognition.</string>
 <key>NSRemindersUsageDescription</key>
 <string>A developer tool you launched from Dez requested access to your reminders.</string>
+<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
+<true/>

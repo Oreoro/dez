@@ -191,6 +191,7 @@ impl RenderOnce for SectionButton {
                             ),
                     )
                     .child(
+<<<<<<< HEAD
                         h_flex()
                             .flex_none()
                             .gap_2()
@@ -210,6 +211,10 @@ impl RenderOnce for SectionButton {
                                 KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
                                     .size(rems_from_px(12.)),
                             ),
+=======
+                        KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
+                            .size(rems_from_px(12_f32)),
+>>>>>>> upstream/main
                     ),
             )
             .on_click(move |_, window, cx| {
@@ -835,6 +840,58 @@ impl WelcomePage {
         }
     }
 
+<<<<<<< HEAD
+=======
+    fn render_agent_card(&self, tab_index: usize, cx: &mut Context<Self>) -> impl IntoElement {
+        let focus = self.focus_handle.clone();
+        let color = cx.theme().colors();
+
+        let description = "Run multiple threads at once, mix and match any ACP-compatible agent, and keep work conflict-free with worktrees.";
+
+        v_flex()
+            .w_full()
+            .p_2()
+            .rounded_md()
+            .border_1()
+            .border_color(color.border_variant)
+            .bg(linear_gradient(
+                360.,
+                linear_color_stop(color.panel_background, 1.0),
+                linear_color_stop(color.editor_background, 0.45),
+            ))
+            .child(
+                h_flex()
+                    .gap_1p5()
+                    .child(
+                        Icon::new(IconName::ZedAssistant)
+                            .color(Color::Muted)
+                            .size(IconSize::Small),
+                    )
+                    .child(Label::new("Collaborate with Agents")),
+            )
+            .child(
+                Label::new(description)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .mb_2(),
+            )
+            .child(
+                Button::new("open-agent", "Open Agent Panel")
+                    .full_width()
+                    .tab_index(tab_index as isize)
+                    .style(ButtonStyle::Outlined)
+                    .key_binding(
+                        KeyBinding::for_action_in(&ToggleFocus, &self.focus_handle, cx)
+                            .size(rems_from_px(12_f32)),
+                    )
+                    .on_click(move |_, window, cx| {
+                        focus.dispatch_action(&ToggleWorkspaceSidebar, window, cx);
+                        focus.dispatch_action(&ToggleFocus, window, cx);
+                    }),
+            )
+    }
+
+>>>>>>> upstream/main
     fn render_recent_project_section(
         &self,
         recent_projects: Vec<impl IntoElement>,
@@ -1150,6 +1207,7 @@ impl Render for WelcomePage {
             .size_full()
             .bg(welcome_background)
             .justify_center()
+<<<<<<< HEAD
             .when(is_dez, |this| this.items_start())
             .child(container_query(move |available_size, _window, cx| {
                 let responsive_width = welcome_responsive_viewport_width(
@@ -1187,6 +1245,51 @@ impl Render for WelcomePage {
                                     first_entry_icon_override,
                                     local_workspace,
                                 )),
+=======
+            .child(
+                v_flex()
+                    .id("welcome-content")
+                    .p_8()
+                    .max_w_128()
+                    .size_full()
+                    .gap_6()
+                    .justify_center()
+                    .overflow_y_scroll()
+                    .child(
+                        h_flex()
+                            .w_full()
+                            .justify_center()
+                            .mb_4()
+                            .gap_4()
+                            .child(Vector::square(VectorName::ZedLogo, rems_from_px(45_f32)))
+                            .child(
+                                v_flex().child(Headline::new(welcome_label)).child(
+                                    Label::new("The editor for what's next")
+                                        .size(LabelSize::Small)
+                                        .color(Color::Muted)
+                                        .italic(),
+                                ),
+                            ),
+                    )
+                    .child(first_section.render(Default::default(), &self.focus_handle))
+                    .child(second_section)
+                    .when(ai_enabled && !showing_recent_projects, |this| {
+                        let agent_tab_index = next_tab_index;
+                        next_tab_index += 1;
+                        this.child(self.render_agent_card(agent_tab_index, cx))
+                    })
+                    .when(!self.fallback_to_recent_projects, |this| {
+                        this.child(
+                            v_flex().gap_4().child(Divider::horizontal()).child(
+                                Button::new("welcome-exit", "Return to Onboarding")
+                                    .tab_index(next_tab_index as isize)
+                                    .full_width()
+                                    .label_size(LabelSize::XSmall)
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
+                                    }),
+                            ),
+>>>>>>> upstream/main
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(
@@ -1414,7 +1517,6 @@ impl crate::SerializableItem for WelcomePage {
         workspace: &mut Workspace,
         item_id: crate::ItemId,
         _closing: bool,
-        _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Task<gpui::Result<()>>> {
         let workspace_id = workspace.database_id()?;

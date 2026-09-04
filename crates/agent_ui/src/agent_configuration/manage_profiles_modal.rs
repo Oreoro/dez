@@ -996,7 +996,7 @@ impl ManageProfilesModal {
                                                     &self.focus_handle,
                                                     cx,
                                                 )
-                                                .size(rems_from_px(12.)),
+                                                .size(rems_from_px(12_f32)),
                                             ),
                                         )
                                         .on_click({
@@ -1044,7 +1044,7 @@ impl Render for ManageProfilesModal {
                     .end_slot(
                         div().child(
                             KeyBinding::for_action_in(&menu::Cancel, &self.focus_handle, cx)
-                                .size(rems_from_px(12.)),
+                                .size(rems_from_px(12_f32)),
                         ),
                     )
                     .on_click({

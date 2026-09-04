@@ -335,7 +335,11 @@ impl Render for Onboarding {
                     .child(
                         v_flex()
                             .min_w_0()
+<<<<<<< HEAD
                             .max_w(rems_from_px(if APP_NAME == "Zed" { 780. } else { 960. }))
+=======
+                            .max_w(rems_from_px(780_f32))
+>>>>>>> upstream/main
                             .w_full()
                             .when(APP_NAME == "Zed", |this| this.mx_auto())
                             .when(APP_NAME == "Zed", |this| this.p_12().gap_6())
@@ -434,10 +438,14 @@ impl Render for Onboarding {
                                         Button::new("finish_setup", "Finish Setup")
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Medium)
+<<<<<<< HEAD
                                             .when(APP_NAME == "Zed", |this| {
                                                 this.width(rems_from_px(200.))
                                             })
                                             .when(compact_layout, |this| this.full_width())
+=======
+                                            .width(rems_from_px(200_f32))
+>>>>>>> upstream/main
                                             .key_binding(KeyBinding::for_action_in(
                                                 &Finish,
                                                 &finish_focus_handle,
@@ -747,7 +755,6 @@ impl workspace::SerializableItem for Onboarding {
         workspace: &mut Workspace,
         item_id: workspace::ItemId,
         _closing: bool,
-        _window: &mut Window,
         cx: &mut ui::Context<Self>,
     ) -> Option<gpui::Task<gpui::Result<()>>> {
         let workspace_id = workspace.database_id()?;

@@ -177,26 +177,28 @@ impl BufferInlayHints {
         server_id: LanguageServerId,
         new_hints: Vec<(InlayId, InlayHint)>,
     ) {
-        let existing_hints = self.hints_by_chunks[chunk.id]
-            .get_or_insert_default()
-            .entry(server_id)
-            .or_insert_with(Vec::new);
-        let existing_count = existing_hints.len();
-        existing_hints.extend(new_hints.into_iter().enumerate().filter_map(
-            |(i, (id, new_hint))| {
-                let new_hint_for_id = HintForId {
+        let chunk_hints = self.hints_by_chunks[chunk.id].get_or_insert_default();
+
+        // A response always covers the entire chunk, so it supersedes the server's previously
+        // cached hints for this chunk: a concurrent fetch for the same chunk and server
+        // (e.g. a server refresh arriving mid-fetch) would otherwise append the same hints
+        // again under fresh ids, duplicating them.
+        for (stale_id, _) in chunk_hints.remove(&server_id).into_iter().flatten() {
+            self.hints_by_id.remove(&stale_id);
+            self.hint_resolves.remove(&stale_id);
+        }
+        let mut inserted_hints = Vec::with_capacity(new_hints.len());
+        for (id, new_hint) in new_hints {
+            if let hash_map::Entry::Vacant(vacant_entry) = self.hints_by_id.entry(id) {
+                vacant_entry.insert(HintForId {
                     chunk_id: chunk.id,
                     server_id,
-                    position: existing_count + i,
-                };
-                if let hash_map::Entry::Vacant(vacant_entry) = self.hints_by_id.entry(id) {
-                    vacant_entry.insert(new_hint_for_id);
-                    Some((id, new_hint))
-                } else {
-                    None
-                }
-            },
-        ));
+                    position: inserted_hints.len(),
+                });
+                inserted_hints.push((id, new_hint));
+            }
+        }
+        chunk_hints.insert(server_id, inserted_hints);
         *self.fetched_hints(&chunk) = None;
     }
 
@@ -256,12 +258,18 @@ impl LspStore {
         server_id: LanguageServerId,
         cx: &mut Context<Self>,
     ) -> Task<anyhow::Result<InlayHint>> {
+        if !self.text_document_capability_matches_for_server(
+            &buffer,
+            server_id,
+            "textDocument/inlayHint",
+            |capabilities| InlayHints::can_resolve_inlays(capabilities.server_capabilities),
+            cx,
+        ) {
+            hint.resolve_state = ResolveState::Resolved;
+            return Task::ready(Ok(hint));
+        }
+
         if let Some((upstream_client, project_id)) = self.upstream_client() {
-            if !self.check_if_capable_for_proto_request(&buffer, InlayHints::can_resolve_inlays, cx)
-            {
-                hint.resolve_state = ResolveState::Resolved;
-                return Task::ready(Ok(hint));
-            }
             let request = proto::ResolveInlayHint {
                 project_id,
                 buffer_id: buffer.read(cx).remote_id().into(),
@@ -286,9 +294,6 @@ impl LspStore {
             }) else {
                 return Task::ready(Ok(hint));
             };
-            if !InlayHints::can_resolve_inlays(&lang_server.capabilities()) {
-                return Task::ready(Ok(hint));
-            }
             let buffer_snapshot = buffer.read(cx).snapshot();
             let request_timeout = ProjectSettings::get_global(cx)
                 .global_lsp_settings

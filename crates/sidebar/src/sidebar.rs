@@ -52,7 +52,9 @@ use menu::{
 };
 use notifications::status_toast::StatusToast;
 use paths::APP_NAME;
-use project::{AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId};
+use project::{
+    AgentId, AgentRegistryStore, Event as ProjectEvent, WorktreeId, repo_identity_path_if_local,
+};
 use recent_projects::sidebar_recent_projects::SidebarRecentProjects;
 use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use serde::{Deserialize, Serialize};
@@ -93,11 +95,11 @@ use unicode_segmentation::UnicodeSegmentation as _;
 use util::ResultExt as _;
 use util::path_list::PathList;
 use workspace::{
-    BrowseRunningSessions, CloseSidebar, CloseWindow, DesignSystemSettings, MultiWorkspace,
-    MultiWorkspaceEvent, NewCenterTerminal, NextProject, NextThread, OpenFolder, OpenLog, OpenMode,
-    PreviousProject, PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent,
-    Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
-    ToggleSidebar, Workspace,
+    BrowseRunningSessions, CloseSidebar, CloseWindow, DesignSystemSettings, FocusWorkspaceSidebar,
+    MultiWorkspace, MultiWorkspaceEvent, MoveProjectDown, MoveProjectUp, NewCenterTerminal,
+    NextProject, NextThread, Open, OpenFolder, OpenLog, OpenMode, PreviousProject, PreviousThread,
+    ProjectGroupKey, RemovalIntent, RevealFiles, SaveIntent, Sidebar as WorkspaceSidebar,
+    SidebarRenderState, SidebarSettings, SidebarSide, Toast, ToggleWorkspaceSidebar, Workspace,
     evidence::{
         WorkspaceEvidenceKind as AuthoritativeWorkspaceEvidenceKind, WorkspaceEvidenceLifecycle,
         WorkspaceEvidenceProvenance,
@@ -105,12 +107,13 @@ use workspace::{
     interface_scale,
     notifications::NotificationId,
     render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
+    sidebar_side_context_menu,
 };
 
 use git_ui::{
     git_panel::ReviewChanges as ReviewGitChanges,
-    worktree_service::{RemoteBranchName, worktree_create_targets},
 };
+use git_ui_core::worktree_service::{RemoteBranchName, worktree_create_targets};
 use zed_actions::agent::OpenSettings;
 use zed_actions::assistant::{ManageSkills, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules};
 use zed_actions::editor::{MoveDown, MoveUp};
@@ -5784,11 +5787,32 @@ enum ListEntry {
     Terminal(TerminalEntry),
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RenameTarget {
+    Thread(ThreadId),
+    Terminal(TerminalId),
+}
+
+impl RenameTarget {
+    fn from_entry(entry: &ListEntry) -> Option<(Self, SharedString)> {
+        match entry {
+            ListEntry::Thread(thread) => Some((
+                Self::Thread(thread.metadata.thread_id),
+                thread.metadata.display_title(),
+            )),
+            ListEntry::Terminal(terminal) => Some((
+                Self::Terminal(terminal.metadata.terminal_id),
+                terminal.metadata.editable_title(),
+            )),
+            ListEntry::ProjectHeader { .. } => None,
+        }
+    }
+}
+
 #[derive(Clone)]
 enum ActivatableEntry {
     Thread {
         metadata: ThreadMetadata,
-        workspace: ThreadEntryWorkspace,
     },
     Terminal {
         metadata: TerminalThreadMetadata,
@@ -5802,7 +5826,6 @@ impl ActivatableEntry {
         match entry {
             ListEntry::Thread(thread) => Some(Self::Thread {
                 metadata: thread.metadata.clone(),
-                workspace: thread.workspace.clone(),
             }),
             ListEntry::Terminal(terminal) => Some(Self::Terminal {
                 metadata: terminal.metadata.clone(),
@@ -5810,38 +5833,6 @@ impl ActivatableEntry {
                 source: terminal.source.clone(),
             }),
             ListEntry::ProjectHeader { .. } => None,
-        }
-    }
-
-    fn project_location(&self, cx: &App) -> (PathList, ProjectGroupKey) {
-        match self {
-            Self::Thread {
-                workspace: ThreadEntryWorkspace::Open(workspace),
-                ..
-            }
-            | Self::Terminal {
-                workspace: ThreadEntryWorkspace::Open(workspace),
-                ..
-            } => (
-                PathList::new(&workspace.read(cx).root_paths(cx)),
-                workspace.read(cx).project_group_key(cx),
-            ),
-            Self::Thread {
-                workspace:
-                    ThreadEntryWorkspace::Closed {
-                        folder_paths,
-                        project_group_key,
-                    },
-                ..
-            }
-            | Self::Terminal {
-                workspace:
-                    ThreadEntryWorkspace::Closed {
-                        folder_paths,
-                        project_group_key,
-                    },
-                ..
-            } => (folder_paths.clone(), project_group_key.clone()),
         }
     }
 }
@@ -5852,6 +5843,26 @@ impl ListEntry {
         match self {
             ListEntry::Thread(thread_entry) => thread_entry.metadata.session_id.as_ref(),
             ListEntry::Terminal(_) | ListEntry::ProjectHeader { .. } => None,
+        }
+    }
+
+    fn reachable_workspaces<'a>(
+        &'a self,
+        multi_workspace: &'a workspace::MultiWorkspace,
+        cx: &'a App,
+    ) -> Vec<Entity<Workspace>> {
+        match self {
+            ListEntry::Thread(thread) => match &thread.workspace {
+                ThreadEntryWorkspace::Open(ws) => vec![ws.clone()],
+                ThreadEntryWorkspace::Closed { .. } => Vec::new(),
+            },
+            ListEntry::Terminal(terminal) => match &terminal.workspace {
+                ThreadEntryWorkspace::Open(workspace) => vec![workspace.clone()],
+                ThreadEntryWorkspace::Closed { .. } => Vec::new(),
+            },
+            ListEntry::ProjectHeader { key, .. } => {
+                multi_workspace.workspaces_for_project_group(key, cx)
+            }
         }
     }
 }
@@ -6292,10 +6303,15 @@ fn workspace_menu_worktree_labels(
 
             if let Some(snapshot) = repository_snapshot {
                 let worktree_name = if snapshot.is_linked_worktree() {
+                    let identity_fallback = repo_identity_path_if_local(
+                        &snapshot.common_dir_abs_path,
+                        snapshot.path_style,
+                    );
                     snapshot
                         .main_worktree_abs_path()
-                        .and_then(|main_worktree_path| {
-                            project::linked_worktree_short_name(main_worktree_path, root_path)
+                        .or(identity_fallback)
+                        .and_then(|name_anchor_path| {
+                            project::linked_worktree_short_name(name_anchor_path, root_path)
                         })
                         .unwrap_or_else(|| folder_name.clone())
                 } else {
@@ -6379,7 +6395,7 @@ fn create_worktree_in_workspace(
 ) {
     workspace.update(cx, |workspace, cx| {
         let focused_dock = workspace.focused_dock_position(window, cx);
-        git_ui::worktree_service::handle_create_worktree(
+        git_ui_core::worktree_service::handle_create_worktree(
             workspace,
             &CreateWorktree {
                 worktree_name: None,
@@ -6402,7 +6418,7 @@ pub struct Sidebar {
     responsive_projection_width: Pixels,
     focus_handle: FocusHandle,
     filter_editor: Entity<Editor>,
-    thread_rename_editor: Entity<Editor>,
+    rename_editor: Entity<Editor>,
     list_state: ListState,
     contents: SidebarContents,
     /// A transient projection over the session list. Authoritative session and
@@ -6429,12 +6445,11 @@ pub struct Sidebar {
     /// Tracks which sidebar entry is currently active (highlighted).
     active_entry: Option<ActiveEntry>,
     hovered_thread_index: Option<usize>,
-    renaming_thread_id: Option<ThreadId>,
-    renaming_terminal: Option<RenamingTerminalEntry>,
+    rename_target: Option<RenameTarget>,
     /// Threads in the database-backed regeneration path need their own loading
     /// state because they do not have a live `agent::Thread` to report it.
     regenerating_titles: HashSet<ThreadId>,
-    /// start_renaming_thread must seed current title into the title editor
+    /// Starting a rename must seed the current title into the title editor,
     /// so this prevents that BufferEdited event from being interpreted as user input.
     suppress_next_rename_edit: bool,
 
@@ -6507,7 +6522,7 @@ impl Sidebar {
             editor.set_placeholder_text(session_rail_search_placeholder(APP_NAME), window, cx);
             editor
         });
-        let thread_rename_editor = cx.new(|cx| Editor::single_line(window, cx));
+        let rename_editor = cx.new(|cx| Editor::single_line(window, cx));
         let sidebar_chrome = cx.new(|cx| {
             let workspace = multi_workspace.read(cx).workspace().clone();
             title_bar::SidebarChrome::new(
@@ -6566,10 +6581,10 @@ impl Sidebar {
         .detach();
 
         cx.subscribe_in(
-            &thread_rename_editor,
+            &rename_editor,
             window,
             |this, title_editor, event, window, cx| {
-                this.handle_thread_rename_editor_event(title_editor, event, window, cx);
+                this.handle_rename_editor_event(title_editor, event, window, cx);
             },
         )
         .detach();
@@ -6699,7 +6714,7 @@ impl Sidebar {
             responsive_projection_width: DEFAULT_WIDTH,
             focus_handle,
             filter_editor,
-            thread_rename_editor,
+            rename_editor,
             list_state: ListState::new(0, gpui::ListAlignment::Top, px(1000.)),
             contents: SidebarContents::default(),
             attention_only: false,
@@ -6711,8 +6726,7 @@ impl Sidebar {
             selection: None,
             active_entry: None,
             hovered_thread_index: None,
-            renaming_thread_id: None,
-            renaming_terminal: None,
+            rename_target: None,
             regenerating_titles: HashSet::new(),
             suppress_next_rename_edit: false,
 
@@ -7202,9 +7216,9 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -7241,9 +7255,9 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -9927,7 +9941,7 @@ impl Sidebar {
         let open_workspaces = self
             .multi_workspace
             .upgrade()
-            .and_then(|mw| mw.read(cx).workspaces_for_project_group(key, cx))
+            .map(|mw| mw.read(cx).workspaces_for_project_group(key, cx))
             .unwrap_or_default();
 
         if open_workspaces.is_empty() {
@@ -10160,7 +10174,8 @@ impl Sidebar {
             let Some(base) = multi_workspace
                 .read(cx)
                 .workspaces_for_project_group(&key, cx)
-                .and_then(|workspaces| workspaces.first().cloned())
+                .first()
+                .cloned()
             else {
                 continue;
             };
@@ -10270,9 +10285,7 @@ impl Sidebar {
 
                 let open_workspaces = multi_workspace
                     .read_with(cx, |multi_workspace, cx| {
-                        multi_workspace
-                            .workspaces_for_project_group(&project_group_key, cx)
-                            .unwrap_or_default()
+                        multi_workspace.workspaces_for_project_group(&project_group_key, cx)
                     })
                     .unwrap_or_default();
 
@@ -10932,8 +10945,9 @@ impl Sidebar {
                                                         close_multi_workspace
                                                             .update(cx, |multi_workspace, cx| {
                                                                 multi_workspace
-                                                                    .close_workspace(
-                                                                        &close_workspace,
+                                                                    .remove(
+                                                                        [close_workspace.clone()],
+                                                                        RemovalIntent::CloseProject,
                                                                         window,
                                                                         cx,
                                                                     )
@@ -10982,6 +10996,7 @@ impl Sidebar {
                             this.separator()
                                 .item(
                                     ContextMenuEntry::new("Move Up")
+                                        .action(Box::new(MoveProjectUp))
                                         .disabled(!can_move_up)
                                         .handler(move |_window, cx| {
                                             move_up_multi_workspace
@@ -10996,6 +11011,7 @@ impl Sidebar {
                                 )
                                 .item(
                                     ContextMenuEntry::new("Move Down")
+                                        .action(Box::new(MoveProjectDown))
                                         .disabled(!can_move_down)
                                         .handler(move |_window, cx| {
                                             move_down_multi_workspace
@@ -11168,11 +11184,9 @@ impl Sidebar {
         dispatch_context.add("Sidebar");
         dispatch_context.add("menu");
 
-        let is_renaming_thread = self
-            .thread_rename_editor
-            .focus_handle(cx)
-            .is_focused(window)
-            && (self.renaming_thread_id.is_some() || self.renaming_terminal.is_some());
+        let is_archived_search_focused = matches!(&self.view, SidebarView::Archive(archive) if archive.read(cx).is_filter_editor_focused(window, cx));
+
+        let is_renaming = self.rename_editor.focus_handle(cx).is_focused(window);
 
         let is_searching = self.filter_editor.focus_handle(cx).is_focused(window)
             || matches!(
@@ -11183,7 +11197,7 @@ impl Sidebar {
 
         let identifier = if is_searching {
             "searching"
-        } else if is_renaming_thread {
+        } else if is_renaming {
             "editing"
         } else {
             "not_searching"
@@ -11202,7 +11216,8 @@ impl Sidebar {
     }
 
     fn cancel(&mut self, _: &Cancel, window: &mut Window, cx: &mut Context<Self>) {
-        if self.finish_active_rename(window, cx) {
+        if self.rename_target.is_some() {
+            self.finish_entry_rename(window, cx);
             return;
         }
 
@@ -11269,26 +11284,29 @@ impl Sidebar {
         !self.filter_editor.read(cx).text(cx).is_empty()
     }
 
-    fn start_renaming_thread(
+    fn start_renaming_entry(
         &mut self,
         ix: usize,
-        thread_id: ThreadId,
+        target: RenameTarget,
         title: SharedString,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.renaming_terminal.is_some() {
-            self.finish_terminal_rename(window, cx);
+        if self.rename_target == Some(target) {
+            self.rename_editor.update(cx, |editor, cx| {
+                editor.select_all(&editor::actions::SelectAll, window, cx);
+                editor.focus_handle(cx).focus(window, cx);
+            });
+            return;
         }
-        if self.renaming_thread_id.is_some() && self.renaming_thread_id != Some(thread_id) {
-            self.finish_thread_rename(window, cx);
-        }
+        if self.rename_target.is_some() {
+            self.finish_entry_rename(window, cx);
 
         self.selection = Some(ix);
-        self.renaming_thread_id = Some(thread_id);
+        self.rename_target = Some(target);
         self.suppress_next_rename_edit = true;
         self.list_state.scroll_to_reveal_item(ix);
-        self.thread_rename_editor.update(cx, |editor, cx| {
+        self.rename_editor.update(cx, |editor, cx| {
             editor.set_text(title, window, cx);
             editor.select_all(&editor::actions::SelectAll, window, cx);
             editor.focus_handle(cx).focus(window, cx);
@@ -11296,7 +11314,7 @@ impl Sidebar {
         cx.notify();
     }
 
-    fn handle_thread_rename_editor_event(
+    fn handle_rename_editor_event(
         &mut self,
         title_editor: &Entity<Editor>,
         event: &editor::EditorEvent,
@@ -11313,22 +11331,24 @@ impl Sidebar {
                     return;
                 }
                 let new_title = title_editor.read(cx).text(cx);
-                if let Some(thread_id) = self.renaming_thread_id {
-                    if !new_title.is_empty() {
-                        self.apply_thread_rename(
-                            thread_id,
-                            SharedString::from(new_title),
-                            window,
-                            cx,
-                        );
+                let Some(target) = self.rename_target else {
+                    return;
+                };
+                if matches!(target, RenameTarget::Thread(_)) && new_title.is_empty() {
+                    return;
+                }
+                let new_title = SharedString::from(new_title);
+                match target {
+                    RenameTarget::Thread(thread_id) => {
+                        self.apply_thread_rename(thread_id, new_title, window, cx);
                     }
-                } else if let Some(terminal) = self.renaming_terminal.clone() {
-                    self.apply_terminal_rename(&terminal, &new_title, cx);
+                    RenameTarget::Terminal(terminal_id) => {
+                        self.apply_terminal_rename(terminal_id, new_title, cx);
+                    }
                 }
             }
             editor::EditorEvent::Blurred => {
-                self.finish_active_rename(window, cx);
-            }
+                self.finish_entry_rename(window, cx);
             _ => {}
         }
     }
@@ -11383,8 +11403,35 @@ impl Sidebar {
         }
     }
 
-    fn finish_thread_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
-        if self.renaming_thread_id.take().is_none() {
+    fn apply_terminal_rename(
+        &mut self,
+        terminal_id: TerminalId,
+        title: SharedString,
+        cx: &mut Context<Self>,
+    ) {
+        let mut found = false;
+        if let Some(multi_workspace) = self.multi_workspace.upgrade() {
+            let workspaces: Vec<_> = multi_workspace.read(cx).workspaces().cloned().collect();
+            for workspace in workspaces {
+                if let Some(agent_panel) = workspace.read(cx).panel::<AgentPanel>(cx)
+                    && agent_panel.update(cx, |agent_panel, cx| {
+                        agent_panel.rename_terminal(terminal_id, title.clone(), cx)
+                    })
+                {
+                    found = true;
+                }
+            }
+        }
+
+        if !found {
+            TerminalThreadMetadataStore::global(cx).update(cx, |store, cx| {
+                store.rename_terminal(terminal_id, title, cx);
+            });
+        }
+    }
+
+    fn finish_entry_rename(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if self.rename_target.take().is_none() {
             return false;
         }
         self.focus_handle.focus(window, cx);
@@ -11680,7 +11727,7 @@ impl Sidebar {
     }
 
     fn confirm(&mut self, _: &Confirm, window: &mut Window, cx: &mut Context<Self>) {
-        if self.finish_active_rename(window, cx) {
+        if self.finish_entry_rename(window, cx) {
             return;
         }
 
@@ -12359,9 +12406,9 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -12812,21 +12859,43 @@ impl Sidebar {
         }
     }
 
-    /// Find the neighbor thread in the sidebar (by display position).
-    /// Look below first, then above, for the nearest thread that isn't
-    /// the one being archived. We capture both the neighbor's metadata
-    /// (for activation) and its workspace paths (for the workspace
-    /// removal fallback).
+    /// Find the entry to select after the entry at `current_position` is
+    /// removed: the nearest activatable entry in the same project section,
+    /// below first, then above. Only when that section has no other
+    /// activatable entry, the nearest one in the whole list.
     fn neighboring_activatable_entry(&self, current_position: usize) -> Option<ActivatableEntry> {
-        let after = self
-            .contents
-            .entries
-            .get(current_position.checked_add(1)?..)?;
-        let before = self.contents.entries.get(..current_position)?;
-        after
+        let entries = &self.contents.entries;
+        let is_header = |entry: &ListEntry| matches!(entry, ListEntry::ProjectHeader { .. });
+
+        let section_start = entries
+            .get(..current_position)?
             .iter()
-            .chain(before.iter().rev())
-            .find_map(ActivatableEntry::from_list_entry)
+            .rposition(is_header)
+            .map_or(0, |header| header + 1);
+        let section_end = entries
+            .get(current_position + 1..)?
+            .iter()
+            .position(is_header)
+            .map_or(entries.len(), |offset| current_position + 1 + offset);
+
+        for (start, end) in [(section_start, section_end), (0, entries.len())] {
+            let Some(before) = entries.get(start..current_position) else {
+                continue;
+            };
+            let Some(after) = entries.get(current_position + 1..end) else {
+                continue;
+            };
+
+            let Some(entry) = after
+                .iter()
+                .chain(before.iter().rev())
+                .find_map(ActivatableEntry::from_list_entry)
+            else {
+                continue;
+            };
+            return Some(entry);
+        }
+        None
     }
 
     fn activate_entry(
@@ -13316,9 +13385,9 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -13610,15 +13679,18 @@ impl Sidebar {
         }
     }
 
+    /// Closed linked-worktree entries need an open workspace so archive root
+    /// planning can inspect repositories before deleting the worktree.
     fn open_workspace_for_archive(
         &mut self,
         folder_paths: PathList,
         project_group_key: ProjectGroupKey,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Option<(Task<anyhow::Result<Entity<Workspace>>>, Entity<Workspace>)> {
+        then: impl FnOnce(&mut Self, Entity<Workspace>, &mut Window, &mut Context<Self>) + 'static,
+    ) {
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
-            return None;
+            return;
         };
 
         let host = project_group_key.host();
@@ -13631,30 +13703,13 @@ impl Sidebar {
                 host,
                 Some(project_group_key),
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Add,
+                None,
                 window,
                 cx,
             )
         });
-
-        Some((open_task, modal_workspace))
-    }
-
-    fn open_workspace_and_archive_thread(
-        &mut self,
-        session_id: acp::SessionId,
-        folder_paths: PathList,
-        project_group_key: ProjectGroupKey,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some((open_task, modal_workspace)) =
-            self.open_workspace_for_archive(folder_paths, project_group_key, window, cx)
-        else {
-            return;
-        };
 
         cx.spawn_in(window, async move |this, cx| {
             let result = open_task.await;
@@ -13662,6 +13717,7 @@ impl Sidebar {
             let workspace = result?;
             Self::wait_for_archive_workspace_metadata(&workspace, cx).await;
 
+<<<<<<< HEAD
             this.update_in(cx, |this, window, cx| {
                 this.update_entries(cx);
                 this.archive_thread(&session_id, window, cx);
@@ -13701,6 +13757,9 @@ impl Sidebar {
                     cx,
                 );
             })?;
+=======
+            this.update_in(cx, |this, window, cx| then(this, workspace, window, cx))?;
+>>>>>>> upstream/main
             anyhow::Ok(())
         })
         .detach_and_log_err(cx);
@@ -13886,12 +13945,20 @@ impl Sidebar {
                 cx,
             )
         {
-            self.open_workspace_and_close_terminal(
-                metadata.clone(),
+            let metadata = metadata.clone();
+            self.open_workspace_for_archive(
                 folder_paths.clone(),
                 project_group_key.clone(),
                 window,
                 cx,
+                move |this, workspace, window, cx| {
+                    this.close_terminal(
+                        &metadata,
+                        &ThreadEntryWorkspace::Open(workspace),
+                        window,
+                        cx,
+                    );
+                },
             );
             return;
         }
@@ -13941,123 +14008,40 @@ impl Sidebar {
             cx,
         );
 
-        if !workspaces_to_remove.is_empty() {
-            let multi_workspace = self.multi_workspace.upgrade().unwrap();
-            let terminal_workspace_removed = matches!(
-                workspace,
-                ThreadEntryWorkspace::Open(workspace) if workspaces_to_remove.contains(workspace)
-            );
-            let (fallback_paths, project_group_key) = neighbor
-                .as_ref()
-                .map(|neighbor| neighbor.project_location(cx))
-                .unwrap_or_else(|| {
-                    workspaces_to_remove
-                        .first()
-                        .map(|workspace| {
-                            let key = workspace.read(cx).project_group_key(cx);
-                            (key.path_list().clone(), key)
-                        })
-                        .unwrap_or_default()
-                });
+        let terminal_workspace_removed = matches!(
+            workspace,
+            ThreadEntryWorkspace::Open(workspace) if workspaces_to_remove.contains(workspace)
+        );
+        let metadata = metadata.clone();
+        let workspace = workspace.clone();
 
-            let excluded = workspaces_to_remove.clone();
-            let remove_task = multi_workspace.update(cx, |multi_workspace, cx| {
-                multi_workspace.remove(
-                    workspaces_to_remove,
-                    move |this, window, cx| {
-                        let active_workspace = this.workspace().clone();
-                        this.find_or_create_workspace(
-                            fallback_paths,
-                            project_group_key.host(),
-                            Some(project_group_key),
-                            |options, window, cx| {
-                                connect_remote(active_workspace, options, window, cx)
-                            },
-                            &excluded,
-                            None,
-                            OpenMode::Activate,
-                            window,
-                            cx,
-                        )
-                    },
+        self.remove_workspaces_then(
+            workspaces_to_remove,
+            close_item_tasks,
+            window,
+            cx,
+            move |this, window, cx| {
+                if terminal_workspace_removed {
+                    this.delete_empty_drafts_for_archive_paths(
+                        metadata.folder_paths(),
+                        metadata.remote_connection.as_ref(),
+                        cx,
+                    );
+                }
+                // If the terminal's workspace has already been removed, don't
+                // synthesize a fallback draft in the detached AgentPanel.
+                this.close_terminal_entry(
+                    &metadata,
+                    &workspace,
+                    is_active,
+                    neighbor.as_ref(),
+                    !terminal_workspace_removed,
+                    roots_to_archive,
                     window,
                     cx,
-                )
-            });
-
-            let metadata = metadata.clone();
-            let workspace = workspace.clone();
-            cx.spawn_in(window, async move |this, cx| {
-                if !remove_task.await? {
-                    return anyhow::Ok(());
-                }
-
-                for task in close_item_tasks {
-                    let result: anyhow::Result<()> = task.await;
-                    result.log_err();
-                }
-
-                this.update_in(cx, |this, window, cx| {
-                    if terminal_workspace_removed {
-                        this.delete_empty_drafts_for_archive_paths(
-                            metadata.folder_paths(),
-                            metadata.remote_connection.as_ref(),
-                            cx,
-                        );
-                    }
-                    // If the terminal's workspace has already been removed,
-                    // don't synthesize a fallback draft in the detached
-                    // AgentPanel.
-                    this.close_terminal_entry(
-                        &metadata,
-                        &workspace,
-                        is_active,
-                        neighbor.as_ref(),
-                        !terminal_workspace_removed,
-                        roots_to_archive,
-                        window,
-                        cx,
-                    );
-                })?;
-                anyhow::Ok(())
-            })
-            .detach_and_log_err(cx);
-        } else if !close_item_tasks.is_empty() {
-            let metadata = metadata.clone();
-            let workspace = workspace.clone();
-            cx.spawn_in(window, async move |this, cx| {
-                for task in close_item_tasks {
-                    let result: anyhow::Result<()> = task.await;
-                    result.log_err();
-                }
-
-                this.update_in(cx, |this, window, cx| {
-                    this.close_terminal_entry(
-                        &metadata,
-                        &workspace,
-                        is_active,
-                        neighbor.as_ref(),
-                        true,
-                        roots_to_archive,
-                        window,
-                        cx,
-                    );
-                })?;
-                anyhow::Ok(())
-            })
-            .detach_and_log_err(cx);
-        } else {
-            self.close_terminal_entry(
-                metadata,
-                workspace,
-                is_active,
-                neighbor.as_ref(),
-                true,
-                roots_to_archive,
-                window,
-                cx,
-            );
-        }
+                );
+            },
+        );
     }
 
     fn close_terminal_with_confirmation(
@@ -14209,6 +14193,48 @@ impl Sidebar {
             self.sync_active_entry_from_active_workspace(cx);
         }
         self.update_entries(cx);
+    }
+
+    fn remove_workspaces_then(
+        &mut self,
+        workspaces_to_remove: Vec<Entity<Workspace>>,
+        close_item_tasks: Vec<Task<anyhow::Result<()>>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        finish: impl FnOnce(&mut Self, &mut Window, &mut Context<Self>) + 'static,
+    ) {
+        if workspaces_to_remove.is_empty() && close_item_tasks.is_empty() {
+            finish(self, window, cx);
+            return;
+        }
+
+        let remove_task = if workspaces_to_remove.is_empty() {
+            None
+        } else {
+            let Some(multi_workspace) = self.multi_workspace.upgrade() else {
+                return;
+            };
+            Some(multi_workspace.update(cx, |multi_workspace, cx| {
+                multi_workspace.remove(workspaces_to_remove, RemovalIntent::KeepProject, window, cx)
+            }))
+        };
+
+        cx.spawn_in(window, async move |this, cx| {
+            if let Some(remove_task) = remove_task
+                && !remove_task.await?
+            {
+                return anyhow::Ok(());
+            }
+
+            for task in close_item_tasks {
+                let result: anyhow::Result<()> = task.await;
+                result.log_err();
+            }
+
+            this.update_in(cx, |this, window, cx| finish(this, window, cx))?;
+            anyhow::Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn close_items_for_archived_worktrees(
@@ -14412,12 +14438,16 @@ impl Sidebar {
                 cx,
             )
         {
-            self.open_workspace_and_archive_thread(
-                session_id.clone(),
+            let session_id = session_id.clone();
+            self.open_workspace_for_archive(
                 folder_paths,
                 project_group_key,
                 window,
                 cx,
+                move |this, _workspace, window, cx| {
+                    this.update_entries(cx);
+                    this.archive_thread(&session_id, window, cx);
+                },
             );
             return;
         }
@@ -14489,133 +14519,40 @@ impl Sidebar {
             ));
         }
 
-        if !workspaces_to_remove.is_empty() {
-            let multi_workspace = self.multi_workspace.upgrade().unwrap();
-            let session_id = session_id.clone();
+        let removed_workspace = !workspaces_to_remove.is_empty();
+        let session_id = session_id.clone();
+        let thread_remote_connection = metadata
+            .as_ref()
+            .and_then(|metadata| metadata.remote_connection.clone());
 
-            let (fallback_paths, project_group_key) = neighbor
-                .as_ref()
-                .map(|neighbor| neighbor.project_location(cx))
-                .unwrap_or_else(|| {
-                    workspaces_to_remove
-                        .first()
-                        .map(|workspace| {
-                            let key = workspace.read(cx).project_group_key(cx);
-                            (key.path_list().clone(), key)
-                        })
-                        .unwrap_or_default()
-                });
-
-            let excluded = workspaces_to_remove.clone();
-            let remove_task = multi_workspace.update(cx, |mw, cx| {
-                mw.remove(
-                    workspaces_to_remove,
-                    move |this, window, cx| {
-                        let active_workspace = this.workspace().clone();
-                        this.find_or_create_workspace(
-                            fallback_paths,
-                            project_group_key.host(),
-                            Some(project_group_key),
-                            |options, window, cx| {
-                                connect_remote(active_workspace, options, window, cx)
-                            },
-                            &excluded,
-                            None,
-                            OpenMode::Activate,
-                            window,
-                            cx,
-                        )
-                    },
+        self.remove_workspaces_then(
+            workspaces_to_remove,
+            close_item_tasks,
+            window,
+            cx,
+            move |this, window, cx| {
+                if removed_workspace && let Some(thread_folder_paths) = thread_folder_paths.as_ref()
+                {
+                    this.delete_empty_drafts_for_archive_paths(
+                        thread_folder_paths,
+                        thread_remote_connection.as_ref(),
+                        cx,
+                    );
+                }
+                let in_flight = thread_id
+                    .and_then(|tid| this.start_archive_worktree_task(tid, roots_to_archive, cx));
+                this.archive_and_activate(
+                    &session_id,
+                    thread_id,
+                    neighbor.as_ref(),
+                    thread_folder_paths.as_ref(),
+                    thread_remote_connection.as_ref(),
+                    in_flight,
                     window,
                     cx,
-                )
-            });
-
-            let thread_folder_paths = thread_folder_paths.clone();
-            let thread_remote_connection = metadata
-                .as_ref()
-                .and_then(|metadata| metadata.remote_connection.clone());
-            cx.spawn_in(window, async move |this, cx| {
-                if !remove_task.await? {
-                    return anyhow::Ok(());
-                }
-
-                for task in close_item_tasks {
-                    let result: anyhow::Result<()> = task.await;
-                    result.log_err();
-                }
-
-                this.update_in(cx, |this, window, cx| {
-                    if let Some(thread_folder_paths) = thread_folder_paths.as_ref() {
-                        this.delete_empty_drafts_for_archive_paths(
-                            thread_folder_paths,
-                            thread_remote_connection.as_ref(),
-                            cx,
-                        );
-                    }
-                    let in_flight = thread_id.and_then(|tid| {
-                        this.start_archive_worktree_task(tid, roots_to_archive, cx)
-                    });
-                    this.archive_and_activate(
-                        &session_id,
-                        thread_id,
-                        neighbor.as_ref(),
-                        thread_folder_paths.as_ref(),
-                        thread_remote_connection.as_ref(),
-                        in_flight,
-                        window,
-                        cx,
-                    );
-                })?;
-                anyhow::Ok(())
-            })
-            .detach_and_log_err(cx);
-        } else if !close_item_tasks.is_empty() {
-            let session_id = session_id.clone();
-            let thread_folder_paths = thread_folder_paths.clone();
-            let thread_remote_connection = metadata
-                .as_ref()
-                .and_then(|metadata| metadata.remote_connection.clone());
-            cx.spawn_in(window, async move |this, cx| {
-                for task in close_item_tasks {
-                    let result: anyhow::Result<()> = task.await;
-                    result.log_err();
-                }
-
-                this.update_in(cx, |this, window, cx| {
-                    let in_flight = thread_id.and_then(|tid| {
-                        this.start_archive_worktree_task(tid, roots_to_archive, cx)
-                    });
-                    this.archive_and_activate(
-                        &session_id,
-                        thread_id,
-                        neighbor.as_ref(),
-                        thread_folder_paths.as_ref(),
-                        thread_remote_connection.as_ref(),
-                        in_flight,
-                        window,
-                        cx,
-                    );
-                })?;
-                anyhow::Ok(())
-            })
-            .detach_and_log_err(cx);
-        } else {
-            let in_flight = thread_id
-                .and_then(|tid| self.start_archive_worktree_task(tid, roots_to_archive, cx));
-            self.archive_and_activate(
-                session_id,
-                thread_id,
-                neighbor.as_ref(),
-                thread_folder_paths.as_ref(),
-                metadata
-                    .as_ref()
-                    .and_then(|metadata| metadata.remote_connection.as_ref()),
-                in_flight,
-                window,
-                cx,
-            );
-        }
+                );
+            },
+        );
     }
 
     /// Archive a thread and activate the nearest neighbor or a draft.
@@ -14953,6 +14890,7 @@ impl Sidebar {
         let Some(ix) = self.selection else {
             return;
         };
+<<<<<<< HEAD
         match self.contents.entries.get(ix).cloned() {
             Some(ListEntry::Thread(thread)) => {
                 let thread_id = thread.metadata.thread_id;
@@ -14964,6 +14902,17 @@ impl Sidebar {
             }
             Some(ListEntry::ProjectHeader { .. }) | None => {}
         }
+=======
+        let Some((target, title)) = self
+            .contents
+            .entries
+            .get(ix)
+            .and_then(RenameTarget::from_entry)
+        else {
+            return;
+        };
+        self.start_renaming_entry(ix, target, title, window, cx);
+>>>>>>> upstream/main
     }
 
     fn record_thread_access(&mut self, id: &ThreadId) {
@@ -15537,6 +15486,28 @@ impl Sidebar {
         window.focus(&focus, cx);
     }
 
+    fn render_rename_title_editor(&self, cx: &mut Context<Self>) -> AnyElement {
+        div()
+            .h_full()
+            .min_w_0()
+            .flex_1()
+            .capture_action(
+                cx.listener(|this, _: &editor::actions::Newline, window, cx| {
+                    this.finish_entry_rename(window, cx);
+                }),
+            )
+            .on_action(cx.listener(|this, _: &Confirm, window, cx| {
+                this.finish_entry_rename(window, cx);
+            }))
+            .on_action(
+                cx.listener(|this, _: &editor::actions::Cancel, window, cx| {
+                    this.finish_entry_rename(window, cx);
+                }),
+            )
+            .child(self.rename_editor.clone())
+            .into_any_element()
+    }
+
     fn render_thread(
         &self,
         ix: usize,
@@ -15565,6 +15536,7 @@ impl Sidebar {
             thread.status,
             AgentThreadStatus::Running | AgentThreadStatus::WaitingForConfirmation
         );
+<<<<<<< HEAD
         let has_changes = thread.diff_stats.lines_added > 0 || thread.diff_stats.lines_removed > 0;
         let has_reviewable_changes =
             has_changes && matches!(&thread.workspace, ThreadEntryWorkspace::Open(_));
@@ -15576,9 +15548,14 @@ impl Sidebar {
         );
         let is_renaming = self.renaming_thread_id == Some(thread.metadata.thread_id);
         let show_row_actions = session_row_actions_visible(is_hovered, is_focused, is_renaming);
+=======
+        let is_renaming =
+            self.rename_target == Some(RenameTarget::Thread(thread.metadata.thread_id));
+>>>>>>> upstream/main
 
         let thread_id_for_actions = thread.metadata.thread_id;
         let focus_handle = self.focus_handle.clone();
+<<<<<<< HEAD
         let title_editor = self.thread_rename_editor.clone();
         let rename_title_label =
             agent_session_label(APP_NAME, "Rename Title", "Rename Agent Session");
@@ -15595,6 +15572,9 @@ impl Sidebar {
             "Open Thread as Markdown",
             "Open Agent Session as Markdown",
         );
+=======
+        let rename_title_editor = is_renaming.then(|| self.render_rename_title_editor(cx));
+>>>>>>> upstream/main
 
         let id = SharedString::from(format!("thread-entry-{}", ix));
 
@@ -15657,6 +15637,7 @@ impl Sidebar {
                 .regenerating_titles
                 .contains(&thread.metadata.thread_id);
 
+<<<<<<< HEAD
         let thread_item =
             canvas_thread_item_style(ThreadItem::new(id, title.clone()), &design_system)
                 .icon(icon)
@@ -15750,6 +15731,55 @@ impl Sidebar {
                                         }),
                                     ))
                                 },
+=======
+        let thread_item = ThreadItem::new(id, title.clone())
+            .base_bg(sidebar_bg)
+            .icon(icon)
+            .when(is_draft, |this| {
+                this.icon_color(Color::Custom(cx.theme().colors().icon_muted.opacity(0.2)))
+            })
+            .status(thread.status)
+            .is_remote(is_remote)
+            .when_some(icon_svg, |this, svg| {
+                this.custom_icon_from_external_svg(svg)
+            })
+            .worktrees(worktrees)
+            .timestamp(timestamp)
+            .highlight_positions(thread.highlight_positions.to_vec())
+            .title_generating(title_generating)
+            .notified(has_notification)
+            .when(thread.diff_stats.lines_added > 0, |this| {
+                this.added(thread.diff_stats.lines_added as usize)
+            })
+            .when(thread.diff_stats.lines_removed > 0, |this| {
+                this.removed(thread.diff_stats.lines_removed as usize)
+            })
+            .selected(is_selected)
+            .focused(is_focused)
+            .hovered(is_hovered)
+            .on_hover(cx.listener(move |this, is_hovered: &bool, _window, cx| {
+                if *is_hovered {
+                    this.hovered_thread_index = Some(ix);
+                } else if this.hovered_thread_index == Some(ix) {
+                    this.hovered_thread_index = None;
+                }
+                cx.notify();
+            }))
+            .when_some(rename_title_editor, |this, title_editor| {
+                this.is_truncated(false).title_slot(title_editor)
+            })
+            .when(is_hovered && !is_renaming, |this| {
+                let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
+                    .icon_size(IconSize::Small)
+                    .tooltip({
+                        let focus_handle = focus_handle.clone();
+                        move |_window, cx| {
+                            Tooltip::for_action_in(
+                                "Rename Thread",
+                                &RenameSelectedThread,
+                                &focus_handle,
+                                cx,
+>>>>>>> upstream/main
                             )
                             .when(
                                 primary_action == Some(AgentSessionRowPrimaryAction::DiscardDraft),
@@ -15891,7 +15921,112 @@ impl Sidebar {
                             }
                         }
                     })
+<<<<<<< HEAD
                 });
+=======
+                    .on_click({
+                        let title = title.clone();
+                        cx.listener(move |this, _, window, cx| {
+                            this.start_renaming_entry(
+                                ix,
+                                RenameTarget::Thread(thread_id_for_actions),
+                                title.clone(),
+                                window,
+                                cx,
+                            );
+                        })
+                    });
+
+                let contextual_action: Option<AnyElement> = if is_running {
+                    Some(
+                        IconButton::new("stop-thread", IconName::Stop)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Error)
+                            .style(ButtonStyle::Tinted(TintColor::Error))
+                            .tooltip(Tooltip::text("Stop Generation"))
+                            .on_click(cx.listener(move |this, _, _window, cx| {
+                                this.stop_thread(&thread_id_for_actions, cx);
+                            }))
+                            .into_any_element(),
+                    )
+                } else {
+                    match thread.draft {
+                        Some(DraftKind::Empty) => None,
+                        Some(DraftKind::WithContent) => Some(
+                            IconButton::new("discard_thread", IconName::Close)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Discard Draft"))
+                                .on_click({
+                                    let thread_workspace = thread_workspace.clone();
+                                    cx.listener(move |this, _, window, cx| {
+                                        this.remove_draft(
+                                            thread_id_for_actions,
+                                            &thread_workspace,
+                                            window,
+                                            cx,
+                                        );
+                                    })
+                                })
+                                .into_any_element(),
+                        ),
+                        None => Some(
+                            IconButton::new("archive-thread", IconName::Archive)
+                                .icon_size(IconSize::Small)
+                                .tooltip({
+                                    let focus_handle = focus_handle.clone();
+                                    move |_window, cx| {
+                                        Tooltip::for_action_in(
+                                            "Archive Thread",
+                                            &ArchiveSelectedThread,
+                                            &focus_handle,
+                                            cx,
+                                        )
+                                    }
+                                })
+                                .on_click({
+                                    let session_id = session_id_for_delete.clone();
+                                    cx.listener(move |this, _, window, cx| {
+                                        if let Some(ref session_id) = session_id {
+                                            this.archive_thread(session_id, window, cx);
+                                        }
+                                    })
+                                })
+                                .into_any_element(),
+                        ),
+                    }
+                };
+
+                this.action_slot(
+                    h_flex()
+                        .gap_0p5()
+                        .child(rename_button)
+                        .when_some(contextual_action, |this, action| this.child(action)),
+                )
+            })
+            .on_click({
+                let thread_workspace = thread_workspace.clone();
+                cx.listener(move |this, _, window, cx| {
+                    this.selection = None;
+                    match &thread_workspace {
+                        ThreadEntryWorkspace::Open(workspace) => {
+                            this.activate_thread(metadata.clone(), workspace, false, window, cx);
+                        }
+                        ThreadEntryWorkspace::Closed {
+                            folder_paths,
+                            project_group_key,
+                        } => {
+                            this.open_workspace_and_activate_thread(
+                                metadata.clone(),
+                                folder_paths.clone(),
+                                project_group_key,
+                                window,
+                                cx,
+                            );
+                        }
+                    }
+                })
+            });
+>>>>>>> upstream/main
 
         if is_draft || thread.metadata.session_id.is_none() {
             return thread_item.into_any_element();
@@ -15944,9 +16079,9 @@ impl Sidebar {
                             move |window, cx| {
                                 sidebar
                                     .update(cx, |sidebar, cx| {
-                                        sidebar.start_renaming_thread(
+                                        sidebar.start_renaming_entry(
                                             ix,
-                                            thread_id,
+                                            RenameTarget::Thread(thread_id),
                                             rename_title.clone(),
                                             window,
                                             cx,
@@ -16159,6 +16294,9 @@ impl Sidebar {
                 Vec::new()
             };
         let is_remote = terminal.workspace.is_remote(cx);
+        let is_renaming =
+            self.rename_target == Some(RenameTarget::Terminal(terminal.metadata.terminal_id));
+        let rename_title_editor = is_renaming.then(|| self.render_rename_title_editor(cx));
 
         let display_title =
             terminal_activity_title(&terminal.metadata, terminal.detected_agent_kind);
@@ -16283,6 +16421,7 @@ impl Sidebar {
                 None => (None, display_title, terminal.highlight_positions.clone()),
             };
 
+<<<<<<< HEAD
         let terminal_item = canvas_thread_item_style(ThreadItem::new(id, title), &design_system)
             .status(terminal_status)
             .icon(
@@ -16294,6 +16433,11 @@ impl Sidebar {
                 APP_NAME,
                 terminal_agent_kind.is_some(),
             ))
+=======
+        let terminal_item = ThreadItem::new(id, title)
+            .base_bg(sidebar_bg)
+            .icon(IconName::Terminal)
+>>>>>>> upstream/main
             .when_some(icon_char, |this, icon_char| this.icon_char(icon_char))
             .is_remote(is_remote)
             .when(session_rail_settings.show_agent_state_metadata, |this| {
@@ -16336,6 +16480,7 @@ impl Sidebar {
                 }
                 cx.notify();
             }))
+<<<<<<< HEAD
             .when(is_renaming, |this| {
                 this.is_truncated(false).title_slot(
                     div()
@@ -16359,6 +16504,12 @@ impl Sidebar {
                 )
             })
             .when(show_row_actions, |this| {
+=======
+            .when_some(rename_title_editor, |this, title_editor| {
+                this.is_truncated(false).title_slot(title_editor)
+            })
+            .when(is_hovered && !is_renaming, |this| {
+>>>>>>> upstream/main
                 this.action_slot(
                     h_flex()
                         .gap_0p5()
@@ -16491,6 +16642,7 @@ impl Sidebar {
             }));
 
         let context_menu_id = SharedString::from(format!("terminal-context-menu-{ix}"));
+<<<<<<< HEAD
         right_click_menu(context_menu_id)
             .trigger(move |_, _, _| terminal_item)
             .menu(move |window, cx| {
@@ -16700,6 +16852,31 @@ impl Sidebar {
                         }
                     });
                     menu
+=======
+        let terminal_id = terminal.metadata.terminal_id;
+        let rename_title = terminal.metadata.editable_title();
+        let sidebar = cx.weak_entity();
+
+        right_click_menu(context_menu_id)
+            .trigger(move |_, _, _| terminal_item)
+            .menu(move |window, cx| {
+                let sidebar = sidebar.clone();
+                let rename_title = rename_title.clone();
+                ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                    menu.entry("Rename Title", None, move |window, cx| {
+                        sidebar
+                            .update(cx, |sidebar, cx| {
+                                sidebar.start_renaming_entry(
+                                    ix,
+                                    RenameTarget::Terminal(terminal_id),
+                                    rename_title.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })
+                            .ok();
+                    })
+>>>>>>> upstream/main
                 })
             })
             .into_any_element()
@@ -16837,37 +17014,6 @@ impl Sidebar {
         }
     }
 
-    /// Closed linked-worktree drafts need an open workspace so archive root
-    /// planning can inspect repositories before deleting the worktree.
-    fn open_workspace_and_remove_draft(
-        &mut self,
-        draft_id: ThreadId,
-        folder_paths: PathList,
-        project_group_key: ProjectGroupKey,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some((open_task, modal_workspace)) =
-            self.open_workspace_for_archive(folder_paths, project_group_key, window, cx)
-        else {
-            return;
-        };
-
-        cx.spawn_in(window, async move |this, cx| {
-            let result = open_task.await;
-            remote_connection::dismiss_connection_modal(&modal_workspace, cx);
-            let workspace = result?;
-            Self::wait_for_archive_workspace_metadata(&workspace, cx).await;
-
-            this.update_in(cx, |this, window, cx| {
-                let workspace = ThreadEntryWorkspace::Open(workspace);
-                this.remove_draft(draft_id, &workspace, window, cx);
-            })?;
-            anyhow::Ok(())
-        })
-        .detach_and_log_err(cx);
-    }
-
     fn remove_draft(
         &mut self,
         draft_id: ThreadId,
@@ -16895,12 +17041,14 @@ impl Sidebar {
                 cx,
             )
         {
-            self.open_workspace_and_remove_draft(
-                draft_id,
+            self.open_workspace_for_archive(
                 folder_paths.clone(),
                 project_group_key.clone(),
                 window,
                 cx,
+                move |this, workspace, window, cx| {
+                    this.remove_draft(draft_id, &ThreadEntryWorkspace::Open(workspace), window, cx);
+                },
             );
             return;
         }
@@ -16965,122 +17113,39 @@ impl Sidebar {
             cx,
         );
 
-        if !workspaces_to_remove.is_empty() {
-            let Some(multi_workspace) = self.multi_workspace.upgrade() else {
-                return;
-            };
-            let draft_workspace_removed = matches!(
-                workspace,
-                ThreadEntryWorkspace::Open(workspace) if workspaces_to_remove.contains(workspace)
-            );
-            let (fallback_paths, project_group_key) = neighbor
-                .as_ref()
-                .map(|neighbor| neighbor.project_location(cx))
-                .unwrap_or_else(|| {
-                    workspaces_to_remove
-                        .first()
-                        .map(|workspace| {
-                            let key = workspace.read(cx).project_group_key(cx);
-                            (key.path_list().clone(), key)
-                        })
-                        .unwrap_or_default()
-                });
+        let draft_workspace_removed = matches!(
+            workspace,
+            ThreadEntryWorkspace::Open(workspace) if workspaces_to_remove.contains(workspace)
+        );
+        let workspace = workspace.clone();
 
-            let excluded = workspaces_to_remove.clone();
-            let remove_task = multi_workspace.update(cx, |multi_workspace, cx| {
-                multi_workspace.remove(
-                    workspaces_to_remove,
-                    move |this, window, cx| {
-                        let active_workspace = this.workspace().clone();
-                        this.find_or_create_workspace(
-                            fallback_paths,
-                            project_group_key.host(),
-                            Some(project_group_key),
-                            |options, window, cx| {
-                                connect_remote(active_workspace, options, window, cx)
-                            },
-                            &excluded,
-                            None,
-                            OpenMode::Activate,
-                            window,
-                            cx,
-                        )
-                    },
+        self.remove_workspaces_then(
+            workspaces_to_remove,
+            close_item_tasks,
+            window,
+            cx,
+            move |this, window, cx| {
+                if draft_workspace_removed
+                    && let Some(draft_folder_paths) = draft_folder_paths.as_ref()
+                {
+                    this.delete_empty_drafts_for_archive_paths(
+                        draft_folder_paths,
+                        draft_remote_connection.as_ref(),
+                        cx,
+                    );
+                }
+                this.remove_draft_entry(
+                    draft_id,
+                    &workspace,
+                    was_active,
+                    neighbor.as_ref(),
+                    !draft_workspace_removed,
+                    roots_to_archive,
                     window,
                     cx,
-                )
-            });
-
-            let workspace = workspace.clone();
-            cx.spawn_in(window, async move |this, cx| {
-                if !remove_task.await? {
-                    return anyhow::Ok(());
-                }
-
-                for task in close_item_tasks {
-                    let result: anyhow::Result<()> = task.await;
-                    result.log_err();
-                }
-
-                this.update_in(cx, |this, window, cx| {
-                    if draft_workspace_removed {
-                        if let Some(draft_folder_paths) = draft_folder_paths.as_ref() {
-                            this.delete_empty_drafts_for_archive_paths(
-                                draft_folder_paths,
-                                draft_remote_connection.as_ref(),
-                                cx,
-                            );
-                        }
-                    }
-                    this.remove_draft_entry(
-                        draft_id,
-                        &workspace,
-                        was_active,
-                        neighbor.as_ref(),
-                        !draft_workspace_removed,
-                        roots_to_archive,
-                        window,
-                        cx,
-                    );
-                })?;
-                anyhow::Ok(())
-            })
-            .detach_and_log_err(cx);
-        } else if !close_item_tasks.is_empty() {
-            let workspace = workspace.clone();
-            cx.spawn_in(window, async move |this, cx| {
-                for task in close_item_tasks {
-                    let result: anyhow::Result<()> = task.await;
-                    result.log_err();
-                }
-
-                this.update_in(cx, |this, window, cx| {
-                    this.remove_draft_entry(
-                        draft_id,
-                        &workspace,
-                        was_active,
-                        neighbor.as_ref(),
-                        true,
-                        roots_to_archive,
-                        window,
-                        cx,
-                    );
-                })?;
-                anyhow::Ok(())
-            })
-            .detach_and_log_err(cx);
-        } else {
-            self.remove_draft_entry(
-                draft_id,
-                workspace,
-                was_active,
-                neighbor.as_ref(),
-                true,
-                roots_to_archive,
-                window,
-                cx,
-            );
-        }
+                );
+            },
+        );
     }
 
     fn remove_draft_with_confirmation(
@@ -19373,6 +19438,7 @@ impl Sidebar {
         &self,
         window: &mut Window,
         cx: &mut Context<Self>,
+<<<<<<< HEAD
     ) -> Option<AnyElement> {
         let mut notices = Vec::with_capacity(5);
         if let Some(workspace_access_status) = self.render_workspace_access_status(cx) {
@@ -19661,6 +19727,13 @@ impl Sidebar {
         let sidebar_on_left = sidebar_side == SidebarSide::Left;
         let sidebar_on_right = sidebar_side == SidebarSide::Right;
         let not_fullscreen = !window.is_fullscreen();
+=======
+    ) -> impl IntoElement {
+        let has_query = self.has_filter_query(cx);
+        let sidebar_on_left = self.side(cx) == SidebarSide::Left;
+        let sidebar_on_right = self.side(cx) == SidebarSide::Right;
+        let not_fullscreen = !window.is_fullscreen() && !window.is_simple_fullscreen();
+>>>>>>> upstream/main
         let traffic_lights = cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let right_window_controls =
@@ -19746,9 +19819,16 @@ impl Sidebar {
         h_flex()
             .flex_none()
             .h(header_height)
+<<<<<<< HEAD
             .bg(cx.theme().colors().tab_bar_background)
             .border_b_1()
             .border_color(cx.theme().colors().border)
+=======
+            .map(|header| match window.window_decorations() {
+                Decorations::Client { .. } => header.mt(px(-1.)),
+                Decorations::Server => header.mt_px().pb_px(),
+            })
+>>>>>>> upstream/main
             .when(left_window_controls, |this| {
                 this.children(Self::render_left_window_controls(window, cx))
             })
@@ -20616,9 +20696,14 @@ fn render_import_onboarding_banner(
                 .min_w_0()
                 .w_full()
                 .gap_1()
+                .items_start()
                 .justify_between()
-                .flex_wrap()
-                .child(Label::new(title).size(LabelSize::Small))
+                .child(
+                    div()
+                        .min_w_0()
+                        .flex_1()
+                        .child(Label::new(title).size(LabelSize::Small)),
+                )
                 .child(
                     IconButton::new(
                         SharedString::from(format!("close-{id}-onboarding")),

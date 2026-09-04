@@ -41,6 +41,8 @@ jobs:
         tool: nextest
     - name: steps::clear_target_dir_if_large
       run: ./script/clear-target-dir-if-larger-than 350 200
+    - name: steps::download_wasi_sdk
+      run: ./script/download-wasi-sdk
     - name: steps::setup_sccache
       run: ./script/setup-sccache
       env:
@@ -99,8 +101,6 @@ jobs:
         restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: steps::setup_linux
       run: ./script/linux
-    - name: steps::download_wasi_sdk
-      run: ./script/download-wasi-sdk
     - name: steps::setup_node
       uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
       with:
@@ -113,6 +113,8 @@ jobs:
         tool: nextest
     - name: steps::clear_target_dir_if_large
       run: ./script/clear-target-dir-if-larger-than 350 200
+    - name: steps::download_wasi_sdk
+      run: ./script/download-wasi-sdk
     - name: steps::setup_sccache
       run: ./script/setup-sccache
       env:

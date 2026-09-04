@@ -114,6 +114,7 @@ fi
 
 rustup target add $target_triple
 
+<<<<<<< HEAD
 echo "Preparing Dez binaries"
 if [[ "$reuse_debug_artifacts" = true ]]; then
     echo "Reusing existing debug binaries from ${artifact_dir}"
@@ -125,6 +126,13 @@ if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "tr
     # not influence its required dynamic libraries.
     cargo build ${build_flag} --package remote_server ${cargo_target_arg}
 fi
+=======
+echo "Compiling zed binaries"
+cargo --config .cargo/bundle-config.toml build ${build_flag} --package zed --package cli --target $target_triple
+# Build remote_server in separate invocation to prevent feature unification from other crates
+# from influencing dynamic libraries required by it.
+cargo --config .cargo/bundle-config.toml build ${build_flag} --package remote_server --target $target_triple
+>>>>>>> upstream/main
 
 echo "Creating application bundle"
 pushd crates/zed
@@ -339,9 +347,28 @@ function sign_binary() {
     fi
 }
 
+debug_symbols_extracted=false
+function extract_debug_symbols() {
+    if [ "$debug_symbols_extracted" = true ]; then
+        return
+    fi
+    debug_symbols_extracted=true
+    if ! dsymutil --flat "target/${target_triple}/${target_dir}/zed" 2> target/dsymutil.log; then
+        echo "dsymutil failed"
+        cat target/dsymutil.log
+        exit 1
+    fi
+    if ! dsymutil --flat "target/${target_triple}/${target_dir}/remote_server" 2> target/dsymutil.log; then
+        echo "dsymutil failed"
+        cat target/dsymutil.log
+        exit 1
+    fi
+}
+
 function upload_debug_symbols() {
     if [ "$local_install" = true ]; then
         echo "local install; skipping sentry upload."
+<<<<<<< HEAD
     elif [[ -n "${SENTRY_AUTH_TOKEN:-}" && -n "${SENTRY_ORG:-}" && -n "${SENTRY_PROJECT:-}" ]]; then
         echo "Uploading Dez debug symbols to ${SENTRY_ORG}/${SENTRY_PROJECT}..."
         if ! dsymutil --flat "target/${target_triple}/${target_dir}/dez" 2> target/dsymutil.log; then
@@ -356,6 +383,11 @@ function upload_debug_symbols() {
         fi
         # note: this uploads the unstripped binary which is needed because it contains
         # .eh_frame data for stack unwinding. see https://github.com/getsentry/symbolic/issues/783
+=======
+    elif [[ -n "${SENTRY_AUTH_TOKEN:-}" ]]; then
+        echo "Uploading zed debug symbols to sentry..."
+        extract_debug_symbols
+>>>>>>> upstream/main
         # Try uploading up to 3 times
         for attempt in 1 2 3; do
             echo "Sentry upload attempt $attempt..."
@@ -378,9 +410,24 @@ function upload_debug_symbols() {
 
 upload_debug_symbols
 
+<<<<<<< HEAD
 cp "${artifact_dir}/dez" "${app_path}/Contents/MacOS/dez"
 cp "${artifact_dir}/cli" "${app_path}/Contents/MacOS/cli"
 cp "${artifact_dir}/dez-terminal-host" "${app_path}/Contents/MacOS/dez-terminal-host"
+=======
+# Sentry receives the extracted zed.dwarf, not the binary, so debug symbols
+# must be extracted before the binaries are stripped below. The .dwarf files
+# also keep symbols recoverable when the sentry upload is skipped.
+if [[ "$target_dir" == "release" && "$local_install" != true ]]; then
+    extract_debug_symbols
+    strip -x "target/${target_triple}/${target_dir}/zed"
+    strip -x "target/${target_triple}/${target_dir}/cli"
+    strip -x "target/${target_triple}/${target_dir}/remote_server"
+fi
+
+cp target/${target_triple}/${target_dir}/zed "${app_path}/Contents/MacOS/zed"
+cp target/${target_triple}/${target_dir}/cli "${app_path}/Contents/MacOS/cli"
+>>>>>>> upstream/main
 sign_app_binaries
 
 if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then

@@ -72,10 +72,22 @@ switching, and restored Sessions retain useful context.
 
 ## Attention {#terminal-thread-notifications}
 
+<<<<<<< HEAD
 When an unfocused terminal emits a bell, Dez can raise attention in Workspaces
 and show a notification. Selecting the Session focuses its terminal
 Surface. Acknowledging the notification changes presentation; it does not
 pretend the underlying work condition has been resolved.
+=======
+You can also configure this from the Settings UI under **AI**, via the "Terminal Thread Init Command" field.
+
+## Terminal Thread Titles {#terminal-thread-titles}
+
+The terminal title in the toolbar updates automatically to reflect the running shell or process. You can set a custom name by clicking the title or the pencil icon that appears on hover. In the Threads Sidebar, right-click a Terminal Thread and select **Rename Title**, or select it and press {#kb agent::RenameSelectedThread}.
+
+## Notifications {#terminal-thread-notifications}
+
+When a terminal produces a bell character while not in focus, Zed notifies you the same way it does when an agent finishes: with a visual pop-up and an optional sound. Clicking the notification brings the terminal into focus and clears the indicator.
+>>>>>>> upstream/main
 
 The same `agent.notify_when_agent_waiting` and `agent.play_sound_when_agent_done` settings apply.
 

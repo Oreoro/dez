@@ -11,6 +11,7 @@ const ZED_DOCS_URL: &str = "https://zed.dev/docs";
 
 /// stable | dev | nightly | preview
 pub static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
+<<<<<<< HEAD
     resolve_release_channel_name(
         cfg!(debug_assertions)
             .then(|| env::var("ZED_RELEASE_CHANNEL").ok())
@@ -28,6 +29,28 @@ fn resolve_release_channel_name(
     runtime_override
         .or_else(|| compiled_override.map(str::to_owned))
         .unwrap_or_else(|| source_channel.to_owned())
+=======
+    if cfg!(debug_assertions) {
+        env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| compile_time_release_channel_name())
+    } else {
+        compile_time_release_channel_name()
+    }
+});
+
+/// When a crate in zed is used as a dependency that uses the `crane` nix
+/// library, it vendors each crate separately and builds it in isolation, which
+/// makes the `include_str!` fail.
+///
+/// The build script checks for `$ZED_RELEASE_CHANNEL` and emits the `cfg`
+#[cfg(__do_not_set_zed_release_channel)]
+fn compile_time_release_channel_name() -> String {
+    env!("ZED_RELEASE_CHANNEL").trim().to_string()
+}
+
+#[cfg(not(__do_not_set_zed_release_channel))]
+fn compile_time_release_channel_name() -> String {
+    include_str!("../../zed/RELEASE_CHANNEL").trim().to_string()
+>>>>>>> upstream/main
 }
 
 #[doc(hidden)]

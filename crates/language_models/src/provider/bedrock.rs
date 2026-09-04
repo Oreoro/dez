@@ -44,9 +44,9 @@ use language_model::{
     LanguageModelCompletionError, LanguageModelCompletionEvent, LanguageModelEffortLevel,
     LanguageModelId, LanguageModelName, LanguageModelProvider, LanguageModelProviderId,
     LanguageModelProviderName, LanguageModelProviderState, LanguageModelRequest,
-    LanguageModelToolChoice, LanguageModelToolResultContent, LanguageModelToolSchemaFormat,
-    LanguageModelToolUse, MessageContent, ProviderSettingsView, RateLimiter, Role,
-    SubPageProviderSettings, TokenUsage, env_var,
+    LanguageModelToolChoice, LanguageModelToolResultContent, LanguageModelToolUse, MessageContent,
+    ProviderErrorCategory, ProviderSettingsView, RateLimiter, Role, SubPageProviderSettings,
+    TokenUsage, env_var,
 };
 use open_ai::responses::Request as OpenAiResponseRequest;
 use open_ai::responses::{ResponseOutputItem, StreamEvent as OpenAiResponseStreamEvent};
@@ -66,11 +66,14 @@ use util::ResultExt;
 
 use crate::AllLanguageModelSettings;
 use crate::provider::open_ai::{
-    ChatCompletionMaxTokensParameter, OpenAiEventMapper, OpenAiResponseEventMapper, into_open_ai,
+    ChatCompletionMaxTokensParameter, OpenAiResponseEventMapper, into_open_ai,
     into_open_ai_response,
 };
+use language_model::chat_completion::{
+    ChatCompletionEventMapper, ResponseStreamEvent, ResponseStreamResult,
+};
 use language_model::util::{fix_streamed_json, parse_tool_arguments};
-use open_ai::{ReasoningEffort, RequestError, ResponseStreamEvent};
+use open_ai::{ReasoningEffort, RequestError};
 
 actions!(bedrock, [Tab, TabPrev]);
 
@@ -977,44 +980,77 @@ impl LanguageModel for BedrockModel {
 
         let request = self.stream_completion(request, cx);
         let display_name = self.model.display_name().to_string();
+        let executor = cx.background_executor().clone();
         let future = self.request_limiter.stream(async move {
             let response = request.await.map_err(|err| match err {
                 BedrockError::Validation(ref msg) => {
                     if msg.contains("model identifier is invalid") {
-                        LanguageModelCompletionError::Other(anyhow!(
-                            "{display_name} is not available in {region}. \
+                        LanguageModelCompletionError::from_provider_response(
+                            PROVIDER_NAME,
+                            None,
+                            Some("ValidationException".to_string()),
+                            format!(
+                                "{display_name} is not available in {region}. \
                                  Try switching to a region where this model is supported."
-                        ))
+                            ),
+                            None,
+                            ProviderErrorCategory::InvalidRequest,
+                        )
                     } else {
-                        LanguageModelCompletionError::BadRequestFormat {
-                            provider: PROVIDER_NAME,
-                            message: msg.clone(),
-                        }
+                        LanguageModelCompletionError::from_provider_response(
+                            PROVIDER_NAME,
+                            None,
+                            Some("ValidationException".to_string()),
+                            msg.clone(),
+                            None,
+                            ProviderErrorCategory::InvalidRequest,
+                        )
                     }
                 }
-                BedrockError::RateLimited => LanguageModelCompletionError::RateLimitExceeded {
-                    provider: PROVIDER_NAME,
-                    retry_after: None,
-                },
+                BedrockError::RateLimited => LanguageModelCompletionError::from_provider_response(
+                    PROVIDER_NAME,
+                    None,
+                    Some("ThrottlingException".to_string()),
+                    "Bedrock request was throttled".to_string(),
+                    None,
+                    ProviderErrorCategory::RateLimit,
+                ),
                 BedrockError::ServiceUnavailable => {
-                    LanguageModelCompletionError::ServerOverloaded {
-                        provider: PROVIDER_NAME,
-                        retry_after: None,
-                    }
+                    LanguageModelCompletionError::from_provider_response(
+                        PROVIDER_NAME,
+                        None,
+                        Some("ServiceUnavailableException".to_string()),
+                        "Bedrock service is temporarily unavailable".to_string(),
+                        None,
+                        ProviderErrorCategory::Overloaded,
+                    )
                 }
-                BedrockError::AccessDenied(msg) => LanguageModelCompletionError::PermissionError {
-                    provider: PROVIDER_NAME,
-                    message: msg,
-                },
+                BedrockError::AccessDenied(msg) => {
+                    LanguageModelCompletionError::from_provider_response(
+                        PROVIDER_NAME,
+                        None,
+                        Some("AccessDeniedException".to_string()),
+                        msg,
+                        None,
+                        ProviderErrorCategory::Permission,
+                    )
+                }
                 BedrockError::InternalServer(msg) => {
-                    LanguageModelCompletionError::ApiInternalServerError {
-                        provider: PROVIDER_NAME,
-                        message: msg,
-                    }
+                    LanguageModelCompletionError::from_provider_response(
+                        PROVIDER_NAME,
+                        None,
+                        Some("InternalServerException".to_string()),
+                        msg,
+                        None,
+                        ProviderErrorCategory::InternalServer,
+                    )
                 }
                 other => LanguageModelCompletionError::Other(anyhow!(other)),
             })?;
-            let events = map_to_language_model_completion_events(response);
+            let events = language_model::stream_in_background(
+                map_to_language_model_completion_events(response).boxed(),
+                executor,
+            );
 
             if deny_tool_calls {
                 Ok(deny_tool_use_events(events).boxed())
@@ -1081,16 +1117,20 @@ fn map_mantle_error(model: &MantleModel, error: RequestError) -> LanguageModelCo
     if let RequestError::HttpResponseError { status_code, .. } = &error
         && *status_code == http_client::http::StatusCode::FORBIDDEN
     {
-        return LanguageModelCompletionError::PermissionError {
-            provider: PROVIDER_NAME,
-            message: format!(
+        return LanguageModelCompletionError::from_provider_response(
+            PROVIDER_NAME,
+            Some(http_client::http::StatusCode::FORBIDDEN),
+            None,
+            format!(
                 "Bedrock Mantle denied this request for {}. Mantle-only models require IAM \
                  permissions for the `bedrock-mantle` endpoint (for example via the \
                  `AmazonBedrockMantleInferenceAccess` managed policy) in addition to whatever \
                  permissions your existing Bedrock credentials already have.",
                 model.display_name()
             ),
-        };
+            None,
+            ProviderErrorCategory::Permission,
+        );
     }
     error.into()
 }
@@ -1173,22 +1213,10 @@ async fn resolve_mantle_auth(
     }
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum MantleChatStreamResult {
-    Ok(ResponseStreamEvent),
-    Err { error: MantleChatStreamError },
-}
-
-#[derive(Deserialize)]
-struct MantleChatStreamError {
-    message: String,
-}
-
 fn parse_mantle_chat_stream_line(line: &str) -> Result<ResponseStreamEvent> {
-    match serde_json::from_str(line) {
-        Ok(MantleChatStreamResult::Ok(response)) => Ok(response),
-        Ok(MantleChatStreamResult::Err { error }) => Err(anyhow!(error.message)),
+    match serde_json::from_str::<ResponseStreamResult>(line) {
+        Ok(ResponseStreamResult::Ok(response)) => Ok(response),
+        Ok(ResponseStreamResult::Err { error }) => Err(anyhow!(error.message)),
         Err(error) => {
             log::error!(
                 "Failed to parse Mantle chat completion stream event: `{}`\nResponse: `{}`",
@@ -1270,7 +1298,7 @@ where
             provider: provider_name.to_owned(),
             status_code: response.status(),
             body,
-            headers: response.headers().clone(),
+            headers: Box::new(response.headers().clone()),
         })
     }
 }
@@ -1325,7 +1353,7 @@ struct MantleResponseEventMapper {
 impl MantleResponseEventMapper {
     fn new() -> Self {
         Self {
-            open_ai_mapper: OpenAiResponseEventMapper::new(),
+            open_ai_mapper: OpenAiResponseEventMapper::new(PROVIDER_ID),
             current_message: None,
             previous_message: None,
             pending_message_events: Vec::new(),
@@ -1825,10 +1853,6 @@ impl LanguageModel for BedrockMantleModel {
         self.model.supports_tools()
     }
 
-    fn tool_input_format(&self) -> LanguageModelToolSchemaFormat {
-        LanguageModelToolSchemaFormat::JsonSchemaSubset
-    }
-
     fn supports_images(&self) -> bool {
         self.model.supports_images()
     }
@@ -1898,7 +1922,7 @@ impl LanguageModel for BedrockMantleModel {
 
         match self.model.protocol() {
             MantleProtocol::Responses => {
-                let request = into_open_ai_response(
+                let request = match into_open_ai_response(
                     request,
                     &model_id,
                     self.model.supports_tools(),
@@ -1906,11 +1930,19 @@ impl LanguageModel for BedrockMantleModel {
                     max_output_tokens,
                     mantle_default_reasoning_effort(&self.model),
                     self.model.supports_thinking(),
-                );
+                    &PROVIDER_ID,
+                ) {
+                    Ok(request) => request,
+                    Err(error) => return async move { Err(error.into()) }.boxed(),
+                };
                 let completions = self.stream_response(request, cx);
+                let executor = cx.background_executor().clone();
                 async move {
                     let mapper = MantleResponseEventMapper::new();
-                    Ok(mapper.map_stream(completions.await?).boxed())
+                    Ok(language_model::stream_in_background(
+                        mapper.map_stream(completions.await?).boxed(),
+                        executor,
+                    ))
                 }
                 .boxed()
             }
@@ -1930,9 +1962,13 @@ impl LanguageModel for BedrockMantleModel {
                     Err(error) => return async move { Err(error.into()) }.boxed(),
                 };
                 let completions = self.stream_completion(request, cx);
+                let executor = cx.background_executor().clone();
                 async move {
-                    let mapper = OpenAiEventMapper::new();
-                    Ok(mapper.map_stream(completions.await?).boxed())
+                    let mapper = ChatCompletionEventMapper::new();
+                    Ok(language_model::stream_in_background(
+                        mapper.map_stream(completions.await?).boxed(),
+                        executor,
+                    ))
                 }
                 .boxed()
             }
@@ -2265,39 +2301,50 @@ pub fn into_bedrock(
         }
     }
 
+    let thinking = if request.thinking_allowed {
+        match thinking_mode {
+            BedrockModelMode::Thinking { budget_tokens } => {
+                Some(bedrock::Thinking::Enabled { budget_tokens })
+            }
+            BedrockModelMode::AdaptiveThinking {
+                effort: default_effort,
+            } => {
+                let effort = request
+                    .thinking_effort
+                    .as_deref()
+                    .and_then(|e| match e {
+                        "low" => Some(bedrock::BedrockAdaptiveThinkingEffort::Low),
+                        "medium" => Some(bedrock::BedrockAdaptiveThinkingEffort::Medium),
+                        "high" => Some(bedrock::BedrockAdaptiveThinkingEffort::High),
+                        "xhigh" => Some(bedrock::BedrockAdaptiveThinkingEffort::XHigh),
+                        "max" => Some(bedrock::BedrockAdaptiveThinkingEffort::Max),
+                        _ => None,
+                    })
+                    .unwrap_or(default_effort);
+                Some(bedrock::Thinking::Adaptive { effort })
+            }
+            BedrockModelMode::Default => None,
+        }
+    } else if model.contains(ConverseModel::ClaudeOpus5.request_id()) {
+        // On Claude Opus 5, omitting the `thinking` field no longer means
+        // "off": the model runs adaptive thinking by default, so features
+        // that suppress thinking (e.g. inline assist) must opt out
+        // explicitly. Earlier Claude models treat omission as "off" and must
+        // keep omitting the field. No effort accompanies the opt-out because
+        // `disabled` combined with effort `xhigh`/`max` is a 400.
+        // <https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-anthropic-claude-opus-5.html>
+        Some(bedrock::Thinking::Disabled)
+    } else {
+        None
+    };
+
     Ok(bedrock::Request {
         model,
         messages: new_messages,
         max_tokens: max_output_tokens,
         system: system_blocks,
         tools: tool_config,
-        thinking: if request.thinking_allowed {
-            match thinking_mode {
-                BedrockModelMode::Thinking { budget_tokens } => {
-                    Some(bedrock::Thinking::Enabled { budget_tokens })
-                }
-                BedrockModelMode::AdaptiveThinking {
-                    effort: default_effort,
-                } => {
-                    let effort = request
-                        .thinking_effort
-                        .as_deref()
-                        .and_then(|e| match e {
-                            "low" => Some(bedrock::BedrockAdaptiveThinkingEffort::Low),
-                            "medium" => Some(bedrock::BedrockAdaptiveThinkingEffort::Medium),
-                            "high" => Some(bedrock::BedrockAdaptiveThinkingEffort::High),
-                            "xhigh" => Some(bedrock::BedrockAdaptiveThinkingEffort::XHigh),
-                            "max" => Some(bedrock::BedrockAdaptiveThinkingEffort::Max),
-                            _ => None,
-                        })
-                        .unwrap_or(default_effort);
-                    Some(bedrock::Thinking::Adaptive { effort })
-                }
-                BedrockModelMode::Default => None,
-            }
-        } else {
-            None
-        },
+        thinking,
         metadata: None,
         stop_sequences: Vec::new(),
         temperature: request.temperature.or(Some(default_temperature)),
@@ -2894,6 +2941,54 @@ mod tests {
             None,
         )
         .unwrap()
+    }
+
+    #[test]
+    fn test_thinking_disallowed_sends_explicit_opt_out_only_on_opus_5() {
+        // Claude Opus 5 runs adaptive thinking by default when the `thinking`
+        // field is omitted, so suppressing thinking requires an explicit
+        // `disabled` opt-out. Earlier Claude models treat omission as "off".
+        for (model, expects_explicit_opt_out) in [
+            ("us.anthropic.claude-opus-5", true),
+            ("global.anthropic.claude-opus-5", true),
+            ("us.anthropic.claude-opus-4-8", false),
+        ] {
+            let request = into_bedrock(
+                LanguageModelRequest {
+                    messages: vec![LanguageModelRequestMessage {
+                        role: Role::User,
+                        content: vec![MessageContent::Text("Hi".into())],
+                        cache: false,
+                        reasoning_details: None,
+                    }],
+                    thinking_allowed: false,
+                    ..Default::default()
+                },
+                model.to_string(),
+                1.0,
+                128_000,
+                BedrockModelMode::AdaptiveThinking {
+                    effort: bedrock::BedrockAdaptiveThinkingEffort::High,
+                },
+                true,
+                true,
+                None,
+                None,
+            )
+            .unwrap();
+
+            if expects_explicit_opt_out {
+                assert!(
+                    matches!(request.thinking, Some(bedrock::Thinking::Disabled)),
+                    "{model} should send an explicit thinking opt-out"
+                );
+            } else {
+                assert!(
+                    request.thinking.is_none(),
+                    "{model} should omit the thinking field entirely"
+                );
+            }
+        }
     }
 
     #[test]
@@ -3653,7 +3748,9 @@ mod tests {
             Some(MantleModel::Grok4_3.max_output_tokens()),
             mantle_default_reasoning_effort(&MantleModel::Grok4_3),
             MantleModel::Grok4_3.supports_thinking(),
-        );
+            &PROVIDER_ID,
+        )
+        .unwrap();
 
         assert_eq!(
             serde_json::to_value(&request).unwrap()["reasoning"],
@@ -3704,7 +3801,9 @@ mod tests {
             Some(128_000),
             Some(ReasoningEffort::Medium),
             false,
-        );
+            &PROVIDER_ID,
+        )
+        .unwrap();
 
         assert!(request.context_management.is_some());
         strip_unsupported_mantle_response_fields(&mut request);

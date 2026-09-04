@@ -7,10 +7,11 @@ use crate::session::running::RunningState;
 use crate::session::running::breakpoint_list::BreakpointList;
 
 use crate::{
-    ClearAllBreakpoints, Continue, CopyDebugAdapterArguments, Detach, FocusBreakpointList,
-    FocusConsole, FocusFrames, FocusLoadedSources, FocusModules, FocusTerminal, FocusVariables,
-    NewProcessModal, NewProcessMode, Pause, RerunSession, StepInto, StepOut, StepOver, Stop,
-    ToggleExpandItem, ToggleSessionPicker, ToggleThreadPicker, persistence, spawn_task_or_modal,
+    ClearAllBreakpoints, Continue, ContinueThread, CopyDebugAdapterArguments, Detach,
+    FocusBreakpointList, FocusConsole, FocusFrames, FocusLoadedSources, FocusModules,
+    FocusTerminal, FocusVariables, NewProcessModal, NewProcessMode, Pause, RerunSession, StepInto,
+    StepOut, StepOver, Stop, ToggleExpandItem, ToggleSessionPicker, ToggleThreadPicker,
+    persistence, spawn_task_or_modal,
 };
 use anyhow::{Context as _, Result, anyhow};
 use collections::IndexMap;
@@ -142,7 +143,7 @@ pub struct DebugPanel {
     pub(crate) session_picker_menu_handle: PopoverMenuHandle<ContextMenu>,
     fs: Arc<dyn Fs>,
     is_zoomed: bool,
-    _subscriptions: [Subscription; 1],
+    _subscriptions: [Subscription; 2],
     breakpoint_list: Entity<BreakpointList>,
 }
 
@@ -166,6 +167,11 @@ impl DebugPanel {
                 },
             );
 
+            let breakpoint_subscription =
+                cx.observe(&project.read(cx).breakpoint_store(), |_, _, cx| {
+                    cx.notify();
+                });
+
             Self {
                 sessions_with_children: Default::default(),
                 active_session: None,
@@ -185,7 +191,7 @@ impl DebugPanel {
                 thread_picker_menu_handle,
                 session_picker_menu_handle,
                 is_zoomed: false,
-                _subscriptions: [focus_subscription],
+                _subscriptions: [focus_subscription, breakpoint_subscription],
                 debug_scenario_scheduled_last: true,
             }
         })
@@ -1085,6 +1091,160 @@ impl DebugPanel {
                                                 "debug-stop",
                                                 debug_stop_icon(paths::APP_NAME),
                                             )
+<<<<<<< HEAD
+=======
+                                        } else {
+                                            let continue_button = IconButton::new(
+                                                "debug-continue",
+                                                IconName::DebugContinue,
+                                            )
+                                            .icon_size(IconSize::Small)
+                                            .disabled(thread_status != ThreadStatus::Stopped)
+                                            .on_click(window.listener_for(
+                                                running_state,
+                                                |this, _, _window, cx| {
+                                                    this.continue_program(cx);
+                                                },
+                                            ))
+                                            .tooltip({
+                                                let focus_handle = focus_handle.clone();
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        "Continue Program",
+                                                        &Continue,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            });
+
+                                            this.child(continue_button).when(
+                                                capabilities
+                                                    .supports_single_thread_execution_requests
+                                                    .unwrap_or_default(),
+                                                |this| {
+                                                    this.child(
+                                                        IconButton::new(
+                                                            "debug-continue-thread",
+                                                            IconName::DebugContinueThread,
+                                                        )
+                                                        .icon_size(IconSize::Small)
+                                                        .disabled(
+                                                            thread_status != ThreadStatus::Stopped,
+                                                        )
+                                                        .on_click(window.listener_for(
+                                                            running_state,
+                                                            |this, _, _window, cx| {
+                                                                this.continue_thread(cx);
+                                                            },
+                                                        ))
+                                                        .tooltip({
+                                                            let focus_handle = focus_handle.clone();
+                                                            move |_window, cx| {
+                                                                Tooltip::for_action_in(
+                                                                    "Continue Thread",
+                                                                    &ContinueThread,
+                                                                    &focus_handle,
+                                                                    cx,
+                                                                )
+                                                            }
+                                                        }),
+                                                    )
+                                                },
+                                            )
+                                        }
+                                    })
+                                    .child(
+                                        IconButton::new("step-over", IconName::DebugStepOver)
+                                            .icon_size(IconSize::Small)
+                                            .on_click(window.listener_for(
+                                                running_state,
+                                                |this, _, _window, cx| {
+                                                    this.step_over(cx);
+                                                },
+                                            ))
+                                            .disabled(thread_status != ThreadStatus::Stopped)
+                                            .tooltip({
+                                                let focus_handle = focus_handle.clone();
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        "Step Over",
+                                                        &StepOver,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            }),
+                                    )
+                                    .child(
+                                        IconButton::new("step-into", IconName::DebugStepInto)
+                                            .icon_size(IconSize::Small)
+                                            .on_click(window.listener_for(
+                                                running_state,
+                                                |this, _, _window, cx| {
+                                                    this.step_in(cx);
+                                                },
+                                            ))
+                                            .disabled(thread_status != ThreadStatus::Stopped)
+                                            .tooltip({
+                                                let focus_handle = focus_handle.clone();
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        "Step In",
+                                                        &StepInto,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            }),
+                                    )
+                                    .child(
+                                        IconButton::new("step-out", IconName::DebugStepOut)
+                                            .icon_size(IconSize::Small)
+                                            .on_click(window.listener_for(
+                                                running_state,
+                                                |this, _, _window, cx| {
+                                                    this.step_out(cx);
+                                                },
+                                            ))
+                                            .disabled(thread_status != ThreadStatus::Stopped)
+                                            .tooltip({
+                                                let focus_handle = focus_handle.clone();
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        "Step Out",
+                                                        &StepOut,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            }),
+                                    )
+                                    .child(Divider::vertical())
+                                    .child(
+                                        IconButton::new("debug-restart", IconName::RotateCcw)
+                                            .icon_size(IconSize::Small)
+                                            .on_click(window.listener_for(
+                                                running_state,
+                                                |this, _, window, cx| {
+                                                    this.rerun_session(window, cx);
+                                                },
+                                            ))
+                                            .tooltip({
+                                                let focus_handle = focus_handle.clone();
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        "Rerun Session",
+                                                        &RerunSession,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            }),
+                                    )
+                                    .child(
+                                        IconButton::new("debug-stop", IconName::Power)
+>>>>>>> upstream/main
                                             .icon_size(IconSize::Small)
                                             .tab_index(0isize)
                                             .aria_label(stop_label)
@@ -1544,7 +1704,7 @@ impl DebugPanel {
         thread_status: ThreadStatus,
         running_state: &Entity<RunningState>,
     ) -> impl IntoElement {
-        let chevron_button_size = rems_from_px(20.);
+        let chevron_button_size = rems_from_px(20_f32);
         PopoverMenu::new("debug-back-in-history-menu")
             .trigger(
                 ButtonLike::new_rounded_right("debug-back-in-history-menu-trigger")

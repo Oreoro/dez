@@ -18,9 +18,15 @@ use editor::Editor;
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
+<<<<<<< HEAD
     AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
     ListState, Pixels, PromptLevel, Render, SharedString, Subscription, Task, TaskExt, WeakEntity,
     Window, list, prelude::*, px,
+=======
+    AnyElement, App, Context, Decorations, DismissEvent, Entity, EventEmitter, FocusHandle,
+    Focusable, ListState, Render, SharedString, Subscription, Task, TaskExt, WeakEntity, Window,
+    list, prelude::*, px,
+>>>>>>> upstream/main
 };
 use itertools::Itertools as _;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
@@ -1189,6 +1195,99 @@ impl ThreadsArchiveView {
         .detach_and_log_err(cx);
     }
 
+<<<<<<< HEAD
+=======
+    fn render_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let has_query = !self.filter_editor.read(cx).text(cx).is_empty();
+        let sidebar_on_left = matches!(
+            AgentSettings::get_global(cx).sidebar_side(),
+            settings::SidebarSide::Left
+        );
+        let sidebar_on_right = !sidebar_on_left;
+        let not_fullscreen = !window.is_fullscreen() && !window.is_simple_fullscreen();
+        let traffic_lights = cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
+        let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
+        let right_window_controls =
+            !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
+        let header_height = platform_title_bar_height(window);
+        let show_focus_keybinding =
+            self.selection.is_some() && !self.filter_editor.focus_handle(cx).is_focused(window);
+
+        h_flex()
+            .h(header_height)
+            .map(|header| match window.window_decorations() {
+                Decorations::Client { .. } => header.mt(px(-1.)),
+                Decorations::Server => header.mt_px().pb_px(),
+            })
+            .when(left_window_controls, |this| {
+                this.children(Self::render_left_window_controls(window, cx))
+            })
+            .map(|this| {
+                if traffic_lights {
+                    this.pl(px(ui::utils::TRAFFIC_LIGHT_PADDING))
+                } else if !left_window_controls {
+                    this.pl_1p5()
+                } else {
+                    this
+                }
+            })
+            .when(!right_window_controls, |this| this.pr_1p5())
+            .gap_1()
+            .justify_between()
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
+            .when(traffic_lights, |this| {
+                this.child(Divider::vertical().color(ui::DividerColor::Border))
+            })
+            .child(
+                h_flex()
+                    .ml_1()
+                    .min_w_0()
+                    .w_full()
+                    .gap_1()
+                    .child(
+                        Icon::new(IconName::MagnifyingGlass)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .child(self.filter_editor.clone()),
+            )
+            .when(show_focus_keybinding, |this| {
+                this.child(KeyBinding::for_action(&FocusSidebarFilter, cx))
+            })
+            .when(has_query, |this| {
+                this.child(
+                    IconButton::new("clear-filter", IconName::Close)
+                        .icon_size(IconSize::Small)
+                        .tooltip(Tooltip::text("Clear Search"))
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.reset_filter_editor_text(window, cx);
+                            this.update_items(cx);
+                        })),
+                )
+            })
+            .when(right_window_controls, |this| {
+                this.children(Self::render_right_window_controls(window, cx))
+            })
+    }
+
+    fn render_left_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
+        platform_title_bar::render_left_window_controls(
+            cx.button_layout(),
+            Box::new(CloseWindow),
+            window,
+        )
+    }
+
+    fn render_right_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
+        platform_title_bar::render_right_window_controls(
+            cx.button_layout(),
+            Box::new(CloseWindow),
+            window,
+        )
+    }
+
+>>>>>>> upstream/main
     fn render_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let entry_count = self
             .items

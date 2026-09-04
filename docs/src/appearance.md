@@ -77,6 +77,7 @@ Like color themes, icon themes support separate light and dark variants:
 
 ## Fonts
 
+<<<<<<< HEAD
 Dez uses JetBrains Mono for interface chrome and code, giving the application
 one coherent terminal-native identity.
 
@@ -87,23 +88,37 @@ does not change official Zed settings or a custom font choice.
 
 The bundled font means editor and terminal typography is consistent even on a
 new machine.
+=======
+Zed uses three font settings and their fallback counterparts for different contexts:
+>>>>>>> upstream/main
 
-| Setting                | Used for                  |
-| ---------------------- | ------------------------- |
-| `buffer_font_family`   | Editor text               |
-| `ui_font_family`       | Interface elements        |
-| `terminal.font_family` | [Terminal](./terminal.md) |
+| Setting                   | Used for                  |
+| ------------------------- | ------------------------- |
+| `buffer_font_family`      | Editor text               |
+| `buffer_font_fallbacks`   | Editor text               |
+| `ui_font_family`          | Interface elements        |
+| `ui_font_fallbacks`       | Interface elements        |
+| `terminal.font_family`    | [Terminal](./terminal.md) |
+| `terminal.font_fallbacks` | [Terminal](./terminal.md) |
 
 Example configuration:
 
 ```json [settings]
 {
   "buffer_font_family": "JetBrains Mono",
+  "buffer_font_fallbacks": ["Nerd Font"],
   "buffer_font_size": 14,
+<<<<<<< HEAD
   "ui_font_family": "JetBrains Mono",
   "ui_font_size": 14,
+=======
+  "ui_font_family": "Inter",
+  "ui_font_fallbacks": ["Nerd Font"],
+  "ui_font_size": 16,
+>>>>>>> upstream/main
   "terminal": {
     "font_family": "JetBrains Mono",
+    "font_fallbacks": ["Nerd Font"],
     "font_size": 14
   }
 }

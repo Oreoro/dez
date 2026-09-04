@@ -656,7 +656,7 @@ impl Render for ThreadImportModal {
                         Section::new().child(
                             v_flex()
                                 .id("thread-import-agent-list")
-                                .max_h(rems_from_px(320.))
+                                .max_h(rems_from_px(320_f32))
                                 .pb_1()
                                 .overflow_y_scroll()
                                 .when(has_agents, |this| this.children(agent_rows))

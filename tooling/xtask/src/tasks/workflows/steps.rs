@@ -336,7 +336,7 @@ pub fn setup_linux() -> Step<Run> {
     named::bash("./script/linux")
 }
 
-fn download_wasi_sdk() -> Step<Run> {
+pub(crate) fn download_wasi_sdk() -> Step<Run> {
     named::bash("./script/download-wasi-sdk")
 }
 

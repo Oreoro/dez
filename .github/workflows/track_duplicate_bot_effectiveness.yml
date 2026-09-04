@@ -37,6 +37,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-issues: read
+          permission-members: read
           permission-organization-projects: write
 
       - name: Set up Python

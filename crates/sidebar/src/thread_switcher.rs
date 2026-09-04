@@ -427,11 +427,16 @@ impl Render for ThreadSwitcher {
             .id("session-switcher")
             .key_context("ThreadSwitcher")
             .track_focus(&self.focus_handle)
+<<<<<<< HEAD
             .role(gpui::Role::Dialog)
             .aria_label(title)
             .aria_description(accessibility_description)
             .p(surface_padding)
             .w(switcher_width)
+=======
+            .p_1p5()
+            .w(rems_from_px(440_f32))
+>>>>>>> upstream/main
             .elevation_3(cx)
             .when(
                 design_system.radius == settings::CanvasRadius::Subtle,
