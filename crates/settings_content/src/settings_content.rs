@@ -16,11 +16,8 @@ mod workspace;
 
 pub use action::{ActionName, ActionWithArguments, CommandAliasTarget};
 pub use agent::*;
-<<<<<<< HEAD
 pub use canvas::*;
-=======
 use anyhow::Context;
->>>>>>> upstream/main
 pub use editor::*;
 pub use extension::*;
 pub use fallible_options::*;
@@ -437,8 +434,9 @@ fallible_options::flattened_deserialize!(SettingsContent {
         global_lsp_settings, image_viewer, markdown_preview, repl, helix_mode, hide_mouse,
         journal, log, line_indicator_format, language_models, outline_panel, project_panel,
         node, proxy, reduce_motion, server_url, credentials_url, session, telemetry, terminal,
-        title_bar, vim_mode, calls, which_key, vim, modeline_lines, feature_flags,
-        instrumentation,
+        sidebar, design_system, workspace_bar, session_rail, pane_grid, agent_ui, multiplexer,
+        accessibility, auto_connect, vim_mode, calls, which_key, vim, modeline_lines,
+        feature_flags, instrumentation,
     },
     defaults: {},
 });
@@ -1345,18 +1343,8 @@ pub struct MarkdownPreviewSettingsContent {
     /// content when `limit_content_width` is enabled. When unset, Canvas
     /// `design_system.content_width` chooses the readable width.
     ///
-<<<<<<< HEAD
-    /// Default: null
-    pub max_width: Option<f32>,
-    /// Whether preview-first Markdown surfaces should expose an Edit Source
-    /// affordance.
-    ///
-    /// Default: true
-    pub show_edit_source_action: Option<bool>,
-=======
     /// Default: 800
     pub max_width: Option<PixelSetting>,
->>>>>>> upstream/main
 }
 
 /// The settings for the image viewer.

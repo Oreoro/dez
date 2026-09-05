@@ -306,7 +306,6 @@ impl Item for StagedDiff {
         Some("Staged Changes".into())
     }
 
-<<<<<<< HEAD
     fn tab_content(&self, params: TabContentParams, _window: &Window, _cx: &App) -> AnyElement {
         let title = self.tab_content_text(0, _cx);
         Label::new(crate::diff_surface_tab_label(
@@ -322,8 +321,6 @@ impl Item for StagedDiff {
         .into_any_element()
     }
 
-=======
->>>>>>> upstream/main
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         "Staged Changes".into()
     }

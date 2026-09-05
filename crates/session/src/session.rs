@@ -215,17 +215,6 @@ impl AppSession {
     }
 
     fn app_will_quit(&mut self, cx: &mut Context<Self>) -> Task<()> {
-<<<<<<< HEAD
-        let window_stack = window_stack(cx);
-        let state = self.durable_workspace_state();
-        let db = KeyValueStore::global(cx);
-        cx.background_spawn(async move {
-            if let Some(window_stack) = window_stack {
-                store_window_stack(db.clone(), &window_stack).await;
-            }
-            store_durable_workspace_state(db, &state).await;
-        })
-=======
         if let Some(window_stack) = window_stack(cx)
             && !window_stack.is_empty()
         {
@@ -234,7 +223,6 @@ impl AppSession {
         } else {
             Task::ready(())
         }
->>>>>>> upstream/main
     }
 
     pub fn id(&self) -> &str {

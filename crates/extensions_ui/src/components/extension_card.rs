@@ -1,13 +1,5 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-<<<<<<< HEAD
-use crate::canvas;
-
-#[derive(IntoElement)]
-pub struct ExtensionCard {
-    overridden_by_dev_extension: bool,
-    children: SmallVec<[AnyElement; 2]>,
-=======
 use cloud_api_types::{ExtensionApiManifest, ExtensionMetadata, ExtensionProvides};
 use extension::{ExtensionManifest, SchemaVersion};
 use extension_host::{ExtensionOperation, ExtensionStore};
@@ -31,7 +23,6 @@ fn extension_status(extension_id: &str, extension_store: &ExtensionStore) -> Ext
             None => ExtensionStatus::NotInstalled,
         },
     }
->>>>>>> upstream/main
 }
 
 pub(crate) fn remote_extension_status(extension_id: &str, cx: &App) -> ExtensionStatus {
@@ -635,17 +626,6 @@ impl RenderOnce for ExtensionCard {
             v_flex()
                 .mt_4()
                 .w_full()
-<<<<<<< HEAD
-                .h(rems_from_px(110.))
-                .p(canvas::extensions_card_padding(cx))
-                .gap(canvas::extensions_gap(cx))
-                .bg(canvas::extensions_card_background(cx))
-                .border_1()
-                .border_color(canvas::extensions_border(cx))
-                .map(|card| canvas::extensions_radius(card, cx))
-                .children(self.children)
-                .when(self.overridden_by_dev_extension, |card| {
-=======
                 .h(rems_from_px(110_f32))
                 .p_3()
                 .gap_2()
@@ -782,7 +762,6 @@ impl RenderOnce for ExtensionCard {
                         ),
                 )
                 .when(is_overridden, |card| {
->>>>>>> upstream/main
                     card.child(
                         h_flex()
                             .absolute()

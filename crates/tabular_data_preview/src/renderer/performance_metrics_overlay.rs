@@ -3,15 +3,9 @@
 //! Provides a semi-transparent overlay in the bottom-right corner showing
 //! Parsing performance metrics for developer experience.
 
-use ui::{
-    ActiveTheme, Context, FluentBuilder, IntoElement, ParentElement, Styled, StyledTypography, div,
-};
+use ui::{ActiveTheme, Context, IntoElement, ParentElement, Styled, StyledTypography, div};
 
-<<<<<<< HEAD:crates/csv_preview/src/renderer/performance_metrics_overlay.rs
-use crate::{CsvPreviewView, PerformanceMetrics, canvas};
-=======
 use crate::{PerformanceMetrics, TabularDataPreviewPane};
->>>>>>> upstream/main:crates/tabular_data_preview/src/renderer/performance_metrics_overlay.rs
 
 impl TabularDataPreviewPane {
     /// Renders a semi-transparent performance metrics overlay in the bottom-right corner.
@@ -30,10 +24,10 @@ impl TabularDataPreviewPane {
             .right_4()
             .px_3()
             .py_2()
-            .bg(canvas::preview_panel_background(cx))
+            .bg(theme.colors().editor_background)
             .border_1()
-            .border_color(canvas::preview_border(cx))
-            .map(|overlay| canvas::preview_radius(overlay, cx))
+            .border_color(theme.colors().border)
+            .rounded_md()
             .opacity(0.75)
             .text_xs()
             .font_buffer(cx)

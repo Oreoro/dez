@@ -17,23 +17,14 @@ use gpui::{
     InteractiveElement, IntoElement, IsZero, Pixels, Render, Resource, RetainAllImageCache,
     ScrollHandle, SharedString, SharedUri, Subscription, Task, WeakEntity, Window, point, px,
 };
-<<<<<<< HEAD
-use language::{Buffer, LanguageRegistry, Point};
-=======
 use language::{Buffer, LanguageRegistry};
->>>>>>> upstream/main
 use markdown::{
     CodeBlockRenderer, CopyButtonVisibility, Markdown, MarkdownElement, MarkdownFont,
     MarkdownOptions, MarkdownStyle,
 };
 use project::search::SearchQuery;
-<<<<<<< HEAD
-use project::{Project, ProjectPath};
-use settings::{MarkdownPreviewOpenMode, SeedQuerySetting, Settings, update_settings_file};
-=======
 use project::{Project, ProjectPath, image_store};
 use settings::{SeedQuerySetting, Settings, update_settings_file};
->>>>>>> upstream/main
 use theme::{SystemAppearance, Theme, ThemeRegistry};
 use theme_settings::ThemeSettings;
 use ui::utils::WithRemSize;
@@ -46,17 +37,9 @@ use util::{
     paths::{PathStyle, PathWithPosition},
     rel_path::RelPath,
 };
-<<<<<<< HEAD
-use workspace::item::{
-    Item, ItemBufferKind, ItemHandle, ProjectItem as WorkspaceProjectItem, ProjectItemKind,
-    SaveOptions, SerializableItem,
-};
-use workspace::notifications::NotifyResultExt;
-=======
 use workspace::item::{Item, ItemBufferKind, ItemHandle, SaveOptions, SerializableItem};
 use workspace::notifications::{NotifyResultExt, NotifyTaskExt};
 use workspace::path_link::{PathMatching, resolve_open_target};
->>>>>>> upstream/main
 use workspace::searchable::{
     Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
 };
@@ -360,18 +343,6 @@ impl MarkdownPreviewView {
         cx: &mut App,
     ) -> Entity<Self> {
         cx.new(|cx| {
-<<<<<<< HEAD
-            Self::new_inner(
-                mode,
-                active_editor,
-                workspace,
-                language_registry,
-                window,
-                cx,
-            )
-        })
-    }
-=======
             let markdown = cx.new(|cx| {
                 Markdown::new_with_options(
                     SharedString::default(),
@@ -412,50 +383,6 @@ impl MarkdownPreviewView {
                 mode,
                 markdown_parse_pending: false,
             };
->>>>>>> upstream/main
-
-    fn new_inner(
-        mode: MarkdownPreviewMode,
-        active_editor: Entity<Editor>,
-        workspace: WeakEntity<Workspace>,
-        language_registry: Arc<LanguageRegistry>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Self {
-        let markdown = cx.new(|cx| {
-            Markdown::new_with_options(
-                SharedString::default(),
-                Some(language_registry),
-                None,
-                MarkdownOptions {
-                    parse_html: true,
-                    render_mermaid_diagrams: true,
-                    parse_heading_slugs: true,
-                    render_metadata_blocks: true,
-                    ..Default::default()
-                },
-                cx,
-            )
-        });
-        let mut this = Self {
-            active_editor: None,
-            focus_handle: cx.focus_handle(),
-            workspace: workspace.clone(),
-            _markdown_subscription: cx.observe(
-                &markdown,
-                |this: &mut Self, _: Entity<Markdown>, cx| {
-                    this.sync_active_root_block(cx);
-                },
-            ),
-            markdown,
-            active_source_index: None,
-            scroll_handle: ScrollHandle::new(),
-            image_cache: RetainAllImageCache::new(cx),
-            base_directory: None,
-            pending_update_task: None,
-            hovered_url: None,
-            mode,
-        };
 
         this.set_editor(active_editor, window, cx);
 
@@ -1883,12 +1810,8 @@ impl Render for MarkdownPreviewView {
                         .size_full()
                         .overflow_y_scroll()
                         .track_scroll(&self.scroll_handle)
-<<<<<<< HEAD
-                        .p(scroll_padding)
-=======
                         .restrict_scroll_to_axis()
                         .p_4()
->>>>>>> upstream/main
                         .child({
                             let markdown_element =
                                 self.render_markdown_element(&preview_theme, window, cx);
@@ -2318,22 +2241,13 @@ mod tests {
     use buffer_diff::BufferDiff;
     use editor::Editor;
     use fs::FakeFs;
-<<<<<<< HEAD
-    use gpui::{App, AppContext as _, Entity, Focusable as _, TestAppContext, WindowHandle};
-=======
     use gpui::{
         App, AppContext as _, Entity, Focusable as _, Modifiers, TestAppContext, WindowHandle, px,
     };
->>>>>>> upstream/main
     use language::{Buffer, DiskState, Point};
     use project::{Project, ProjectPath};
     use serde_json::json;
-<<<<<<< HEAD
-    use settings::{MarkdownPreviewOpenMode, update_settings_file};
-    use std::path::PathBuf;
-=======
     use std::path::{Path, PathBuf};
->>>>>>> upstream/main
     use std::sync::Arc;
     use std::time::Duration;
     use util::path;
@@ -2404,72 +2318,6 @@ mod tests {
     }
 
     #[gpui::test]
-<<<<<<< HEAD
-    async fn opens_markdown_as_preview_by_default(cx: &mut TestAppContext) {
-        let app_state = init_test(cx);
-        app_state
-            .fs
-            .as_fake()
-            .insert_tree(
-                path!("/dir"),
-                json!({
-                    "note.md": "# Note\n"
-                }),
-            )
-            .await;
-
-        cx.update(|cx| {
-            open_paths(
-                &[PathBuf::from(path!("/dir/note.md"))],
-                app_state.clone(),
-                workspace::OpenOptions::default(),
-                cx,
-            )
-        })
-        .await
-        .unwrap();
-
-        let multi_workspace = cx.update(|cx| cx.windows()[0].downcast::<MultiWorkspace>().unwrap());
-        multi_workspace
-            .update(cx, |multi_workspace, _, cx| {
-                let workspace = multi_workspace.workspace().read(cx);
-                let preview = workspace
-                    .active_item_as::<MarkdownPreviewView>(cx)
-                    .ok_or_else(|| {
-                        let item = workspace
-                            .active_item(cx)
-                            .map(|item| format!("{:?}", item.item_id()));
-                        let editors = workspace.items_of_type::<Editor>(cx).count();
-                        anyhow::anyhow!(
-                            "Markdown files should open as previews by default \
-                             (active_item={item:?}, editor_count={editors})"
-                        )
-                    })
-                    .unwrap();
-                let editor = preview
-                    .read(cx)
-                    .active_editor
-                    .as_ref()
-                    .expect("preview should keep its source editor available")
-                    .editor
-                    .clone();
-
-                let editor_source_path = editor.read_with(cx, |editor, cx| {
-                    let buffer = editor.buffer().read(cx).as_singleton().unwrap();
-                    buffer.read(cx).file().unwrap().path().clone()
-                });
-                assert_eq!(editor_source_path.as_ref(), rel_path("note.md"));
-                assert!(
-                    workspace.items_of_type::<Editor>(cx).next().is_none(),
-                    "preview-first open should not create a separate source tab"
-                );
-            })
-            .unwrap();
-    }
-
-    #[gpui::test]
-    async fn opens_preview_file_link_at_line(cx: &mut TestAppContext) {
-=======
     async fn resolves_remote_preview_image_through_project(cx: &mut TestAppContext) {
         init_test(cx);
         let project = Project::test(FakeFs::new(cx.executor()), [], cx).await;
@@ -2598,7 +2446,6 @@ mod tests {
 
     #[gpui::test]
     async fn opens_preview_file_links_at_positions(cx: &mut TestAppContext) {
->>>>>>> upstream/main
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());

@@ -476,7 +476,7 @@ impl ToTaffy<taffy::style::Style> for Style {
                         )]
                     }
                     // grid-template-*: repeat(<number>, auto)
-                    crate::TemplateColumnMinSize::Auto => {
+                    crate::GridTemplateMinSize::Auto => {
                         vec![repeat(template.repeat, vec![taffy::style_helpers::auto()])]
                     }
                 }

@@ -306,7 +306,6 @@ impl LanguageServerState {
             );
         }
 
-<<<<<<< HEAD
         let has_server_items = self.items.iter().any(|item| item.server_info().is_some());
         if self.show_before_server_starts && !is_restricted && !has_server_items {
             menu = menu
@@ -317,15 +316,6 @@ impl LanguageServerState {
                 );
         }
 
-        let server_metadata = self
-            .lsp_store
-            .update(cx, |lsp_store, _| {
-                lsp_store
-                    .language_server_statuses()
-                    .map(|(server_id, status)| {
-                        (
-                            server_id,
-=======
         let path_style = self
             .workspace
             .upgrade()
@@ -338,7 +328,6 @@ impl LanguageServerState {
                     lsp_store
                         .language_server_statuses()
                         .map(|(server_id, status)| {
->>>>>>> upstream/main
                             (
                                 server_id,
                                 ServerMetadata {

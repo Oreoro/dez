@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     AnyView, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Global,
-    IntoElement, ManagedView, Render, Subscription, WeakEntity, Window,
+    IntoElement, ManagedView, Render, SharedString, Subscription, WeakEntity, Window,
 };
 use project::{ProjectPath, git_store::Repository};
 use workspace::Workspace;
@@ -113,4 +113,42 @@ pub fn open_file_history(
         return;
     };
     opener(workspace, path, window, cx);
+}
+
+/// Returns the project-flavored copy when the app is Zed, otherwise the
+/// workspace-flavored copy Dez uses across its git surfaces.
+pub fn git_workspace_copy(
+    app_name: &str,
+    project_copy: &'static str,
+    workspace_copy: &'static str,
+) -> &'static str {
+    if app_name == "Zed" {
+        project_copy
+    } else {
+        workspace_copy
+    }
+}
+
+/// Normalizes a diff surface tab label: Zed keeps its own titles; Dez renders
+/// a consistent "Diff · {scope}" form.
+pub fn diff_surface_tab_label(app_name: &str, label: &str) -> SharedString {
+    if app_name == "Zed" {
+        return label.to_owned().into();
+    }
+
+    let label = label.trim();
+    if label.is_empty() || label == "Diff" {
+        return "Diff".into();
+    }
+    if label.starts_with("Diff · ") {
+        return label.to_owned().into();
+    }
+
+    let scope = label
+        .strip_suffix(" Diff")
+        .or_else(|| label.strip_prefix("Diff "))
+        .or_else(|| label.strip_suffix(" Changes"))
+        .or_else(|| label.strip_prefix("Changes "))
+        .unwrap_or(label);
+    format!("Diff · {scope}").into()
 }

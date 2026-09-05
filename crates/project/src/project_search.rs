@@ -836,41 +836,11 @@ impl RequestHandler<'_> {
     async fn handle_find_first_match(&self, mut entry: MatchingEntry) {
         async move {
             let abs_path = entry.worktree_root.join(entry.path.path.as_std_path());
-<<<<<<< HEAD
-            let file = match self
-                .fs
-                .context("Trying to query filesystem in remote project search")?
-                .open_sync(&abs_path)
-                .await
-            {
-                Ok(file) => file,
-                Err(error) => {
-                    if is_permission_denied(&error) {
-                        if self
-                            .permission_denied_roots
-                            .lock()
-                            .insert(entry.worktree_root.to_path_buf())
-                        {
-                            log::warn!(
-                                "Workspace search skipped inaccessible root {}",
-                                entry.worktree_root.display()
-                            );
-                        }
-                    } else {
-                        log::debug!(
-                            "Workspace search could not open {}: {error:#}",
-                            abs_path.display()
-                        );
-                    }
-                    return anyhow::Ok(());
-                }
-=======
             let fs = self
                 .fs
                 .context("Trying to query filesystem in remote project search")?;
             let Some(file) = fs.open_sync(&abs_path).await.log_err() else {
                 return anyhow::Ok(());
->>>>>>> upstream/main
             };
 
             let mut file = BufReader::new(file);
@@ -977,20 +947,11 @@ impl RequestHandler<'_> {
     }
 }
 
-<<<<<<< HEAD
-fn is_permission_denied(error: &anyhow::Error) -> bool {
-    error.chain().any(|cause| {
-        cause
-            .downcast_ref::<std::io::Error>()
-            .is_some_and(|error| error.kind() == std::io::ErrorKind::PermissionDenied)
-    })
-=======
 fn is_utf8_prefix(bytes: &[u8]) -> bool {
     match std::str::from_utf8(bytes) {
         Ok(_) => true,
         Err(error) => error.error_len().is_none(),
     }
->>>>>>> upstream/main
 }
 
 struct InputPath {

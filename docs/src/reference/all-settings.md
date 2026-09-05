@@ -848,14 +848,9 @@ List of `string` values
     "line_numbers": true,
     "runnables": false,
     "breakpoints": true,
-<<<<<<< HEAD
-    "folds": false,
-    "min_line_number_digits": 0
-=======
     "folds": true,
     "min_line_number_digits": 4,
     "git_gutter_width": "default"
->>>>>>> upstream/main
   }
 }
 ```
@@ -5233,8 +5228,6 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 Run the {#action theme_selector::Toggle} action in the command palette to see a current list of valid theme names.
 
-<<<<<<< HEAD
-=======
 ## Title Bar
 
 - Description: Whether or not to show various elements in the title bar
@@ -5297,7 +5290,6 @@ Run the {#action theme_selector::Toggle} action in the command palette to see a 
 
 > Note: This setting only affects Linux. GNOME Wayland does not support server-side decorations. Changes only apply to newly created windows. Restart Zed to apply the setting to all windows.
 
->>>>>>> upstream/main
 ## Vim
 
 - Description: Whether or not to enable vim mode.

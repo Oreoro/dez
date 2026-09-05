@@ -191,30 +191,8 @@ impl RenderOnce for SectionButton {
                             ),
                     )
                     .child(
-<<<<<<< HEAD
-                        h_flex()
-                            .flex_none()
-                            .gap_2()
-                            .when(show_meta, |this| {
-                                this.when_some(meta, |this, meta| {
-                                    this.child(
-                                        div().max_w(rems_from_px(220.)).overflow_hidden().child(
-                                            Label::new(meta)
-                                                .truncate()
-                                                .size(welcome_secondary_label_size(APP_NAME))
-                                                .color(Color::Muted),
-                                        ),
-                                    )
-                                })
-                            })
-                            .child(
-                                KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
-                                    .size(rems_from_px(12.)),
-                            ),
-=======
                         KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
                             .size(rems_from_px(12_f32)),
->>>>>>> upstream/main
                     ),
             )
             .on_click(move |_, window, cx| {
@@ -840,58 +818,6 @@ impl WelcomePage {
         }
     }
 
-<<<<<<< HEAD
-=======
-    fn render_agent_card(&self, tab_index: usize, cx: &mut Context<Self>) -> impl IntoElement {
-        let focus = self.focus_handle.clone();
-        let color = cx.theme().colors();
-
-        let description = "Run multiple threads at once, mix and match any ACP-compatible agent, and keep work conflict-free with worktrees.";
-
-        v_flex()
-            .w_full()
-            .p_2()
-            .rounded_md()
-            .border_1()
-            .border_color(color.border_variant)
-            .bg(linear_gradient(
-                360.,
-                linear_color_stop(color.panel_background, 1.0),
-                linear_color_stop(color.editor_background, 0.45),
-            ))
-            .child(
-                h_flex()
-                    .gap_1p5()
-                    .child(
-                        Icon::new(IconName::ZedAssistant)
-                            .color(Color::Muted)
-                            .size(IconSize::Small),
-                    )
-                    .child(Label::new("Collaborate with Agents")),
-            )
-            .child(
-                Label::new(description)
-                    .size(LabelSize::Small)
-                    .color(Color::Muted)
-                    .mb_2(),
-            )
-            .child(
-                Button::new("open-agent", "Open Agent Panel")
-                    .full_width()
-                    .tab_index(tab_index as isize)
-                    .style(ButtonStyle::Outlined)
-                    .key_binding(
-                        KeyBinding::for_action_in(&ToggleFocus, &self.focus_handle, cx)
-                            .size(rems_from_px(12_f32)),
-                    )
-                    .on_click(move |_, window, cx| {
-                        focus.dispatch_action(&ToggleWorkspaceSidebar, window, cx);
-                        focus.dispatch_action(&ToggleFocus, window, cx);
-                    }),
-            )
-    }
-
->>>>>>> upstream/main
     fn render_recent_project_section(
         &self,
         recent_projects: Vec<impl IntoElement>,
@@ -922,10 +848,26 @@ impl WelcomePage {
                     .role(gpui::Role::Status)
                     .aria_label(format!("{title}. {description}"))
                     .child(
-                        div()
-                            .flex_none()
-                            .pt_0p5()
-                            .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
+                        Icon::new(IconName::ZedAssistant)
+                            .color(Color::Muted)
+                            .size(IconSize::Small),
+                    )
+                    .child(Label::new("Collaborate with Agents")),
+            )
+            .child(
+                Label::new(description)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .mb_2(),
+            )
+            .child(
+                Button::new("open-agent", "Open Agent Panel")
+                    .full_width()
+                    .tab_index(tab_index as isize)
+                    .style(ButtonStyle::Outlined)
+                    .key_binding(
+                        KeyBinding::for_action_in(&ToggleFocus, &self.focus_handle, cx)
+                            .size(rems_from_px(12_f32)),
                     )
                     .child(
                         v_flex()
@@ -1207,45 +1149,6 @@ impl Render for WelcomePage {
             .size_full()
             .bg(welcome_background)
             .justify_center()
-<<<<<<< HEAD
-            .when(is_dez, |this| this.items_start())
-            .child(container_query(move |available_size, _window, cx| {
-                let responsive_width = welcome_responsive_viewport_width(
-                    APP_NAME,
-                    available_size.width,
-                    crate::interface_scale(cx),
-                );
-                let compact_spacing = dez_welcome_uses_compact_spacing(APP_NAME, responsive_width);
-                let split_layout = dez_welcome_uses_split_layout(
-                    APP_NAME,
-                    responsive_width,
-                    has_secondary_content,
-                );
-                let home_separator = cx.theme().colors().border_variant;
-                let mut secondary_content = secondary_content;
-                let sections = if split_layout {
-                    h_flex()
-                        .id("welcome-sections")
-                        .w_full()
-                        .min_w_0()
-                        .items_start()
-                        .gap_6()
-                        .child(
-                            div()
-                                .min_w_0()
-                                .flex_1()
-                                .when(is_dez, |this| this.px_1())
-                                .child(first_section.render(
-                                    action_tab_offset,
-                                    &section_focus_handle,
-                                    welcome_emphasizes_first_action(APP_NAME),
-                                    true,
-                                    first_entry_label_override.clone(),
-                                    first_entry_meta_override.clone(),
-                                    first_entry_icon_override,
-                                    local_workspace,
-                                )),
-=======
             .child(
                 v_flex()
                     .id("welcome-content")
@@ -1289,7 +1192,6 @@ impl Render for WelcomePage {
                                         window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
                                     }),
                             ),
->>>>>>> upstream/main
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(

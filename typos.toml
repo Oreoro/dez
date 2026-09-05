@@ -108,27 +108,10 @@ extend-ignore-re = [
     "composit",
     # Used in truncating tests to ensure byte-length vs char like in café
     "caf…",
-<<<<<<< HEAD
-    # Git commit hashes in Dez docs and changelogs are not typos.
-    "[0-9a-f]{7,40}",
-    # iTerm2 terminal name
-    "iterm",
-    # Mis-scoping is a legitimate hyphenated word in the identity check.
-    "mis-scoping",
-    # The scap crate (screen capture) and its capitalized form
-    "[Ss]cap",
-    # Common spelling variant used in writeable_path_from_extension et al.
-    "writeable",
-    # Vim command abbreviations like :bd[elete]
-    "elete",
-    # Test fixture string in text::tests
-    "GHIzJ"
-=======
     '\[elete\]',
     "GHIzJ",
     # Intentionally non-matching query in project search tests
     "NOTHINGmATCHEStHIS",
->>>>>>> upstream/main
 ]
 check-filename = true
 

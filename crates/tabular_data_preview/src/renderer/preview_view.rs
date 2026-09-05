@@ -2,16 +2,13 @@ use std::time::Instant;
 
 use ui::{SpinnerLabel, div, prelude::*};
 
-<<<<<<< HEAD:crates/csv_preview/src/renderer/preview_view.rs
-use crate::{CsvPreviewView, canvas};
-=======
 use crate::TabularDataPreviewPane;
->>>>>>> upstream/main:crates/tabular_data_preview/src/renderer/preview_view.rs
 
 use super::settings::settings_popover_menu;
 
 impl Render for TabularDataPreviewPane {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.theme();
         let row_height = window.pixel_snap(window.line_height());
         if row_height != self.row_height {
             self.row_height = row_height;
@@ -24,7 +21,7 @@ impl Render for TabularDataPreviewPane {
         let render_prep_start = Instant::now();
         let table_with_settings = v_flex()
             .size_full()
-            .bg(canvas::preview_background(cx))
+            .bg(theme.colors().editor_background)
             .track_focus(&self.focus_handle)
             .child({
                 let is_parsing = self.is_parsing;

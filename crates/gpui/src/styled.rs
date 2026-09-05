@@ -784,7 +784,7 @@ pub trait Styled: Sized {
     fn grid_cols_auto(mut self, cols: u16) -> Self {
         self.style().grid_cols = Some(GridTemplate {
             repeat: cols,
-            min_size: TemplateColumnMinSize::Auto,
+            min_size: GridTemplateMinSize::Auto,
         });
         self
     }
@@ -822,7 +822,7 @@ pub trait Styled: Sized {
     fn grid_rows_auto(mut self, rows: u16) -> Self {
         self.style().grid_rows = Some(GridTemplate {
             repeat: rows,
-            min_size: TemplateColumnMinSize::Auto,
+            min_size: GridTemplateMinSize::Auto,
         });
         self
     }

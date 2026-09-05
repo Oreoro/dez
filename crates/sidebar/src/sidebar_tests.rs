@@ -16166,23 +16166,13 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
     });
     let (multi_workspace, cx) =
         cx.add_window_view(|window, cx| MultiWorkspace::test_new(local_project, window, cx));
-<<<<<<< HEAD
-    let local_workspace = multi_workspace.read_with(cx, |multi_workspace, _cx| {
-        multi_workspace.workspace().clone()
-    });
-=======
     let local_workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
->>>>>>> upstream/main
 
     let server_fs = FakeFs::new(server_cx.executor());
     server_fs
         .insert_tree("/remote-project", serde_json::json!({ "src": {} }))
         .await;
-<<<<<<< HEAD
-    let (options, server_session, _) = remote::RemoteClient::fake_server(cx, server_cx);
-=======
     let (opts, server_session, _) = remote::RemoteClient::fake_server(cx, server_cx);
->>>>>>> upstream/main
     server_cx.update(remote_server::HeadlessProject::init);
     let server_executor = server_cx.executor();
     let _headless = server_cx.new(|cx| {
@@ -16200,17 +16190,12 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
             cx,
         )
     });
-<<<<<<< HEAD
-    let remote_client = remote::RemoteClient::connect_mock(options.clone(), cx).await;
-
-=======
     let remote_client = remote::RemoteClient::connect_mock(opts.clone(), cx).await;
 
     // Stand in for the save prompt from a concurrent workspace removal: as
     // soon as the remote workspace is activated mid-open, activate the local
     // workspace again. The open must still return the workspace it created,
     // not whichever workspace is active once it finishes.
->>>>>>> upstream/main
     multi_workspace.update_in(cx, |_, window, cx| {
         let local_workspace = local_workspace.clone();
         cx.subscribe_in(&cx.entity(), window, move |this, _, event, window, cx| {
@@ -16222,21 +16207,6 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
     });
 
     let created = multi_workspace
-<<<<<<< HEAD
-        .update_in(cx, |multi_workspace, window, cx| {
-            let project_group_key = ProjectGroupKey::new(
-                Some(options.clone()),
-                PathList::new(&[PathBuf::from("/remote-project")]),
-            );
-            multi_workspace.find_or_create_workspace(
-                PathList::new(&[PathBuf::from("/remote-project")]),
-                Some(options),
-                Some(project_group_key),
-                move |_, _, _| Task::ready(Ok(Some(remote_client))),
-                &[],
-                None,
-                workspace::OpenMode::Activate,
-=======
         .update_in(cx, |mw, window, cx| {
             let key = ProjectGroupKey::new(
                 Some(opts.clone()),
@@ -16250,7 +16220,6 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
                 None,
                 workspace::OpenMode::Activate,
                 None,
->>>>>>> upstream/main
                 window,
                 cx,
             )
@@ -16265,16 +16234,8 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
         "the returned workspace should be the remote workspace that was created"
     );
     assert_eq!(
-<<<<<<< HEAD
-        multi_workspace.read_with(cx, |multi_workspace, _cx| {
-            multi_workspace.workspace().clone()
-        }),
-        local_workspace,
-        "the local Workspace should have reactivated during the remote open"
-=======
         multi_workspace.read_with(cx, |mw, _| mw.workspace().clone()),
         local_workspace,
         "the local workspace should have re-activated during the open"
->>>>>>> upstream/main
     );
 }

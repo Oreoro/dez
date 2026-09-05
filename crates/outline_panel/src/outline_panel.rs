@@ -5283,17 +5283,9 @@ impl OutlinePanel {
                     })
                     .child(
                         IconButton::new(pin_button_id, icon)
-<<<<<<< HEAD
                             .tab_index(0isize)
                             .aria_label(icon_tooltip)
                             .tooltip(Tooltip::text(icon_tooltip))
-=======
-                            .tooltip(Tooltip::for_action_title_in(
-                                icon_tooltip,
-                                &ToggleActiveEditorPin,
-                                &self.focus_handle,
-                            ))
->>>>>>> upstream/main
                             .shape(IconButtonShape::Square)
                             .on_click(cx.listener(|outline_panel, _, window, cx| {
                                 outline_panel.toggle_active_editor_pin(

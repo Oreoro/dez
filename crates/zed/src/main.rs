@@ -75,7 +75,7 @@ use workspace::{
 
 use zed::{
     OpenListener, OpenRequest, RawOpenRequest, app_menus, build_window_options,
-    derive_paths_with_position, dispatch_open_requests_after_startup, edit_prediction_registry,
+    derive_paths_with_position, edit_prediction_registry,
     handle_cli_connection, handle_keymap_file_changes, initialize_workspace,
     open_paths_with_positions,
 };
@@ -1022,7 +1022,7 @@ fn main() {
         {
             log::warn!("workspace restore was already started for this app session");
         }
-        let startup_task = cx.spawn({
+        let restore_task = cx.spawn({
             let app_state = app_state.clone();
             async move |cx| {
                 if let Err(error) = restore_or_create_workspace(app_state.clone(), cx).await {
@@ -1045,7 +1045,7 @@ fn main() {
                 });
             }
         });
-        let (startup_ready_tx, startup_ready_rx) = oneshot::channel();
+        let restore_finished = cx.background_spawn(restore_task).shared();
 
         let (first_window_tx, first_window_rx) = oneshot::channel::<()>();
         let first_window_tx = Rc::new(RefCell::new(Some(first_window_tx)));
@@ -1055,19 +1055,13 @@ fn main() {
             }
         });
 
-        let restore_finished = cx.background_spawn(restore_task).shared();
 
         cx.spawn({
             let db = workspace::WorkspaceDb::global(cx);
             let fs = app_state.fs.clone();
             let restore_finished = restore_finished.clone();
             async move |_cx| {
-<<<<<<< HEAD
-                startup_task.await;
-                startup_ready_tx.send(()).ok();
-=======
                 restore_finished.await;
->>>>>>> upstream/main
                 db.garbage_collect_workspaces(
                     fs.as_ref(),
                     &current_session_id,
@@ -1083,22 +1077,6 @@ fn main() {
         component_preview::init(app_state.clone(), cx);
 
         cx.spawn(async move |cx| {
-<<<<<<< HEAD
-            dispatch_open_requests_after_startup(
-                async move {
-                    startup_ready_rx.await.ok();
-                },
-                open_rx,
-                |urls| {
-                    cx.update(|cx| {
-                        if let Some(request) = OpenRequest::parse(urls, cx).log_err() {
-                            handle_open_request(request, app_state.clone(), cx);
-                        }
-                    });
-                },
-            )
-            .await;
-=======
             let _first_window_subscription = _first_window_subscription;
             let first_window_placed = first_window_rx.shared();
             while let Some(urls) = open_rx.next().await {
@@ -1115,7 +1093,6 @@ fn main() {
                     }
                 });
             }
->>>>>>> upstream/main
         })
         .detach();
     });

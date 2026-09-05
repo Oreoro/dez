@@ -18,15 +18,9 @@ use editor::Editor;
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
-<<<<<<< HEAD
-    AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
-    ListState, Pixels, PromptLevel, Render, SharedString, Subscription, Task, TaskExt, WeakEntity,
-    Window, list, prelude::*, px,
-=======
     AnyElement, App, Context, Decorations, DismissEvent, Entity, EventEmitter, FocusHandle,
     Focusable, ListState, Render, SharedString, Subscription, Task, TaskExt, WeakEntity, Window,
     list, prelude::*, px,
->>>>>>> upstream/main
 };
 use itertools::Itertools as _;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
@@ -1195,8 +1189,6 @@ impl ThreadsArchiveView {
         .detach_and_log_err(cx);
     }
 
-<<<<<<< HEAD
-=======
     fn render_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = !self.filter_editor.read(cx).text(cx).is_empty();
         let sidebar_on_left = matches!(
@@ -1287,7 +1279,6 @@ impl ThreadsArchiveView {
         )
     }
 
->>>>>>> upstream/main
     fn render_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let entry_count = self
             .items

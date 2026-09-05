@@ -696,13 +696,9 @@ impl<T: ScrollableHandle> ScrollbarState<T> {
             track_color,
             show_behavior,
             get_visibility: config.get_visibility,
-            style: config.style.unwrap_or_default(),
-<<<<<<< HEAD
-            show_state: VisibilityState::from_behavior(show_behavior, keep_track_visible),
-=======
             reveal_policy: config.reveal_policy,
-            show_state: VisibilityState::from_behavior(show_behavior),
->>>>>>> upstream/main
+            style: config.style.unwrap_or_default(),
+            show_state: VisibilityState::from_behavior(show_behavior, keep_track_visible),
             mouse_in_parent: true,
             last_prepaint_state: None,
             _auto_hide_task: None,
@@ -1359,7 +1355,6 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                     },
                     parent_bounds_hitbox: window.insert_hitbox(bounds, HitboxBehavior::Normal),
                 });
-<<<<<<< HEAD
         let became_scrollable = prepaint_state.as_ref().is_some_and(|state| {
             state.has_thumbs()
                 && self
@@ -1375,15 +1370,6 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
         });
 
         if became_scrollable {
-=======
-        if prepaint_state.as_ref().is_some_and(|state| {
-            let scrollbar_state = self.state.read(cx);
-            state.should_show_scrollbars(
-                scrollbar_state.last_prepaint_state.as_ref(),
-                scrollbar_state.reveal_policy,
-            )
-        }) {
->>>>>>> upstream/main
             self.state
                 .update(cx, |state, cx| state.show_scrollbars(window, cx));
         }

@@ -3800,26 +3800,15 @@ impl AgentPanel {
         self.terminals.contains_key(&terminal_id)
     }
 
-<<<<<<< HEAD
-    pub fn set_terminal_custom_title(
-        &mut self,
-        terminal_id: TerminalId,
-        custom_title: Option<String>,
-=======
     pub fn rename_terminal(
         &mut self,
         terminal_id: TerminalId,
         title: SharedString,
->>>>>>> upstream/main
         cx: &mut Context<Self>,
     ) -> bool {
         let Some(terminal) = self.terminals.get(&terminal_id) else {
             return false;
         };
-<<<<<<< HEAD
-        terminal.view.update(cx, |terminal_view, cx| {
-            terminal_view.set_custom_title(custom_title, cx);
-=======
         let terminal_title = terminal.terminal_title(cx);
         let custom_title = normalize_terminal_custom_title(terminal_title.as_ref(), title);
         let terminal_view = terminal.view.clone();
@@ -3827,7 +3816,6 @@ impl AgentPanel {
             terminal_view.update(cx, |terminal_view, cx| {
                 terminal_view.set_custom_title(custom_title.map(|title| title.to_string()), cx);
             });
->>>>>>> upstream/main
         });
         true
     }
@@ -6762,7 +6750,6 @@ impl AgentPanel {
         };
 
         let is_full_screen = self.is_zoomed(window, cx);
-<<<<<<< HEAD
         let (icon_id, icon_name) = if is_full_screen {
             ("disable-full-screen", IconName::Minimize)
         } else {
@@ -6774,17 +6761,6 @@ impl AgentPanel {
             .tab_index(0isize)
             .aria_label(zoom_label)
             .tooltip(move |_, cx| Tooltip::for_action(zoom_label, &ToggleZoom, cx))
-=======
-        let (icon_name, tooltip_text) = if is_full_screen {
-            (IconName::Minimize, "Disable Full Screen")
-        } else {
-            (IconName::Maximize, "Enable Full Screen")
-        };
-        let full_screen_button = IconButton::new("toggle-full-screen", icon_name)
-            .icon_size(IconSize::Small)
-            .toggle_state(is_full_screen)
-            .tooltip(move |_, cx| Tooltip::for_action(tooltip_text, &ToggleZoom, cx))
->>>>>>> upstream/main
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.toggle_zoom(&ToggleZoom, window, cx);
             }));
@@ -7156,11 +7132,7 @@ impl Render for AgentPanel {
             .size_full()
             .justify_between()
             .track_focus(&self.focus_handle)
-<<<<<<< HEAD
             .bg(canvas_agent_panel_background(cx))
-=======
-            .bg(cx.theme().colors().panel_background)
->>>>>>> upstream/main
             .on_action(cx.listener(|this, action: &NewThread, window, cx| {
                 this.new_thread(action, window, cx);
             }))
@@ -7959,10 +7931,6 @@ mod tests {
             );
         });
 
-<<<<<<< HEAD
-        panel.update_in(cx, |panel, window, cx| {
-            panel.edit_visible_title(window, cx);
-=======
         let title_editor_focus_handle = panel.read_with(cx, |panel, cx| {
             panel
                 .active_thread_view(cx)
@@ -7973,7 +7941,6 @@ mod tests {
         });
         cx.update(|window, cx| {
             title_editor_focus_handle.focus(window, cx);
->>>>>>> upstream/main
         });
         cx.run_until_parked();
 
@@ -7990,8 +7957,6 @@ mod tests {
     }
 
     #[gpui::test]
-<<<<<<< HEAD
-=======
     async fn test_resubmitting_edited_message_keeps_zoomed_agent_panel_open(
         cx: &mut TestAppContext,
     ) {
@@ -8075,7 +8040,6 @@ mod tests {
     }
 
     #[gpui::test]
->>>>>>> upstream/main
     async fn test_active_thread_serialize_and_load_round_trip(cx: &mut TestAppContext) {
         init_test(cx);
         cx.update(|cx| {

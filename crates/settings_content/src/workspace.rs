@@ -835,14 +835,8 @@ pub struct ProjectPanelSettingsContent {
     pub git_status: Option<bool>,
     /// Amount of indentation (in pixels) for nested items.
     ///
-<<<<<<< HEAD
-    /// Default: 12.5
-    #[serde(serialize_with = "serialize_optional_f32_with_two_decimal_places")]
-    pub indent_size: Option<f32>,
-=======
     /// Default: 20
     pub indent_size: Option<crate::PixelSetting>,
->>>>>>> upstream/main
     /// Whether to reveal it in the project panel automatically,
     /// when a corresponding project entry becomes active.
     /// Gitignored entries are never auto revealed.

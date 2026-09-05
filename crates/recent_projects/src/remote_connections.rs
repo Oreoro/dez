@@ -412,12 +412,7 @@ pub async fn open_remote_project(
                 });
             }
 
-<<<<<<< HEAD
-            Ok((workspace, items)) => {
-                remote_workspace = workspace;
-=======
             Ok((_, items)) => {
->>>>>>> upstream/main
                 navigate_to_positions(&window, items, &paths_with_positions, cx);
             }
         }
@@ -425,18 +420,6 @@ pub async fn open_remote_project(
         break;
     }
 
-<<<<<<< HEAD
-    if let Some(remote_workspace) = remote_workspace {
-        remote_workspace.update(cx, |workspace, cx| {
-            if let Some(client) = workspace.project().read(cx).remote_client()
-                && let Some(extension_store) = ExtensionStore::try_global(cx)
-            {
-                extension_store.update(cx, |store, cx| store.register_remote_client(client, cx));
-            }
-        });
-    }
-=======
->>>>>>> upstream/main
     Ok(window)
 }
 

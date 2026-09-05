@@ -1,9 +1,5 @@
 use crate::{
-<<<<<<< HEAD:crates/csv_preview/src/renderer/row_identifiers.rs
-    CsvPreviewView, canvas,
-=======
     TabularDataPreviewPane,
->>>>>>> upstream/main:crates/tabular_data_preview/src/renderer/row_identifiers.rs
     settings::RowIdentifiers,
     types::{DataRow, DisplayRow, LineNumber},
 };
@@ -179,9 +175,9 @@ impl TabularDataPreviewPane {
 
         let value = div()
             .flex()
-            .px(canvas::preview_cell_padding_x(cx))
-            .border_color(canvas::preview_subtle_border(cx))
-            .bg(canvas::preview_panel_background(cx))
+            .px_1()
+            .border_color(cx.theme().colors().border_variant)
+            .bg(cx.theme().colors().panel_background)
             .h_full()
             .text_color(cx.theme().colors().text_muted)
             .justify_center()

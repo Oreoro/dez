@@ -843,17 +843,6 @@ impl Item for Editor {
             .when(params.truncate_title_middle, |this| {
                 this.w_full().min_w_0().overflow_hidden()
             })
-<<<<<<< HEAD
-            .when(show_surface_prefix, |this| {
-                this.child(
-                    Label::new("Editor ·")
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .flex_shrink_0(),
-                )
-            })
-            .child(title)
-=======
             .child(
                 Label::new(if params.truncate_title_middle {
                     self.title(cx).to_string()
@@ -871,7 +860,6 @@ impl Item for Editor {
                 .when(params.preview, |this| this.italic())
                 .when(was_deleted, |this| this.strikethrough()),
             )
->>>>>>> upstream/main
             .when_some(description, |this, description| {
                 this.child(
                     Label::new(description)

@@ -19,12 +19,7 @@ pub struct EnumVariantDropdown {
     disabled: bool,
     aria_label: Option<SharedString>,
     aria_description: Option<SharedString>,
-<<<<<<< HEAD
-    icon_for_value: Option<Rc<dyn Fn(T) -> IconName + 'static>>,
-    on_change: Rc<dyn Fn(T, &mut ui::Window, &mut App) + 'static>,
-=======
     on_change: Rc<dyn Fn(usize, &mut ui::Window, &mut App) + 'static>,
->>>>>>> upstream/main
 }
 
 impl EnumVariantDropdown {
@@ -104,58 +99,6 @@ impl EnumVariantDropdown {
 
 impl RenderOnce for EnumVariantDropdown {
     fn render(self, window: &mut ui::Window, cx: &mut ui::App) -> impl gpui::IntoElement {
-<<<<<<< HEAD
-        let Self {
-            id,
-            current_value,
-            variants,
-            labels,
-            should_do_title_case,
-            tab_index,
-            disabled,
-            aria_label,
-            aria_description,
-            icon_for_value,
-            on_change,
-        } = self;
-
-        let current_value_index = variants
-            .iter()
-            .position(|value| *value == current_value)
-            .unwrap_or_default();
-        let current_value_label = labels.get(current_value_index).copied().unwrap_or_default();
-        let visible_label = if should_do_title_case {
-            current_value_label.to_title_case()
-        } else {
-            current_value_label.to_string()
-        };
-        let menu_icon_for_value = icon_for_value.clone();
-        let popover_handle = window
-            .use_keyed_state((id.clone(), "enum-variant-dropdown-handle"), cx, |_, _| {
-                ui::PopoverMenuHandle::<ContextMenu>::default()
-            })
-            .read(cx)
-            .clone();
-
-        let context_menu = window.use_keyed_state(current_value_label, cx, |window, cx| {
-            ContextMenu::new(window, cx, move |mut menu, _, _| {
-                for (&value, &label) in std::iter::zip(variants, labels) {
-                    let on_change = on_change.clone();
-                    let entry = ContextMenuEntry::new(if should_do_title_case {
-                        label.to_title_case()
-                    } else {
-                        label.to_string()
-                    })
-                    .toggleable(IconPosition::End, value == current_value)
-                    .handler(move |window, cx| {
-                        on_change(value, window, cx);
-                    });
-                    menu = if let Some(icon_for_value) = menu_icon_for_value.as_ref() {
-                        menu.item(entry.icon(icon_for_value(value)))
-                    } else {
-                        menu.item(entry)
-                    };
-=======
         let current_value_label = self.labels[self.selected_index];
 
         let context_menu = window.use_keyed_state(current_value_label, cx, |window, cx| {
@@ -175,7 +118,6 @@ impl RenderOnce for EnumVariantDropdown {
                             on_change(index, window, cx);
                         },
                     );
->>>>>>> upstream/main
                 }
                 menu
             })

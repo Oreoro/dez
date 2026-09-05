@@ -1016,7 +1016,10 @@ impl TerminalBuilder {
             Shell::System | Shell::Program(_) => None,
         };
         builder.terminal.hyperlink_regex_searches =
-            RegexSearches::new(&path_hyperlink_regexes, path_hyperlink_timeout_ms);
+            RegexSearches::new(
+                &path_hyperlink_regexes,
+                Duration::from_millis(path_hyperlink_timeout_ms),
+            );
         builder.terminal.activation_script = activation_script.clone();
         builder.terminal.template = CopyTemplate {
             shell: shell.clone(),
@@ -1025,7 +1028,7 @@ impl TerminalBuilder {
             alternate_scroll,
             max_scroll_history_lines,
             path_hyperlink_regexes,
-            path_hyperlink_timeout_ms,
+            path_hyperlink_timeout: Duration::from_millis(path_hyperlink_timeout_ms),
             window_id,
         };
         if !activation_script.is_empty() {
@@ -1499,35 +1502,6 @@ impl TerminalBuilder {
     }
 
     pub fn subscribe(mut self, cx: &Context<Terminal>) -> Terminal {
-<<<<<<< HEAD
-        // `Terminal::drop` escalates to SIGKILL on a detached background task,
-        // which never gets to run when the whole app quits: the process exits
-        // as soon as the `on_app_quit` futures resolve. Perform the same
-        // escalation in a quit observer, whose future keeps the app alive for
-        // the grace period, so that processes ignoring SIGHUP/SIGTERM don't
-        // outlive Zed (#47412). The subscription can't be stored on `Terminal`
-        // (`Subscription` is not `Send`, and `TerminalBuilder` is built on a
-        // background thread), so its lifetime is tied to the entity's release
-        // instead.
-        let app_quit_subscription = cx.on_app_quit(|terminal, cx| {
-            let kill_processes = match &terminal.terminal_type {
-                TerminalType::Pty { info, .. } => Some(terminate_processes_with_grace_period(
-                    info.clone(),
-                    cx.background_executor().clone(),
-                )),
-                TerminalType::Hosted { .. } | TerminalType::DisplayOnly => None,
-            };
-            async move {
-                if let Some(kill_processes) = kill_processes {
-                    kill_processes.await;
-                }
-            }
-        });
-        cx.on_release(move |_, _| drop(app_quit_subscription))
-            .detach();
-
-=======
->>>>>>> upstream/main
         //Event loop
         self.terminal.event_loop_task = cx.spawn(async move |terminal, cx| {
             while let Some(event) = self.events_rx.next().await {
@@ -2367,27 +2341,17 @@ impl Terminal {
         let input = input.into();
         #[cfg(any(test, feature = "test-support"))]
         self.pty_write_log.borrow_mut().push(input.to_vec());
-<<<<<<< HEAD
         match &self.terminal_type {
-            TerminalType::Pty { pty_tx, .. } => {
+            TerminalType::Pty {
+                resources: PtyResources::Active(pty_tx),
+                ..
+            } => {
                 if log::log_enabled!(log::Level::Debug) {
                     if let Ok(str) = str::from_utf8(&input) {
                         log::debug!("Writing to PTY: {:?}", str);
                     } else {
                         log::debug!("Writing to PTY: {:?}", input);
                     }
-=======
-        if let TerminalType::Pty {
-            resources: PtyResources::Active(pty_tx),
-            ..
-        } = &self.terminal_type
-        {
-            if log::log_enabled!(log::Level::Debug) {
-                if let Ok(str) = str::from_utf8(&input) {
-                    log::debug!("Writing to PTY: {:?}", str);
-                } else {
-                    log::debug!("Writing to PTY: {:?}", input);
->>>>>>> upstream/main
                 }
                 pty_tx.notify(input);
                 false
@@ -2526,10 +2490,7 @@ impl Terminal {
         cx.emit(Event::Wakeup);
     }
 
-<<<<<<< HEAD
     fn write_input(&mut self, input: impl Into<Cow<'static, [u8]>>) -> bool {
-=======
-    fn write_input(&mut self, input: impl Into<Cow<'static, [u8]>>) {
         let input = input.into();
         if !self.is_remote_terminal && input.contains(&b'\r') {
             let term = self.term.lock_unfair();
@@ -2539,7 +2500,6 @@ impl Terminal {
             ));
         }
 
->>>>>>> upstream/main
         self.events.push_back(InternalEvent::Scroll(Scroll::Bottom));
         self.events.push_back(InternalEvent::SetSelection(None));
         #[cfg(any(test, feature = "test-support"))]
@@ -3688,24 +3648,7 @@ impl Terminal {
         if let Some(subprocess) = self.subprocess.take() {
             subprocess.kill();
         }
-<<<<<<< HEAD
-        match std::mem::replace(&mut self.terminal_type, TerminalType::DisplayOnly) {
-            TerminalType::Pty { pty_tx, info } => {
-                let kill_processes =
-                    terminate_processes_with_grace_period(info, self.background_executor.clone());
-                pty_tx.shutdown();
-                self.background_executor.spawn(kill_processes).detach();
-            }
-            TerminalType::Hosted { controller } => {
-                if let Err(error) = controller.detach() {
-                    log::warn!("failed to detach hosted terminal: {error:#}");
-                }
-            }
-            TerminalType::DisplayOnly => {}
-        }
-=======
         self.release_pty_resources();
->>>>>>> upstream/main
     }
 
     pub fn request_hosted_termination(
@@ -6124,109 +6067,6 @@ mod tests {
         );
     }
 
-<<<<<<< HEAD
-    #[cfg(unix)]
-    fn parse_pid_marker(content: &str, prefix: &str, suffix: &str) -> i32 {
-        content
-            .split(prefix)
-            .nth(1)
-            .and_then(|rest| rest.split(suffix).next())
-            .and_then(|pid| pid.trim().parse().ok())
-            .unwrap_or_else(|| {
-                panic!("failed to parse pid between {prefix:?} and {suffix:?} from: {content}")
-            })
-    }
-
-    /// Regression test for <https://github.com/zed-industries/zed/issues/47412>:
-    /// closing a terminal must not orphan processes that ignore SIGHUP and
-    /// SIGTERM. The shell ignores both signals and the `sleep`s inherit the
-    /// ignored dispositions, so only the SIGKILL escalation can terminate them.
-    ///
-    /// Two process groups are covered: the background `sleep` is spawned before
-    /// `set -m` and stays in the shell's own group, while job control places
-    /// the foreground job (an inner shell that `exec`s `sleep`) in a separate
-    /// group that killing the shell's group never reaches — it is only found
-    /// via the foreground-group capture (`tcgetpgrp`).
-    #[cfg(unix)]
-    #[gpui::test]
-    async fn test_dropping_terminal_kills_processes_ignoring_sighup_and_sigterm(
-        cx: &mut TestAppContext,
-    ) {
-        cx.executor().allow_parking();
-
-        let (terminal, _completion_rx) = build_test_terminal_with_arguments(
-            cx,
-            "/bin/sh".to_string(),
-            vec![
-                "-c".to_string(),
-                "trap '' HUP TERM; sleep 300 & echo bg_marker_${!}_bgend; set -m; \
-                 /bin/sh -c 'echo fg_marker_$$_fgend; exec sleep 300'"
-                    .to_string(),
-            ],
-        )
-        .await;
-
-        assert_content_eventually(&terminal, "_fgend", cx).await;
-        let content = terminal.update(cx, |term, _| term.get_content());
-        let background_sleep_pid = parse_pid_marker(&content, "bg_marker_", "_bgend");
-        let foreground_sleep_pid = parse_pid_marker(&content, "fg_marker_", "_fgend");
-
-        let shell_pid = terminal.update(cx, |terminal, _| match &terminal.terminal_type {
-            TerminalType::Pty { info, .. } => info.pid_getter().fallback_pid().as_u32() as i32,
-            TerminalType::Hosted { .. } | TerminalType::DisplayOnly => {
-                panic!("expected a PTY-backed terminal")
-            }
-        });
-
-        for pid in [background_sleep_pid, foreground_sleep_pid] {
-            assert_eq!(
-                unsafe { libc::kill(pid, 0) },
-                0,
-                "process {pid} should be running before the terminal is dropped"
-            );
-        }
-
-        // The foreground-group escalation is only exercised if `set -m`
-        // actually placed the foreground job in its own process group; assert
-        // the arrangement so this test fails loudly instead of silently
-        // degrading into a shell-group-only test.
-        let shell_pgid = unsafe { libc::getpgid(shell_pid) };
-        let foreground_pgid = unsafe { libc::getpgid(foreground_sleep_pid) };
-        assert!(shell_pgid > 0 && foreground_pgid > 0);
-        assert_ne!(
-            foreground_pgid, shell_pgid,
-            "job control should place the foreground sleep in its own process group"
-        );
-        assert_eq!(
-            unsafe { libc::getpgid(background_sleep_pid) },
-            shell_pgid,
-            "the background sleep should stay in the shell's process group"
-        );
-
-        drop(terminal);
-        // Flush effects so the released terminal entity is actually dropped.
-        cx.update(|_| {});
-
-        for _ in 0..300 {
-            let background_dead = unsafe { libc::kill(background_sleep_pid, 0) } != 0;
-            let foreground_dead = unsafe { libc::kill(foreground_sleep_pid, 0) } != 0;
-            if background_dead && foreground_dead {
-                return;
-            }
-            cx.background_executor
-                .timer(Duration::from_millis(10))
-                .await;
-        }
-        panic!(
-            "processes survived dropping the terminal: background sleep {background_sleep_pid} \
-             alive: {}, foreground sleep {foreground_sleep_pid} alive: {}",
-            unsafe { libc::kill(background_sleep_pid, 0) } == 0,
-            unsafe { libc::kill(foreground_sleep_pid, 0) } == 0,
-        );
-    }
-
-=======
->>>>>>> upstream/main
     /// Test that kill_active_task on a task that's not running is a no-op
     #[gpui::test]
     async fn test_kill_active_task_on_completed_task_is_noop(cx: &mut TestAppContext) {

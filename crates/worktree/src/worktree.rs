@@ -7432,12 +7432,6 @@ pub fn decode_byte_header(prefix: &[u8]) -> (Option<&'static Encoding>, ByteCont
 mod tests {
     use super::*;
 
-<<<<<<< HEAD
-    #[test]
-    fn dez_does_not_open_a_half_working_workspace_without_root_access() {
-        assert!(worktree_root_open_failure_is_fatal("Dez"));
-        assert!(!worktree_root_open_failure_is_fatal("Zed"));
-=======
     /// Streams `bytes` the way `decode_file_text_to_rope` would, returning the
     /// decoded text and detected line ending, or `None` if the fast path bailed.
     async fn stream(bytes: &[u8]) -> Option<(String, LineEnding)> {
@@ -7523,7 +7517,12 @@ mod tests {
         assert_eq!(stream(b"hello \xff\xfeA").await, None, "invalid utf-8");
         assert_eq!(stream(b"hello \xe2\x82").await, None, "truncated at eof");
         assert_eq!(stream(b"plain \x1b$B text").await, None, "iso-2022 escape");
->>>>>>> upstream/main
+    }
+
+    #[test]
+    fn dez_does_not_open_a_half_working_workspace_without_root_access() {
+        assert!(worktree_root_open_failure_is_fatal("Dez"));
+        assert!(!worktree_root_open_failure_is_fatal("Zed"));
     }
 
     /// reproduction of issue #50785

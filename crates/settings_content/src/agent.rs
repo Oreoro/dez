@@ -294,14 +294,8 @@ pub struct AgentSettingsContent {
     /// centered when the panel is wider than this value. When unset, Canvas
     /// `design_system.content_width` chooses the readable width.
     ///
-<<<<<<< HEAD
-    /// Default: null
-    #[serde(serialize_with = "crate::serialize_optional_f32_with_two_decimal_places")]
-    pub max_content_width: Option<f32>,
-=======
     /// Default: 850
     pub max_content_width: Option<crate::PixelSetting>,
->>>>>>> upstream/main
     /// The default model to use when creating new chats and for other features when a specific model is not specified.
     pub default_model: Option<LanguageModelSelection>,
     /// The model to use for subagents spawned via the `spawn_agent` tool. Defaults to the parent agent's model when not specified.

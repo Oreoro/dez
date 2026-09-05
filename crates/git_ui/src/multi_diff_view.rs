@@ -232,7 +232,6 @@ impl Item for MultiDiffView {
         Some(Icon::new(IconName::Diff).color(Color::Muted))
     }
 
-<<<<<<< HEAD
     fn tab_content(&self, params: TabContentParams, _window: &Window, _cx: &App) -> AnyElement {
         let title = self.title();
         Label::new(crate::diff_surface_tab_label(
@@ -248,8 +247,6 @@ impl Item for MultiDiffView {
         .into_any_element()
     }
 
-=======
->>>>>>> upstream/main
     fn tab_tooltip_text(&self, _cx: &App) -> Option<ui::SharedString> {
         Some(self.title())
     }

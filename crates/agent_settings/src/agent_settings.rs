@@ -10,14 +10,9 @@ use anyhow::Context as _;
 use collections::{HashSet, IndexMap};
 use fs::Fs;
 use futures::channel::oneshot;
-<<<<<<< HEAD
 use gpui::{App, Pixels, SharedString, px};
 use icons::IconName;
 use language_model::{LanguageModel, LanguageModelRegistry};
-=======
-use gpui::{App, Pixels, SharedString};
-use language_model::LanguageModel;
->>>>>>> upstream/main
 use project::DisableAiSettings;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -1105,21 +1100,13 @@ impl Settings for AgentSettings {
             enabled: agent.enabled.unwrap(),
             button: agent.button.unwrap(),
             dock: agent.dock.unwrap(),
-<<<<<<< HEAD
-            default_width: px(agent.default_width.unwrap()),
-            default_height: px(agent.default_height.unwrap()),
-            max_content_width: if agent.limit_content_width.unwrap() {
-                agent
-                    .max_content_width
-                    .map(px)
-                    .or_else(|| canvas_content_width(content))
-=======
-            sidebar_side: agent.sidebar_side.unwrap(),
             default_width: agent.default_width.unwrap().into_gpui(),
             default_height: agent.default_height.unwrap().into_gpui(),
             max_content_width: if agent.limit_content_width.unwrap() {
-                Some(agent.max_content_width.unwrap().into_gpui())
->>>>>>> upstream/main
+                agent
+                    .max_content_width
+                    .map(IntoGpui::into_gpui)
+                    .or_else(|| canvas_content_width(content))
             } else {
                 None
             },

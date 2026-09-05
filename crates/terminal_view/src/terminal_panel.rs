@@ -633,25 +633,6 @@ impl TerminalPanel {
         .detach_and_log_err(cx);
     }
 
-<<<<<<< HEAD
-    /// Create a new Terminal in the current working directory or the user's home directory
-    fn new_terminal(
-        workspace: &mut Workspace,
-        action: &workspace::NewTerminal,
-        window: &mut Window,
-        cx: &mut Context<Workspace>,
-    ) {
-        let working_directory = default_working_directory(workspace, cx);
-        let local = action.local;
-        Self::add_center_terminal(workspace, window, cx, move |project, cx| {
-            if local {
-                project.create_local_terminal(cx)
-            } else {
-                project.create_terminal_shell(working_directory, cx)
-            }
-        })
-        .detach_and_log_err(cx);
-=======
         terminal_panel
             .update(cx, |panel, cx| {
                 panel.add_terminal_shell(
@@ -663,7 +644,6 @@ impl TerminalPanel {
                 )
             })
             .detach_and_log_err(cx);
->>>>>>> upstream/main
     }
 
     pub fn spawn_task(
@@ -769,8 +749,6 @@ impl TerminalPanel {
         }
     }
 
-<<<<<<< HEAD
-=======
     /// Create a new Terminal in the current working directory or the user's home directory
     fn new_terminal(
         workspace: &mut Workspace,
@@ -816,7 +794,6 @@ impl TerminalPanel {
             .detach_and_log_err(cx);
     }
 
->>>>>>> upstream/main
     fn terminals_for_task(
         &self,
         label: &str,
@@ -971,10 +948,7 @@ impl TerminalPanel {
 
     fn add_terminal_shell(
         &mut self,
-<<<<<<< HEAD
-=======
         force_local: bool,
->>>>>>> upstream/main
         cwd: Option<PathBuf>,
         reveal_strategy: RevealStrategy,
         window: &mut Window,
@@ -1611,17 +1585,9 @@ impl Render for TerminalPanel {
         self.workspace
             .update(cx, |workspace, cx| {
                 registrar
-<<<<<<< HEAD
-                    .id("terminal-panel")
-                    .role(gpui::Role::Region)
-                    .aria_label("Terminal Panel")
-                    .track_focus(&self.focus_handle)
-                    .size_full()
-=======
                     .track_focus(&self.focus_handle)
                     .size_full()
                     .relative()
->>>>>>> upstream/main
                     .child(self.center.render(
                         workspace.zoomed_item(),
                         None,
@@ -1636,10 +1602,7 @@ impl Render for TerminalPanel {
                         window,
                         cx,
                     ))
-<<<<<<< HEAD
-=======
                     .children(restoring_placeholder)
->>>>>>> upstream/main
             })
             .ok()
             .map(|div| {
@@ -2589,9 +2552,6 @@ mod tests {
         let result = window_handle
             .update(cx, |_, window, cx| {
                 terminal_panel.update(cx, |terminal_panel, cx| {
-<<<<<<< HEAD
-                    terminal_panel.add_terminal_shell(None, RevealStrategy::Always, window, cx)
-=======
                     terminal_panel.add_terminal_shell(
                         true,
                         None,
@@ -2599,7 +2559,6 @@ mod tests {
                         window,
                         cx,
                     )
->>>>>>> upstream/main
                 })
             })
             .unwrap()
@@ -3030,9 +2989,6 @@ mod tests {
     }
 
     #[gpui::test]
-<<<<<<< HEAD
-    async fn test_new_terminal_opens_in_center_by_default(cx: &mut TestAppContext) {
-=======
     async fn test_terminal_panel_starts_open_follows_setting(cx: &mut TestAppContext) {
         cx.executor().allow_parking();
         init_test(cx);
@@ -3070,7 +3026,6 @@ mod tests {
 
     #[gpui::test]
     async fn test_new_terminal_opens_in_panel_by_default(cx: &mut TestAppContext) {
->>>>>>> upstream/main
         cx.executor().allow_parking();
         init_test(cx);
 

@@ -72,13 +72,8 @@ use util::{
     rel_path::{RelPath, RelPathBuf},
 };
 use workspace::{
-<<<<<<< HEAD
     DesignSystemSettings, DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible,
     PaneKind, PreviewTabsSettings, SelectedEntry, SplitDirection, Workspace, WorkspaceSettings,
-=======
-    DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible, PreviewTabsSettings,
-    SelectedEntry, SplitDirection, Workspace, WorkspaceSettings, copy_file_permalink,
->>>>>>> upstream/main
     dock::{DockPosition, Panel, PanelEvent},
     focus_follows_mouse::FocusFollowsMouse as _,
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},

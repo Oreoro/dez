@@ -68,19 +68,9 @@
   // The weight of the UI font in standard CSS units from 100 to 900.
   "ui_font_weight": 400,
   // The default font size for text in the UI
-<<<<<<< HEAD
   "ui_font_size": 14,
   // The default font size for agent responses in the agent panel. Falls back to the UI font size if unset.
   "agent_ui_font_size": 14,
-=======
-  "ui_font_size": 16,
-  // The font family for agent responses in the agent panel. Falls back to the UI font family if unset.
-  "agent_ui_font_family": null,
-  // The default font size for agent responses in the agent panel. Falls back to the UI font size if unset.
-  "agent_ui_font_size": null,
-  // The font family for user messages in the agent panel. Falls back to the buffer font family if unset.
-  "agent_buffer_font_family": null,
->>>>>>> upstream/main
   // The default font size for user messages in the agent panel.
   "agent_buffer_font_size": 14,
   // The default font size for the commit editor in the git panel and commit modal.
@@ -212,19 +202,11 @@
   "reveal_if_open": false,
   // Whether to automatically close files that have been deleted on disk.
   "close_on_file_delete": false,
-<<<<<<< HEAD
-  // Whether toggling a panel (e.g. with its keyboard shortcut) also closes
-  // the panel when it is already focused, instead of just moving focus back
-  // to the editor. Enabled by default so compatibility panels behave like
-  // dismissible Canvas panes during the pane-first migration.
-  "close_panel_on_toggle": true,
-=======
   // Whether invoking a panel's ToggleFocus action while the panel is already
   // focused closes the panel, instead of just moving focus back to the
   // editor. This only applies to a panel's focus-toggle action, not to its
   // regular visibility-toggle action.
   "close_panel_on_toggle": false,
->>>>>>> upstream/main
   // Relative size of the drop target in the editor that will open dropped file as a split pane (0-0.5)
   // E.g. 0.25 == If you drop onto the top/bottom quarter of the pane a new vertical split will be used
   //              If you drop onto the left/right quarter of the pane a new horizontal split will be used
@@ -267,14 +249,9 @@
   //
   // Default: true
   "zoomed_padding": true,
-<<<<<<< HEAD
-  // What draws Dez's window decorations (titlebar):
-  // 1. The Dez client draws its own window decorations
-=======
   // On Linux, what draws Zed's window decorations (titlebar).
   // This setting has no effect on other platforms:
   // 1. Zed draws its own window decorations.
->>>>>>> upstream/main
   //    "client"
   // 2. The window manager or compositor draws the window decorations.
   //    Not supported by GNOME Wayland.
@@ -600,8 +577,6 @@
   },
   // Whether to allow windows to tab together based on the user’s tabbing preference (macOS only).
   "use_system_window_tabs": false,
-<<<<<<< HEAD
-=======
   // Which fullscreen mode the `zed::ToggleFullScreen` action enters (macOS only).
   //
   // 1. Use macOS's native fullscreen, which moves the window into its own Mission Control space.
@@ -633,7 +608,6 @@
     // The layout of window control buttons in the title bar (Linux only).
     "button_layout": "platform_default",
   },
->>>>>>> upstream/main
   "audio": {
     // Select specific output audio device.
     // `null` means use system default.
@@ -757,14 +731,10 @@
     // Whether to show fold buttons in the gutter.
     "folds": false,
     // Minimum number of characters to reserve space for in the gutter.
-<<<<<<< HEAD
-    "min_line_number_digits": 0,
-=======
     "min_line_number_digits": 4,
     // The width of the git diff hunk indicators in the gutter.
     // Use "default" to scale with font size, or {"custom": <pixels>} for a fixed width.
     "git_gutter_width": "default",
->>>>>>> upstream/main
   },
   "indent_guides": {
     // Whether to show indent guides in the editor.

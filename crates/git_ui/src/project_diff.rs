@@ -489,7 +489,6 @@ impl Item for ProjectDiff {
         ))
     }
 
-<<<<<<< HEAD
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
         Label::new(self.tab_content_text(0, cx))
             .truncate()
@@ -508,10 +507,6 @@ impl Item for ProjectDiff {
             .as_ref()
             .and_then(|project_path| project_path.path.file_name());
         project_diff_tab_label(paths::APP_NAME, &base_label, active_file_name)
-=======
-    fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        "Uncommitted Changes".into()
->>>>>>> upstream/main
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {

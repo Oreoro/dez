@@ -4137,32 +4137,6 @@ impl Pane {
                                         }),
                                     )
                                 })
-<<<<<<< HEAD
-                                .when(!is_selected_review_evidence, |menu| {
-                                    menu.entry(
-                                        "Add to Review Evidence",
-                                        Some(Box::new(AddActiveFileToEvidence)),
-                                        window.handler_for(&pane, move |pane, window, cx| {
-                                            pane.activate_item(ix, true, true, window, cx);
-                                            window.dispatch_action(
-                                                AddActiveFileToEvidence.boxed_clone(),
-                                                cx,
-                                            );
-                                        }),
-                                    )
-                                })
-                                .when(is_selected_review_evidence, |menu| {
-                                    menu.entry(
-                                        "Remove from Review Evidence",
-                                        Some(Box::new(RemoveActiveFileFromEvidence)),
-                                        window.handler_for(&pane, move |pane, window, cx| {
-                                            pane.activate_item(ix, true, true, window, cx);
-                                            window.dispatch_action(
-                                                RemoveActiveFileFromEvidence.boxed_clone(),
-                                                cx,
-                                            );
-                                        }),
-=======
                                 .when(has_git_repo, |menu| {
                                     menu.separator().when_some(
                                         project_path.clone(),
@@ -4208,7 +4182,6 @@ impl Pane {
                                                 ),
                                             )
                                         },
->>>>>>> upstream/main
                                     )
                                 })
                                 .when(is_local, |menu| {
@@ -5520,26 +5493,11 @@ impl Pane {
         let (should_block, needs_wsl_translation) = self
             .workspace
             .update(cx, |workspace, cx| {
-<<<<<<< HEAD
-                if workspace.project().read(cx).is_via_collab() {
-                    workspace.show_error(
-                        if paths::APP_NAME == "Zed" {
-                            "Cannot drop files on a remote project"
-                        } else {
-                            "Cannot drop files on a remote workspace"
-                        },
-                        cx,
-                    );
-                    true
-                } else {
-                    false
-=======
                 let project = workspace.project().read(cx);
 
                 if project.is_via_collab() {
                     workspace.show_error("Cannot drop files on a remote project", cx);
                     return (true, false);
->>>>>>> upstream/main
                 }
                 if project.is_via_remote_server() {
                     if !project.is_via_wsl(cx) {
@@ -6571,12 +6529,7 @@ impl Render for Pane {
                     .overflow_hidden()
                     .on_drag_move::<DraggedTab>(cx.listener(Self::handle_drag_move))
                     .on_drag_move::<DraggedSelection>(cx.listener(Self::handle_drag_move))
-<<<<<<< HEAD
-                    .on_drag_move::<DraggedPane>(cx.listener(Self::handle_drag_move))
-                    .when(is_local, |div| {
-=======
                     .when(accepts_external_paths, |div| {
->>>>>>> upstream/main
                         div.on_drag_move::<ExternalPaths>(cx.listener(Self::handle_drag_move))
                     })
                     .map(|div| {
@@ -6634,20 +6587,7 @@ impl Render for Pane {
                         // drag target
                         div()
                             .invisible()
-                            .when(self.drag_tab_target && cx.has_active_drag(), |div| {
-                                div.visible()
-                                    .bg(cx.theme().colors().drop_target_background)
-                                    .border_2()
-                                    .border_color(cx.theme().colors().drop_target_border)
-                                    .rounded_lg()
-                            })
                             .absolute()
-<<<<<<< HEAD
-                            .top_0()
-                            .right_0()
-                            .bottom_0()
-                            .left_0()
-=======
                             .bg(cx.theme().colors().drop_target_background)
                             .group_drag_over::<DraggedTab>("", |style| style.visible())
                             .group_drag_over::<DraggedSelection>("", |style| style.visible())
@@ -6657,7 +6597,11 @@ impl Render for Pane {
                             .when_some(self.can_drop_predicate.clone(), |this, p| {
                                 this.can_drop(move |a, window, cx| p(a, window, cx))
                             })
->>>>>>> upstream/main
+                            .absolute()
+                            .top_0()
+                            .right_0()
+                            .bottom_0()
+                            .left_0()
                             .on_drop(cx.listener(move |this, dragged_tab, window, cx| {
                                 let target_ix = if this.drag_tab_target {
                                     this.items.len()

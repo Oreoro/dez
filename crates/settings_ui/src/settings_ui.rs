@@ -780,11 +780,8 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::SaturatingBool>(render_toggle_button)
         .add_basic_renderer::<settings::CursorShape>(render_dropdown)
         .add_basic_renderer::<settings::RestoreOnStartupBehavior>(render_dropdown)
-<<<<<<< HEAD
-=======
         .add_basic_renderer::<settings::OnNewWindow>(render_dropdown)
         .add_basic_renderer::<settings::BottomDockLayout>(render_dropdown)
->>>>>>> upstream/main
         .add_basic_renderer::<settings::OnLastWindowClosed>(render_dropdown)
         .add_basic_renderer::<settings::CliDefaultOpenBehavior>(render_dropdown)
         .add_basic_renderer::<settings::DefaultOpenBehavior>(render_dropdown)
@@ -3496,17 +3493,11 @@ impl SettingsWindow {
             .aria_value(a11y_value)
             .track_focus(&self.search_bar.focus_handle(cx))
             .a11y_synthetic_children(a11y_text_runs)
-<<<<<<< HEAD
-            .py(search_padding_y)
-            .px(search_padding_x)
-            .mb(search_margin_bottom)
-=======
             .py_1()
             .pl_1p5()
             .pr_0p5()
             .h_7()
             .mb_3()
->>>>>>> upstream/main
             .gap_1p5()
             .border_1()
             .border_color(search_border_color)

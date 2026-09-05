@@ -315,20 +315,6 @@ impl Render for PlatformTitleBar {
                 |title_bar| {
                     let show_right_controls = !(sidebar.open && sidebar.side == SidebarSide::Right);
 
-<<<<<<< HEAD
-                let title_bar = title_bar.children(
-                    show_right_controls
-                        .then(|| {
-                            render_right_window_controls(
-                                button_layout,
-                                close_action.as_ref().boxed_clone(),
-                                window,
-                                height,
-                            )
-                        })
-                        .flatten(),
-                );
-=======
                     let title_bar = title_bar.children(
                         show_right_controls
                             .then(|| {
@@ -340,7 +326,6 @@ impl Render for PlatformTitleBar {
                             })
                             .flatten(),
                     );
->>>>>>> upstream/main
 
                     if self.platform_style == PlatformStyle::Linux
                         && matches!(decorations, Decorations::Client { .. })

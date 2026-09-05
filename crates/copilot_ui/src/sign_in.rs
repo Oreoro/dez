@@ -283,10 +283,6 @@ impl CopilotCodeVerification {
             .gap_2p5()
             .items_center()
             .text_center()
-<<<<<<< HEAD
-            .child(Headline::new("Use GitHub Copilot in Dez").size(HeadlineSize::Large))
-=======
->>>>>>> upstream/main
             .child(
                 Headline::new("Use GitHub Copilot Edit Predictions in Zed")
                     .size(HeadlineSize::Large),
@@ -1003,13 +999,8 @@ impl ConfigurationView {
     }
 
     fn render_for_chat(&self) -> impl IntoElement {
-<<<<<<< HEAD
-        let start_label = "To use the Dez agent with GitHub Copilot, you need to be logged in to GitHub. Your GitHub account must have an active Copilot Chat subscription.";
-        let no_status_label = "Copilot Chat requires an active GitHub Copilot subscription. Please ensure Copilot is configured and try again, or use a different LLM provider.";
-=======
         let start_label = "To use Zed's agent with GitHub Copilot Chat, you need to be logged in to GitHub. Note that your GitHub account must have an active Copilot Chat subscription.";
         let no_status_label = "Copilot Chat requires an active GitHub Copilot subscription. Please ensure Copilot Chat is configured and try again, or use a different LLM provider.";
->>>>>>> upstream/main
 
         let (label, button) = if let Some(msg) = self.loading_message() {
             (

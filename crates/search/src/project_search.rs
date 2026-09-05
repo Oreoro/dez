@@ -58,15 +58,9 @@ use ui::{
 };
 use util::{ResultExt as _, paths::PathMatcher};
 use workspace::{
-<<<<<<< HEAD
-    DeploySearch, DesignSystemSettings, ItemNavHistory, NewSearch, ToolbarItemEvent,
-    ToolbarItemLocation, ToolbarItemView, Workspace, WorkspaceId,
-    item::{Item, ItemEvent, ItemHandle, SaveOptions},
-=======
     DeploySearch, ItemNavHistory, NewSearch, ToolbarItemEvent, ToolbarItemLocation,
     ToolbarItemView, Workspace, WorkspaceId,
     item::{Item, ItemBufferKind, ItemEvent, ItemHandle, SaveOptions},
->>>>>>> upstream/main
     searchable::{Direction, SearchEvent, SearchToken, SearchableItem, SearchableItemHandle},
 };
 
@@ -388,9 +382,6 @@ pub struct ProjectSearch {
     search_excluded_history_cursor: SearchHistoryCursor,
     pub project_search_turning_into_text_finder: Arc<AtomicBool>,
     _excerpts_subscription: Subscription,
-<<<<<<< HEAD
-    _quit_subscription: Subscription,
-=======
     _workspace_subscription: Option<Subscription>,
 }
 
@@ -422,7 +413,6 @@ enum SearchPhase {
     Typing,
     /// A manual search, or an on-type search the user confirmed with Enter.
     Confirmed,
->>>>>>> upstream/main
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -525,16 +515,8 @@ impl ProjectSearch {
     ) -> Self {
         let capability = project.read(cx).capability();
         let excerpts = cx.new(|_| MultiBuffer::new(capability));
-<<<<<<< HEAD
-        let subscription = Self::subscribe_to_excerpts(&excerpts, cx);
-        let quit_subscription = cx.on_app_quit(|this, _cx| {
-            this.pending_search.take();
-            async {}
-        });
-=======
         let excerpts_subscription = Self::subscribe_to_excerpts(&excerpts, cx);
         let workspace_subscription = Self::subscribe_to_workspace(&workspace, cx);
->>>>>>> upstream/main
 
         Self {
             project,
@@ -553,13 +535,8 @@ impl ProjectSearch {
             search_included_history_cursor: Default::default(),
             search_excluded_history_cursor: Default::default(),
             project_search_turning_into_text_finder: Arc::new(AtomicBool::new(false)),
-<<<<<<< HEAD
-            _excerpts_subscription: subscription,
-            _quit_subscription: quit_subscription,
-=======
             _excerpts_subscription: excerpts_subscription,
             _workspace_subscription: workspace_subscription,
->>>>>>> upstream/main
         }
     }
 
@@ -568,16 +545,8 @@ impl ProjectSearch {
             let excerpts = self
                 .excerpts
                 .update(cx, |excerpts, cx| cx.new(|cx| excerpts.clone(cx)));
-<<<<<<< HEAD
-            let subscription = Self::subscribe_to_excerpts(&excerpts, cx);
-            let quit_subscription = cx.on_app_quit(|this, _cx| {
-                this.pending_search.take();
-                async {}
-            });
-=======
             let excerpts_subscription = Self::subscribe_to_excerpts(&excerpts, cx);
             let workspace_subscription = Self::subscribe_to_workspace(&self.workspace, cx);
->>>>>>> upstream/main
 
             Self {
                 project: self.project.clone(),
@@ -604,13 +573,8 @@ impl ProjectSearch {
                 search_included_history_cursor: self.search_included_history_cursor.clone(),
                 search_excluded_history_cursor: self.search_excluded_history_cursor.clone(),
                 project_search_turning_into_text_finder: Arc::new(AtomicBool::new(false)),
-<<<<<<< HEAD
-                _excerpts_subscription: subscription,
-                _quit_subscription: quit_subscription,
-=======
                 _excerpts_subscription: excerpts_subscription,
                 _workspace_subscription: workspace_subscription,
->>>>>>> upstream/main
             }
         })
     }
@@ -1191,27 +1155,9 @@ impl Render for ProjectSearchView {
                 .size_full()
                 .track_focus(&self.focus_handle(cx))
                 .child(self.results_editor.clone())
-                .into_any_element();
-        }
+        } else {
+            let model = self.entity.read(cx);
 
-<<<<<<< HEAD
-        let search_state = self.entity.read(cx).search_state;
-        if paths::APP_NAME != "Zed" {
-            let state = workspace_search_state_copy(search_state);
-            let animate_state_icon = state.busy
-                && DesignSystemSettings::get_global(cx).motion != settings::CanvasMotion::Reduced;
-            let state_icon = Icon::new(state.icon)
-                .size(IconSize::Small)
-                .color(if state.busy {
-                    Color::Accent
-                } else {
-                    Color::Muted
-                });
-            let state_icon = if animate_state_icon {
-                state_icon.with_rotate_animation(2).into_any_element()
-            } else {
-                state_icon.into_any_element()
-=======
             let heading_text = match model.search_state {
                 SearchState::Running { .. } if model.search_state.no_results_so_far() => {
                     "No Results"
@@ -1226,13 +1172,8 @@ impl Render for ProjectSearchView {
                 } => "Searching…",
                 SearchState::Completed(SearchCompletion::NoResults) => "No Results",
                 _ => "Search All Files",
->>>>>>> upstream/main
             };
-            let accessibility_label = format!("{}. {}", state.title, state.description);
 
-<<<<<<< HEAD
-            return h_flex()
-=======
             let heading_text = div()
                 .justify_center()
                 .child(Label::new(heading_text).size(LabelSize::Large));
@@ -1246,11 +1187,9 @@ impl Render for ProjectSearchView {
                 ),
                 _ => None,
             };
+            let accessibility_label = format!("{}. {}", state.title, state.description);
 
-            let page_content = page_content.map(|text| div().child(text));
-
-            h_flex()
->>>>>>> upstream/main
+            return h_flex()
                 .key_context(key_context)
                 .on_action(cx.listener(Self::open_text_finder))
                 .size_full()

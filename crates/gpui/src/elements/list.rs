@@ -11,7 +11,7 @@ use crate::{
     AnyElement, App, AvailableSpace, Bounds, ContentMask, DispatchPhase, Edges, Element, EntityId,
     FocusHandle, GlobalElementId, Hitbox, HitboxBehavior, InspectorElementId, IntoElement,
     Overflow, Pixels, Point, ScrollDelta, ScrollWheelEvent, Size, Style, StyleRefinement, Styled,
-    Window, point, px, size,
+    Window, Corners, point, px, size,
 };
 use collections::VecDeque;
 use refineable::Refineable as _;
@@ -1587,14 +1587,6 @@ impl Element for List {
         cx: &mut App,
     ) {
         let current_view = window.current_view();
-<<<<<<< HEAD
-        window.with_content_mask(Some(ContentMask::new(bounds)), |window| {
-            for item in &mut prepaint.layout.item_layouts {
-                item.element.paint(window, cx);
-            }
-        });
-=======
->>>>>>> upstream/main
 
         // Register the scroll listener before painting children so that, in
         // the bubble phase (which runs in reverse registration order),
@@ -1621,7 +1613,7 @@ impl Element for List {
             }
         });
 
-        window.with_content_mask(Some(ContentMask { bounds }), |window| {
+        window.with_content_mask(Some(ContentMask { bounds, corner_radii: Corners::default() }), |window| {
             for item in &mut prepaint.layout.item_layouts {
                 item.element.paint(window, cx);
             }

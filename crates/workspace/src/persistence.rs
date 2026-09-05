@@ -1088,21 +1088,6 @@ impl Domain for WorkspaceDb {
             ALTER TABLE bookmarks ADD COLUMN label TEXT NOT NULL DEFAULT "";
         ),
         sql!(
-<<<<<<< HEAD
-            ALTER TABLE panes ADD COLUMN kind TEXT NOT NULL DEFAULT "tabs";
-        ),
-        sql!(
-            ALTER TABLE panes ADD COLUMN visible INTEGER NOT NULL DEFAULT 1;
-        ),
-        sql!(
-            ALTER TABLE workspaces ADD COLUMN active_canvas_layout_recipe TEXT;
-        ),
-        sql!(
-            ALTER TABLE workspaces ADD COLUMN saved_canvas_layouts TEXT;
-        ),
-        sql!(
-            ALTER TABLE workspaces ADD COLUMN user_selected_review_evidence TEXT;
-=======
             CREATE TABLE recent_navigation_history (
                 workspace_id INTEGER NOT NULL,
                 path BLOB NOT NULL,
@@ -1112,7 +1097,6 @@ impl Domain for WorkspaceDb {
                 ON DELETE CASCADE
                 ON UPDATE CASCADE
             ) STRICT;
->>>>>>> upstream/main
         ),
     ];
 

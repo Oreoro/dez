@@ -196,7 +196,6 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
             .color(tab_label_color(params.selected))
             .when(overlay.is_some(), |this| this.alpha(0.));
 
-<<<<<<< HEAD
         if let Some(overlay) = overlay {
             h_flex()
                 .relative()
@@ -207,12 +206,6 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
         } else {
             label.into_any_element()
         }
-=======
-        Label::new(text)
-            .single_line()
-            .color(params.text_color())
-            .into_any_element()
->>>>>>> upstream/main
     }
 
     /// Returns the textual contents of the tab.

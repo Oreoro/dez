@@ -875,7 +875,6 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
             add_panel_when_ready(project_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(outline_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(git_panel, workspace_handle.clone(), cx.clone()),
-<<<<<<< HEAD
             async move {
                 if let Some(channels_panel) = channels_panel {
                     add_panel_when_ready(channels_panel, channels_workspace_handle, channels_cx)
@@ -885,12 +884,7 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
             async move {
                 debug_panel.await.context("failed to load debug panel").log_err();
             },
-            initialize_agent_panel(workspace_handle, cx.clone()).map(|r| r.log_err()),
-=======
-            add_panel_when_ready(channels_panel, workspace_handle.clone(), cx.clone()),
-            add_panel_when_ready(debug_panel, workspace_handle.clone(), cx.clone()),
             initialize_agent_panel(workspace_handle.clone(), cx.clone()).map(|r| r.log_err()),
->>>>>>> upstream/main
         );
 
         workspace_handle.update(cx, |workspace, cx| {
@@ -1755,7 +1749,6 @@ fn register_actions(
                     cx,
                     |workspace, window, cx| {
                         cx.activate(true);
-<<<<<<< HEAD
                         if should_seed_empty_workspace_with_blank_file(APP_NAME) {
                             // Preserve upstream Zed's synchronous blank buffer
                             // to avoid changing its New Window behavior.
@@ -1776,9 +1769,6 @@ fn register_actions(
                         } else {
                             seed_empty_workspace_with_home(workspace, window, cx);
                         }
-=======
-                        initialize_new_window(workspace, window, cx);
->>>>>>> upstream/main
                     },
                 )
                 .detach();

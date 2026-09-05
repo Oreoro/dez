@@ -286,7 +286,6 @@ pub fn terminal_title_prefix(title: &str) -> Option<&str> {
     }
 }
 
->>>>>>> upstream/main
 pub struct TerminalThreadMetadataStore {
     db: TerminalThreadMetadataDb,
     terminals: HashMap<TerminalId, TerminalThreadMetadata>,

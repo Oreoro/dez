@@ -10,18 +10,12 @@ use block::ConcreteBlock;
 use block2::RcBlock;
 use cocoa::{
     appkit::{
-<<<<<<< HEAD
-        NSAppKitVersionNumber, NSAppKitVersionNumber12_0, NSApplication, NSBackingStoreBuffered,
-        NSColor, NSEvent, NSEventModifierFlags, NSFilenamesPboardType, NSPasteboard,
-        NSRequestUserAttentionType, NSScreen, NSView, NSViewHeightSizable, NSViewWidthSizable,
-        NSVisualEffectBlendingMode, NSVisualEffectMaterial, NSVisualEffectState,
-=======
         NSApplication, NSBackingStoreBuffered, NSColor, NSEvent, NSEventModifierFlags, NSEventType,
         NSFilenamesPboardType, NSPasteboard, NSRequestUserAttentionType, NSScreen, NSView,
-        NSViewHeightSizable, NSViewWidthSizable, NSVisualEffectMaterial, NSVisualEffectState,
->>>>>>> upstream/main
-        NSVisualEffectView, NSWindow, NSWindowCollectionBehavior, NSWindowOcclusionState,
-        NSWindowOrderingMode, NSWindowStyleMask, NSWindowTitleVisibility,
+        NSViewHeightSizable, NSViewWidthSizable, NSVisualEffectBlendingMode,
+        NSVisualEffectMaterial, NSVisualEffectState, NSVisualEffectView, NSWindow,
+        NSWindowCollectionBehavior, NSWindowOcclusionState, NSWindowOrderingMode,
+        NSWindowStyleMask, NSWindowTitleVisibility,
     },
     base::{id, nil},
     foundation::{

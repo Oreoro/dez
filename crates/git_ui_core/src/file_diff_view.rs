@@ -21,10 +21,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use ui::{Color, Icon, IconName, SharedString};
+use ui::{Color, Icon, IconName, Label, LabelCommon, SharedString};
 use util::paths::PathExt as _;
 use workspace::{
-    Item, ItemHandle as _, ItemNavHistory, ToolbarItemLocation, Workspace,
+    Item, ItemHandle as _, ItemNavHistory, TabContentParams, ToolbarItemLocation, Workspace,
     item::{ItemEvent, SaveOptions},
     searchable::SearchableItemHandle,
 };
@@ -250,7 +250,6 @@ impl Item for FileDiffView {
         Some(Icon::new(IconName::Diff).color(Color::Muted))
     }
 
-<<<<<<< HEAD:crates/git_ui/src/file_diff_view.rs
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
         let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
         Label::new(crate::diff_surface_tab_label(
@@ -266,8 +265,6 @@ impl Item for FileDiffView {
         .into_any_element()
     }
 
-=======
->>>>>>> upstream/main:crates/git_ui_core/src/file_diff_view.rs
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
         let title_text = |buffer: &Entity<Buffer>| {
             buffer

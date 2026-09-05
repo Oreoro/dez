@@ -823,9 +823,6 @@ impl MultiWorkspace {
                 task.detach();
             }
         });
-<<<<<<< HEAD
-        let quit_subscription = cx.on_app_quit(Self::app_will_quit);
-=======
         let settings_subscription = cx.observe_global_in::<settings::SettingsStore>(window, {
             let mut previous_multi_workspace_enabled = !DisableAiSettings::get_global(cx)
                 .disable_ai
@@ -838,7 +835,6 @@ impl MultiWorkspace {
                 previous_multi_workspace_enabled = multi_workspace_enabled;
             }
         });
->>>>>>> upstream/main
         Self::subscribe_to_workspace(&workspace, window, cx);
         let weak_self = cx.weak_entity();
         let active_workspace_id = Rc::new(Cell::new(workspace.entity_id()));
@@ -863,11 +859,7 @@ impl MultiWorkspace {
             sidebar_overlay: None,
             pending_removal_tasks: Vec::new(),
             _serialize_task: None,
-<<<<<<< HEAD
-            _subscriptions: vec![release_subscription, quit_subscription],
-=======
             _subscriptions: vec![release_subscription, settings_subscription],
->>>>>>> upstream/main
             previous_focus_handle: None,
         };
 
@@ -1160,13 +1152,8 @@ impl MultiWorkspace {
         self.sidebar_open = true;
         self.retain_active_workspace_without_serializing(cx);
         let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
-<<<<<<< HEAD
-        for workspace in self.retained_workspaces.clone() {
-            workspace.update(cx, |workspace, cx| {
-=======
         for workspace in self.workspaces().cloned().collect::<Vec<_>>() {
             workspace.update(cx, |workspace, _cx| {
->>>>>>> upstream/main
                 workspace.set_sidebar_focus_handle(sidebar_focus_handle.clone());
                 workspace.notify_panes(cx);
             });
@@ -1215,13 +1202,8 @@ impl MultiWorkspace {
     ) {
         self.sidebar_auto_close_pending = false;
         self.sidebar_open = false;
-<<<<<<< HEAD
-        for workspace in self.retained_workspaces.clone() {
-            workspace.update(cx, |workspace, cx| {
-=======
         for workspace in self.workspaces().cloned().collect::<Vec<_>>() {
             workspace.update(cx, |workspace, _cx| {
->>>>>>> upstream/main
                 workspace.set_sidebar_focus_handle(None);
                 workspace.notify_panes(cx);
             });
@@ -1639,89 +1621,6 @@ impl MultiWorkspace {
         &self,
         key: &ProjectGroupKey,
         cx: &App,
-<<<<<<< HEAD
-    ) -> Option<Vec<Entity<Workspace>>> {
-        let has_group = self.project_groups.iter().any(|group| group.key == *key)
-            || self
-                .retained_workspaces
-                .iter()
-                .any(|workspace| workspace.read(cx).project_group_key(cx) == *key);
-
-        has_group.then(|| {
-            self.retained_workspaces
-                .iter()
-                .filter(|workspace| workspace.read(cx).project_group_key(cx) == *key)
-                .cloned()
-                .collect()
-        })
-    }
-
-    fn create_durable_empty_local_workspace(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<Entity<Workspace>>> {
-        let app_state = self.workspace().read(cx).app_state().clone();
-        let db = crate::persistence::WorkspaceDb::global(cx);
-
-        cx.spawn_in(window, async move |this, cx| {
-            let workspace_id = db.next_id().await?;
-            let workspace = this.update_in(cx, |_this, window, cx| {
-                let project = Project::local(
-                    app_state.client.clone(),
-                    app_state.node_runtime.clone(),
-                    app_state.user_store.clone(),
-                    app_state.languages.clone(),
-                    app_state.fs.clone(),
-                    None,
-                    project::LocalProjectFlags::default(),
-                    cx,
-                );
-                cx.new(|cx| Workspace::new(Some(workspace_id), project, app_state, window, cx))
-            })?;
-            Ok(workspace)
-        })
-    }
-
-    pub fn close_workspace(
-        &mut self,
-        workspace: &Entity<Workspace>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<bool>> {
-        let group_key = workspace.read(cx).project_group_key(cx);
-        let excluded_workspace = workspace.clone();
-
-        self.remove(
-            [workspace.clone()],
-            move |this, window, cx| {
-                if let Some(workspace) = this
-                    .workspaces_for_project_group(&group_key, cx)
-                    .unwrap_or_default()
-                    .into_iter()
-                    .find(|candidate| {
-                        candidate != &excluded_workspace
-                            && !candidate.read(cx).project().read(cx).is_disconnected(cx)
-                    })
-                {
-                    return Task::ready(Ok(workspace));
-                }
-
-                let current_group_index = this
-                    .project_groups
-                    .iter()
-                    .position(|group| group.key == group_key);
-                this.fallback_workspace(
-                    current_group_index,
-                    std::slice::from_ref(&excluded_workspace),
-                    window,
-                    cx,
-                )
-            },
-            window,
-            cx,
-        )
-=======
     ) -> Vec<Entity<Workspace>> {
         self.held
             .iter()
@@ -1729,7 +1628,6 @@ impl MultiWorkspace {
             .map(|held| held.workspace.clone())
             .filter(|workspace| workspace.read(cx).project_group_key(cx) == *key)
             .collect()
->>>>>>> upstream/main
     }
 
     pub fn remove_project_group(
@@ -1738,40 +1636,15 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<bool>> {
-<<<<<<< HEAD
-        let group_index = self
-            .project_groups
-            .iter()
-            .position(|group| group.key == *group_key);
-
-=======
         // The active workspace can remain unpinned while the sidebar is
         // closed. Pin it first: this puts it in the removal set below, and
         // stops `activate` from pinning it while switching to the
         // replacement, which would recreate the project group row this
         // function just deleted.
->>>>>>> upstream/main
         let active_workspace = self.workspace().clone();
         if active_workspace.read(cx).project_group_key(cx) == *group_key
             && !self.is_workspace_retained(&active_workspace)
         {
-<<<<<<< HEAD
-            self.retain_workspace(active_workspace, group_key.clone(), cx);
-        }
-
-        let workspaces = self
-            .workspaces_for_project_group(group_key, cx)
-            .unwrap_or_default();
-        let excluded_workspaces = workspaces.clone();
-        let removal_task = self.remove(
-            workspaces,
-            move |this, window, cx| {
-                this.fallback_workspace(group_index, &excluded_workspaces, window, cx)
-            },
-            window,
-            cx,
-        );
-=======
             let index = self.hold(active_workspace, window, cx);
             self.pin(index, group_key.clone(), cx);
         }
@@ -1779,58 +1652,10 @@ impl MultiWorkspace {
         let workspaces = self.workspaces_for_project_group(group_key, cx);
 
         let task = self.remove(workspaces, RemovalIntent::CloseProject, window, cx);
->>>>>>> upstream/main
 
         self.project_groups.retain(|group| group.key != *group_key);
         cx.emit(MultiWorkspaceEvent::ProjectGroupsChanged);
 
-<<<<<<< HEAD
-        removal_task
-    }
-
-    fn fallback_workspace(
-        &mut self,
-        group_index: Option<usize>,
-        excluded_workspaces: &[Entity<Workspace>],
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Task<Result<Entity<Workspace>>> {
-        if let Some(group_index) = group_index {
-            if let Some(workspace) =
-                self.nearest_retained_workspace(group_index, excluded_workspaces, cx)
-            {
-                return Task::ready(Ok(workspace));
-            }
-
-            let neighboring_group_key = self
-                .project_groups
-                .get(group_index + 1)
-                .or_else(|| {
-                    group_index
-                        .checked_sub(1)
-                        .and_then(|previous| self.project_groups.get(previous))
-                })
-                .map(|group| group.key.clone());
-
-            if let Some(key) = neighboring_group_key
-                && key.host().is_none()
-            {
-                return self.find_or_create_local_workspace(
-                    key.path_list().clone(),
-                    Some(key),
-                    excluded_workspaces,
-                    None,
-                    OpenMode::Activate,
-                    window,
-                    cx,
-                );
-            }
-        }
-
-        self.create_durable_empty_local_workspace(window, cx)
-    }
-
-=======
         task
     }
 
@@ -1866,73 +1691,15 @@ impl MultiWorkspace {
     }
 
     #[cfg(test)]
->>>>>>> upstream/main
     pub(super) fn nearest_retained_workspace(
         &self,
         group_index: usize,
         excluded_workspaces: &[Entity<Workspace>],
         cx: &App,
     ) -> Option<Entity<Workspace>> {
-<<<<<<< HEAD
-        for distance in 1..self.project_groups.len() {
-            for index in [
-                group_index.checked_add(distance),
-                group_index.checked_sub(distance),
-            ]
-            .into_iter()
-            .flatten()
-            {
-                if let Some(group) = self.project_groups.get(index) {
-                    let workspace_is_available = |workspace: &Entity<Workspace>| {
-                        self.retained_workspace_is_available_for_fallback(
-                            workspace,
-                            &group.key,
-                            excluded_workspaces,
-                            cx,
-                        )
-                    };
-                    let workspace = group
-                        .last_active_workspace
-                        .as_ref()
-                        .and_then(WeakEntity::upgrade)
-                        .filter(&workspace_is_available)
-                        .or_else(|| {
-                            self.workspaces_for_project_group(&group.key, cx)
-                                .unwrap_or_default()
-                                .into_iter()
-                                .find(workspace_is_available)
-                        });
-
-                    if workspace.is_some() {
-                        return workspace;
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    fn retained_workspace_is_available_for_fallback(
-        &self,
-        workspace: &Entity<Workspace>,
-        group_key: &ProjectGroupKey,
-        excluded_workspaces: &[Entity<Workspace>],
-        cx: &App,
-    ) -> bool {
-        if excluded_workspaces.contains(workspace) || !self.is_workspace_retained(workspace) {
-            return false;
-        }
-
-        // ProjectGroupState already owns the last-active Workspace association,
-        // and local Workspaces have no disconnected state to validate. Avoid
-        // re-reading that entity while removal may originate from its update.
-        group_key.host().is_none() || !workspace.read(cx).project().read(cx).is_disconnected(cx)
-=======
         self.neighbor_group_keys(Some(group_index))
             .into_iter()
             .find_map(|key| self.live_member_for_group(&key, excluded_workspaces, cx))
->>>>>>> upstream/main
     }
 
     /// Goes through sqlite: serialize -> close -> open new window
@@ -2027,16 +1794,7 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Workspace>>> {
-<<<<<<< HEAD
-        if let Err(error) = crate::ensure_workspace_startup_ready(cx) {
-            return Task::ready(Err(error));
-        }
-        if let Some(workspace) =
-            self.workspace_for_paths_excluding(&paths, host.as_ref(), excluding, cx)
-        {
-=======
         if let Some(workspace) = self.workspace_for_paths(&paths, host.as_ref(), cx) {
->>>>>>> upstream/main
             self.activate(workspace.clone(), source_workspace, window, cx);
             return Task::ready(Ok(workspace));
         }
@@ -2249,12 +2007,7 @@ impl MultiWorkspace {
             return;
         }
 
-<<<<<<< HEAD
-        let workspace_database_id = workspace.read(cx).database_id();
-        let old_active_workspace = self.active_workspace.clone();
-=======
         let old_active_workspace = self.workspace().clone();
->>>>>>> upstream/main
         let old_active_was_retained = self.active_workspace_is_retained();
         let should_retain_workspaces = self.multi_workspace_enabled(cx);
 
@@ -2270,22 +2023,9 @@ impl MultiWorkspace {
             self.pin(displayed, key, cx);
         }
 
-<<<<<<< HEAD
-        self.active_workspace = workspace;
-        self.active_workspace_database_id = workspace_database_id;
-        // Publish the new active workspace before anyone reads the shared cell
-        // to decide who owns the window chrome.
-        self.active_workspace_id
-            .set(self.active_workspace.entity_id());
-        let viewport_id = self.window_id.as_u64();
-        self.active_workspace.update(cx, |workspace, cx| {
-            workspace.mark_durable_session_active(viewport_id, cx);
-        });
-=======
         // Publish the new active workspace before anyone reads the shared cell
         // to decide who owns the window chrome.
         self.active_workspace_id.set(workspace.entity_id());
->>>>>>> upstream/main
 
         let stamp = self
             .held
@@ -2317,23 +2057,6 @@ impl MultiWorkspace {
     /// transient, so it is retained across workspace switches even when
     /// the sidebar is closed. No-op if the workspace is already persistent.
     pub fn retain_active_workspace(&mut self, cx: &mut Context<Self>) {
-<<<<<<< HEAD
-        if self.retain_active_workspace_without_serializing(cx) {
-            self.serialize(cx);
-            cx.notify();
-        }
-    }
-
-    fn retain_active_workspace_without_serializing(&mut self, cx: &mut Context<Self>) -> bool {
-        let workspace = self.active_workspace.clone();
-        if self.is_workspace_retained(&workspace) {
-            return false;
-        }
-
-        let key = workspace.read(cx).project_group_key(cx);
-        self.retain_workspace(workspace, key, cx);
-        true
-=======
         let index = self.displayed_index();
         if self.held[index].pinned {
             return;
@@ -2363,7 +2086,6 @@ impl MultiWorkspace {
         }
         self.project_groups.clear();
         cx.notify();
->>>>>>> upstream/main
     }
 
     /// Detaches a workspace: clears session state, DB binding, cached
@@ -2410,29 +2132,16 @@ impl MultiWorkspace {
 
     pub fn serialize(&mut self, cx: &mut Context<Self>) {
         self._serialize_task = Some(cx.spawn(async move |this, cx| {
-<<<<<<< HEAD
-            let Some((window_id, state)) = this
-                .read_with(cx, |this, cx| (this.window_id, this.persistence_state(cx)))
-                .ok()
-            else {
-=======
             let Ok(task) = this.update(cx, |this, cx| this.serialize_now(cx)) else {
->>>>>>> upstream/main
                 return;
             };
             task.await;
         }));
     }
 
-<<<<<<< HEAD
-    fn persistence_state(&self, cx: &App) -> MultiWorkspaceState {
-        MultiWorkspaceState {
-            active_workspace_id: self.active_workspace_database_id,
-=======
     fn serialize_now(&mut self, cx: &mut Context<Self>) -> Task<()> {
         let state = MultiWorkspaceState {
             active_workspace_id: self.workspace().read(cx).database_id(),
->>>>>>> upstream/main
             project_groups: self
                 .project_groups
                 .iter()
@@ -2444,32 +2153,6 @@ impl MultiWorkspace {
                 })
                 .collect::<Vec<_>>(),
             sidebar_open: self.sidebar_open,
-<<<<<<< HEAD
-            sidebar_state: self
-                .sidebar
-                .as_ref()
-                .and_then(|sidebar| sidebar.serialized_state(cx))
-                .or_else(|| self.pending_sidebar_state.clone()),
-        }
-    }
-
-    /// Returns the in-flight serialization task (if any) so the caller can
-    /// await it. Used by the quit handler to ensure pending DB writes
-    /// complete before the process exits.
-    pub fn flush_serialization(&mut self) -> Task<()> {
-        self._serialize_task.take().unwrap_or(Task::ready(()))
-    }
-
-    fn app_will_quit(&mut self, cx: &mut Context<Self>) -> impl Future<Output = ()> + use<> {
-        self._serialize_task.take();
-        let window_id = self.window_id;
-        let state = self.persistence_state(cx);
-        let kvp = db::kvp::KeyValueStore::global(cx);
-        let mut tasks = vec![cx.background_spawn(async move {
-            crate::persistence::write_multi_workspace_state(&kvp, window_id, state).await;
-        })];
-        tasks.extend(std::mem::take(&mut self.pending_removal_tasks));
-=======
             sidebar_state: self.sidebar.as_ref().and_then(|s| s.serialized_state(cx)),
         };
         let window_id = self.window_id;
@@ -2485,7 +2168,6 @@ impl MultiWorkspace {
         self._serialize_task.take();
         self.serialize_now(cx)
     }
->>>>>>> upstream/main
 
     pub fn flush_pending_serialization(
         &mut self,
@@ -2504,32 +2186,7 @@ impl MultiWorkspace {
     }
 
     pub fn focus_active_workspace(&self, window: &mut Window, cx: &mut App) {
-<<<<<<< HEAD
-        // If a dock panel is zoomed, focus it instead of the center pane.
-        // Otherwise, focusing the center pane triggers dismiss_zoomed_items_to_reveal
-        // which closes the zoomed dock.
-        let focus_handle = {
-            let workspace = self.workspace().read(cx);
-            let mut target = None;
-            for dock in workspace.all_docks() {
-                let dock = dock.read(cx);
-                if dock.is_open() {
-                    if let Some(panel) = dock.active_panel() {
-                        if panel.is_zoomed(window, cx) {
-                            target = Some(panel.activation_focus_handle(cx));
-                            break;
-                        }
-                    }
-                }
-            }
-            target.unwrap_or_else(|| {
-                let pane = workspace.active_pane().clone();
-                pane.read(cx).focus_handle(cx)
-            })
-        };
-=======
         let focus_handle = self.workspace().read(cx).fallback_focus_handle(window, cx);
->>>>>>> upstream/main
         window.focus(&focus_handle, cx);
     }
 

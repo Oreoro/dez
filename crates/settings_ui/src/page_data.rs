@@ -4730,11 +4730,7 @@ fn status_bar_visibility_setting_visible(app_name: &str, json_path: Option<&str>
 }
 
 fn window_and_layout_page() -> SettingsPage {
-<<<<<<< HEAD
-    fn status_bar_section() -> Vec<SettingsPageItem> {
-=======
     fn status_bar_section() -> [SettingsPageItem; 12] {
->>>>>>> upstream/main
         [
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -6127,16 +6123,8 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-<<<<<<< HEAD
-                title: "Folder Icons",
-                description: files_copy(
-                    "Whether to show folder icons or chevrons for directories in the project panel.",
-                    "Whether Files shows folder icons or chevrons for directories.",
-                ),
-=======
                 title: "Folder Indicator",
                 description: "What to show for directories in the project panel.",
->>>>>>> upstream/main
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("project_panel.folder_indicator"),
@@ -6723,30 +6711,10 @@ fn panels_page() -> SettingsPage {
         .collect()
     }
 
-<<<<<<< HEAD
-    fn outline_panel_section() -> Vec<SettingsPageItem> {
-=======
     fn terminal_panel_section() -> [SettingsPageItem; 5] {
->>>>>>> upstream/main
         [
-            SettingsPageItem::SectionHeader(workspace_surface_copy(
-                paths::APP_NAME,
-                "Outline Panel",
-                "Outline",
-            )),
+            SettingsPageItem::SectionHeader("Terminal Panel"),
             SettingsPageItem::SettingItem(SettingItem {
-<<<<<<< HEAD
-                title: workspace_surface_copy(
-                    paths::APP_NAME,
-                    "Outline Panel Button",
-                    "Outline Control",
-                ),
-                description: workspace_surface_copy(
-                    paths::APP_NAME,
-                    "Show the outline panel button in the status bar.",
-                    "Show the Outline control in Workspace status.",
-                ),
-=======
                 title: "Terminal Dock",
                 description: "Where to dock the terminal panel.",
                 field: Box::new(SettingField {
@@ -6821,11 +6789,22 @@ fn panels_page() -> SettingsPage {
 
     fn outline_panel_section() -> [SettingsPageItem; 12] {
         [
-            SettingsPageItem::SectionHeader("Outline Panel"),
+            SettingsPageItem::SectionHeader(workspace_surface_copy(
+                paths::APP_NAME,
+                "Outline Panel",
+                "Outline",
+            )),
             SettingsPageItem::SettingItem(SettingItem {
-                title: "Outline Panel Button",
-                description: "Show the outline panel button in the status bar.",
->>>>>>> upstream/main
+                title: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Outline Panel Button",
+                    "Outline Control",
+                ),
+                description: workspace_surface_copy(
+                    paths::APP_NAME,
+                    "Show the outline panel button in the status bar.",
+                    "Show the Outline control in Workspace status.",
+                ),
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.button"),
@@ -6903,17 +6882,8 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-<<<<<<< HEAD
-                title: "Folder Icons",
-                description: workspace_surface_copy(
-                    paths::APP_NAME,
-                    "Whether to show folder icons or chevrons for directories in the outline panel.",
-                    "Whether Outline shows folder icons or chevrons for directories.",
-                ),
-=======
                 title: "Folder Indicator",
                 description: "What to show for directories in the outline panel.",
->>>>>>> upstream/main
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("outline_panel.folder_indicator"),
@@ -7086,11 +7056,7 @@ fn panels_page() -> SettingsPage {
         .collect()
     }
 
-<<<<<<< HEAD
-    fn git_panel_section() -> Vec<SettingsPageItem> {
-=======
     fn git_panel_section() -> [SettingsPageItem; 18] {
->>>>>>> upstream/main
         [
             SettingsPageItem::SectionHeader(workspace_surface_copy(
                 paths::APP_NAME,
@@ -7316,17 +7282,8 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::SettingItem(SettingItem {
-<<<<<<< HEAD
-                title: "Folder Icons",
-                description: workspace_surface_copy(
-                    paths::APP_NAME,
-                    "Whether to show folder icons or chevrons for directories in the git panel.",
-                    "Whether Git shows folder icons or chevrons for directories.",
-                ),
-=======
                 title: "Folder Indicator",
                 description: "What to show for directories in the git panel.",
->>>>>>> upstream/main
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("git_panel.folder_indicator"),

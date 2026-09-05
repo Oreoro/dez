@@ -66,11 +66,6 @@ If you would like to use distinct themes for light mode/dark mode that can be se
     "line_height": "standard",
   },
 
-<<<<<<< HEAD
-  // Controls the font size for agent responses in the agent panel.
-  // If not specified, it falls back to the UI font size.
-  "agent_ui_font_size": 15.5,
-=======
   // Controls the font family and size for agent responses in the agent panel.
   // If not specified, they fall back to the UI font family and size.
   "agent_ui_font_family": "Inter",
@@ -79,7 +74,6 @@ If you would like to use distinct themes for light mode/dark mode that can be se
   // and user messages.
   // If not specified, the font family falls back to the buffer font family.
   "agent_buffer_font_family": "Berkeley Mono",
->>>>>>> upstream/main
   // Controls the font size for the agent panel's message editor, user message,
   // and any other snippet of code.
   "agent_buffer_font_size": 13,
@@ -530,14 +524,6 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
     "default_width": 640, // Default width (left/right docked)
     "default_height": 320 // Default height (bottom docked)
   },
-<<<<<<< HEAD
-  // Controls the font size for agent responses in the agent panel.
-  // If not specified, it falls back to the UI font size.
-  "agent_ui_font_size": 15.5,
-  // Controls the font size for the agent panel's message editor, user message,
-  // and any other snippet of code.
-  "agent_buffer_font_size": 13
-=======
   // Controls the font family and size for agent responses in the agent panel.
   // If not specified, they fall back to the UI font family and size.
   "agent_ui_font_family": "Inter",
@@ -547,7 +533,6 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
   // If not specified, the font family falls back to the buffer font family.
   "agent_buffer_font_family": "Berkeley Mono",
   "agent_buffer_font_size": 12
->>>>>>> upstream/main
 }
 ```
 

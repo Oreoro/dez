@@ -90,18 +90,18 @@ pub const DEFAULT_ADDITIONAL_WINDOW_SIZE: Size<Pixels> = Size {
 const DEFAULT_PENDING_INPUT_TIMEOUT: Duration = Duration::from_secs(1);
 
 #[derive(Clone, Copy)]
-struct PendingInputTimeout(Option<Duration>);
+struct PendingInputTimeoutConfig(Option<Duration>);
 
-impl Global for PendingInputTimeout {}
+impl Global for PendingInputTimeoutConfig {}
 
 /// Configures how long pending multi-stroke key input waits before replaying
 /// partial input. Passing `None` disables the timeout.
 pub fn set_pending_input_timeout(timeout: Option<Duration>, cx: &mut App) {
-    cx.set_global(PendingInputTimeout(timeout));
+    cx.set_global(PendingInputTimeoutConfig(timeout));
 }
 
 fn pending_input_timeout(cx: &App) -> Option<Duration> {
-    cx.try_global::<PendingInputTimeout>()
+    cx.try_global::<PendingInputTimeoutConfig>()
         .map_or(Some(DEFAULT_PENDING_INPUT_TIMEOUT), |timeout| timeout.0)
 }
 
@@ -1307,6 +1307,7 @@ pub(crate) enum DrawPhase {
     Focus,
 }
 
+#[cfg(test)]
 pub(crate) const PENDING_INPUT_TIMEOUT: Duration = Duration::from_secs(1);
 
 /// Pending input for a potential multi-stroke key binding.
@@ -5808,14 +5809,18 @@ impl Window {
                 || match_result.pending_has_binding
                 || text_input_requires_timeout;
             currently_pending.timeout = if needs_timeout {
-                match previous_timeout {
-                    Some(mut timeout) if timeout.is_paused() => {
-                        timeout.reset_duration(PENDING_INPUT_TIMEOUT);
+                match (pending_input_timeout(cx), previous_timeout) {
+                    (Some(duration), Some(mut timeout)) if timeout.is_paused() => {
+                        timeout.reset_duration(duration);
                         Some(timeout)
                     }
-                    previous_timeout => {
+                    (Some(duration), previous_timeout) => {
                         drop(previous_timeout);
-                        Some(self.new_pending_input_timeout(PENDING_INPUT_TIMEOUT, cx))
+                        Some(self.new_pending_input_timeout(duration, cx))
+                    }
+                    (None, previous_timeout) => {
+                        drop(previous_timeout);
+                        None
                     }
                 }
             } else {

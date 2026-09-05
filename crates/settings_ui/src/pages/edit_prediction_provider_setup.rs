@@ -34,15 +34,10 @@ pub(crate) fn render_edit_prediction_setup_page(
 ) -> AnyElement {
     let providers = [
         Some(render_provider_dropdown(window, cx)),
-<<<<<<< HEAD
-        render_github_copilot_provider(window, cx).map(IntoElement::into_any_element),
-        (paths::APP_NAME == "Zed").then(|| {
-=======
         Some(render_zed_provider(settings_window, window, cx).into_any_element()),
         render_github_copilot_provider(settings_window, window, cx)
             .map(IntoElement::into_any_element),
         Some(
->>>>>>> upstream/main
             render_api_key_provider(
                 IconName::Inception,
                 "Mercury",

@@ -8,12 +8,8 @@ pub use line_ending_indicator::LineEndingIndicator;
 use picker::{Picker, PickerDelegate};
 use project::Project;
 use std::sync::Arc;
-<<<<<<< HEAD
 use ui::{ListItem, prelude::*};
 use util::ResultExt;
-=======
-use ui::{ListItem, ListItemSpacing, prelude::*};
->>>>>>> upstream/main
 use workspace::ModalView;
 
 actions!(

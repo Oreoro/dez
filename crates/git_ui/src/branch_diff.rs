@@ -475,7 +475,6 @@ impl Item for BranchDiff {
         Some(self.tab_content_text(0, cx))
     }
 
-<<<<<<< HEAD
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
         let title = self.tab_content_text(0, cx);
         Label::new(crate::diff_surface_tab_label(
@@ -491,8 +490,6 @@ impl Item for BranchDiff {
         .into_any_element()
     }
 
-=======
->>>>>>> upstream/main
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
         match self.diff_base(cx) {
             DiffBase::Merge { base_ref } => format!("Changes since {}", base_ref).into(),

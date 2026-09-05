@@ -287,11 +287,6 @@ async fn test_project_group_keys_add_workspace(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
-<<<<<<< HEAD
-async fn test_open_new_window_preserves_existing_sidebar_and_joins_app_session(
-    cx: &mut TestAppContext,
-) {
-=======
 async fn test_move_active_project_group_actions(cx: &mut TestAppContext) {
     init_test(cx);
     let fs = FakeFs::new(cx.executor());
@@ -343,7 +338,6 @@ async fn test_move_active_project_group_actions(cx: &mut TestAppContext) {
 
 #[gpui::test]
 async fn test_open_new_window_does_not_open_sidebar_on_existing_window(cx: &mut TestAppContext) {
->>>>>>> upstream/main
     init_test(cx);
 
     let app_state = cx.update(AppState::test);
@@ -765,54 +759,6 @@ async fn test_remove_fallback_via_find_or_create_skips_removed_workspaces(cx: &m
 }
 
 #[gpui::test]
-<<<<<<< HEAD
-async fn terminal_evidence_is_isolated_between_same_path_workspaces(cx: &mut TestAppContext) {
-    init_test(cx);
-    let fs = FakeFs::new(cx.executor());
-    fs.insert_tree("/shared", json!({ "file.txt": "" })).await;
-    let project_a = Project::test(fs.clone(), ["/shared".as_ref()], cx).await;
-    let project_b = Project::test(fs, ["/shared".as_ref()], cx).await;
-
-    let (multi_workspace, cx) =
-        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project_a, window, cx));
-    let workspace_a = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
-    let workspace_b = multi_workspace.update_in(cx, |mw, window, cx| {
-        mw.test_add_workspace(project_b, window, cx)
-    });
-
-    workspace_a.update(cx, |workspace, cx| {
-        workspace.set_terminal_working_directory_evidence(
-            "session-a",
-            Some(PathBuf::from("/shared/a")),
-            cx,
-        );
-    });
-    workspace_b.update(cx, |workspace, cx| {
-        workspace.set_terminal_working_directory_evidence(
-            "session-b",
-            Some(PathBuf::from("/shared/b")),
-            cx,
-        );
-    });
-
-    let terminal_record = |workspace: &Entity<Workspace>, cx: &App| {
-        workspace
-            .read(cx)
-            .evidence_set()
-            .records()
-            .iter()
-            .find(|record| {
-                record.kind == crate::evidence::WorkspaceEvidenceKind::TerminalWorkingDirectory
-            })
-            .cloned()
-            .unwrap()
-    };
-    let record_a = multi_workspace.read_with(cx, |_, cx| terminal_record(&workspace_a, cx));
-    let record_b = multi_workspace.read_with(cx, |_, cx| terminal_record(&workspace_b, cx));
-    assert_eq!(record_a.path.as_ref(), std::path::Path::new("/shared/a"));
-    assert_eq!(record_b.path.as_ref(), std::path::Path::new("/shared/b"));
-    assert_ne!(record_a.id, record_b.id);
-=======
 async fn test_remove_keeping_the_project_does_not_switch_projects(cx: &mut TestAppContext) {
     init_test(cx);
     let fs = FakeFs::new(cx.executor());
@@ -856,7 +802,6 @@ async fn test_remove_keeping_the_project_does_not_switch_projects(cx: &mut TestA
             "the replacement workspace should be in the removed workspace's project"
         );
     });
->>>>>>> upstream/main
 }
 
 #[gpui::test]
@@ -1013,42 +958,6 @@ async fn test_close_workspace_prefers_already_loaded_neighboring_workspace(
 }
 
 #[gpui::test]
-<<<<<<< HEAD
-async fn test_remove_project_group_prefers_already_loaded_neighboring_workspace(
-    cx: &mut TestAppContext,
-) {
-    init_test(cx);
-    let fs = FakeFs::new(cx.executor());
-    fs.insert_tree("/root_a", json!({ "file_a.txt": "" })).await;
-    fs.insert_tree("/root_b", json!({ "file_b.txt": "" })).await;
-    let project_a = Project::test(fs.clone(), ["/root_a".as_ref()], cx).await;
-    let key_a = project_a.read_with(cx, |project, cx| project.project_group_key(cx));
-    let project_b = Project::test(fs, ["/root_b".as_ref()], cx).await;
-
-    let (multi_workspace, cx) =
-        cx.add_window_view(|window, cx| MultiWorkspace::test_new(project_a, window, cx));
-    multi_workspace.update(cx, |multi_workspace, cx| {
-        multi_workspace.open_sidebar(cx);
-    });
-    cx.run_until_parked();
-
-    let workspace_a = multi_workspace.read_with(cx, |multi_workspace, _cx| {
-        multi_workspace.workspace().clone()
-    });
-    let workspace_b = multi_workspace.update_in(cx, |multi_workspace, window, cx| {
-        multi_workspace.test_add_workspace(project_b, window, cx)
-    });
-    multi_workspace.update_in(cx, |multi_workspace, window, cx| {
-        multi_workspace.activate(workspace_a.clone(), None, window, cx);
-    });
-    workspace_a.update(cx, |_workspace, cx| {
-        assert_eq!(
-            multi_workspace.read(cx).database_id(cx),
-            None,
-            "durable MultiWorkspace identity must not re-read its active Workspace during an update"
-        );
-    });
-=======
 async fn test_close_workspace_prefers_workspace_in_same_project_group(cx: &mut TestAppContext) {
     init_test(cx);
     let fs = FakeFs::new(cx.executor());
@@ -1179,7 +1088,6 @@ async fn test_remove_project_group_opens_unloaded_local_neighbor(cx: &mut TestAp
             expanded: true,
         });
     });
->>>>>>> upstream/main
 
     let removed = multi_workspace
         .update_in(cx, |multi_workspace, window, cx| {
@@ -1188,18 +1096,6 @@ async fn test_remove_project_group_opens_unloaded_local_neighbor(cx: &mut TestAp
         .await
         .expect("removing the active project group should succeed");
 
-<<<<<<< HEAD
-    assert!(removed, "the active project group should be removed");
-    multi_workspace.read_with(cx, |multi_workspace, _cx| {
-        assert_eq!(
-            multi_workspace.workspace(),
-            &workspace_b,
-            "removing the active group should activate the loaded neighboring Workspace"
-        );
-        assert!(
-            !multi_workspace.project_group_keys().contains(&key_a),
-            "the removed Workspace group must not be recreated by fallback activation"
-=======
     assert!(
         removed,
         "remove_project_group should remove the active group"
@@ -1285,7 +1181,6 @@ async fn test_remove_project_group_replaces_unretained_active_workspace(cx: &mut
             multi_workspace.project_group_keys(),
             vec![remote_key],
             "only the remote project group should remain"
->>>>>>> upstream/main
         );
     });
 }

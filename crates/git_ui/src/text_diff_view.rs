@@ -318,7 +318,6 @@ impl Item for TextDiffView {
         Some(Icon::new(IconName::Diff).color(Color::Muted))
     }
 
-<<<<<<< HEAD
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
         let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
         Label::new(crate::diff_surface_tab_label(
@@ -334,8 +333,6 @@ impl Item for TextDiffView {
         .into_any_element()
     }
 
-=======
->>>>>>> upstream/main
     fn tab_content_text(&self, _detail: usize, _: &App) -> SharedString {
         self.title.clone()
     }

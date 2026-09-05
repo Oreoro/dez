@@ -4339,113 +4339,6 @@ impl Item for TerminalView {
         )
     }
 
-    fn tab_icon(&self, _window: &Window, cx: &App) -> Option<Icon> {
-        let terminal = self.terminal().read(cx);
-        let foreground_command = terminal.foreground_process_command_name();
-        let foreground_agent =
-            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
-        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
-            paths::APP_NAME,
-            foreground_command.as_deref(),
-        );
-        let (icon, color) = terminal_tab_icon_presentation(
-            terminal.task().map(|task| &task.status),
-            foreground_agent,
-            foreground_multiplexer,
-        );
-
-        Some(Icon::new(icon).size(IconSize::Small).color(color))
-    }
-
-    fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
-        let terminal_entity_id = self.terminal().entity_id();
-        let terminal = self.terminal().read(cx);
-        let foreground_command = terminal.foreground_process_command_name();
-        let foreground_agent =
-            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
-        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
-            paths::APP_NAME,
-            foreground_command.as_deref(),
-        );
-        let terminal_task = terminal.task();
-        let (icon, icon_color) = terminal_tab_icon_presentation(
-            terminal_task.map(|task| &task.status),
-            foreground_agent,
-            foreground_multiplexer,
-        );
-        let rerun_button = terminal_task.and_then(TerminalView::rerun_button);
-        let foreground_process_label = foreground_agent
-            .or(foreground_multiplexer)
-            .map(|process| format!("{} running in terminal", process.display_name));
-
-        Some(
-            h_flex()
-                .id(("terminal-tab-icon", terminal_entity_id))
-                .relative()
-                .flex_none()
-                .size(IconSize::Small.rems())
-                .items_center()
-                .justify_center()
-                .group("term-tab-icon")
-                .when_some(foreground_process_label, |this, label| {
-                    this.role(gpui::Role::Label).aria_label(label)
-                })
-                .child(
-                    div()
-                        .when(rerun_button.is_some(), |this| {
-                            this.group_hover("", |style| style.invisible())
-                        })
-                        .child(Icon::new(icon).size(IconSize::Small).color(icon_color)),
-                )
-                .when_some(rerun_button, |this, rerun_button| {
-                    this.child(div().absolute().visible_on_hover("").child(rerun_button))
-                })
-                .into_any(),
-        )
-    }
-
-    fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
-        let title = self
-            .custom_title
-            .as_ref()
-            .filter(|title| !title.trim().is_empty())
-            .cloned()
-            .unwrap_or_else(|| {
-                let terminal = self.terminal().read(cx);
-                terminal.title(detail == 0)
-            });
-
-<<<<<<< HEAD
-        match title.trim() {
-            "" => "Terminal".into(),
-            title => title.to_string().into(),
-        }
-=======
-        let (icon, icon_color, rerun_button) = match terminal.task() {
-            Some(terminal_task) => match &terminal_task.status {
-                TaskStatus::Running => (
-                    IconName::PlayFilled,
-                    Color::Disabled,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Unknown => (
-                    IconName::Warning,
-                    Color::Warning,
-                    TerminalView::rerun_button(terminal_task),
-                ),
-                TaskStatus::Completed { success } => {
-                    let rerun_button = TerminalView::rerun_button(terminal_task);
-
-                    if *success {
-                        (IconName::Check, Color::Success, rerun_button)
-                    } else {
-                        (IconName::XCircle, Color::Error, rerun_button)
-                    }
-                }
-            },
-            None => (IconName::Terminal, Color::Muted, None),
-        };
-
         let self_handle = self.self_handle.clone();
         h_flex()
             .gap_1()
@@ -4514,7 +4407,23 @@ impl Item for TerminalView {
                     }),
             )
             .into_any()
->>>>>>> upstream/main
+    }
+
+    fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
+        let title = self
+            .custom_title
+            .as_ref()
+            .filter(|title| !title.trim().is_empty())
+            .cloned()
+            .unwrap_or_else(|| {
+                let terminal = self.terminal().read(cx);
+                terminal.title(detail == 0)
+            });
+
+        match title.trim() {
+            "" => "Terminal".into(),
+            title => title.to_string().into(),
+        }
     }
 
     fn force_show_tab_bar(&self) -> bool {

@@ -77,20 +77,7 @@ Like color themes, icon themes support separate light and dark variants:
 
 ## Fonts
 
-<<<<<<< HEAD
-Dez uses JetBrains Mono for interface chrome and code, giving the application
-one coherent terminal-native identity.
-
-When an existing Dez profile still contains the exact old generated
-Lumin/JetBrains settings header and `.ZedSans` UI value, Dez migrates that one
-generated value in memory and offers the normal backed-up settings update. It
-does not change official Zed settings or a custom font choice.
-
-The bundled font means editor and terminal typography is consistent even on a
-new machine.
-=======
 Zed uses three font settings and their fallback counterparts for different contexts:
->>>>>>> upstream/main
 
 | Setting                   | Used for                  |
 | ------------------------- | ------------------------- |
@@ -108,14 +95,9 @@ Example configuration:
   "buffer_font_family": "JetBrains Mono",
   "buffer_font_fallbacks": ["Nerd Font"],
   "buffer_font_size": 14,
-<<<<<<< HEAD
-  "ui_font_family": "JetBrains Mono",
-  "ui_font_size": 14,
-=======
   "ui_font_family": "Inter",
   "ui_font_fallbacks": ["Nerd Font"],
   "ui_font_size": 16,
->>>>>>> upstream/main
   "terminal": {
     "font_family": "JetBrains Mono",
     "font_fallbacks": ["Nerd Font"],

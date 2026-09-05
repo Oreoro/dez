@@ -1601,11 +1601,6 @@ impl<'a> ElicitationCard<'a> {
     }
 
     pub(crate) fn render(self, cx: &App) -> Div {
-<<<<<<< HEAD
-        let border_color = elicitation_card_border(cx);
-        let header_background = elicitation_header_background(cx);
-        let tool_name_font_size = rems_from_px(13.);
-=======
         let border_color = cx.theme().colors().border.opacity(0.8);
         let header_background = cx
             .theme()
@@ -1613,7 +1608,6 @@ impl<'a> ElicitationCard<'a> {
             .element_background
             .blend(cx.theme().colors().editor_foreground.opacity(0.025));
         let tool_name_font_size = rems_from_px(13_f32);
->>>>>>> upstream/main
         let is_pending = matches!(&self.elicitation.status, ElicitationStatus::Pending { .. });
         let is_accepted_url = matches!(
             (&self.elicitation.status, &self.elicitation.request.mode),
@@ -1693,9 +1687,6 @@ impl<'a> ElicitationCard<'a> {
         };
 
         v_flex()
-<<<<<<< HEAD
-            .gap(elicitation_gap(cx))
-=======
             .gap_2()
             .when_some(mode.requested_schema.title.clone(), |this, title| {
                 this.child(Label::new(title).size(LabelSize::Small))
@@ -1710,7 +1701,6 @@ impl<'a> ElicitationCard<'a> {
                     )
                 },
             )
->>>>>>> upstream/main
             .children(mode.requested_schema.properties.iter().filter_map(
                 |(field_name, property)| {
                     let field = state.fields.get(field_name)?;
@@ -1983,13 +1973,8 @@ impl<'a> ElicitationCard<'a> {
         v_flex()
             .min_w_0()
             .flex_1()
-<<<<<<< HEAD
-            .gap(elicitation_compact_gap(cx))
-            .child(Label::new(option.label).size(LabelSize::Small).truncate())
-=======
             .gap_0p5()
             .child(Label::new(option.label).size(LabelSize::Small))
->>>>>>> upstream/main
             .when_some(option.description, |this, description| {
                 this.child(
                     Label::new(description)
@@ -2041,10 +2026,6 @@ impl<'a> ElicitationCard<'a> {
 
     fn render_url_elicitation(&self, mode: &acp::ElicitationUrlMode, cx: &App) -> AnyElement {
         v_flex()
-<<<<<<< HEAD
-            .gap(elicitation_gap(cx))
-            .child(Self::render_url_summary(&mode.url, cx))
-=======
             .gap_2()
             .when_some(url_host_presentation(&mode.url), |this, presentation| {
                 this.child(
@@ -2085,7 +2066,6 @@ impl<'a> ElicitationCard<'a> {
                 )
             })
             .child(Self::render_url_summary(&mode.url))
->>>>>>> upstream/main
             .into_any_element()
     }
 

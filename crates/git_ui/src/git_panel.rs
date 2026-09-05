@@ -47,16 +47,11 @@ use git::{
     TrashUntrackedFiles, UnstageAll, ViewFile, parse_git_remote_url,
 };
 use gpui::{
-<<<<<<< HEAD
     AbsoluteLength, Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClickEvent,
-    DismissEvent, Empty, Entity, EventEmitter, FocusHandle, Focusable, Hsla, KeyContext,
-=======
-    AbsoluteLength, Action, Anchor, AnyElement, AsyncApp, AsyncWindowContext, ClickEvent,
-    ClipboardItem, DismissEvent, Empty, Entity, EventEmitter, FocusHandle, Focusable, KeyContext,
->>>>>>> upstream/main
-    MouseButton, MouseDownEvent, Pixels, Point, PromptLevel, ScrollStrategy, Subscription, Task,
-    TaskExt, TextStyle, UniformListScrollHandle, WeakEntity, actions, anchored, deferred,
-    uniform_list,
+    ClipboardItem, DismissEvent, Empty, Entity, EventEmitter, FocusHandle, Focusable, Hsla,
+    KeyContext, MouseButton, MouseDownEvent, Pixels, Point, PromptLevel, ScrollStrategy,
+    Subscription, Task, TaskExt, TextStyle, UniformListScrollHandle, WeakEntity, actions, anchored,
+    deferred, uniform_list,
 };
 use itertools::Itertools;
 use language::{Buffer, BufferEvent, File};
@@ -103,11 +98,7 @@ use util::paths::PathStyle;
 use util::{ResultExt, TryFutureExt, markdown::MarkdownInlineCode, maybe, rel_path::RelPath};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::{
-<<<<<<< HEAD
-    DesignSystemSettings, Item, Workspace,
-=======
-    Item, ModalView, Workspace,
->>>>>>> upstream/main
+    DesignSystemSettings, Item, ModalView, Workspace,
     dock::{DockPosition, Panel, PanelEvent},
     notifications::{DetachAndPromptErr, NotificationId, NotifyTaskExt},
 };
@@ -8584,7 +8575,6 @@ impl GitPanel {
         let group_name: SharedString = format!("header_{}", ix).into();
         let section = header.header;
         let weak = cx.weak_entity();
-<<<<<<< HEAD
         let design_system = DesignSystemSettings::get_global(cx);
         let canvas_density = design_system.density;
         let canvas_radius = design_system.radius;
@@ -8596,9 +8586,7 @@ impl GitPanel {
             canvas_git_panel_row_border_color(row_background, false, canvas_contrast, cx);
         let hover_border =
             canvas_git_panel_row_hover_border_color(hover_background, false, canvas_contrast, cx);
-=======
         let checkbox_weak = weak.clone();
->>>>>>> upstream/main
         let stage_intent = StageIntent::for_section(section);
         let toggle_state = stage_intent.checkbox_state(|| self.header_state(header.header));
         let is_collapsed = self.collapsed_sections.contains(&section);
@@ -8621,15 +8609,10 @@ impl GitPanel {
             .pr(row_padding_right)
             .gap_2()
             .justify_between()
-<<<<<<< HEAD
             .when(!section_is_empty && !all_conflicts_resolved, |this| {
                 this.cursor_pointer()
                     .hover(|s| s.bg(hover_background).border_color(hover_border))
             })
-=======
-            .cursor_pointer()
-            .hover(|style| style.bg(cx.theme().colors().ghost_element_hover))
->>>>>>> upstream/main
             .border_1()
             .border_r_2()
             .bg(row_background)
@@ -9231,17 +9214,12 @@ impl GitPanel {
         let checkbox_wrapper_id: ElementId =
             ElementId::Name(format!("dir_checkbox_wrapper_{}_{}", entry.name, ix).into());
 
-<<<<<<< HEAD
         let (selected_bg_alpha, state_opacity_step) = match canvas_contrast {
             settings::CanvasContrast::Low => (0.06, 0.03),
             settings::CanvasContrast::Standard => (0.08, 0.04),
             settings::CanvasContrast::High => (0.12, 0.06),
         };
-=======
-        let selected_bg_alpha = 0.08;
         let marked_bg_alpha = 0.12;
-        let state_opacity_step = 0.04;
->>>>>>> upstream/main
 
         let info_color = cx.theme().status().info;
         let colors = cx.theme().colors();
@@ -9259,15 +9237,11 @@ impl GitPanel {
                 info_color.alpha(selected_bg_alpha + state_opacity_step * 2.0),
             )
         } else {
-<<<<<<< HEAD
             (
                 colors.ghost_element_background,
                 canvas_git_panel_hover_background(canvas_contrast, cx),
                 colors.ghost_element_active,
             )
-=======
-            (colors.ghost_element_hover, colors.ghost_element_active)
->>>>>>> upstream/main
         };
         let row_border = canvas_git_panel_row_border_color(base_bg, selected, canvas_contrast, cx);
         let hover_border =
@@ -9894,13 +9868,9 @@ impl editor::Addon for GitPanelAddon {
 
 impl Panel for GitPanel {
     fn activation_focus_handle(&self, cx: &App) -> FocusHandle {
-<<<<<<< HEAD
-        if self.entries.is_empty() || self.commit_editor_expanded {
-=======
         if self.active_tab == GitPanelTab::Changes
             && (self.entries.is_empty() || self.commit_editor_expanded)
         {
->>>>>>> upstream/main
             self.commit_editor.focus_handle(cx)
         } else {
             self.focus_handle.clone()
@@ -9933,19 +9903,10 @@ impl Panel for GitPanel {
         GitPanelSettings::get_global(cx).default_width
     }
 
-<<<<<<< HEAD
-    fn icon(&self, _: &Window, _cx: &App) -> Option<ui::IconName> {
-        Some(ui::IconName::GitBranch)
-    }
-
-    fn button_visible(&self, cx: &App) -> bool {
-        GitPanelSettings::get_global(cx).button
-=======
     fn icon(&self, _: &Window, cx: &App) -> Option<ui::IconName> {
         GitPanelSettings::get_global(cx)
             .button
             .then_some(ui::IconName::GitBranch)
->>>>>>> upstream/main
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {

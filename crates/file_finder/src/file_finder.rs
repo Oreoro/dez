@@ -2216,15 +2216,9 @@ impl FileFinderDelegate {
                     h_flex()
                         .w_full()
                         .min_w_0()
-<<<<<<< HEAD
                         .gap(canvas::file_finder_gap(cx))
                         .child(file_name_label.truncate_middle())
                         .child(full_path_label.truncate_start()),
-=======
-                        .gap_1p5()
-                        .child(file_name_label.flex_none().truncate_middle())
-                        .child(full_path_label.flex_1().truncate_start()),
->>>>>>> upstream/main
                 )
                 .end_slot::<AnyElement>(end_slot),
         )
