@@ -4920,7 +4920,7 @@ pub async fn restore_hosted_terminal(
             settings.alternate_scroll,
             settings.max_scroll_history_lines,
             settings.path_hyperlink_regexes.clone(),
-            settings.path_hyperlink_timeout_ms,
+            Duration::from_millis(settings.path_hyperlink_timeout_ms),
             window.window_handle().window_id().as_u64(),
             cx.background_executor(),
             Vec::new(),

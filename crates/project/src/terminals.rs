@@ -538,7 +538,7 @@ impl Project {
                             settings.alternate_scroll,
                             settings.max_scroll_history_lines,
                             settings.path_hyperlink_regexes,
-                            settings.path_hyperlink_timeout_ms,
+                            Duration::from_millis(settings.path_hyperlink_timeout_ms),
                             is_via_remote,
                             cx.entity_id().as_u64(),
                             None,

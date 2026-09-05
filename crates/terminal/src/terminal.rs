@@ -2342,10 +2342,7 @@ impl Terminal {
         #[cfg(any(test, feature = "test-support"))]
         self.pty_write_log.borrow_mut().push(input.to_vec());
         match &self.terminal_type {
-            TerminalType::Pty {
-                resources: PtyResources::Active(pty_tx),
-                ..
-            } => {
+            TerminalType::Pty { resources, .. } => {
                 if log::log_enabled!(log::Level::Debug) {
                     if let Ok(str) = str::from_utf8(&input) {
                         log::debug!("Writing to PTY: {:?}", str);
@@ -2353,7 +2350,9 @@ impl Terminal {
                         log::debug!("Writing to PTY: {:?}", input);
                     }
                 }
-                pty_tx.notify(input);
+                if let PtyResources::Active(pty_tx) = resources {
+                    pty_tx.notify(input);
+                }
                 false
             }
             TerminalType::Hosted { controller } => match controller.input(input.into_owned()) {
