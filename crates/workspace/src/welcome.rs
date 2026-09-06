@@ -848,7 +848,7 @@ impl WelcomePage {
                     .role(gpui::Role::Status)
                     .aria_label(format!("{title}. {description}"))
                     .child(
-                        Icon::new(IconName::ZedAssistant)
+                        Icon::new(IconName::Robot)
                             .color(Color::Muted)
                             .size(IconSize::Small),
                     )
