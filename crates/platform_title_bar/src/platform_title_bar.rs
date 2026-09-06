@@ -322,6 +322,7 @@ impl Render for PlatformTitleBar {
                                     button_layout,
                                     close_action.as_ref().boxed_clone(),
                                     window,
+                                    height,
                                 )
                             })
                             .flatten(),

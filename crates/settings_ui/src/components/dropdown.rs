@@ -10,47 +10,38 @@ use ui::{
 };
 
 #[derive(IntoElement)]
-pub struct EnumVariantDropdown {
+pub struct EnumVariantDropdown<T>
+where
+    T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
+{
     id: ElementId,
-    selected_index: usize,
+    current_value: T,
+    variants: &'static [T],
     labels: &'static [&'static str],
     should_do_title_case: bool,
     tab_index: Option<isize>,
     disabled: bool,
     aria_label: Option<SharedString>,
     aria_description: Option<SharedString>,
-    on_change: Rc<dyn Fn(usize, &mut ui::Window, &mut App) + 'static>,
+    icon_for_value: Option<Rc<dyn Fn(T) -> IconName + 'static>>,
+    on_change: Rc<dyn Fn(T, &mut ui::Window, &mut App) + 'static>,
 }
 
-impl EnumVariantDropdown {
-    pub fn new<T>(
+impl<T> EnumVariantDropdown<T>
+where
+    T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
+{
+    pub fn new(
         id: impl Into<ElementId>,
         current_value: T,
         variants: &'static [T],
         labels: &'static [&'static str],
         on_change: impl Fn(T, &mut ui::Window, &mut App) + 'static,
-    ) -> Self
-    where
-        T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
-    {
-        let selected_index = variants
-            .iter()
-            .position(|v| *v == current_value)
-            .unwrap_or(0);
-        Self::new_indexed(id, selected_index, labels, move |index, window, cx| {
-            on_change(variants[index], window, cx)
-        })
-    }
-
-    pub fn new_indexed(
-        id: impl Into<ElementId>,
-        selected_index: usize,
-        labels: &'static [&'static str],
-        on_change: impl Fn(usize, &mut ui::Window, &mut App) + 'static,
     ) -> Self {
         Self {
             id: id.into(),
-            selected_index,
+            current_value,
+            variants,
             labels,
             should_do_title_case: true,
             tab_index: None,
@@ -97,27 +88,61 @@ impl EnumVariantDropdown {
     }
 }
 
-impl RenderOnce for EnumVariantDropdown {
+impl<T> RenderOnce for EnumVariantDropdown<T>
+where
+    T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
+{
     fn render(self, window: &mut ui::Window, cx: &mut ui::App) -> impl gpui::IntoElement {
-        let current_value_label = self.labels[self.selected_index];
+        let Self {
+            id,
+            current_value,
+            variants,
+            labels,
+            should_do_title_case,
+            tab_index,
+            disabled,
+            aria_label,
+            aria_description,
+            icon_for_value,
+            on_change,
+        } = self;
+
+        let current_value_index = variants
+            .iter()
+            .position(|value| *value == current_value)
+            .unwrap_or_default();
+        let current_value_label = labels.get(current_value_index).copied().unwrap_or_default();
+        let visible_label = if should_do_title_case {
+            current_value_label.to_title_case()
+        } else {
+            current_value_label.to_string()
+        };
+        let menu_icon_for_value = icon_for_value.clone();
+        let popover_handle = window
+            .use_keyed_state((id.clone(), "enum-variant-dropdown-handle"), cx, |_, _| {
+                ui::PopoverMenuHandle::<ContextMenu>::default()
+            })
+            .read(cx)
+            .clone();
 
         let context_menu = window.use_keyed_state(current_value_label, cx, |window, cx| {
             ContextMenu::new(window, cx, move |mut menu, _, _| {
-                for (index, &label) in self.labels.iter().enumerate() {
-                    let on_change = self.on_change.clone();
-                    menu = menu.toggleable_entry(
-                        if self.should_do_title_case {
-                            label.to_title_case()
-                        } else {
-                            label.to_string()
-                        },
-                        index == self.selected_index,
-                        IconPosition::End,
-                        None,
-                        move |window, cx| {
-                            on_change(index, window, cx);
-                        },
-                    );
+                for (&value, &label) in std::iter::zip(variants, labels) {
+                    let on_change = on_change.clone();
+                    let entry = ContextMenuEntry::new(if should_do_title_case {
+                        label.to_title_case()
+                    } else {
+                        label.to_string()
+                    })
+                    .toggleable(IconPosition::End, value == current_value)
+                    .handler(move |window, cx| {
+                        on_change(value, window, cx);
+                    });
+                    menu = if let Some(icon_for_value) = menu_icon_for_value.as_ref() {
+                        menu.item(entry.icon(icon_for_value(value)))
+                    } else {
+                        menu.item(entry)
+                    };
                 }
                 menu
             })

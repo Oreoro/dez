@@ -37,7 +37,7 @@ pub(crate) fn render_edit_prediction_setup_page(
         Some(render_zed_provider(settings_window, window, cx).into_any_element()),
         render_github_copilot_provider(settings_window, window, cx)
             .map(IntoElement::into_any_element),
-        Some(
+        (paths::APP_NAME == "Zed").then(|| {
             render_api_key_provider(
                 IconName::Inception,
                 "Mercury",
