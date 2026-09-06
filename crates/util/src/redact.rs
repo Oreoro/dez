@@ -38,6 +38,13 @@ pub fn should_redact(env_var_name: &str) -> bool {
         .any(|suffix| env_var_name.ends_with(suffix))
 }
 
+pub fn is_valid_environment_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|character| character != '=' && !character.is_control())
+}
+
 /// Redact common secret-bearing environment assignments, CLI flags, and URL
 /// credentials from a command while preserving its reviewable structure.
 pub fn redact_command(command: &str) -> String {

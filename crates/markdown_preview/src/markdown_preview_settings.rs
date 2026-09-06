@@ -6,6 +6,8 @@ use settings::{IntoGpui, RegisterSetting, Settings};
 pub struct MarkdownPreviewSettings {
     /// How Markdown files should open by default.
     pub default_open_mode: settings::MarkdownPreviewOpenMode,
+    /// Whether to automatically open Markdown files in the preview.
+    pub open_markdown_files_in_preview: bool,
     /// The maximum width of the rendered markdown content, or `None` to render
     /// content edge to edge.
     pub max_width: Option<Pixels>,
@@ -21,11 +23,11 @@ impl Settings for MarkdownPreviewSettings {
         } else {
             None
         };
-        let show_edit_source_action = markdown_preview.show_edit_source_action.unwrap_or(true);
         Self {
-            default_open_mode,
+            default_open_mode: content.default_open_mode.unwrap_or_default(),
+            open_markdown_files_in_preview: content.open_markdown_files_in_preview.unwrap_or(false),
             max_width,
-            show_edit_source_action,
+            show_edit_source_action: content.show_edit_source_action.unwrap_or(true),
         }
     }
 }

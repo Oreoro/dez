@@ -62,7 +62,6 @@ use language_model::{
 use menu;
 use multi_buffer::ExcerptBoundaryInfo;
 use notifications::status_toast::StatusToast;
-use panel::PanelHeader;
 use project::git_store::GitAccess;
 use project::{
     Fs, Project, ProjectPath,
@@ -9943,8 +9942,6 @@ impl Panel for GitPanel {
         }))
     }
 }
-
-impl PanelHeader for GitPanel {}
 
 pub fn panel_editor_container(_window: &mut Window, cx: &mut App) -> Div {
     let design_system = DesignSystemSettings::get_global(cx);

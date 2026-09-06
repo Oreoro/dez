@@ -1333,6 +1333,26 @@ pub struct MarkdownPreviewSettingsContent {
     ///
     /// Default: preview
     pub default_open_mode: Option<MarkdownPreviewOpenMode>,
+    /// The name of a font to use for rendering in the markdown preview.
+    /// Falls back to the UI font if unset.
+    pub font_family: Option<FontFamilyName>,
+    /// The name of a font to use for code (code blocks and inline code) in the
+    /// markdown preview. Falls back to the buffer font if unset.
+    pub code_font_family: Option<FontFamilyName>,
+    /// The font size to use for rendering in the markdown preview.
+    /// Falls back to the UI font size if unset.
+    pub font_size: Option<FontSize>,
+    /// The theme to use for the markdown preview.
+    /// Falls back to the main editor theme if unset.
+    pub theme: Option<ThemeSelection>,
+    /// Whether to automatically open Markdown files in the preview.
+    ///
+    /// Default: false
+    pub open_markdown_files_in_preview: Option<bool>,
+    /// Whether preview-first surfaces should show a source-edit affordance.
+    ///
+    /// Default: true
+    pub show_edit_source_action: Option<bool>,
     /// Whether to limit the width of the rendered markdown content. When
     /// enabled, content is constrained to `max_width` and centered
     /// horizontally within the preview pane, for optimal readability.
