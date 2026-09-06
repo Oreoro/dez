@@ -494,7 +494,11 @@ impl RenderOnce for Switch {
                 DynamicSpacing::Base20.rems(cx),
                 DynamicSpacing::Base12.rems(cx),
             ),
-            SwitchSize::Small => (rems_from_px(28.), rems_from_px(16.), rems_from_px(10.)),
+            SwitchSize::Small => (
+                rems_from_px(28_f32),
+                rems_from_px(16_f32),
+                rems_from_px(10_f32),
+            ),
         };
 
         let switch = div()

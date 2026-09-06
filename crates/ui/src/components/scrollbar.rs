@@ -1145,10 +1145,6 @@ pub struct ScrollbarPrepaintState {
 }
 
 impl ScrollbarPrepaintState {
-    fn has_thumbs(&self) -> bool {
-        !self.thumbs.is_empty()
-    }
-
     fn thumb_for_position(&self, position: &Point<Pixels>) -> Option<&ScrollbarLayout> {
         self.thumbs
             .iter()
@@ -1355,21 +1351,13 @@ impl<T: ScrollableHandle> Element for ScrollbarElement<T> {
                     },
                     parent_bounds_hitbox: window.insert_hitbox(bounds, HitboxBehavior::Normal),
                 });
-        let became_scrollable = prepaint_state.as_ref().is_some_and(|state| {
-            state.has_thumbs()
-                && self
-                    .state
-                    .read(cx)
-                    .last_prepaint_state
-                    .as_ref()
-                    .is_none_or(|previous| !previous.has_thumbs())
-        });
-
-        self.state.update(cx, |state, _| {
-            state.last_prepaint_state = prepaint_state.clone()
-        });
-
-        if became_scrollable {
+        if prepaint_state.as_ref().is_some_and(|state| {
+            let scrollbar_state = self.state.read(cx);
+            state.should_show_scrollbars(
+                scrollbar_state.last_prepaint_state.as_ref(),
+                scrollbar_state.reveal_policy,
+            )
+        }) {
             self.state
                 .update(cx, |state, cx| state.show_scrollbars(window, cx));
         }
