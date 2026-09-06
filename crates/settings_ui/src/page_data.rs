@@ -744,7 +744,7 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Reveal If Open",
-                description: "when enabled, zed will prefer already-open buffers.",
+                description: "When enabled, the editor will prefer already-open buffers.",
                 field: Box::new(SettingField {
                     organization_override: None,
                     json_path: Some("reveal_if_open"),

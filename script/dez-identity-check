@@ -892,12 +892,15 @@ require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
 require_multiline_pattern crates/agent_ui/src/agent_ui.rs \
     'EditPredictionProvider::Zed \| EditPredictionProvider::Mercury if app_name != "Zed" => \{.*?EditPredictionProvider::None' \
     'the Agent UI treats unavailable upstream prediction providers as active in Dez'
+require_pattern crates/zed/src/zed.rs \
+    'collab_ui::collab_panel::CollabPanel::load\(workspace_handle\.clone\(\), cx\.clone\(\)\)' \
+    'the Collaboration panel must load in Dez so it stays reachable as a Workspace Tool'
+reject_pattern crates/zed/src/zed.rs \
+    'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{' \
+    'the Collaboration panel load can regress to being Zed-gated'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'let channels_panel = \(APP_NAME == "Zed"\)\.then\(\|\| \{.*?CollabPanel::load' \
-    'Dez eagerly loads the upstream collaboration panel'
-require_multiline_pattern crates/zed/src/zed.rs \
-    'const DEZ_HIDDEN_ACTION_NAMESPACES:.*?"channel_modal::".*?"collab::".*?"collab_panel::".*?const DEZ_HIDDEN_ACTIONS:.*?"workspace::FollowNextCollaborator"' \
-    'Dez can retain default shortcuts for removed collaboration surfaces'
+    'const DEZ_HIDDEN_ACTION_NAMESPACES:.*?"channel_modal::".*?"collab::".*?"terminal_panel::".*?const DEZ_HIDDEN_ACTIONS:.*?"workspace::FollowNextCollaborator"' \
+    'Dez can retain default shortcuts for removed call and channel-modal surfaces'
 require_pattern crates/zed/src/zed.rs \
     '!is_dez_hidden_keybinding_name\(binding\.action\(\)\.name\(\), APP_NAME\)' \
     'Dez does not apply its product boundary to loaded keybindings'
@@ -1291,7 +1294,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let pathless_workspaces = workspaces.*?workspace_path_list\(workspace, cx\)\.paths\(\)\.is_empty\(\).*?workspace::ProjectGroup.*?workspaces: pathless_workspaces.*?group_key\.path_list\(\)\.paths\(\)\.is_empty\(\) && terminals\.is_empty\(\)' \
     'scratch terminals can disappear because Session Rail has no transient empty-workspace group'
 require_multiline_pattern crates/terminal/src/pty_info.rs \
-    'refresh_pending: AtomicBool.*?fn load\(&self\).*?\*self\.current\.write\(\) = info\.clone\(\).*?fn refresh_current.*?self\.task\.lock\(\)\.is_some\(\).*?self\.refresh_pending\.store\(true, Ordering::Release\).*?let previous = self\.current\.read\(\)\.clone\(\).*?this\.load\(\) != previous.*?this\.task\.lock\(\)\.take\(\).*?this\.refresh_pending\.swap\(false, Ordering::AcqRel\).*?cx\.emit\(Event::ProcessInfoChanged\).*?this\.refresh_current\(cx\)' \
+    'refresh_pending: AtomicBool.*?fn load\(&self\).*?\*self\.current\.write\(\) = info\.clone\(\).*?fn refresh_current.*?self\.task\.lock\(\)\.is_some\(\).*?self\.refresh_pending\.store\(true, Ordering::Release\).*?let previous = self\.current\.read\(\)\.clone\(\).*?let current = this\.load\(\);.*?current != previous.*?this\.task\.lock\(\)\.take\(\).*?this\.refresh_pending\.swap\(false, Ordering::AcqRel\).*?cx\.emit\(Event::ProcessInfoChanged\).*?this\.refresh_current\(cx\)' \
     'foreground-process refreshes can drop a shell-to-agent transition instead of coalescing one trailing inspection'
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'fn terminal_foreground_agent_presentation.*?app_name == "Zed".*?detect_terminal_agent_command\(command\?\)\?.*?fn terminal_foreground_multiplexer_presentation.*?app_name == "Zed".*?"tmux".*?IconName::SplitAlt.*?fn terminal_context_activity_label.*?foreground_agent\.or\(foreground_multiplexer\).*?"\{\} running".*?status != "Active".*?Event::ProcessInfoChanged.*?cx\.notify\(\).*?cx\.emit\(ItemEvent::UpdateTab\).*?fn render_session_context_strip.*?foreground_process_command_name\(\).*?terminal_foreground_agent_presentation.*?terminal_foreground_multiplexer_presentation.*?terminal_context_activity_label\(status, foreground_agent, foreground_multiplexer\).*?activity_accessibility_label.*?activity_label_visible.*?Label::new\(activity_label\.unwrap_or_default\(\)\).*?fn tab_icon_element.*?foreground_process_command_name\(\).*?terminal_foreground_agent_presentation.*?terminal_foreground_multiplexer_presentation.*?terminal_tab_icon_presentation.*?running in terminal' \
@@ -3419,8 +3422,11 @@ require_pattern crates/workspace/src/panel_pane.rs \
     '"ProjectPanel" => "Files"' \
     'the Dez file-tree Surface is not labeled Files'
 require_multiline_pattern crates/workspace/src/panel_pane.rs \
-    'matches!\(panel_key, "TerminalPanel" \| "CollaborationPanel"\).*?\(app_name == "Zed"\)\.then_some\(Self::Project\)' \
-    'Dez can regress to exposing inherited Terminal or Collaboration panels as duplicate Workspace Tool surfaces'
+    'panel_key == "TerminalPanel".*?\(app_name == "Zed"\)\.then_some\(Self::Project\)' \
+    'Dez can regress to exposing the inherited Terminal panel as a duplicate Workspace Tool surface'
+require_pattern crates/workspace/src/panel_pane.rs \
+    'panel_key == "CollaborationPanel"' \
+    'the Collaboration panel can regress to being unreachable from the Dez Workspace Tools surface'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn close_panel<T: Panel>\(&mut self.*?panel_item_for::<T>.*?ensure_tabbed_pane.*?mark_canvas_layout_custom.*?pane\.set_visible\(false.*?set_active_pane.*?serialize_workspace' \
     'panel close actions can regress to affecting legacy docks only and leave Workspace Tools visibly open'
@@ -3491,7 +3497,7 @@ reject_pattern crates/workspace/src/history_manager.rs \
     'recent_project_workspaces\(fs\.as_ref\(\)\)' \
     'launch history can regress to triggering protected-folder access prompts'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'fn welcome_summary.*?"Start a terminal or agent in this Workspace, then inspect the code and verify the diff\.".*?"Open a Workspace, run an agent, and review changes in one place\.".*?fn welcome_title.*?has_workspace.*?"Continue in this Workspace".*?"Start a Workspace".*?let page_title = welcome_title\(APP_NAME, has_workspace\);.*?let page_summary = welcome_summary\(APP_NAME, has_workspace\);.*?Headline::new\(page_title\).*?when\(!installation_required.*?Label::new\(page_summary\)' \
+    'fn welcome_summary.*?"Run a tool, supervise its work, then review it\.".*?"Open a folder or repository to get started\.".*?fn welcome_title.*?has_workspace.*?"Continue in this Workspace".*?"Start a Workspace".*?let page_title = welcome_title\(APP_NAME, has_workspace\);.*?let page_summary = welcome_summary\(APP_NAME, has_workspace\);.*?Headline::new\(page_title\).*?when\(!installation_required.*?Label::new\(page_summary\)' \
     'the Dez welcome headline no longer explains the Workspace-to-IDE product promise'
 require_multiline_pattern crates/workspace/src/welcome.rs \
     'impl RenderOnce for SectionHeader.*?role\(gpui::Role::Heading\).*?aria_level\(2\).*?aria_label\(accessibility_title\).*?let page_title = welcome_title\(APP_NAME, has_workspace\).*?id\("dez-home-heading"\).*?role\(gpui::Role::Heading\).*?aria_level\(1\).*?aria_label\(page_title\).*?Headline::new\(page_title\).*?welcome_title\("Dez", false\), "Start a Workspace".*?welcome_title\("Dez", true\), "Continue in this Workspace"' \

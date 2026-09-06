@@ -849,9 +849,8 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
         let project_panel = ProjectPanel::load(workspace_handle.clone(), cx.clone());
         let outline_panel = OutlinePanel::load(workspace_handle.clone(), cx.clone());
         let git_panel = GitPanel::load(workspace_handle.clone(), cx.clone());
-        let channels_panel = (APP_NAME == "Zed").then(|| {
-            collab_ui::collab_panel::CollabPanel::load(workspace_handle.clone(), cx.clone())
-        });
+        let channels_panel =
+            collab_ui::collab_panel::CollabPanel::load(workspace_handle.clone(), cx.clone());
         let channels_workspace_handle = workspace_handle.clone();
         let channels_cx = cx.clone();
         let debug_panel = DebugPanel::load(workspace_handle.clone(), cx);
@@ -875,12 +874,11 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
             add_panel_when_ready(project_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(outline_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(git_panel, workspace_handle.clone(), cx.clone()),
-            async move {
-                if let Some(channels_panel) = channels_panel {
-                    add_panel_when_ready(channels_panel, channels_workspace_handle, channels_cx)
-                        .await;
-                }
-            },
+            add_panel_when_ready(
+                channels_panel,
+                channels_workspace_handle,
+                channels_cx,
+            ),
             async move {
                 debug_panel.await.context("failed to load debug panel").log_err();
             },
@@ -2876,7 +2874,6 @@ const AI_ACTION_NAMESPACES: &[&str] = &[
 const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &[
     "channel_modal::",
     "collab::",
-    "collab_panel::",
     "terminal_panel::",
 ];
 const DEZ_HIDDEN_ACTIONS: &[&str] = &["workspace::FollowNextCollaborator"];
@@ -7113,7 +7110,6 @@ mod tests {
     #[test]
     fn dez_drops_inherited_collaboration_keybindings() {
         for action_name in [
-            "collab_panel::ToggleFocus",
             "collab::ShareProject",
             "channel_modal::ToggleMode",
             "terminal_panel::Toggle",
@@ -7123,6 +7119,13 @@ mod tests {
             assert!(is_dez_hidden_keybinding_name(action_name, "Dez"));
             assert!(!is_dez_hidden_keybinding_name(action_name, "Zed"));
         }
+
+        // The Collaboration panel is restored as a Workspace Tool in Dez, so
+        // its panel-level keybindings stay available.
+        assert!(!is_dez_hidden_keybinding_name(
+            "collab_panel::ToggleFocus",
+            "Dez"
+        ));
 
         for action_name in ["workspace::NewTerminal", "editor::ToggleCodeActions"] {
             assert!(!is_dez_hidden_keybinding_name(action_name, "Dez"));

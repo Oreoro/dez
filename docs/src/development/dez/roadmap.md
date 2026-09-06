@@ -490,6 +490,18 @@ code, all launch gates pass, and known limitations are documented.
 
 ## Progress {#progress}
 
+- [x] 2026-09-06: Restore the Collaboration panel as a Dez Workspace Tool.
+      `CollabPanel` loads again in every window, routes into the native
+      Workspace Tools pane surface, and gains `workspace::RevealCollab` plus
+      **Open Collab** entries in the pane Add menu and the active Workspace
+      header menu; `workspace::RevealOutline` similarly exposes Outline. The
+      demoted account, call, and channel-modal chrome stays hidden: `collab::`
+      and `channel_modal::` keybindings remain filtered while panel-level
+      `collab_panel::` shortcuts work again. The identity check now requires
+      the Dez panel load, rejects a Zed-gated load, and requires the
+      Collaboration routing. The surface contract Add-menu wireframe names the
+      Collab destination. Source checks pass; compiled and rendered proof
+      remains deferred to CI.
 - [x] 2026-07-23: Prepare the canonical public source repository. Replace the
       inherited Zed front page with an honest Dez v0.0.1 source-candidate
       README, add a public **What is Dez?** guide to documentation navigation,

@@ -4164,6 +4164,71 @@ impl Render for TerminalView {
 impl Item for TerminalView {
     type Event = ItemEvent;
 
+    fn tab_icon(&self, _window: &Window, cx: &App) -> Option<Icon> {
+        let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let (icon, color) = terminal_tab_icon_presentation(
+            terminal.task().map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+
+        Some(Icon::new(icon).size(IconSize::Small).color(color))
+    }
+
+    fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
+        let terminal_entity_id = self.terminal().entity_id();
+        let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let terminal_task = terminal.task();
+        let (icon, icon_color) = terminal_tab_icon_presentation(
+            terminal_task.map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+        let rerun_button = terminal_task.and_then(TerminalView::rerun_button);
+        let foreground_process_label = foreground_agent
+            .or(foreground_multiplexer)
+            .map(|process| format!("{} running in terminal", process.display_name));
+
+        Some(
+            h_flex()
+                .id(("terminal-tab-icon", terminal_entity_id))
+                .relative()
+                .flex_none()
+                .size(IconSize::Small.rems())
+                .items_center()
+                .justify_center()
+                .group("term-tab-icon")
+                .when_some(foreground_process_label, |this, label| {
+                    this.role(gpui::Role::Label).aria_label(label)
+                })
+                .child(
+                    div()
+                        .when(rerun_button.is_some(), |this| {
+                            this.group_hover("", |style| style.invisible())
+                        })
+                        .child(Icon::new(icon).size(IconSize::Small).color(icon_color)),
+                )
+                .when_some(rerun_button, |this, rerun_button| {
+                    this.child(div().absolute().visible_on_hover("").child(rerun_button))
+                })
+                .into_any(),
+        )
+    }
+
     fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
         let title = terminal_surface_tab_label(
             paths::APP_NAME,
@@ -4344,77 +4409,6 @@ impl Item for TerminalView {
                 })
                 .into_any(),
         )
-    }
-
-        let self_handle = self.self_handle.clone();
-        h_flex()
-            .gap_1()
-            .group("term-tab-icon")
-            .when(!params.selected, |this| {
-                this.track_focus(&self.focus_handle)
-            })
-            .on_action(move |action: &RenameTerminal, window, cx| {
-                self_handle
-                    .update(cx, |this, cx| this.rename_terminal(action, window, cx))
-                    .ok();
-            })
-            .child(
-                h_flex()
-                    .group("term-tab-icon")
-                    .child(
-                        div()
-                            .when(rerun_button.is_some(), |this| {
-                                this.hover(|style| style.invisible().w_0())
-                            })
-                            .child(Icon::new(icon).color(icon_color)),
-                    )
-                    .when_some(rerun_button, |this, rerun_button| {
-                        this.child(
-                            div()
-                                .absolute()
-                                .visible_on_hover("term-tab-icon")
-                                .child(rerun_button),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .relative()
-                    .child(
-                        Label::new(title)
-                            .single_line()
-                            .color(params.text_color())
-                            .when(self.is_renaming(), |this| this.alpha(0.)),
-                    )
-                    .when_some(self.rename_editor.clone(), |this, editor| {
-                        let self_handle = self.self_handle.clone();
-                        let self_handle_cancel = self.self_handle.clone();
-                        this.child(
-                            div()
-                                .absolute()
-                                .top_0()
-                                .left_0()
-                                .size_full()
-                                .child(editor)
-                                .on_action(move |_: &menu::Confirm, window, cx| {
-                                    self_handle
-                                        .update(cx, |this, cx| {
-                                            this.finish_renaming(true, window, cx)
-                                        })
-                                        .ok();
-                                })
-                                .on_action(move |_: &menu::Cancel, window, cx| {
-                                    self_handle_cancel
-                                        .update(cx, |this, cx| {
-                                            this.finish_renaming(false, window, cx)
-                                        })
-                                        .ok();
-                                }),
-                        )
-                    }),
-            )
-            .into_any()
-    }
 
     fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
         let title = self

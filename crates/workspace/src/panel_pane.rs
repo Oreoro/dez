@@ -27,9 +27,10 @@ impl PanelPaneKind {
     }
 
     fn for_panel_key_and_app(panel_key: &str, app_name: &str) -> Option<Self> {
-        if matches!(panel_key, "TerminalPanel" | "CollaborationPanel") {
+        if panel_key == "TerminalPanel" {
             (app_name == "Zed").then_some(Self::Project)
-        } else if PROJECT_TOOL_PANEL_KEYS.contains(&panel_key) {
+        } else if panel_key == "CollaborationPanel" || PROJECT_TOOL_PANEL_KEYS.contains(&panel_key)
+        {
             Some(Self::Project)
         } else if panel_key == AGENT_PANEL_KEY {
             Some(Self::Agent)
@@ -170,9 +171,9 @@ mod tests {
             "official Zed keeps its inherited Terminal Panel behavior"
         );
         assert_eq!(
-            PanelPaneKind::for_panel_key_and_app("CollaborationPanel", "Dez"),
-            None,
-            "Dez Workspace Tools must not regain the removed Collaboration surface"
+            PanelPaneKind::for_panel_key("CollaborationPanel"),
+            Some(PanelPaneKind::Project),
+            "the Collaboration panel is restored as a Workspace Tool in Dez"
         );
         assert_eq!(
             PanelPaneKind::for_panel_key_and_app("CollaborationPanel", "Zed"),

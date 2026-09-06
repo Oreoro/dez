@@ -1,7 +1,8 @@
 use crate::{
     AddActiveFileToEvidence, BrowseRunningSessions, CloseWindow, MultiWorkspace, NewCenterTerminal,
     NewFile, NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
-    RemoveActiveFileFromEvidence, RevealBuiltInAgent, RevealDebug, RevealFiles, RevealGitChanges,
+    RemoveActiveFileFromEvidence, RevealBuiltInAgent, RevealCollab, RevealDebug, RevealFiles,
+    RevealGitChanges, RevealOutline,
     SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
     ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
@@ -6135,7 +6136,9 @@ fn render_new_surface_control(pane: &Pane, cx: &App) -> AnyElement {
                             }
                             .boxed_clone(),
                         )
+                        .action_with_icon("Outline", IconName::ToC, RevealOutline.boxed_clone())
                         .action_with_icon("Debug", IconName::Debug, RevealDebug.boxed_clone())
+                        .action_with_icon("Collab", IconName::UserGroup, RevealCollab.boxed_clone())
                         .separator()
                         .action_with_icon(
                             search_symbols,

@@ -971,7 +971,7 @@ fn session_empty_state_copy(
             (
                 IconName::Terminal,
                 "No activity yet",
-                "Open a terminal or run an agent. Running work, attention, recovery, and review-ready changes appear here automatically.",
+                "Open a terminal or run an agent. Its activity and attention appear here.",
             )
         }
     }
@@ -10836,6 +10836,7 @@ impl Sidebar {
                                         name: "debug".to_owned(),
                                     }),
                                 )
+                                .action("Open Collab", Box::new(workspace::RevealCollab))
                                 .separator()
                         });
 

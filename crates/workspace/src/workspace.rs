@@ -2942,6 +2942,10 @@ actions!(
         RevealGitChanges,
         /// Reveals and focuses Debug in the native Workspace Tools pane.
         RevealDebug,
+        /// Reveals and focuses Outline in the native Workspace Tools pane.
+        RevealOutline,
+        /// Reveals and focuses the native Collab panel.
+        RevealCollab,
         /// Reveals and focuses the native Built-in Agent pane.
         RevealBuiltInAgent,
     ]
@@ -14460,6 +14464,16 @@ impl Workspace {
                     workspace.activate_panel_for_proto_id(PanelId::DebugPanel, window, cx);
                 }),
             )
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &RevealCollab, window, cx| {
+                    workspace.activate_panel_item_for_key("CollaborationPanel", true, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &RevealOutline, window, cx| {
+                    workspace.activate_panel_item_for_key("OutlinePanel", true, window, cx);
+                },
+            ))
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &RevealBuiltInAgent, window, cx| {
                     workspace.activate_panel_for_proto_id(PanelId::AssistantPanel, window, cx);

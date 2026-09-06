@@ -281,9 +281,9 @@ fn welcome_summary(app_name: &str, has_workspace: bool) -> &'static str {
     if app_name == "Zed" {
         "Write. Delegate. Watch. Verify."
     } else if has_workspace {
-        "Start a terminal or agent in this Workspace, then inspect the code and verify the diff."
+        "Run a tool, supervise its work, then review it."
     } else {
-        "Open a Workspace, run an agent, and review changes in one place."
+        "Open a folder or repository to get started."
     }
 }
 
@@ -492,21 +492,21 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::AiOpenAi,
                 title: "Codex",
-                meta: Some("Agent CLI"),
+                meta: None,
                 action: &OPEN_CODEX_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::AiClaude,
                 title: "Claude Code",
-                meta: Some("Agent CLI"),
+                meta: None,
                 action: &OPEN_CLAUDE_CODE_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::AiOpenCode,
                 title: "OpenCode",
-                meta: Some("Agent CLI"),
+                meta: None,
                 action: &OPEN_OPEN_CODE_TERMINAL,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -539,14 +539,14 @@ const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
             SectionEntry {
                 icon: IconName::FolderOpen,
                 title: "Open Files",
-                meta: Some("Inspect code"),
+                meta: None,
                 action: &REVEAL_FILES,
                 visibility_guard: SectionVisibility::Always,
             },
             SectionEntry {
                 icon: IconName::Diff,
                 title: "Review Changes",
-                meta: Some("Verify the diff"),
+                meta: None,
                 action: &REVEAL_GIT_CHANGES,
                 visibility_guard: SectionVisibility::Always,
             },
@@ -847,12 +847,8 @@ impl WelcomePage {
                     .py_2()
                     .role(gpui::Role::Status)
                     .aria_label(format!("{title}. {description}"))
-                    .child(
-                        Icon::new(IconName::Robot)
-                            .color(Color::Muted)
-                            .size(IconSize::Small),
-                    )
-                    .child(Label::new("Collaborate with Agents")),
+                    .child(Icon::new(icon).color(Color::Muted).size(IconSize::Small))
+                    .child(Label::new(title)),
             )
             .child(
                 Label::new(description)
@@ -1554,11 +1550,11 @@ mod tests {
     fn dez_home_states_the_workflow_without_a_persistent_walkthrough() {
         assert_eq!(
             welcome_summary("Dez", false),
-            "Open a Workspace, run an agent, and review changes in one place."
+            "Open a folder or repository to get started."
         );
         assert_eq!(
             welcome_summary("Dez", true),
-            "Start a terminal or agent in this Workspace, then inspect the code and verify the diff."
+            "Run a tool, supervise its work, then review it."
         );
         assert_eq!(
             welcome_summary("Zed", true),
