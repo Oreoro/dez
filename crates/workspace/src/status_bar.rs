@@ -997,8 +997,7 @@ impl StatusBar {
                             _,
                             RepositoryEvent::StatusesChanged
                                 | RepositoryEvent::HeadChanged
-                                | RepositoryEvent::BranchListChanged
-                                | RepositoryEvent::GitDirectoryChanged,
+                                | RepositoryEvent::BranchListChanged,
                             true,
                         )
                 ) {

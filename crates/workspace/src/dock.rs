@@ -1121,7 +1121,7 @@ impl Dock {
         cx.notify();
     }
 
-    fn resize_active_panel(
+    pub(crate) fn resize_active_panel(
         &mut self,
         size: Option<Pixels>,
         flex: Option<f32>,
@@ -1192,7 +1192,7 @@ impl Dock {
             .contains(&self.position)
     }
 
-    fn resize_all_panels(
+    pub(crate) fn resize_all_panels(
         &mut self,
         size: Option<Pixels>,
         flex: Option<f32>,

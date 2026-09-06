@@ -1,13 +1,14 @@
 use anyhow::{Context as _, Result};
 use fs::Fs;
 
+use agent_settings::AgentSettings;
 use gpui::{
     AnyView, App, Context, DragMoveEvent, Entity, EntityId, EventEmitter, FocusHandle, Focusable,
     ManagedView, MouseButton, Pixels, Render, Subscription, Task, TaskExt, WeakEntity, Window,
     WindowId, actions, deferred, px,
 };
-use project::Project;
 pub use project::ProjectGroupKey;
+use project::{DisableAiSettings, Project};
 use remote::RemoteConnectionOptions;
 use settings::Settings;
 pub use settings::SidebarSide;
@@ -867,7 +868,7 @@ impl MultiWorkspace {
             multi_workspace.apply_open_sidebar(false, cx);
         }
 
-        let active_workspace = multi_workspace.active_workspace.clone();
+        let active_workspace = multi_workspace.workspace().clone();
         let viewport_id = multi_workspace.window_id.as_u64();
         active_workspace.update(cx, |workspace, cx| {
             workspace.mark_durable_session_active(viewport_id, cx);
@@ -895,7 +896,8 @@ impl MultiWorkspace {
         self.sidebar = Some(Box::new(sidebar));
         if self.sidebar_open {
             let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
-            for workspace in self.retained_workspaces.clone() {
+            for workspace in self.workspaces() {
+                let workspace = workspace.clone();
                 workspace.update(cx, |workspace, _cx| {
                     workspace.set_sidebar_focus_handle(sidebar_focus_handle.clone());
                 });
@@ -1153,7 +1155,7 @@ impl MultiWorkspace {
         self.retain_active_workspace_without_serializing(cx);
         let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
         for workspace in self.workspaces().cloned().collect::<Vec<_>>() {
-            workspace.update(cx, |workspace, _cx| {
+            workspace.update(cx, |workspace, cx| {
                 workspace.set_sidebar_focus_handle(sidebar_focus_handle.clone());
                 workspace.notify_panes(cx);
             });
@@ -1203,7 +1205,7 @@ impl MultiWorkspace {
         self.sidebar_auto_close_pending = false;
         self.sidebar_open = false;
         for workspace in self.workspaces().cloned().collect::<Vec<_>>() {
-            workspace.update(cx, |workspace, _cx| {
+            workspace.update(cx, |workspace, cx| {
                 workspace.set_sidebar_focus_handle(None);
                 workspace.notify_panes(cx);
             });
@@ -2064,6 +2066,18 @@ impl MultiWorkspace {
         let key = self.held[index].workspace.read(cx).project_group_key(cx);
         self.pin(index, key, cx);
         self.serialize(cx);
+        cx.notify();
+    }
+
+    /// Same as `retain_active_workspace` but skips serialization, for use
+    /// during state transitions that will serialize themselves afterwards.
+    pub fn retain_active_workspace_without_serializing(&mut self, cx: &mut Context<Self>) {
+        let index = self.displayed_index();
+        if self.held[index].pinned {
+            return;
+        }
+        let key = self.held[index].workspace.read(cx).project_group_key(cx);
+        self.pin(index, key, cx);
         cx.notify();
     }
 

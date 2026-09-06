@@ -860,27 +860,6 @@ impl WelcomePage {
                     .color(Color::Muted)
                     .mb_2(),
             )
-            .child(
-                Button::new("open-agent", "Open Agent Panel")
-                    .full_width()
-                    .tab_index(tab_index as isize)
-                    .style(ButtonStyle::Outlined)
-                    .key_binding(
-                        KeyBinding::for_action_in(&ToggleFocus, &self.focus_handle, cx)
-                            .size(rems_from_px(12_f32)),
-                    )
-                    .child(
-                        v_flex()
-                            .min_w_0()
-                            .gap_0p5()
-                            .child(Label::new(title).size(welcome_primary_label_size(APP_NAME)))
-                            .child(
-                                Label::new(description)
-                                    .size(welcome_secondary_label_size(APP_NAME))
-                                    .color(Color::Muted),
-                            ),
-                    ),
-            )
     }
 
     fn render_recent_workspace_error(
@@ -1149,49 +1128,43 @@ impl Render for WelcomePage {
             .size_full()
             .bg(welcome_background)
             .justify_center()
-            .child(
-                v_flex()
-                    .id("welcome-content")
-                    .p_8()
-                    .max_w_128()
-                    .size_full()
-                    .gap_6()
-                    .justify_center()
-                    .overflow_y_scroll()
-                    .child(
-                        h_flex()
-                            .w_full()
-                            .justify_center()
-                            .mb_4()
-                            .gap_4()
-                            .child(Vector::square(VectorName::ZedLogo, rems_from_px(45_f32)))
-                            .child(
-                                v_flex().child(Headline::new(welcome_label)).child(
-                                    Label::new("The editor for what's next")
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted)
-                                        .italic(),
-                                ),
-                            ),
-                    )
-                    .child(first_section.render(Default::default(), &self.focus_handle))
-                    .child(second_section)
-                    .when(ai_enabled && !showing_recent_projects, |this| {
-                        let agent_tab_index = next_tab_index;
-                        next_tab_index += 1;
-                        this.child(self.render_agent_card(agent_tab_index, cx))
-                    })
-                    .when(!self.fallback_to_recent_projects, |this| {
-                        this.child(
-                            v_flex().gap_4().child(Divider::horizontal()).child(
-                                Button::new("welcome-exit", "Return to Onboarding")
-                                    .tab_index(next_tab_index as isize)
-                                    .full_width()
-                                    .label_size(LabelSize::XSmall)
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
-                                    }),
-                            ),
+            .when(is_dez, |this| this.items_start())
+            .child(container_query(move |available_size, _window, cx| {
+                let responsive_width = welcome_responsive_viewport_width(
+                    APP_NAME,
+                    available_size.width,
+                    crate::interface_scale(cx),
+                );
+                let compact_spacing = dez_welcome_uses_compact_spacing(APP_NAME, responsive_width);
+                let split_layout = dez_welcome_uses_split_layout(
+                    APP_NAME,
+                    responsive_width,
+                    has_secondary_content,
+                );
+                let home_separator = cx.theme().colors().border_variant;
+                let mut secondary_content = secondary_content;
+                let sections = if split_layout {
+                    h_flex()
+                        .id("welcome-sections")
+                        .w_full()
+                        .min_w_0()
+                        .items_start()
+                        .gap_6()
+                        .child(
+                            div()
+                                .min_w_0()
+                                .flex_1()
+                                .when(is_dez, |this| this.px_1())
+                                .child(first_section.render(
+                                    action_tab_offset,
+                                    &section_focus_handle,
+                                    welcome_emphasizes_first_action(APP_NAME),
+                                    true,
+                                    first_entry_label_override.clone(),
+                                    first_entry_meta_override.clone(),
+                                    first_entry_icon_override,
+                                    local_workspace,
+                                )),
                         )
                         .when_some(secondary_content.take(), |this, secondary_content| {
                             this.child(

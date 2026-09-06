@@ -2402,6 +2402,7 @@ mod dez_sidebar_chrome_tests {
         assert!(!canvas_layout_menu_visible("Dez", false, false));
         assert!(!canvas_layout_menu_visible("Zed", true, true));
     }
+}
 
 mod tests {
     use super::*;

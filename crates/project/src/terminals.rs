@@ -2,7 +2,7 @@ use anyhow::Result;
 use collections::HashMap;
 use gpui::{App, AppContext as _, Context, Entity, Task, WeakEntity};
 
-use futures::{FutureExt, future::Shared};
+use futures::{FutureExt, StreamExt as _, future::Shared};
 use itertools::Itertools as _;
 use language::LanguageName;
 use remote::{Interactive, RemoteClient};
@@ -16,6 +16,14 @@ use std::{
 use task::{Shell, ShellBuilder, ShellKind, SpawnInTerminal};
 use terminal::{
     Terminal, TerminalBuilder, TerminalMode, insert_zed_terminal_env,
+    session_host::{
+        TerminalSessionCommand, TerminalSessionId, TerminalSessionShell,
+        transport::{
+            TERMINAL_HOST_BIN_ENV, TERMINAL_HOST_ID_ENV, TERMINAL_HOST_SOCKET_ENV,
+            TERMINAL_HOST_TOKEN_FILE_ENV, TERMINAL_SESSION_ID_ENV, TerminalHostConnection,
+            TerminalHostResponse, terminal_host_executable_path,
+        },
+    },
     terminal_settings::TerminalSettings,
 };
 use util::{
@@ -499,20 +507,112 @@ impl Project {
                                 ..
                             } => None,
                         }
-                    };
-                    anyhow::Ok(TerminalBuilder::new(
-                        local_path.map(|path| path.to_path_buf()),
-                        TerminalMode::interactive(),
+                    });
+                    match detail {
+                        Some(detail) => anyhow::bail!(
+                            "the Dez terminal service is unavailable: {detail}; no disposable fallback shell was started"
+                        ),
+                        None => anyhow::bail!(
+                            "the Dez terminal service is unavailable; no disposable fallback shell was started"
+                        ),
+                    }
+                }
+            }
+            let (builder, hosted_session) = if let Some(connection) = hosted_connection {
+                let session_id = TerminalSessionId::new();
+                let working_directory = local_path.map(|path| path.to_path_buf());
+                let shell = settings.shell;
+                env.remove("SHLVL");
+                if std::env::var("LANG").is_err() {
+                    env.entry("LANG".to_owned())
+                        .or_insert_with(|| "en_US.UTF-8".to_owned());
+                }
+                cx.update(|cx| {
+                    insert_zed_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
+                });
+                if let Ok(helper) = terminal_host_executable_path() {
+                    env.insert(
+                        TERMINAL_HOST_BIN_ENV.to_owned(),
+                        helper.to_string_lossy().into_owned(),
+                    );
+                }
+                env.insert(
+                    TERMINAL_HOST_SOCKET_ENV.to_owned(),
+                    connection
+                        .endpoint()
+                        .socket_path()
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                env.insert(
+                    TERMINAL_HOST_TOKEN_FILE_ENV.to_owned(),
+                    connection
+                        .endpoint()
+                        .token_file_path()
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                env.insert(TERMINAL_HOST_ID_ENV.to_owned(), connection.host_id().to_string());
+                env.insert(TERMINAL_SESSION_ID_ENV.to_owned(), session_id.to_string());
+                let hosted_shell = match &shell {
+                    Shell::System => None,
+                    Shell::Program(program) => Some(TerminalSessionShell {
+                        program: program.clone(),
+                        args: Vec::new(),
+                    }),
+                    Shell::WithArguments { program, args, .. } => Some(TerminalSessionShell {
+                        program: program.clone(),
+                        args: args.clone(),
+                    }),
+                };
+                let response = connection
+                    .command(TerminalSessionCommand::Create {
+                        session_id,
+                        working_directory: working_directory.clone(),
+                        shell: hosted_shell,
+                        environment: env
+                            .iter()
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect(),
+                        columns: 80,
+                        rows: 24,
+                    })
+                    .await?;
+                match response {
+                    TerminalHostResponse::Snapshot { snapshot } if snapshot.state.may_be_live() => {
+                    }
+                    TerminalHostResponse::Error { message }
+                    | TerminalHostResponse::Unsupported { message } => {
+                        anyhow::bail!("terminal host could not create a shell: {message}");
+                    }
+                    TerminalHostResponse::Snapshot { snapshot } => {
+                        anyhow::bail!(
+                            "terminal host created a non-live shell state: {}",
+                            snapshot.state.label()
+                        );
+                    }
+                    TerminalHostResponse::Sessions { .. }
+                    | TerminalHostResponse::Attachment { .. }
+                    | TerminalHostResponse::Heartbeat { .. }
+                    | TerminalHostResponse::Events { .. } => {
+                        anyhow::bail!("terminal host returned an invalid create response");
+                    }
+                }
+                let controller = connection.controller(session_id);
+                let builder = project.update(cx, move |_, cx| {
+                    TerminalBuilder::new_hosted(
+                        session_id,
+                        controller,
+                        working_directory,
                         shell,
                         env,
                         settings.cursor_shape,
                         settings.alternate_scroll,
                         settings.max_scroll_history_lines,
                         settings.path_hyperlink_regexes,
-                        Duration::from_millis(settings.path_hyperlink_timeout_ms),
-                        is_via_remote,
+                        settings.path_hyperlink_timeout_ms,
                         cx.entity_id().as_u64(),
-                        cx,
+                        cx.background_executor(),
                         activation_script,
                         path_style,
                     )
@@ -531,7 +631,7 @@ impl Project {
                         };
                         anyhow::Ok(TerminalBuilder::new(
                             local_path.map(|path| path.to_path_buf()),
-                            None,
+                            TerminalMode::interactive(),
                             shell,
                             env,
                             settings.cursor_shape,
@@ -541,7 +641,6 @@ impl Project {
                             Duration::from_millis(settings.path_hyperlink_timeout_ms),
                             is_via_remote,
                             cx.entity_id().as_u64(),
-                            None,
                             cx,
                             activation_script,
                             path_style,
