@@ -212,17 +212,29 @@ impl PtyProcessInfo {
         self.refresh_pending.store(false, Ordering::Release);
         let previous = self.current.read().clone();
         let this = self.clone();
-        let refresh = cx
-            .background_executor()
-            .spawn(async move { this.load() != previous });
+        let refresh = cx.background_executor().spawn(async move {
+            let current = this.load();
+            let changed = current != previous;
+            let changed_cwd = match (&previous, &current) {
+                (Some(previous), Some(current)) if previous.cwd != current.cwd => {
+                    Some(current.cwd.clone())
+                }
+                (None, Some(current)) => Some(current.cwd.clone()),
+                _ => None,
+            };
+            (changed, changed_cwd)
+        });
         let this = Arc::downgrade(self);
         *self.task.lock() = Some(cx.spawn(async move |terminal, cx| {
-            let changed = refresh.await;
+            let (changed, changed_cwd) = refresh.await;
             if let Some(this) = this.upgrade() {
                 this.task.lock().take();
                 let refresh_again = this.refresh_pending.swap(false, Ordering::AcqRel);
                 terminal
-                    .update(cx, |_terminal, cx| {
+                    .update(cx, |terminal, cx| {
+                        if let Some(working_directory) = changed_cwd {
+                            terminal.record_cwd_change(working_directory);
+                        }
                         if changed {
                             cx.emit(Event::ProcessInfoChanged);
                         }
