@@ -58,8 +58,8 @@ use ui::{
 };
 use util::{ResultExt as _, paths::PathMatcher};
 use workspace::{
-    DeploySearch, ItemNavHistory, NewSearch, ToolbarItemEvent, ToolbarItemLocation,
-    ToolbarItemView, Workspace, WorkspaceId,
+    DeploySearch, DesignSystemSettings, ItemNavHistory, NewSearch, ToolbarItemEvent,
+    ToolbarItemLocation, ToolbarItemView, Workspace, WorkspaceId,
     item::{Item, ItemBufferKind, ItemEvent, ItemHandle, SaveOptions},
     searchable::{Direction, SearchEvent, SearchToken, SearchableItem, SearchableItemHandle},
 };
@@ -121,13 +121,19 @@ fn workspace_search_state_copy(search_state: SearchState) -> WorkspaceSearchStat
             description: "Type a query above, then press Enter. Add path filters only when you need to narrow the scope.",
             busy: false,
         },
-        SearchState::Running(SearchActivity::WaitingForScan) => WorkspaceSearchStateCopy {
+        SearchState::Running {
+            activity: SearchActivity::WaitingForScan,
+            ..
+        } => WorkspaceSearchStateCopy {
             icon: IconName::LoadCircle,
             title: "Preparing Workspace Search",
             description: "Scanning files before the search begins. Results will appear here automatically.",
             busy: true,
         },
-        SearchState::Running(SearchActivity::Searching) => WorkspaceSearchStateCopy {
+        SearchState::Running {
+            activity: SearchActivity::Searching,
+            ..
+        } => WorkspaceSearchStateCopy {
             icon: IconName::LoadCircle,
             title: "Searching Workspace",
             description: "Scanning files for the current query. Results will appear here as they are found.",
@@ -175,13 +181,17 @@ mod product_label_tests {
         assert!(idle.description.contains("press Enter"));
         assert!(!idle.busy);
 
-        let preparing =
-            workspace_search_state_copy(SearchState::Running(SearchActivity::WaitingForScan));
+        let preparing = workspace_search_state_copy(SearchState::Running {
+            activity: SearchActivity::WaitingForScan,
+            previous_completion: None,
+        });
         assert_eq!(preparing.title, "Preparing Workspace Search");
         assert!(preparing.busy);
 
-        let searching =
-            workspace_search_state_copy(SearchState::Running(SearchActivity::Searching));
+        let searching = workspace_search_state_copy(SearchState::Running {
+            activity: SearchActivity::Searching,
+            previous_completion: None,
+        });
         assert_eq!(searching.title, "Searching Workspace");
         assert!(searching.busy);
 
@@ -1166,37 +1176,25 @@ impl Render for ProjectSearchView {
                 .size_full()
                 .track_focus(&self.focus_handle(cx))
                 .child(self.results_editor.clone())
-        } else {
-            let model = self.entity.read(cx);
+                .into_any_element();
+        }
 
-            let heading_text = match model.search_state {
-                SearchState::Running { .. } if model.search_state.no_results_so_far() => {
-                    "No Results"
-                }
-                SearchState::Running {
-                    activity: SearchActivity::WaitingForScan,
-                    ..
-                } => "Loading project…",
-                SearchState::Running {
-                    activity: SearchActivity::Searching,
-                    ..
-                } => "Searching…",
-                SearchState::Completed(SearchCompletion::NoResults) => "No Results",
-                _ => "Search All Files",
-            };
-
-            let heading_text = div()
-                .justify_center()
-                .child(Label::new(heading_text).size(LabelSize::Large));
-
-            let page_content: Option<AnyElement> = match model.search_state {
-                SearchState::Idle => Some(self.landing_text_minor(cx).into_any_element()),
-                _ if model.search_state.no_results_so_far() => Some(
-                    Label::new("No results found in this project for the provided query")
-                        .size(LabelSize::Small)
-                        .into_any_element(),
-                ),
-                _ => None,
+        let search_state = self.entity.read(cx).search_state;
+        if paths::APP_NAME != "Zed" {
+            let state = workspace_search_state_copy(search_state);
+            let animate_state_icon = state.busy
+                && DesignSystemSettings::get_global(cx).motion != settings::CanvasMotion::Reduced;
+            let state_icon = Icon::new(state.icon)
+                .size(IconSize::Small)
+                .color(if state.busy {
+                    Color::Accent
+                } else {
+                    Color::Muted
+                });
+            let state_icon = if animate_state_icon {
+                state_icon.with_rotate_animation(2).into_any_element()
+            } else {
+                state_icon.into_any_element()
             };
             let accessibility_label = format!("{}. {}", state.title, state.description);
 
@@ -1215,7 +1213,7 @@ impl Render for ProjectSearchView {
                         .role(gpui::Role::Status)
                         .aria_label(accessibility_label)
                         .w_full()
-                        .max_w(rems_from_px(640.))
+                        .max_w(rems_from_px(640_f32))
                         .overflow_y_scroll()
                         .px_6()
                         .py_8()
@@ -1248,10 +1246,14 @@ impl Render for ProjectSearchView {
         }
 
         let heading_text = match search_state {
-            SearchState::Running(SearchActivity::WaitingForScan) => {
-                workspace_search_loading_label(paths::APP_NAME)
-            }
-            SearchState::Running(SearchActivity::Searching) => "Searching…",
+            SearchState::Running {
+                activity: SearchActivity::WaitingForScan,
+                ..
+            } => workspace_search_loading_label(paths::APP_NAME),
+            SearchState::Running {
+                activity: SearchActivity::Searching,
+                ..
+            } => "Searching…",
             SearchState::Completed(SearchCompletion::NoResults) => "No Results",
             _ => "Search All Files",
         };

@@ -2012,6 +2012,7 @@ impl MultiWorkspace {
         let old_active_workspace = self.workspace().clone();
         let old_active_was_retained = self.active_workspace_is_retained();
         let should_retain_workspaces = self.multi_workspace_enabled(cx);
+        let workspace_database_id = workspace.read(cx).database_id();
 
         if should_retain_workspaces && !old_active_was_retained {
             let key = old_active_workspace.read(cx).project_group_key(cx);
@@ -2028,6 +2029,7 @@ impl MultiWorkspace {
         // Publish the new active workspace before anyone reads the shared cell
         // to decide who owns the window chrome.
         self.active_workspace_id.set(workspace.entity_id());
+        self.active_workspace_database_id = workspace_database_id;
 
         let stamp = self
             .held
@@ -2153,9 +2155,9 @@ impl MultiWorkspace {
         }));
     }
 
-    fn serialize_now(&mut self, cx: &mut Context<Self>) -> Task<()> {
-        let state = MultiWorkspaceState {
-            active_workspace_id: self.workspace().read(cx).database_id(),
+    fn persistence_state(&self, cx: &App) -> MultiWorkspaceState {
+        MultiWorkspaceState {
+            active_workspace_id: self.active_workspace_database_id,
             project_groups: self
                 .project_groups
                 .iter()
@@ -2168,7 +2170,11 @@ impl MultiWorkspace {
                 .collect::<Vec<_>>(),
             sidebar_open: self.sidebar_open,
             sidebar_state: self.sidebar.as_ref().and_then(|s| s.serialized_state(cx)),
-        };
+        }
+    }
+
+    fn serialize_now(&mut self, cx: &mut Context<Self>) -> Task<()> {
+        let state = self.persistence_state(cx);
         let window_id = self.window_id;
         let kvp = db::kvp::KeyValueStore::global(cx);
         cx.background_spawn(async move {

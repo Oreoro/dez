@@ -1815,7 +1815,7 @@ require_multiline_pattern crates/project/src/git_store.rs \
 require_multiline_pattern crates/git_ui_core/src/git_ui_core.rs \
     'fn git_workspace_copy.*?app_name == "Zed".*?project_copy.*?workspace_copy' \
     'Dez Git surfaces can regress to exposing the internal Project owner'
-require_pattern crates/git_ui/src/git_ui.rs \
+require_multiline_pattern crates/git_ui/src/git_ui.rs \
     'fn dez_names_the_workspace_as_the_public_git_owner\(\).*?"Open File in Workspace".*?"Open File in Project"' \
     'Dez Git surfaces can regress to losing the workspace-owner regression test'
 require_multiline_pattern crates/git_ui/src/commit_view.rs \
@@ -1824,7 +1824,7 @@ require_multiline_pattern crates/git_ui/src/commit_view.rs \
 require_multiline_pattern crates/git_ui/src/git_panel.rs \
     'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"You do not have write access to this project",[[:space:]]*"You do not have write access to this Workspace"' \
     'the Git write-access failure can regress to Project language in Dez'
-require_multiline_pattern crates/git_ui/src/worktree_picker.rs \
+require_multiline_pattern crates/git_ui_core/src/worktree_picker.rs \
     'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"Worktree creation is not supported in collaborative projects",[[:space:]]*"Worktree creation is not supported in shared Workspaces".*?"Requires a Git repository in this Workspace".*?"Cannot create a named worktree in a Workspace with multiple repositories"' \
     'Git worktree eligibility can regress to mixed Project and Workspace ownership'
 require_multiline_pattern crates/git_ui/src/clone.rs \
@@ -2823,11 +2823,14 @@ require_multiline_pattern crates/git_ui/src/project_diff.rs \
 require_multiline_pattern crates/git_ui/src/project_diff.rs \
     'fn project_diff_base_label.*?"Uncommitted Diff".*?"Unstaged Diff".*?"Staged Diff".*?"Diff since \{base_ref\}".*?fn project_diff_tab_label.*?app_name == "Zed".*?"Diff · \{active_file_name\}".*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?"Diff · \{scope\}".*?fn project_diff_tooltip_label.*?app_name == "Zed".*?"\{base_label\} · \{active_path\}".*?fn tab_tooltip_text.*?active_project_path.*?project_diff_tooltip_label.*?fn tab_content.*?Label::new\(self\.tab_content_text.*?truncate\(\).*?fn tab_content_text.*?active_project_path.*?file_name.*?project_diff_tab_label\(paths::APP_NAME' \
     'the Main Work Area Git review can regress to a generic tab with no active file identity'
-require_multiline_pattern crates/git_ui/src/git_ui.rs \
-    'fn diff_surface_tab_label.*?app_name == "Zed".*?label\.is_empty\(\) \|\| label == "Diff".*?label\.starts_with\("Diff · "\).*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?strip_suffix\(" Changes"\).*?strip_prefix\("Changes "\).*?"Diff · \{scope\}".*?fn dez_normalizes_first_party_diff_titles_without_changing_zed.*?"Staged Changes".*?"Diff · Staged".*?"Changes since main".*?"Diff · since main".*?"Clipboard ↔ main\.rs".*?"Diff · Clipboard ↔ main\.rs".*?"Zed".*?"Staged Changes"' \
+require_multiline_pattern crates/git_ui_core/src/git_ui_core.rs \
+    'fn diff_surface_tab_label.*?app_name == "Zed".*?label\.is_empty\(\) \|\| label == "Diff".*?label\.starts_with\("Diff · "\).*?strip_suffix\(" Diff"\).*?strip_prefix\("Diff "\).*?strip_suffix\(" Changes"\).*?strip_prefix\("Changes "\).*?"Diff · \{scope\}"' \
     'secondary Git review surfaces can regress to ambiguous Changes or filename-only tab labels'
+require_multiline_pattern crates/git_ui/src/git_ui.rs \
+    'fn dez_normalizes_first_party_diff_titles_without_changing_zed.*?"Staged Changes".*?"Diff · Staged".*?"Changes since main".*?"Diff · since main".*?"Clipboard ↔ main\.rs".*?"Diff · Clipboard ↔ main\.rs".*?"Zed".*?"Staged Changes"' \
+    'secondary Git review surfaces can regress to losing the diff-tab normalization regression test'
 for diff_surface_file in \
-    crates/git_ui/src/file_diff_view.rs \
+    crates/git_ui_core/src/file_diff_view.rs \
     crates/git_ui/src/text_diff_view.rs \
     crates/git_ui/src/solo_diff_view.rs \
     crates/git_ui/src/branch_diff.rs \
@@ -3512,13 +3515,13 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn open_recent_project.*?SerializedWorkspaceLocation::Local.*?window\.window_handle\(\)\.downcast::<MultiWorkspace>\(\).*?cx\.defer\(move \|cx\|.*?multi_workspace\.open_project\(paths, open_mode, window, cx\).*?task\.detach_and_log_err\(cx\)' \
     'opening a recent Workspace from Home can regress to re-reading WelcomePage during its own action update'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
-    'pub fn remove_project_group.*?active_workspace.*?retain_workspace\(active_workspace, group_key\.clone\(\), cx\).*?fallback_workspace\(group_index, &excluded_workspaces.*?fn fallback_workspace.*?nearest_retained_workspace.*?key\.host\(\)\.is_none\(\).*?create_durable_empty_local_workspace.*?fn nearest_retained_workspace.*?retained_workspace_is_available_for_fallback.*?last_active_workspace.*?WeakEntity::upgrade.*?fn retained_workspace_is_available_for_fallback.*?excluded_workspaces\.contains\(workspace\).*?!self\.is_workspace_retained\(workspace\).*?group_key\.host\(\)\.is_none\(\).*?!workspace\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\)' \
+    'pub fn remove_project_group.*?active_workspace.*?self\.hold\(active_workspace, window, cx\).*?self\.pin\(index, group_key\.clone\(\), cx\).*?let replacement = same_group.*?live_member_for_group\(key, doomed, cx\).*?Project::local\(.*?Workspace::new\(None, project, app_state, window, cx\)' \
     'removing the active Workspace can regress to a no-op, a disconnected fallback, or a remote path opened as local'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
     'active_workspace_database_id: Option<WorkspaceId>.*?let active_workspace_database_id = workspace\.read\(cx\)\.database_id\(\).*?active_workspace_database_id,.*?let workspace_database_id = workspace\.read\(cx\)\.database_id\(\).*?self\.active_workspace_database_id = workspace_database_id.*?fn persistence_state.*?active_workspace_id: self\.active_workspace_database_id.*?pub fn database_id.*?self\.active_workspace_database_id' \
     'durable MultiWorkspace identity can regress to re-reading its active Workspace while that Workspace holds an update lease'
 require_multiline_pattern crates/workspace/src/multi_workspace.rs \
-    'pub fn close_workspace.*?workspaces_for_project_group\(&group_key, cx\).*?candidate != &excluded_workspace.*?!candidate\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\).*?fallback_workspace' \
+    'fn live_member_for_group.*?excluding\.contains\(workspace\).*?!workspace\.read\(cx\)\.project\(\)\.read\(cx\)\.is_disconnected\(cx\).*?last_active_workspace_for_group\(key, cx\)' \
     'closing a Workspace can regress to selecting a disconnected sibling'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub fn open_remote_project_with_new_connection.*?Task<Result<\(Option<Entity<Workspace>>, Vec<Option<Box<dyn ItemHandle>>>\)>>.*?None => return Ok\(\(None, Vec::new\(\)\)\).*?Ok\(\(Some\(workspace\), items\)\).*?pub fn open_remote_project_with_existing_connection.*?Task<Result<\(Entity<Workspace>, Vec<Option<Box<dyn ItemHandle>>>\)>>.*?async fn open_remote_project_inner.*?Result<\(Entity<Workspace>, Vec<Option<Box<dyn ItemHandle>>>\)>.*?Ok\(\([[:space:]]*workspace' \
@@ -3563,7 +3566,7 @@ require_multiline_pattern crates/workspace/src/welcome.rs \
     'fn welcome_forces_tab_bar\(app_name: &str\).*?app_name != "Zed".*?pub\(crate\) const DEZ_HOME_ICON: IconName = IconName::Compass.*?fn welcome_tab_icon\(app_name: &str\).*?then_some\(DEZ_HOME_ICON\).*?Icon::new\(DEZ_HOME_ICON\).*?impl Item for WelcomePage.*?fn tab_icon.*?welcome_tab_icon\(APP_NAME\)\.map\(Icon::new\).*?fn force_show_tab_bar\(&self\) -> bool.*?welcome_forces_tab_bar\(APP_NAME\).*?!welcome_forces_tab_bar\("Zed"\).*?welcome_tab_icon\("Dez"\), Some\(DEZ_HOME_ICON\).*?welcome_tab_icon\("Zed"\), None' \
     'the single Home item can regress to hiding its native tab and adjacent Add control'
 require_multiline_pattern crates/workspace/src/welcome.rs \
-    'DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px\(980\.\).*?fn welcome_responsive_viewport_width.*?app_name == "Zed".*?interface_scale.*?fn dez_welcome_uses_split_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?container_query\(move \|available_size.*?welcome_responsive_viewport_width\(.*?available_size\.width.*?crate::interface_scale\(cx\).*?dez_welcome_uses_compact_spacing\(APP_NAME, responsive_width\).*?dez_welcome_uses_split_layout\(.*?responsive_width.*?\.id\("welcome-content"\).*?\.w_full\(\).*?\.h_full\(\).*?640\..*?1120\..*?Headline::new\(page_title\).*?\.child\(sections\)' \
+    'DEZ_WELCOME_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?DEZ_WELCOME_SPLIT_BREAKPOINT: Pixels = px\(980\.\).*?fn welcome_responsive_viewport_width.*?app_name == "Zed".*?interface_scale.*?fn dez_welcome_uses_split_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?container_query\(move \|available_size.*?welcome_responsive_viewport_width\(.*?available_size\.width.*?crate::interface_scale\(cx\).*?dez_welcome_uses_compact_spacing\(APP_NAME, responsive_width\).*?dez_welcome_uses_split_layout\(.*?responsive_width.*?\.id\("welcome-content"\).*?\.w_full\(\).*?\.h_full\(\).*?640_f32.*?1120_f32.*?Headline::new\(page_title\).*?this\.child\(sections\)' \
     'the top-anchored Dez Home content can regress to an opaque, oversized, or poorly balanced canvas'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
     'Home evaluates its compact and two-column breakpoints in interface-scaled tab[[:space:]]+width.*?collapses visible action metadata and the[[:space:]]+secondary column before rows crowd.*?native pane remains the width owner.*?official Zed keeps its inherited physical-width[[:space:]]+behavior' \
@@ -3581,7 +3584,7 @@ reject_pattern crates/workspace/src/welcome.rs \
     'home_surface|dez-supported-terminal-agent|rounded_lg\(\).*?border_1\(\).*?bg\(home_' \
     'Dez Home can regress to prominent web-card framing or a redundant provider icon grid'
 require_multiline_pattern crates/onboarding/src/onboarding.rs \
-    'DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?fn onboarding_responsive_viewport_width.*?app_name == "Zed".*?interface_scale.*?fn dez_onboarding_uses_compact_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.bg\(onboarding_background\).*?container_query\(move \|available_size.*?onboarding_responsive_viewport_width\(.*?available_size\.width.*?workspace::interface_scale\(cx\).*?dez_onboarding_uses_compact_layout\(APP_NAME, responsive_width\).*?780\..*?960\..*?when\(APP_NAME == "Zed", \|this\| this\.mx_auto\(\)\).*?when\(is_dez && compact_layout.*?this\.px_3\(\)\.py_4\(\).*?IconName::Settings.*?Headline::new\("Set up Dez"\).*?HeadlineSize::Large.*?when\(compact_layout, \|this\| this\.full_width\(\)\).*?fn dez_onboarding_collapses_before_controls_can_clip' \
+    'DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px\(760\.\).*?fn onboarding_responsive_viewport_width.*?app_name == "Zed".*?interface_scale.*?fn dez_onboarding_uses_compact_layout.*?theme_is_transparent\(cx\).*?gpui::transparent_black\(\).*?\.bg\(onboarding_background\).*?container_query\(move \|available_size.*?onboarding_responsive_viewport_width\(.*?available_size\.width.*?workspace::interface_scale\(cx\).*?dez_onboarding_uses_compact_layout\(APP_NAME, responsive_width\).*?780_f32.*?960_f32.*?when\(APP_NAME == "Zed", \|this\| this\.mx_auto\(\)\).*?when\(is_dez && compact_layout.*?this\.px_3\(\)\.py_4\(\).*?IconName::Settings.*?Headline::new\("Set up Dez"\).*?HeadlineSize::Large.*?when\(compact_layout, \|this\| this\.full_width\(\)\).*?fn dez_onboarding_collapses_before_controls_can_clip' \
     'Dez setup can regress to an opaque centered overlay or clip its primary action at narrow widths'
 require_multiline_pattern docs/src/development/dez/surface-contract.md \
     'native setup surface follows the same interface-scaled tab-width policy.*?Zooming in stacks its heading and.*?Finish Setup.*?assigned pane remains the physical width owner.*?official[[:space:]]+Zed retains its inherited physical-width onboarding behavior' \
@@ -3689,7 +3692,7 @@ require_multiline_pattern script/bundle-mac \
     'export ZED_RELEASE_CHANNEL="\$\{channel\}".*?export RELEASE_CHANNEL="\$\{channel\}"' \
     'the selected bundle identity is not compiled into the packaged binaries'
 require_multiline_pattern crates/release_channel/src/lib.rs \
-    'resolve_release_channel_name\(.*?option_env!\("RELEASE_CHANNEL"\).*?include_str!\("\.\./\.\./zed/RELEASE_CHANNEL"\)' \
+    'env::var\("ZED_RELEASE_CHANNEL"\).*?compile_time_release_channel_name\(\).*?include_str!\("\.\./\.\./zed/RELEASE_CHANNEL"\)' \
     'release binaries ignore the compile-time release identity selected by the bundler'
 require_multiline_pattern script/bundle-mac \
     'case "\$channel" in.*?dev\|nightly\|preview\|stable' \
@@ -3752,13 +3755,16 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'Open Terminal Details.*?Open Terminal Details.*?menu = menu\.entry\("Open Terminal Details"' \
     'terminal-backed Sessions rows can regress to ambiguous Terminal Session detail wording'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'Some\(ListEntry::Terminal\(terminal\)\).*?start_renaming_terminal\(ix, &terminal' \
+    'ListEntry::Terminal\(terminal\) => Some\(\(.*?Self::Terminal\(terminal\.metadata\.terminal_id\).*?terminal_title_for_editing\(&terminal\.metadata\)' \
+    'selected Terminal Sessions no longer map to the shared rename target'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn rename_selected_thread.*?RenameTarget::from_entry.*?start_renaming_entry\(ix, target, title, window, cx\)' \
     'selected Terminal Sessions no longer enter the shared keyboard rename flow'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'menu = menu\.entry\(rename_label.*?start_renaming_terminal\(ix, &rename_terminal' \
+    'menu = menu\.entry\(rename_label.*?start_renaming_entry\(.*?RenameTarget::Terminal\(rename_terminal_id\)' \
     'Terminal Session rows no longer retain context-menu rename'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn apply_terminal_rename\(.*?set_custom_title\(custom_title_string\.clone\(\), cx\).*?set_terminal_custom_title\(.*?metadata\.custom_title = custom_title;.*?store\.save\(metadata, cx\)' \
+    'fn apply_terminal_rename\(.*?set_custom_title\(custom_title_string\.clone\(\), cx\).*?rename_terminal\(terminal_id, title\.clone\(\), cx\).*?metadata\.custom_title = custom_title;.*?store\.save\(metadata, cx\)' \
     'terminal rename no longer updates live surfaces and durable Session metadata together'
 require_pattern crates/agent_ui/src/agent_panel.rs \
     '^    pub fn set_terminal_custom_title\($' \

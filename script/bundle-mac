@@ -116,9 +116,12 @@ rustup target add $target_triple
 
 echo "Compiling zed binaries"
 cargo --config .cargo/bundle-config.toml build ${build_flag} --package zed --package cli --target $target_triple
-# Build remote_server in separate invocation to prevent feature unification from other crates
-# from influencing dynamic libraries required by it.
-cargo --config .cargo/bundle-config.toml build ${build_flag} --package remote_server --target $target_triple
+# Build remote_server in a separate invocation so feature unification from the
+# app does not influence its required dynamic libraries. Machine-focused builds
+# can omit the unrelated remote server entirely.
+if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then
+    cargo --config .cargo/bundle-config.toml build ${build_flag} --package remote_server --target $target_triple
+fi
 
 echo "Creating application bundle"
 pushd crates/zed

@@ -16166,7 +16166,9 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
     });
     let (multi_workspace, cx) =
         cx.add_window_view(|window, cx| MultiWorkspace::test_new(local_project, window, cx));
-    let local_workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
+    let local_workspace = multi_workspace.read_with(cx, |multi_workspace, _cx| {
+        multi_workspace.workspace().clone()
+    });
 
     let server_fs = FakeFs::new(server_cx.executor());
     server_fs
@@ -16234,7 +16236,7 @@ async fn test_find_or_create_workspace_returns_the_created_remote_workspace(
         "the returned workspace should be the remote workspace that was created"
     );
     assert_eq!(
-        multi_workspace.read_with(cx, |mw, _| mw.workspace().clone()),
+        multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone()),
         local_workspace,
         "the local workspace should have re-activated during the open"
     );

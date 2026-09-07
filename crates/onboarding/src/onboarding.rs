@@ -335,7 +335,11 @@ impl Render for Onboarding {
                     .child(
                         v_flex()
                             .min_w_0()
-                            .max_w(rems_from_px(780_f32))
+                            .max_w(rems_from_px(if APP_NAME == "Zed" {
+                                780_f32
+                            } else {
+                                960_f32
+                            }))
                             .w_full()
                             .when(APP_NAME == "Zed", |this| this.mx_auto())
                             .when(APP_NAME == "Zed", |this| this.p_12().gap_6())
@@ -435,6 +439,7 @@ impl Render for Onboarding {
                                             .style(ButtonStyle::Filled)
                                             .size(ButtonSize::Medium)
                                             .width(rems_from_px(200_f32))
+                                            .when(compact_layout, |this| this.full_width())
                                             .key_binding(KeyBinding::for_action_in(
                                                 &Finish,
                                                 &finish_focus_handle,
