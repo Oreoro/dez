@@ -61,9 +61,9 @@ fn sandbox_row_gap(cx: &App) -> Pixels {
 
 fn sandbox_tooltip_width(cx: &App) -> Rems {
     match DesignSystemSettings::get_global(cx).density {
-        settings::CanvasDensity::Compact => rems_from_px(260.),
-        settings::CanvasDensity::Balanced => rems_from_px(280.),
-        settings::CanvasDensity::Spacious => rems_from_px(340.),
+        settings::CanvasDensity::Compact => rems_from_px(260_f32),
+        settings::CanvasDensity::Balanced => rems_from_px(280_f32),
+        settings::CanvasDensity::Spacious => rems_from_px(340_f32),
     }
 }
 

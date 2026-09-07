@@ -7308,12 +7308,12 @@ impl ThreadView {
         let line_top = if has_previous_tool_call {
             rems(0.)
         } else {
-            rems_from_px(12.)
+            rems_from_px(12_f32)
         };
         let line_bottom = if has_next_tool_call {
             rems(0.)
         } else {
-            rems_from_px(12.)
+            rems_from_px(12_f32)
         };
 
         div()
@@ -7323,7 +7323,7 @@ impl ThreadView {
             .child(
                 div()
                     .absolute()
-                    .left(rems_from_px(10.))
+                    .left(rems_from_px(10_f32))
                     .top(line_top)
                     .bottom(line_bottom)
                     .w_px()

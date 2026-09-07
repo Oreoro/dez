@@ -880,7 +880,7 @@ fn render_diff_hunk_controls(
             })
             .key_binding(
                 KeyBinding::for_action_in(&Reject, &editor.read(cx).focus_handle(cx), cx)
-                    .map(|kb| kb.size(rems_from_px(12.))),
+                    .map(|kb| kb.size(rems_from_px(12_f32))),
             )
             .on_click({
                 let editor = editor.clone();
@@ -906,7 +906,7 @@ fn render_diff_hunk_controls(
             )
             .key_binding(
                 KeyBinding::for_action_in(&Keep, &editor.read(cx).focus_handle(cx), cx)
-                    .map(|kb| kb.size(rems_from_px(12.))),
+                    .map(|kb| kb.size(rems_from_px(12_f32))),
             )
             .on_click({
                 let editor = editor.clone();
