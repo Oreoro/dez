@@ -9237,7 +9237,6 @@ impl GitPanel {
             )
         } else {
             (
-                colors.ghost_element_background,
                 canvas_git_panel_hover_background(canvas_contrast, cx),
                 colors.ghost_element_active,
             )

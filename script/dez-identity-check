@@ -3767,7 +3767,7 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn apply_terminal_rename\(.*?set_custom_title\(custom_title_string\.clone\(\), cx\).*?rename_terminal\(terminal_id, title\.clone\(\), cx\).*?metadata\.custom_title = custom_title;.*?store\.save\(metadata, cx\)' \
     'terminal rename no longer updates live surfaces and durable Session metadata together'
 require_pattern crates/agent_ui/src/agent_panel.rs \
-    '^    pub fn set_terminal_custom_title\($' \
+    '^    pub fn rename_terminal\($' \
     'Agent-owned Terminal Sessions cannot receive Session Rail title edits'
 require_multiline_pattern docs/src/ai/terminal-threads.md \
     '# Terminals.*?native Zed Surface.*?Workspaces.*?Built-in Agent owns conversations.*?## Closing and Ending.*?End Terminal…' \

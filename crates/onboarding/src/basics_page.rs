@@ -718,7 +718,7 @@ fn render_ai_section(cx: &mut App) -> impl IntoElement {
             let is_installed = installed_agents.contains_key(*agent_id);
             grid.child(
                 div()
-                    .min_w(rems_from_px(150.))
+                    .min_w(rems_from_px(150_f32))
                     .flex_1()
                     .child(render_registry_agent_button(agent, is_installed, cx)),
             )

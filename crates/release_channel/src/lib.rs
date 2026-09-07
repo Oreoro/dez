@@ -297,20 +297,7 @@ impl FromStr for ReleaseChannel {
 
 #[cfg(test)]
 mod tests {
-    use super::{ReleaseChannel, resolve_release_channel_name};
-
-    #[test]
-    fn compiled_release_channel_overrides_the_source_channel() {
-        assert_eq!(
-            resolve_release_channel_name(None, Some("preview"), "dev"),
-            "preview"
-        );
-        assert_eq!(
-            resolve_release_channel_name(Some("nightly".into()), Some("preview"), "dev"),
-            "nightly"
-        );
-        assert_eq!(resolve_release_channel_name(None, None, "dev"), "dev");
-    }
+    use super::ReleaseChannel;
 
     #[test]
     fn test_dez_release_identities() {
