@@ -22,7 +22,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use ui::{Color, Icon, IconName, Label, SharedString};
+use ui::{Color, Icon, IconName, Label, SharedString, prelude::*};
 use util::paths::PathExt;
 
 use workspace::{

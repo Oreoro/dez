@@ -16,7 +16,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use ui::{Color, Icon, IconName, Label};
+use ui::{Color, Icon, IconName, Label, prelude::*};
 use util::paths::PathStyle;
 use util::rel_path::RelPath;
 use workspace::{

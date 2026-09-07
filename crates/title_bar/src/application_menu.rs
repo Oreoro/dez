@@ -580,4 +580,5 @@ mod tests {
         assert!(app_menu.read_with(cx, |app_menu, _| {
             menu_entry(&app_menu.entries, "View").handle.is_deployed()
         }));
+    }
 }
