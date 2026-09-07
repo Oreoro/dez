@@ -17,7 +17,6 @@ pub use db::*;
 use itertools::Itertools;
 pub use native_agent_server::{NativeAgentServer, native_agent_icon};
 use parking_lot::Mutex;
-use parking_lot::Mutex;
 pub use pattern_extraction::*;
 pub use sandboxing::{
     ThreadSandbox, sandbox_worktree_writable_paths, settings_sandbox_policy,
