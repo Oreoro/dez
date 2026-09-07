@@ -33,10 +33,11 @@ mod workspace_settings;
 
 pub use dock::Panel;
 pub use multi_workspace::{
-    BrowseRunningSessions, CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectToNewWindow,
-    MultiWorkspace, MultiWorkspaceEvent, NextProject, NextThread, PreviousProject, PreviousThread,
-    ProjectGroup, ProjectGroupKey, SerializedProjectGroupState, Sidebar, SidebarEvent,
-    SidebarHandle, SidebarRenderState, SidebarSide, ToggleSidebar, render_sidebar_header_controls,
+    BrowseRunningSessions, CloseSidebar, DraggedSidebar, FocusSidebar, MoveProjectDown,
+    MoveProjectToNewWindow, MoveProjectUp, MultiWorkspace, MultiWorkspaceEvent, NextProject,
+    NextThread, PreviousProject, PreviousThread, ProjectGroup, ProjectGroupKey, RemovalIntent,
+    SerializedProjectGroupState, Sidebar, SidebarEvent, SidebarHandle, SidebarRenderState,
+    SidebarSide, ToggleSidebar, render_sidebar_header_controls,
     render_sidebar_header_controls_with_auxiliary_visibility,
     render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
     sidebar_side_context_menu,
@@ -2526,6 +2527,10 @@ actions!(
         ReloadActiveItem,
         /// Reopens the most recently dismissed picker in the current window.
         ReopenLastPicker,
+        /// Resets the active dock to its default size.
+        ResetActiveDockSize,
+        /// Resets all open docks to their default sizes.
+        ResetOpenDocksSize,
         /// Resizes the active pane one step to the left.
         ResizePaneLeft,
         /// Resizes the active pane one step to the right.
@@ -4002,6 +4007,16 @@ impl Workspace {
                 project::Event::WorktreeUpdatedEntries(..) => {
                     this.update_window_title(window, cx);
                     this.serialize_workspace(window, cx);
+                }
+
+                project::Event::EntryRenamed {
+                    old_abs_path,
+                    new_abs_path,
+                    ..
+                } => {
+                    if this.rename_persisted_navigation_history_paths(old_abs_path, new_abs_path) {
+                        this.serialize_workspace(window, cx);
+                    }
                 }
 
                 project::Event::DisconnectedFromHost => {
@@ -5532,6 +5547,14 @@ impl Workspace {
         }
     }
 
+    pub fn finish_dock_restoration(&self, cx: &mut App) {
+        for dock in self.all_docks() {
+            dock.update(cx, |dock, _| {
+                dock.finish_restoration();
+            });
+        }
+    }
+
     /// Returns which dock currently has focus, or `None` if focus is in the
     /// center pane or elsewhere. Does NOT fall back to any global state.
     pub fn focused_dock_position(&self, window: &Window, cx: &App) -> Option<DockPosition> {
@@ -6896,7 +6919,7 @@ impl Workspace {
                 let mut serialize_tasks = Vec::new();
                 let mut remaining_dirty_items = Vec::new();
                 if allow_hot_exit_serialization {
-                    workspace.update_in(cx, |workspace, window, cx| {
+                    workspace.update_in(cx, |workspace, _window, cx| {
                         for (pane, item) in dirty_items {
                             if let Some(task) = item
                                 .to_serializable_item_handle(cx)
@@ -12819,7 +12842,7 @@ impl Workspace {
             anyhow::bail!("no id for view");
         };
         let id = ViewId::from_proto(id)?;
-        let panel_id = view.panel_id.and_then(proto::PanelId::from_i32);
+        let panel_id = view.panel_id.and_then(|panel_id| proto::PanelId::try_from(panel_id).ok());
 
         let pane = this.update(cx, |this, _cx| {
             let state = this
@@ -13617,42 +13640,6 @@ impl Workspace {
             return Task::ready(());
         };
 
-        fn serialize_pane_handle(
-            pane_handle: &Entity<Pane>,
-            window: &mut Window,
-            cx: &mut App,
-        ) -> SerializedPane {
-            let (items, active, pinned_count, pane_kind, visible) = {
-                let pane = pane_handle.read(cx);
-                let active_item_id = pane.active_item().map(|item| item.item_id());
-                (
-                    pane.items()
-                        .filter_map(|handle| {
-                            let handle = handle.to_serializable_item_handle(cx)?;
-
-                            Some(SerializedItem {
-                                kind: Arc::from(handle.serialized_item_kind()),
-                                item_id: handle.item_id().as_u64(),
-                                active: Some(handle.item_id()) == active_item_id,
-                                preview: pane.is_active_preview_item(handle.item_id()),
-                            })
-                        })
-                        .collect::<Vec<_>>(),
-                    pane.has_focus(window, cx),
-                    pane.pinned_count(),
-                    pane.pane_kind(),
-                    pane.is_visible(),
-                )
-            };
-
-            if pane_kind.is_tabbed() {
-                SerializedPane::new(items, active, pinned_count).with_visible(visible)
-            } else {
-                SerializedPane::new_with_kind(items, active, pinned_count, pane_kind)
-                    .with_visible(visible)
-            }
-        }
-
         fn build_serialized_pane_group(
             pane_group: &Member,
             window: &mut Window,
@@ -14384,6 +14371,31 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, action: &ClearSavedCanvasLayoutSlot, window, cx| {
                     workspace.clear_saved_canvas_layout_slot(action.slot, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ReopenClosedItem, window, cx| {
+                    workspace.reopen_closed_item(window, cx).detach();
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ResetActiveDockSize, window, cx| {
+                    if let Some(dock) = workspace.active_dock(window, cx).cloned() {
+                        dock.update(cx, |dock, cx| {
+                            dock.reset_panel_sizes(window, cx);
+                        });
+                    }
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &ResetOpenDocksSize, window, cx| {
+                    for dock in workspace.all_docks() {
+                        if dock.read(cx).visible_panel().is_some() {
+                            dock.update(cx, |dock, cx| {
+                                dock.reset_panel_sizes(window, cx);
+                            });
+                        }
+                    }
                 },
             ))
             .on_action(cx.listener(
@@ -15249,6 +15261,41 @@ fn empty_workspace_window_title(app_name: &str) -> &'static str {
     }
 }
 
+fn serialize_pane_handle(
+    pane_handle: &Entity<Pane>,
+    window: &mut Window,
+    cx: &mut App,
+) -> SerializedPane {
+    let (items, active, pinned_count, pane_kind, visible) = {
+        let pane = pane_handle.read(cx);
+        let active_item_id = pane.active_item().map(|item| item.item_id());
+        (
+            pane.items()
+                .filter_map(|handle| {
+                    let handle = handle.to_serializable_item_handle(cx)?;
+
+                    Some(SerializedItem {
+                        kind: Arc::from(handle.serialized_item_kind()),
+                        item_id: handle.item_id().as_u64(),
+                        active: Some(handle.item_id()) == active_item_id,
+                        preview: pane.is_active_preview_item(handle.item_id()),
+                    })
+                })
+                .collect::<Vec<_>>(),
+            pane.has_focus(window, cx),
+            pane.pinned_count(),
+            pane.pane_kind(),
+            pane.is_visible(),
+        )
+    };
+
+    if pane_kind.is_tabbed() {
+        SerializedPane::new(items, active, pinned_count).with_visible(visible)
+    } else {
+        SerializedPane::new_with_kind(items, active, pinned_count, pane_kind).with_visible(visible)
+    }
+}
+
 fn project_window_title(project: &Project, cx: &App) -> String {
     let mut title = String::new();
 
@@ -15261,8 +15308,7 @@ fn project_window_title(project: &Project, cx: &App) -> String {
     }
 
     if title.is_empty() {
-        // Keep the default untitled-window text instead of showing a blank title.
-        "empty project".to_string()
+        empty_workspace_window_title(paths::APP_NAME).to_string()
     } else {
         title
     }
@@ -18256,6 +18302,7 @@ mod tests {
     use super::*;
     use crate::{
         dock::{PanelEvent, test::TestPanel},
+        invalid_item_view::InvalidItemView,
         item::{
             ItemBufferKind, ItemEvent,
             test::{TestItem, TestProjectItem},
@@ -25395,7 +25442,7 @@ mod tests {
         }
 
         #[gpui::test]
-        async fn test_open_url_or_file_resolves_remote_base_path(cx: &mut TestAppContext) {
+        async fn test_reveal_if_open(cx: &mut TestAppContext) {
             init_test(cx);
             cx.update(register_project_item::<TestPngItemView>);
 
@@ -26601,7 +26648,7 @@ mod tests {
             cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
 
         workspace.update_in(cx, |workspace, window, cx| {
-            workspace.bottom_dock().update(cx, |dock, cx| {
+            workspace.left_dock().update(cx, |dock, cx| {
                 dock.restore_serialized_state(
                     DockData {
                         visible: true,
@@ -26615,7 +26662,7 @@ mod tests {
         });
 
         let first_panel = workspace.update_in(cx, |workspace, window, cx| {
-            let panel = cx.new(|cx| TestPanel::new(DockPosition::Bottom, 100, cx));
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
             workspace.add_panel(panel.clone(), window, cx);
             panel
         });
@@ -26628,7 +26675,7 @@ mod tests {
             panel
         });
         workspace.read_with(cx, |workspace, cx| {
-            let dock = workspace.bottom_dock().read(cx);
+            let dock = workspace.left_dock().read(cx);
             assert!(dock.is_open());
             assert_eq!(
                 dock.active_panel().map(|panel| panel.panel_id()),
@@ -26642,7 +26689,7 @@ mod tests {
         workspace.read_with(cx, |workspace, cx| {
             assert_eq!(
                 workspace
-                    .bottom_dock()
+                    .left_dock()
                     .read(cx)
                     .active_panel()
                     .map(|panel| panel.panel_id()),
@@ -26651,11 +26698,11 @@ mod tests {
         });
 
         workspace.update_in(cx, |workspace, window, cx| {
-            let panel = cx.new(|cx| TestPanel::new(DockPosition::Bottom, 300, cx));
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 300, cx));
             workspace.add_panel(panel, window, cx);
         });
         workspace.read_with(cx, |workspace, cx| {
-            let dock = workspace.bottom_dock().read(cx);
+            let dock = workspace.left_dock().read(cx);
             assert!(dock.is_open());
             assert_eq!(
                 dock.active_panel().map(|panel| panel.panel_id()),
@@ -26673,7 +26720,7 @@ mod tests {
             cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
 
         workspace.update_in(cx, |workspace, window, cx| {
-            workspace.bottom_dock().update(cx, |dock, cx| {
+            workspace.left_dock().update(cx, |dock, cx| {
                 dock.restore_serialized_state(
                     DockData {
                         visible: true,
@@ -26686,12 +26733,12 @@ mod tests {
             });
         });
         workspace.read_with(cx, |workspace, cx| {
-            assert!(workspace.bottom_dock().read(cx).is_open());
+            assert!(workspace.left_dock().read(cx).is_open());
         });
 
         workspace.update_in(cx, |workspace, window, cx| {
             workspace
-                .bottom_dock()
+                .left_dock()
                 .update(cx, |dock, cx| dock.set_open(false, window, cx));
         });
 
@@ -26704,7 +26751,7 @@ mod tests {
         });
 
         workspace.read_with(cx, |workspace, cx| {
-            assert!(!workspace.bottom_dock().read(cx).is_open());
+            assert!(!workspace.left_dock().read(cx).is_open());
         });
     }
 
@@ -26719,7 +26766,7 @@ mod tests {
             cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
 
         workspace.update_in(cx, |workspace, window, cx| {
-            workspace.bottom_dock().update(cx, |dock, cx| {
+            workspace.left_dock().update(cx, |dock, cx| {
                 dock.restore_serialized_state(
                     DockData {
                         visible: true,
@@ -26746,7 +26793,7 @@ mod tests {
         workspace.read_with(cx, |workspace, cx| {
             assert_eq!(
                 workspace
-                    .bottom_dock()
+                    .left_dock()
                     .read(cx)
                     .active_panel()
                     .map(|panel| panel.panel_id()),
@@ -26771,7 +26818,7 @@ mod tests {
         });
 
         workspace.update_in(cx, |workspace, window, cx| {
-            workspace.bottom_dock().update(cx, |dock, cx| {
+            workspace.left_dock().update(cx, |dock, cx| {
                 dock.restore_serialized_state(
                     DockData {
                         visible: true,
@@ -26784,7 +26831,7 @@ mod tests {
             });
         });
         workspace.read_with(cx, |workspace, cx| {
-            let dock = workspace.bottom_dock().read(cx);
+            let dock = workspace.left_dock().read(cx);
             assert!(
                 !dock.is_open(),
                 "dock must not open for a panel that can no longer register",
@@ -26800,7 +26847,7 @@ mod tests {
         });
         workspace.read_with(cx, |workspace, cx| {
             assert!(
-                !workspace.bottom_dock().read(cx).is_open(),
+                !workspace.left_dock().read(cx).is_open(),
                 "stale dock state must not replay when the panel registers much later",
             );
         });
@@ -26817,14 +26864,14 @@ mod tests {
             cx.add_window_view(|window, cx| Workspace::test_new(project, window, cx));
 
         let first_panel = workspace.update_in(cx, |workspace, window, cx| {
-            let panel = cx.new(|cx| TestPanel::new(DockPosition::Bottom, 100, cx));
+            let panel = cx.new(|cx| TestPanel::new(DockPosition::Left, 100, cx));
             workspace.add_panel(panel.clone(), window, cx);
             workspace.toggle_panel_focus::<TestPanel>(window, cx);
             panel
         });
 
         workspace.update_in(cx, |workspace, window, cx| {
-            workspace.bottom_dock().update(cx, |dock, cx| {
+            workspace.left_dock().update(cx, |dock, cx| {
                 dock.restore_serialized_state(
                     DockData {
                         visible: true,
@@ -26852,7 +26899,7 @@ mod tests {
             panel
         });
         workspace.read_with(cx, |workspace, cx| {
-            let dock = workspace.bottom_dock().read(cx);
+            let dock = workspace.left_dock().read(cx);
             assert!(dock.is_open());
             assert_eq!(
                 dock.active_panel().map(|panel| panel.panel_id()),
@@ -26894,7 +26941,7 @@ mod tests {
         }
 
         fn position(&self, _: &Window, _: &App) -> DockPosition {
-            DockPosition::Bottom
+            DockPosition::Left
         }
 
         fn position_is_valid(&self, _: DockPosition) -> bool {

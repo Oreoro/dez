@@ -382,6 +382,7 @@ pub struct ProjectSearch {
     search_excluded_history_cursor: SearchHistoryCursor,
     pub project_search_turning_into_text_finder: Arc<AtomicBool>,
     _excerpts_subscription: Subscription,
+    _quit_subscription: Subscription,
     _workspace_subscription: Option<Subscription>,
 }
 
@@ -516,6 +517,10 @@ impl ProjectSearch {
         let capability = project.read(cx).capability();
         let excerpts = cx.new(|_| MultiBuffer::new(capability));
         let excerpts_subscription = Self::subscribe_to_excerpts(&excerpts, cx);
+        let quit_subscription = cx.on_app_quit(|this, _cx| {
+            this.pending_search.take();
+            async {}
+        });
         let workspace_subscription = Self::subscribe_to_workspace(&workspace, cx);
 
         Self {
@@ -536,6 +541,7 @@ impl ProjectSearch {
             search_excluded_history_cursor: Default::default(),
             project_search_turning_into_text_finder: Arc::new(AtomicBool::new(false)),
             _excerpts_subscription: excerpts_subscription,
+            _quit_subscription: quit_subscription,
             _workspace_subscription: workspace_subscription,
         }
     }
@@ -546,6 +552,10 @@ impl ProjectSearch {
                 .excerpts
                 .update(cx, |excerpts, cx| cx.new(|cx| excerpts.clone(cx)));
             let excerpts_subscription = Self::subscribe_to_excerpts(&excerpts, cx);
+            let quit_subscription = cx.on_app_quit(|this, _cx| {
+                this.pending_search.take();
+                async {}
+            });
             let workspace_subscription = Self::subscribe_to_workspace(&self.workspace, cx);
 
             Self {
@@ -574,6 +584,7 @@ impl ProjectSearch {
                 search_excluded_history_cursor: self.search_excluded_history_cursor.clone(),
                 project_search_turning_into_text_finder: Arc::new(AtomicBool::new(false)),
                 _excerpts_subscription: excerpts_subscription,
+                _quit_subscription: quit_subscription,
                 _workspace_subscription: workspace_subscription,
             }
         })

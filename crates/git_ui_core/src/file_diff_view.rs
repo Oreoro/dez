@@ -8,8 +8,8 @@ use editor::{
 };
 use futures::{FutureExt, select_biased};
 use gpui::{
-    App, AppContext as _, AsyncApp, Context, Entity, EventEmitter, FocusHandle, Focusable, Font,
-    IntoElement, Render, Task, WeakEntity, Window,
+    AnyElement, App, AppContext as _, AsyncApp, Context, Entity, EventEmitter, FocusHandle,
+    Focusable, Font, IntoElement, Render, Task, WeakEntity, Window,
 };
 use language::{Buffer, HighlightedText, Point};
 use project::{Project, ProjectPath};
@@ -24,8 +24,8 @@ use std::{
 use ui::{Color, Icon, IconName, Label, LabelCommon, SharedString};
 use util::paths::PathExt as _;
 use workspace::{
-    Item, ItemHandle as _, ItemNavHistory, TabContentParams, ToolbarItemLocation, Workspace,
-    item::{ItemEvent, SaveOptions},
+    Item, ItemHandle as _, ItemNavHistory, ToolbarItemLocation, Workspace,
+    item::{ItemEvent, SaveOptions, TabContentParams},
     searchable::SearchableItemHandle,
 };
 

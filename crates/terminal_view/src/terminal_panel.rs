@@ -1585,6 +1585,9 @@ impl Render for TerminalPanel {
         self.workspace
             .update(cx, |workspace, cx| {
                 registrar
+                    .id("terminal-panel")
+                    .role(gpui::Role::Region)
+                    .aria_label("Terminal Panel")
                     .track_focus(&self.focus_handle)
                     .size_full()
                     .relative()

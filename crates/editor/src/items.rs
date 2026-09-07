@@ -843,23 +843,15 @@ impl Item for Editor {
             .when(params.truncate_title_middle, |this| {
                 this.w_full().min_w_0().overflow_hidden()
             })
-            .child(
-                Label::new(if params.truncate_title_middle {
-                    self.title(cx).to_string()
-                } else {
-                    util::truncate_and_trailoff(
-                        &self.title(cx),
-                        params.max_title_len.unwrap_or(MAX_TAB_TITLE_LEN),
-                    )
-                })
-                .single_line()
-                .color(label_color)
-                .when(params.truncate_title_middle, |this| {
-                    this.truncate_middle().flex_1()
-                })
-                .when(params.preview, |this| this.italic())
-                .when(was_deleted, |this| this.strikethrough()),
-            )
+            .when(show_surface_prefix, |this| {
+                this.child(
+                    Label::new("Editor ·")
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .flex_shrink_0(),
+                )
+            })
+            .child(title)
             .when_some(description, |this, description| {
                 this.child(
                     Label::new(description)

@@ -4138,6 +4138,32 @@ impl Pane {
                                         }),
                                     )
                                 })
+                                .when(!is_selected_review_evidence, |menu| {
+                                    menu.entry(
+                                        "Add to Review Evidence",
+                                        Some(Box::new(AddActiveFileToEvidence)),
+                                        window.handler_for(&pane, move |pane, window, cx| {
+                                            pane.activate_item(ix, true, true, window, cx);
+                                            window.dispatch_action(
+                                                AddActiveFileToEvidence.boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                    )
+                                })
+                                .when(is_selected_review_evidence, |menu| {
+                                    menu.entry(
+                                        "Remove from Review Evidence",
+                                        Some(Box::new(RemoveActiveFileFromEvidence)),
+                                        window.handler_for(&pane, move |pane, window, cx| {
+                                            pane.activate_item(ix, true, true, window, cx);
+                                            window.dispatch_action(
+                                                RemoveActiveFileFromEvidence.boxed_clone(),
+                                                cx,
+                                            );
+                                        }),
+                                    )
+                                })
                                 .when(has_git_repo, |menu| {
                                     menu.separator().when_some(
                                         project_path.clone(),

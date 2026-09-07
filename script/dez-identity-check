@@ -1812,9 +1812,12 @@ require_multiline_pattern crates/git_ui/src/git_panel.rs \
 require_multiline_pattern crates/project/src/git_store.rs \
     'pub fn reset_failed_graph_data.*?data\.fetch_task\.is_ready\(\) && data\.error\.is_some\(\).*?initial_graph_data\.remove\(&key\).*?can_retry' \
     'Git History retry can regress to discarding in-flight or healthy graph state'
-require_multiline_pattern crates/git_ui/src/git_ui.rs \
-    'fn git_workspace_copy.*?app_name == "Zed".*?project_copy.*?workspace_copy.*?fn dez_names_the_workspace_as_the_public_git_owner.*?"Open File in Workspace".*?"Open File in Project"' \
+require_multiline_pattern crates/git_ui_core/src/git_ui_core.rs \
+    'fn git_workspace_copy.*?app_name == "Zed".*?project_copy.*?workspace_copy' \
     'Dez Git surfaces can regress to exposing the internal Project owner'
+require_pattern crates/git_ui/src/git_ui.rs \
+    'fn dez_names_the_workspace_as_the_public_git_owner\(\).*?"Open File in Workspace".*?"Open File in Project"' \
+    'Dez Git surfaces can regress to losing the workspace-owner regression test'
 require_multiline_pattern crates/git_ui/src/commit_view.rs \
     'git_workspace_copy\([[:space:]]*paths::APP_NAME,[[:space:]]*"Open File in Project",[[:space:]]*"Open File in Workspace"' \
     'the commit-file action can regress to Project language in Dez'

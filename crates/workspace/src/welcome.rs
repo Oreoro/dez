@@ -191,8 +191,25 @@ impl RenderOnce for SectionButton {
                             ),
                     )
                     .child(
-                        KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
-                            .size(rems_from_px(12_f32)),
+                        h_flex()
+                            .flex_none()
+                            .gap_2()
+                            .when(show_meta, |this| {
+                                this.when_some(meta, |this, meta| {
+                                    this.child(
+                                        div().max_w(rems_from_px(220_f32)).overflow_hidden().child(
+                                            Label::new(meta)
+                                                .truncate()
+                                                .size(welcome_secondary_label_size(APP_NAME))
+                                                .color(Color::Muted),
+                                        ),
+                                    )
+                                })
+                            })
+                            .child(
+                                KeyBinding::for_action_in(action_ref, &self.focus_handle, cx)
+                                    .size(rems_from_px(12_f32)),
+                            ),
                     ),
             )
             .on_click(move |_, window, cx| {
@@ -1181,7 +1198,7 @@ impl Render for WelcomePage {
                         .min_w_0()
                         .gap_4()
                         .when(is_dez && !has_secondary_content, |this| {
-                            this.max_w(rems_from_px(520.))
+                            this.max_w(rems_from_px(520_f32))
                         })
                         .child(first_section.render(
                             action_tab_offset,
@@ -1205,7 +1222,11 @@ impl Render for WelcomePage {
                         .id("welcome-content")
                         .w_full()
                         .h_full()
-                        .max_w(rems_from_px(if APP_NAME == "Zed" { 640. } else { 1120. }))
+                        .max_w(rems_from_px(if APP_NAME == "Zed" {
+                            640_f32
+                        } else {
+                            1120_f32
+                        }))
                         .when(APP_NAME == "Zed", |this| this.p_6().gap_5())
                         .when(is_dez && compact_spacing, |this| this.px_3().py_4().gap_4())
                         .when(is_dez && !compact_spacing, |this| {
