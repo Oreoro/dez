@@ -781,7 +781,6 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::CursorShape>(render_dropdown)
         .add_basic_renderer::<settings::RestoreOnStartupBehavior>(render_dropdown)
         .add_basic_renderer::<settings::OnNewWindow>(render_dropdown)
-        .add_basic_renderer::<settings::BottomDockLayout>(render_dropdown)
         .add_basic_renderer::<settings::OnLastWindowClosed>(render_dropdown)
         .add_basic_renderer::<settings::CliDefaultOpenBehavior>(render_dropdown)
         .add_basic_renderer::<settings::DefaultOpenBehavior>(render_dropdown)
@@ -3494,11 +3493,9 @@ impl SettingsWindow {
             .aria_value(a11y_value)
             .track_focus(&self.search_bar.focus_handle(cx))
             .a11y_synthetic_children(a11y_text_runs)
-            .py_1()
-            .pl_1p5()
-            .pr_0p5()
-            .h_7()
-            .mb_3()
+            .py(search_padding_y)
+            .px(search_padding_x)
+            .mb(search_margin_bottom)
             .gap_1p5()
             .border_1()
             .border_color(search_border_color)
@@ -4058,6 +4055,7 @@ impl SettingsWindow {
         let search_query = self.search_bar.read(cx).text(cx);
 
         v_flex()
+            .id("no-results")
             .size_full()
             .items_center()
             .justify_center()
@@ -4241,13 +4239,17 @@ impl SettingsWindow {
                 .when(self.sub_page_stack.is_empty(), |this| {
                     this.when_some(root_nav_label, |this, title| {
                         this.child(
-                            Label::new(title)
-                                .size(LabelSize::Large)
-                                .mt_2()
-                                .mb_3()
+                            div()
+                                .id("settings-page-heading")
                                 .role(Role::Heading)
                                 .aria_level(1)
-                                .aria_label(title),
+                                .child(
+                                    Label::new(title)
+                                        .size(LabelSize::Large)
+                                        .mt_2()
+                                        .mb_3()
+                                        .aria_label(title),
+                                ),
                         )
                     })
                 })

@@ -4769,7 +4769,7 @@ fn status_bar_visibility_setting_visible(app_name: &str, json_path: Option<&str>
 }
 
 fn window_and_layout_page() -> SettingsPage {
-    fn status_bar_section() -> [SettingsPageItem; 12] {
+    fn status_bar_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader("Status Bar"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -6964,7 +6964,7 @@ fn panels_page() -> SettingsPage {
         ]
     }
 
-    fn outline_panel_section() -> [SettingsPageItem; 12] {
+    fn outline_panel_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader(workspace_surface_copy(
                 paths::APP_NAME,
@@ -7233,7 +7233,7 @@ fn panels_page() -> SettingsPage {
         .collect()
     }
 
-    fn git_panel_section() -> [SettingsPageItem; 18] {
+    fn git_panel_section() -> Vec<SettingsPageItem> {
         [
             SettingsPageItem::SectionHeader(workspace_surface_copy(
                 paths::APP_NAME,
