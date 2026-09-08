@@ -9488,7 +9488,7 @@ impl Sidebar {
                                 &group_name,
                                 &workspace_name,
                                 is_active,
-                                rail_contains_focus,
+                                is_focused,
                                 cx,
                             )
                         }),
@@ -9498,7 +9498,7 @@ impl Sidebar {
                         id_prefix,
                         key,
                         is_active,
-                        rail_contains_focus,
+                        is_focused,
                         &group_name,
                         &workspace_name,
                         cx,
