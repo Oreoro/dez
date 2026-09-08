@@ -95,7 +95,7 @@ use util::path_list::PathList;
 use workspace::{
     BrowseRunningSessions, CloseSidebar, CloseWindow, DesignSystemSettings, MultiWorkspace,
     MultiWorkspaceEvent, NewCenterTerminal, NextProject, NextThread, OpenFolder, OpenLog, OpenMode,
-    PreviousProject, PreviousThread, ProjectGroupKey, RevealFiles, SaveIntent,
+    PreviousProject, PreviousThread, ProjectGroupKey, RemovalIntent, RevealFiles, SaveIntent,
     Sidebar as WorkspaceSidebar, SidebarRenderState, SidebarSettings, SidebarSide, Toast,
     ToggleSidebar, Workspace,
     evidence::{
@@ -107,10 +107,8 @@ use workspace::{
     render_sidebar_header_controls_with_state, sidebar_header_control_metrics,
 };
 
-use git_ui::{
-    git_panel::ReviewChanges as ReviewGitChanges,
-    worktree_service::{RemoteBranchName, worktree_create_targets},
-};
+use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
+use git_ui_core::worktree_service::{RemoteBranchName, worktree_create_targets};
 use zed_actions::agent::OpenSettings;
 use zed_actions::assistant::{ManageSkills, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules};
 use zed_actions::editor::{MoveDown, MoveUp};
@@ -6394,7 +6392,7 @@ fn create_worktree_in_workspace(
 ) {
     workspace.update(cx, |workspace, cx| {
         let focused_dock = workspace.focused_dock_position(window, cx);
-        git_ui::worktree_service::handle_create_worktree(
+        git_ui_core::worktree_service::handle_create_worktree(
             workspace,
             &CreateWorktree {
                 worktree_name: None,
@@ -7215,7 +7213,6 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
                 window,
@@ -7254,7 +7251,6 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
                 window,
@@ -9940,7 +9936,7 @@ impl Sidebar {
         let open_workspaces = self
             .multi_workspace
             .upgrade()
-            .and_then(|mw| mw.read(cx).workspaces_for_project_group(key, cx))
+            .map(|mw| mw.read(cx).workspaces_for_project_group(key, cx))
             .unwrap_or_default();
 
         if open_workspaces.is_empty() {
@@ -10173,7 +10169,8 @@ impl Sidebar {
             let Some(base) = multi_workspace
                 .read(cx)
                 .workspaces_for_project_group(&key, cx)
-                .and_then(|workspaces| workspaces.first().cloned())
+                .first()
+                .cloned()
             else {
                 continue;
             };
@@ -10283,9 +10280,7 @@ impl Sidebar {
 
                 let open_workspaces = multi_workspace
                     .read_with(cx, |multi_workspace, cx| {
-                        multi_workspace
-                            .workspaces_for_project_group(&project_group_key, cx)
-                            .unwrap_or_default()
+                        multi_workspace.workspaces_for_project_group(&project_group_key, cx)
                     })
                     .unwrap_or_default();
 
@@ -12345,7 +12340,6 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
                 window,
@@ -13302,7 +13296,6 @@ impl Sidebar {
                 host,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
                 window,
@@ -13617,7 +13610,6 @@ impl Sidebar {
                 host,
                 Some(project_group_key),
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Add,
                 window,
@@ -13946,26 +13938,10 @@ impl Sidebar {
                         .unwrap_or_default()
                 });
 
-            let excluded = workspaces_to_remove.clone();
             let remove_task = multi_workspace.update(cx, |multi_workspace, cx| {
                 multi_workspace.remove(
                     workspaces_to_remove,
-                    move |this, window, cx| {
-                        let active_workspace = this.workspace().clone();
-                        this.find_or_create_workspace(
-                            fallback_paths,
-                            project_group_key.host(),
-                            Some(project_group_key),
-                            |options, window, cx| {
-                                connect_remote(active_workspace, options, window, cx)
-                            },
-                            &excluded,
-                            None,
-                            OpenMode::Activate,
-                            window,
-                            cx,
-                        )
-                    },
+                    RemovalIntent::KeepProject,
                     window,
                     cx,
                 )
@@ -14492,29 +14468,8 @@ impl Sidebar {
                         .unwrap_or_default()
                 });
 
-            let excluded = workspaces_to_remove.clone();
             let remove_task = multi_workspace.update(cx, |mw, cx| {
-                mw.remove(
-                    workspaces_to_remove,
-                    move |this, window, cx| {
-                        let active_workspace = this.workspace().clone();
-                        this.find_or_create_workspace(
-                            fallback_paths,
-                            project_group_key.host(),
-                            Some(project_group_key),
-                            |options, window, cx| {
-                                connect_remote(active_workspace, options, window, cx)
-                            },
-                            &excluded,
-                            None,
-                            OpenMode::Activate,
-                            window,
-                            cx,
-                        )
-                    },
-                    window,
-                    cx,
-                )
+                mw.remove(workspaces_to_remove, RemovalIntent::KeepProject, window, cx)
             });
 
             let thread_folder_paths = thread_folder_paths.clone();
@@ -16975,26 +16930,10 @@ impl Sidebar {
                         .unwrap_or_default()
                 });
 
-            let excluded = workspaces_to_remove.clone();
             let remove_task = multi_workspace.update(cx, |multi_workspace, cx| {
                 multi_workspace.remove(
                     workspaces_to_remove,
-                    move |this, window, cx| {
-                        let active_workspace = this.workspace().clone();
-                        this.find_or_create_workspace(
-                            fallback_paths,
-                            project_group_key.host(),
-                            Some(project_group_key),
-                            |options, window, cx| {
-                                connect_remote(active_workspace, options, window, cx)
-                            },
-                            &excluded,
-                            None,
-                            OpenMode::Activate,
-                            window,
-                            cx,
-                        )
-                    },
+                    RemovalIntent::KeepProject,
                     window,
                     cx,
                 )
@@ -17608,9 +17547,9 @@ impl Sidebar {
                 None,
                 provisional_key,
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
-                &[],
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )

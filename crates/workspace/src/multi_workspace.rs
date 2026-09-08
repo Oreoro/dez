@@ -1632,6 +1632,22 @@ impl MultiWorkspace {
             .collect()
     }
 
+    /// Closes a single workspace, preferring to display another workspace from
+    /// the same project group afterwards.
+    pub fn close_workspace(
+        &mut self,
+        workspace: &Entity<Workspace>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<bool>> {
+        self.remove(
+            [workspace.clone()],
+            RemovalIntent::CloseProject,
+            window,
+            cx,
+        )
+    }
+
     pub fn remove_project_group(
         &mut self,
         group_key: &ProjectGroupKey,
