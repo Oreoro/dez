@@ -4243,12 +4243,12 @@ impl SettingsWindow {
                                 .id("settings-page-heading")
                                 .role(Role::Heading)
                                 .aria_level(1)
+                                .aria_label(title)
                                 .child(
                                     Label::new(title)
                                         .size(LabelSize::Large)
                                         .mt_2()
-                                        .mb_3()
-                                        .aria_label(title),
+                                        .mb_3(),
                                 ),
                         )
                     })
