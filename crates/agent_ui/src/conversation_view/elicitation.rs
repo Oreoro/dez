@@ -1969,7 +1969,7 @@ impl<'a> ElicitationCard<'a> {
             .into_any_element()
     }
 
-    fn render_option_content(option: ElicitationOption, cx: &App) -> Div {
+    fn render_option_content(option: ElicitationOption, _cx: &App) -> Div {
         v_flex()
             .min_w_0()
             .flex_1()
@@ -2065,7 +2065,7 @@ impl<'a> ElicitationCard<'a> {
                         ),
                 )
             })
-            .child(Self::render_url_summary(&mode.url))
+            .child(Self::render_url_summary(&mode.url, cx))
             .into_any_element()
     }
 

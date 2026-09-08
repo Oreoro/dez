@@ -12,6 +12,7 @@ use crate::{Agent, ArchiveSelectedThread, RemoveSelectedThread, default_agent_se
 
 use agent::ThreadStore;
 use agent_client_protocol::schema::v1 as acp;
+use agent_settings::AgentSettings;
 use chrono::{DateTime, Datelike as _, Local, NaiveDate, TimeDelta, Utc};
 use collections::HashMap;
 use editor::Editor;
@@ -19,8 +20,8 @@ use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     AnyElement, App, Context, Decorations, DismissEvent, Entity, EventEmitter, FocusHandle,
-    Focusable, ListState, Render, SharedString, Subscription, Task, TaskExt, WeakEntity, Window,
-    list, prelude::*, px,
+    Focusable, Hsla, ListState, PromptLevel, Render, SharedString, Subscription, Task, TaskExt,
+    WeakEntity, Window, list, prelude::*, px,
 };
 use itertools::Itertools as _;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
@@ -39,11 +40,12 @@ use ui::{
 use util::ResultExt;
 use util::paths::PathExt;
 use workspace::{
-    DesignSystemSettings, ModalView, PathList, RecentWorkspace, SerializedWorkspaceLocation,
-    Workspace, WorkspaceDb, WorkspaceId,
+    CloseWindow, DesignSystemSettings, ModalView, PathList, RecentWorkspace,
+    SerializedWorkspaceLocation, Workspace, WorkspaceDb, WorkspaceId,
 };
 
 use zed_actions::editor::{MoveDown, MoveUp};
+use zed_actions::sidebar::FocusSidebarFilter;
 
 fn agent_history_label(
     app_name: &str,
@@ -1201,7 +1203,7 @@ impl ThreadsArchiveView {
         let left_window_controls = !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_left;
         let right_window_controls =
             !cfg!(target_os = "macos") && not_fullscreen && sidebar_on_right;
-        let header_height = platform_title_bar_height(window);
+        let header_height = ui::utils::platform_title_bar_height(window);
         let show_focus_keybinding =
             self.selection.is_some() && !self.filter_editor.focus_handle(cx).is_focused(window);
 
@@ -1259,7 +1261,11 @@ impl ThreadsArchiveView {
                 )
             })
             .when(right_window_controls, |this| {
-                this.children(Self::render_right_window_controls(window, cx))
+                this.children(Self::render_right_window_controls(
+                    window,
+                    cx,
+                    header_height,
+                ))
             })
     }
 
@@ -1271,11 +1277,16 @@ impl ThreadsArchiveView {
         )
     }
 
-    fn render_right_window_controls(window: &Window, cx: &mut App) -> Option<AnyElement> {
+    fn render_right_window_controls(
+        window: &Window,
+        cx: &mut App,
+        height: Pixels,
+    ) -> Option<AnyElement> {
         platform_title_bar::render_right_window_controls(
             cx.button_layout(),
             Box::new(CloseWindow),
             window,
+            height,
         )
     }
 

@@ -225,12 +225,6 @@ pub(crate) fn compose_terminal_thread_title(
     }
 }
 
-pub(crate) fn terminal_title_without_prefix(title: &str) -> &str {
-    terminal_title_prefix(title)
-        .map(|prefix| &title[prefix.len()..])
-        .unwrap_or(title)
-}
-
 pub(crate) fn normalize_terminal_custom_title(
     terminal_title: &str,
     edited_title: SharedString,
@@ -241,48 +235,6 @@ pub(crate) fn normalize_terminal_custom_title(
         None
     } else {
         Some(edited_title)
-    }
-}
-
-pub fn terminal_title_prefix(title: &str) -> Option<&str> {
-    let mut prefix_byte_len = 0;
-    let mut saw_prefix_character = false;
-    let mut saw_whitespace_after_prefix = false;
-
-    let mut chars = title.chars().peekable();
-    while let Some(character) = chars.next() {
-        if character.is_alphanumeric() {
-            return None;
-        }
-
-        if character.is_whitespace() {
-            if !saw_prefix_character {
-                return None;
-            }
-
-            prefix_byte_len += character.len_utf8();
-            saw_whitespace_after_prefix = true;
-
-            while let Some(character) = chars.peek() {
-                if !character.is_whitespace() {
-                    break;
-                }
-
-                prefix_byte_len += character.len_utf8();
-                chars.next();
-            }
-
-            break;
-        }
-
-        saw_prefix_character = true;
-        prefix_byte_len += character.len_utf8();
-    }
-
-    if saw_whitespace_after_prefix {
-        Some(&title[..prefix_byte_len])
-    } else {
-        None
     }
 }
 
@@ -457,7 +409,6 @@ impl TerminalThreadMetadataStore {
         };
         mutate(&mut metadata.attention, Utc::now());
         self.save_internal(metadata);
-        cx.notify();
     }
 
     pub fn rename_terminal(
