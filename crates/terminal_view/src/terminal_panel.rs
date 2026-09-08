@@ -633,19 +633,6 @@ impl TerminalPanel {
         .detach_and_log_err(cx);
     }
 
-        terminal_panel
-            .update(cx, |panel, cx| {
-                panel.add_terminal_shell(
-                    action.local,
-                    Some(action.working_directory.clone()),
-                    RevealStrategy::Always,
-                    window,
-                    cx,
-                )
-            })
-            .detach_and_log_err(cx);
-    }
-
     pub fn spawn_task(
         &mut self,
         task: &SpawnInTerminal,

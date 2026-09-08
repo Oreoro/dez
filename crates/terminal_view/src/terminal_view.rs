@@ -4409,6 +4409,7 @@ impl Item for TerminalView {
                 })
                 .into_any(),
         )
+    }
 
     fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
         let title = self

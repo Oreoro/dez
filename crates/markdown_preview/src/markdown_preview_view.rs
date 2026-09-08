@@ -503,6 +503,7 @@ impl MarkdownPreviewView {
         }
 
         this
+        })
     }
 
     fn workspace_updated(
