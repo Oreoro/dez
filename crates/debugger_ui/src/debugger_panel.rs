@@ -9,7 +9,7 @@ use crate::session::running::breakpoint_list::BreakpointList;
 use crate::{
     ClearAllBreakpoints, Continue, ContinueThread, CopyDebugAdapterArguments, Detach,
     FocusBreakpointList, FocusConsole, FocusFrames, FocusLoadedSources, FocusModules,
-    FocusTerminal, FocusVariables, NewProcessModal, NewProcessMode, Pause, RerunSession, StepInto,
+    FocusTerminal, FocusVariables, NewProcessModal, NewProcessMode, Pause, StepInto,
     StepOut, StepOver, Stop, ToggleExpandItem, ToggleSessionPicker, ToggleThreadPicker,
     persistence, spawn_task_or_modal,
 };
