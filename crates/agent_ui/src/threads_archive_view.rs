@@ -41,7 +41,7 @@ use util::ResultExt;
 use util::paths::PathExt;
 use workspace::{
     CloseWindow, DesignSystemSettings, ModalView, PathList, RecentWorkspace,
-    SerializedWorkspaceLocation, Workspace, WorkspaceDb, WorkspaceId,
+    SerializedWorkspaceLocation, SidebarSettings, Workspace, WorkspaceDb, WorkspaceId,
 };
 
 use zed_actions::editor::{MoveDown, MoveUp};
@@ -1194,7 +1194,7 @@ impl ThreadsArchiveView {
     fn render_header(&self, window: &Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_query = !self.filter_editor.read(cx).text(cx).is_empty();
         let sidebar_on_left = matches!(
-            AgentSettings::get_global(cx).sidebar_side(),
+            SidebarSettings::get_global(cx).side(),
             settings::SidebarSide::Left
         );
         let sidebar_on_right = !sidebar_on_left;
