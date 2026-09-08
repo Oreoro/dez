@@ -1601,12 +1601,8 @@ impl<'a> ElicitationCard<'a> {
     }
 
     pub(crate) fn render(self, cx: &App) -> Div {
-        let border_color = cx.theme().colors().border.opacity(0.8);
-        let header_background = cx
-            .theme()
-            .colors()
-            .element_background
-            .blend(cx.theme().colors().editor_foreground.opacity(0.025));
+        let border_color = elicitation_card_border(cx);
+        let header_background = elicitation_header_background(cx);
         let tool_name_font_size = rems_from_px(13_f32);
         let is_pending = matches!(&self.elicitation.status, ElicitationStatus::Pending { .. });
         let is_accepted_url = matches!(
