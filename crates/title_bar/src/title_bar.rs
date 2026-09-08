@@ -8,7 +8,6 @@ mod update_version;
 use crate::application_menu::{ApplicationMenu, show_menus};
 use crate::plan_chip::PlanChip;
 use agent_settings::{AgentSettings, WindowLayout};
-use arrayvec::ArrayVec;
 use git_ui_core::worktree_picker::WorktreePicker;
 pub use platform_title_bar::{
     self, DraggedWindowTab, MergeAllWindows, MoveTabToNewWindow, PlatformTitleBar,
@@ -2404,6 +2403,7 @@ mod dez_sidebar_chrome_tests {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
     use util::paths::PathStyle;
