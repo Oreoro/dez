@@ -1,4 +1,4 @@
-use gpui::Pixels;
+use gpui::{Pixels, px};
 use settings::{IntoGpui, RegisterSetting, Settings};
 
 /// The settings for the markdown preview.

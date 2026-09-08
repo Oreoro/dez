@@ -26,7 +26,7 @@ use markdown::{
 };
 use project::search::SearchQuery;
 use project::{Project, ProjectPath, image_store};
-use settings::{SeedQuerySetting, Settings, update_settings_file};
+use settings::{MarkdownPreviewOpenMode, SeedQuerySetting, Settings, update_settings_file};
 use theme::{SystemAppearance, Theme, ThemeRegistry};
 use theme_settings::ThemeSettings;
 use ui::utils::WithRemSize;
@@ -39,7 +39,9 @@ use util::{
     paths::{PathStyle, PathWithPosition},
     rel_path::RelPath,
 };
-use workspace::item::{Item, ItemBufferKind, ItemHandle, SaveOptions, SerializableItem};
+use workspace::item::{
+    Item, ItemBufferKind, ItemHandle, ProjectItem, ProjectItemKind, SaveOptions, SerializableItem,
+};
 use workspace::notifications::{NotifyResultExt, NotifyTaskExt};
 use workspace::path_link::{PathMatching, resolve_open_target};
 use workspace::searchable::{
@@ -471,38 +473,38 @@ impl MarkdownPreviewView {
                 markdown_parse_pending: false,
             };
 
-        this.set_editor(active_editor, window, cx);
+            this.set_editor(active_editor, window, cx);
 
-        match mode {
-            MarkdownPreviewMode::Follow => {
-                if let Some(workspace) = &workspace.upgrade() {
-                    cx.observe_in(workspace, window, |this, workspace, window, cx| {
-                        let item = workspace.read(cx).active_item(cx);
-                        this.workspace_updated(item, window, cx);
-                    })
-                    .detach();
-                } else {
-                    log::error!("Failed to listen to workspace updates");
-                }
-            }
-            MarkdownPreviewMode::Default => {
-                // After workspace restoration the bound editor may be an orphan that
-                // wraps the right buffer but isn't the canonical Editor instance in
-                // any pane. Re-binding to the workspace's editor for our buffer is
-                // what restores cursor-driven scroll sync — `SelectionsChanged` only
-                // fires from the editor the user actually interacts with.
-                //
-                // Subscribing to `workspace::Event` (rather than `observe`) keeps the
-                // rebind check off the cursor-move hot path; `observe` would fire on
-                // every workspace `cx.notify`.
-                if let Some(workspace) = &workspace.upgrade() {
-                    cx.subscribe_in(workspace, window, Self::on_workspace_event)
+            match mode {
+                MarkdownPreviewMode::Follow => {
+                    if let Some(workspace) = &workspace.upgrade() {
+                        cx.observe_in(workspace, window, |this, workspace, window, cx| {
+                            let item = workspace.read(cx).active_item(cx);
+                            this.workspace_updated(item, window, cx);
+                        })
                         .detach();
+                    } else {
+                        log::error!("Failed to listen to workspace updates");
+                    }
+                }
+                MarkdownPreviewMode::Default => {
+                    // After workspace restoration the bound editor may be an orphan that
+                    // wraps the right buffer but isn't the canonical Editor instance in
+                    // any pane. Re-binding to the workspace's editor for our buffer is
+                    // what restores cursor-driven scroll sync — `SelectionsChanged` only
+                    // fires from the editor the user actually interacts with.
+                    //
+                    // Subscribing to `workspace::Event` (rather than `observe`) keeps the
+                    // rebind check off the cursor-move hot path; `observe` would fire on
+                    // every workspace `cx.notify`.
+                    if let Some(workspace) = &workspace.upgrade() {
+                        cx.subscribe_in(workspace, window, Self::on_workspace_event)
+                            .detach();
+                    }
                 }
             }
-        }
 
-        this
+            this
         })
     }
 
@@ -1810,7 +1812,7 @@ impl Item for MarkdownPreviewView {
     }
 }
 
-impl WorkspaceProjectItem for MarkdownPreviewView {
+impl ProjectItem for MarkdownPreviewView {
     type Item = MarkdownPreviewProjectItem;
 
     fn project_item_kind() -> Option<ProjectItemKind> {
@@ -1826,13 +1828,7 @@ impl WorkspaceProjectItem for MarkdownPreviewView {
     ) -> Self {
         let buffer = item.read(cx).buffer.clone();
         let editor = cx.new(|cx| {
-            <Editor as WorkspaceProjectItem>::for_project_item(
-                project.clone(),
-                pane,
-                buffer,
-                window,
-                cx,
-            )
+            <Editor as ProjectItem>::for_project_item(project.clone(), pane, buffer, window, cx)
         });
         let workspace = pane
             .map(Pane::workspace)
