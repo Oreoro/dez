@@ -947,9 +947,15 @@ impl TerminalPanel {
                 anyhow::bail!("terminal not yet supported for collaborative projects");
             }
             let project = workspace.read_with(cx, |workspace, _| workspace.project().clone())?;
-            let terminal = project
-                .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
-                .await;
+            let terminal = if force_local {
+                project
+                    .update(cx, |project, cx| project.create_local_terminal(cx))
+                    .await
+            } else {
+                project
+                    .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
+                    .await
+            };
 
             let pane = terminal_panel
                 .read_with(cx, |terminal_panel, _| terminal_panel.active_pane.clone())?;
