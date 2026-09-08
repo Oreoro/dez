@@ -18,7 +18,7 @@ use editor::Editor;
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
-    AnyElement, App, Context, Decorations, DismissEvent, Entity, EventEmitter, FocusHandle,
+    AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle,
     Focusable, Hsla, ListState, PromptLevel, Render, SharedString, Subscription, Task, TaskExt,
     WeakEntity, Window, list, prelude::*, px,
 };
