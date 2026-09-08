@@ -127,10 +127,13 @@ impl project::ProjectItem for MarkdownPreviewProjectItem {
                 .read(cx)
                 .worktree_for_id(path.worktree_id, cx)
                 .is_some_and(|worktree| {
-                    MarkdownPreviewView::is_markdown_path(worktree.read(cx).root_name_str())
+                    MarkdownPreviewView::is_markdown_path(
+                        worktree.read(cx).root_name_str(),
+                        project.read(cx).languages(),
+                    )
                 })
         } else {
-            MarkdownPreviewView::is_markdown_path(rel_path)
+            MarkdownPreviewView::is_markdown_path(rel_path, project.read(cx).languages())
         };
         if MarkdownPreviewSettings::get_global(cx).default_open_mode
             == MarkdownPreviewOpenMode::Source
@@ -1835,7 +1838,7 @@ impl ProjectItem for MarkdownPreviewView {
             .unwrap_or_else(WeakEntity::new_invalid);
         let language_registry = project.read(cx).languages().clone();
 
-        Self::new_inner(
+        Self::new(
             MarkdownPreviewMode::Default,
             editor,
             workspace,
@@ -1858,7 +1861,7 @@ impl Render for MarkdownPreviewView {
         let contrast = design_system.contrast;
         let radius = design_system.radius;
         let colors = cx.theme().colors();
-        let (scroll_padding, sheet_padding_x, sheet_padding_y) = match density {
+        let (_scroll_padding, sheet_padding_x, sheet_padding_y) = match density {
             settings::CanvasDensity::Compact => (px(12.), px(12.), px(10.)),
             settings::CanvasDensity::Balanced => (px(16.), px(20.), px(16.)),
             settings::CanvasDensity::Spacious => (px(24.), px(28.), px(24.)),
