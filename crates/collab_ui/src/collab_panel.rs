@@ -10,7 +10,6 @@ use client::{ChannelId, Client, Contact, Notification, Status, User, UserStore};
 use collections::{HashMap, HashSet};
 use contact_finder::ContactFinder;
 use db::kvp::KeyValueStore;
-use db::write_and_log;
 use editor::{Editor, EditorElement, EditorStyle};
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
@@ -360,8 +359,7 @@ fn persist_local_notes(notes: &[LocalNote], cx: &App) {
         Err(error) => {
             log::error!("Failed to serialize local notes: {error}");
             return;
-        }
-    };
+        }    };
     let db = KeyValueStore::global(cx);
     db::write_and_log(cx, move || db.write_kvp(LOCAL_NOTES_KEY.into(), serialized));
 }
@@ -1519,7 +1517,7 @@ impl CollabPanel {
                         .color(Color::Muted),
                 ),
             )
-            .child(Label::new(title))
+            .child(Label::new(title.clone()))
             .end_slot(
                 IconButton::new(
                     SharedString::from(format!("delete-local-note-{note_id}")),
@@ -1603,10 +1601,10 @@ impl CollabPanel {
             // The persisted text already carries the title line from the
             // first open; re-inserting it here would duplicate it on every
             // reopen. The tab title comes from `set_title` below.
-            buffer.update(&mut cx, |buffer, cx| {
+            buffer.update(cx, |buffer, cx| {
                 buffer.set_text(note_text, cx);
             });
-            workspace.update_in(&mut cx, |workspace, window, cx| {
+            workspace.update_in(cx, |workspace, window, cx| {
                 let editor = cx.new(|cx| {
                     Editor::for_buffer(buffer.clone(), Some(project.clone()), window, cx)
                 });
@@ -2116,6 +2114,7 @@ impl CollabPanel {
                     Section::Channels => self.new_root_channel(window, cx),
                     Section::Contacts => self.toggle_contact_finder(window, cx),
                     Section::FavoriteChannels
+                    | Section::LocalNotes
                     | Section::ContactRequests
                     | Section::Online
                     | Section::Offline

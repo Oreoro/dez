@@ -41,6 +41,7 @@ fuzzy.workspace = true
 gpui.workspace = true
 language.workspace = true
 livekit_client.workspace = true
+log.workspace = true
 menu.workspace = true
 notifications.workspace = true
 picker.workspace = true
