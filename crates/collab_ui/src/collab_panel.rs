@@ -1505,7 +1505,6 @@ impl CollabPanel {
         is_selected: bool,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let note_id_for_menu = note_id;
         ListItem::new(SharedString::from(format!("local-note-{note_id}")))
             .height(panel_row_height())
             .focused(is_selected)
@@ -1522,15 +1521,13 @@ impl CollabPanel {
             )
             .child(Label::new(title))
             .end_slot(
-                Button::new(
+                IconButton::new(
                     SharedString::from(format!("delete-local-note-{note_id}")),
-                    "Delete",
+                    IconName::Trash,
                 )
-                .style(ButtonStyle::Subtle)
-                .size(ButtonSize::Compact)
-                .label_size(LabelSize::XSmall)
+                .icon_size(IconSize::Small)
                 .visible_on_hover("collab-panel-entries")
-                .aria_label(format!("Delete note {}", note_id_for_menu))
+                .aria_label(format!("Delete note {title}"))
                 .on_click(cx.listener(move |this, _, _, cx| {
                     this.delete_local_note(note_id, cx);
                 })),
