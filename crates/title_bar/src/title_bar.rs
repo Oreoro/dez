@@ -1346,6 +1346,9 @@ impl SidebarChrome {
         }
 
         let host = self.project.read(cx).host()?;
+        if paths::APP_NAME != "Zed" {
+            return None;
+        }
         let host_user = self.user_store.read(cx).get_cached_user(host.user_id)?;
         let participant_index = self
             .user_store

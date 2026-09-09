@@ -10,6 +10,7 @@ use client::{ChannelId, Client, Contact, Notification, Status, User, UserStore};
 use collections::{HashMap, HashSet};
 use contact_finder::ContactFinder;
 use db::kvp::KeyValueStore;
+use db::write_and_log;
 use editor::{Editor, EditorElement, EditorStyle};
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
@@ -20,6 +21,7 @@ use gpui::{
     div, fill, point, prelude::*, px, size, uniform_list,
 };
 
+use language::Buffer;
 use menu::{Cancel, Confirm, SecondaryConfirm, SelectNext, SelectPrevious};
 use notifications::{NotificationEntry, NotificationEvent, NotificationStore};
 use project::{Fs, Project};
@@ -53,6 +55,7 @@ use workspace::{
 const FILTER_OCCUPIED_CHANNELS_KEY: &str = "filter_occupied_channels";
 const FAVORITE_CHANNELS_KEY: &str = "favorite_channels";
 const COLLABORATION_PANEL_KEY: &str = "CollaborationPanel";
+const LOCAL_NOTES_KEY: &str = "CollabLocalNotes";
 const TOAST_DURATION: Duration = Duration::from_secs(5);
 
 fn panel_row_height() -> Rems {
@@ -90,6 +93,8 @@ actions!(
         MoveChannelUp,
         /// Moves the selected channel down in the list.
         MoveChannelDown,
+        /// Creates a new local note that works without signing in.
+        NewLocalNote,
     ]
 );
 
@@ -142,6 +147,11 @@ pub fn init(cx: &mut App) {
             window.defer(cx, move |window, cx| {
                 ChannelView::open(channel_id, None, workspace, window, cx).detach_and_log_err(cx)
             });
+        });
+        workspace.register_action(|workspace, _: &NewLocalNote, window, cx| {
+            if let Some(panel) = workspace.panel::<CollabPanel>(cx) {
+                panel.update(cx, |panel, cx| panel.create_local_note(window, cx));
+            }
         });
         // TODO: make it possible to bind this one to a held key for push to talk?
         // how to make "toggle_on_modifiers_press" contextual?
@@ -279,6 +289,7 @@ pub struct CollabPanel {
     project: Entity<Project>,
     match_candidates: Vec<StringMatchCandidate>,
     subscriptions: Vec<Subscription>,
+    note_buffer_subscriptions: HashMap<u64, (Entity<Buffer>, Subscription)>,
     collapsed_sections: Vec<Section>,
     collapsed_channels: Vec<ChannelId>,
     filter_occupied_channels: bool,
@@ -287,6 +298,7 @@ pub struct CollabPanel {
     notification_store: Entity<NotificationStore>,
     current_notification_toast: Option<(u64, Task<()>)>,
     mark_as_read_tasks: HashMap<u64, Task<anyhow::Result<()>>>,
+    local_notes: Vec<LocalNote>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -294,9 +306,71 @@ struct SerializedCollabPanel {
     collapsed_channels: Option<Vec<u64>>,
 }
 
+#[derive(Serialize, Deserialize)]
+struct SerializedLocalNotes {
+    notes: Vec<SerializedLocalNote>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct SerializedLocalNote {
+    id: u64,
+    title: String,
+    text: String,
+}
+
+#[derive(Clone, Debug)]
+struct LocalNote {
+    id: u64,
+    title: String,
+    text: String,
+}
+
+fn load_local_notes(cx: &App) -> Vec<LocalNote> {
+    KeyValueStore::global(cx)
+        .read_kvp(LOCAL_NOTES_KEY)
+        .log_err()
+        .flatten()
+        .and_then(|json| serde_json::from_str::<SerializedLocalNotes>(&json).ok())
+        .map(|serialized| {
+            serialized
+                .notes
+                .into_iter()
+                .map(|note| LocalNote {
+                    id: note.id,
+                    title: note.title,
+                    text: note.text,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn persist_local_notes(notes: &[LocalNote], cx: &App) {
+    let serialized = match serde_json::to_string(&SerializedLocalNotes {
+        notes: notes
+            .iter()
+            .map(|note| SerializedLocalNote {
+                id: note.id,
+                title: note.title.clone(),
+                text: note.text.clone(),
+            })
+            .collect(),
+    }) {
+        Ok(serialized) => serialized,
+        Err(error) => {
+            log::error!("Failed to serialize local notes: {error}");
+            return;
+        }
+    };
+    db::write_and_log(cx, move || {
+        KeyValueStore::global(cx).write_kvp(LOCAL_NOTES_KEY.into(), serialized)
+    });
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug, PartialOrd, Ord)]
 enum Section {
     ActiveCall,
+    LocalNotes,
     FavoriteChannels,
     Channels,
     ChannelInvites,
@@ -309,6 +383,10 @@ enum Section {
 #[derive(Clone, Debug)]
 enum ListEntry {
     Header(Section),
+    LocalNote {
+        note_id: u64,
+        title: SharedString,
+    },
     CallParticipant {
         user: Arc<User>,
         peer_id: Option<PeerId>,
@@ -441,6 +519,8 @@ impl CollabPanel {
                 filter_occupied_channels: false,
                 workspace: workspace.weak_handle(),
                 client: workspace.app_state().client.clone(),
+                local_notes: load_local_notes(cx),
+                note_buffer_subscriptions: HashMap::default(),
             };
 
             this.update_entries(false, cx);
@@ -610,6 +690,40 @@ impl CollabPanel {
         let prev_selected_entry = self.selection.and_then(|ix| self.entries.get(ix).cloned());
         let old_entries = mem::take(&mut self.entries);
         let mut scroll_to_top = false;
+
+        if !self.local_notes.is_empty() || !query.is_empty() {
+            self.match_candidates.clear();
+            self.match_candidates.extend(
+                self.local_notes
+                    .iter()
+                    .enumerate()
+                    .map(|(ix, note)| StringMatchCandidate::new(ix, &note.title)),
+            );
+            let matches = fg_executor.block_on(match_strings(
+                &self.match_candidates,
+                &query,
+                true,
+                true,
+                usize::MAX,
+                &Default::default(),
+                executor.clone(),
+            ));
+            let matched_notes: Vec<&LocalNote> = matches
+                .iter()
+                .filter_map(|mat| self.local_notes.get(mat.candidate_id))
+                .collect();
+            if !matched_notes.is_empty() || self.local_notes.is_empty() {
+                self.entries.push(ListEntry::Header(Section::LocalNotes));
+                if !self.collapsed_sections.contains(&Section::LocalNotes) {
+                    for note in matched_notes {
+                        self.entries.push(ListEntry::LocalNote {
+                            note_id: note.id,
+                            title: note.title.clone().into(),
+                        });
+                    }
+                }
+            }
+        }
 
         if let Some(room) = ActiveCall::global(cx).read(cx).room() {
             self.entries.push(ListEntry::Header(Section::ActiveCall));
@@ -1385,6 +1499,166 @@ impl CollabPanel {
             .tooltip(Tooltip::text("Open Channel Notes"))
     }
 
+    fn render_local_note(
+        &self,
+        note_id: u64,
+        title: SharedString,
+        is_selected: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let note_id_for_menu = note_id;
+        ListItem::new(SharedString::from(format!("local-note-{note_id}")))
+            .height(panel_row_height())
+            .focused(is_selected)
+            .dock(self.dock_side(cx))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.open_local_note(note_id, window, cx);
+            }))
+            .start_slot(
+                h_flex().gap_1p5().child(
+                    Icon::new(IconName::Reader)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                ),
+            )
+            .child(Label::new(title))
+            .end_slot(
+                Button::new(
+                    SharedString::from(format!("delete-local-note-{note_id}")),
+                    "Delete",
+                )
+                .style(ButtonStyle::Subtle)
+                .size(ButtonSize::Compact)
+                .label_size(LabelSize::XSmall)
+                .visible_on_hover("collab-panel-entries")
+                .aria_label(format!("Delete note {}", note_id_for_menu))
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.delete_local_note(note_id, cx);
+                })),
+            )
+            .tooltip(Tooltip::text("Open Local Note"))
+    }
+
+    fn create_local_note(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let max_id = self
+            .local_notes
+            .iter()
+            .map(|note| note.id)
+            .max()
+            .unwrap_or(0);
+        let note = LocalNote {
+            id: max_id + 1,
+            title: format!("Note {}", max_id + 1),
+            text: String::new(),
+        };
+        self.local_notes.push(note.clone());
+        self.persist_local_notes(cx);
+        self.update_entries(false, cx);
+        cx.notify();
+        self.open_local_note(note.id, window, cx);
+    }
+
+    fn delete_local_note(&mut self, note_id: u64, cx: &mut Context<Self>) {
+        self.local_notes.retain(|note| note.id != note_id);
+        self.note_buffer_subscriptions.remove(&note_id);
+        self.persist_local_notes(cx);
+        self.selection.take();
+        self.update_entries(false, cx);
+        cx.notify();
+    }
+
+    fn persist_local_notes(&mut self, cx: &mut Context<Self>) {
+        persist_local_notes(&self.local_notes, cx);
+    }
+
+    fn open_local_note(&mut self, note_id: u64, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(note) = self.local_notes.iter().find(|note| note.id == note_id) else {
+            return;
+        };
+        let note = note.clone();
+        let Some(workspace) = self.workspace.upgrade() else {
+            return;
+        };
+
+        let project = self.project.clone();
+        let existing = workspace.read_with(cx, |workspace, cx| {
+            workspace.items(cx).find_map(|item| {
+                item.downcast::<Editor>().and_then(|editor| {
+                    let matches =
+                        editor.read(cx).buffer().read(cx).title(cx) == note.title.as_str();
+                    matches.then_some(editor)
+                })
+            })
+        });
+
+        if let Some(existing) = existing {
+            workspace.update(cx, |workspace, cx| {
+                workspace.activate_item(&existing, true, true, window, cx)
+            });
+            return;
+        }
+        let note_title = note.title.clone();
+        let note_text = note.text.clone();
+
+        let create = project.update(cx, |project, cx| project.create_buffer(None, true, cx));
+        let panel = cx.weak_entity();
+        cx.spawn_in(window, async move |_, mut cx| {
+            let buffer = create.await?;
+            buffer.update(&mut cx, |buffer, cx| {
+                buffer.set_text(note_text, cx);
+                buffer.edit([(0..0, note.title.clone())], None, cx);
+            });
+            workspace.update_in(&mut cx, |workspace, window, cx| {
+                let editor = cx.new(|cx| {
+                    Editor::for_buffer(buffer.clone(), Some(project.clone()), window, cx)
+                });
+                editor.update(cx, |editor, cx| {
+                    editor.buffer().update(cx, |multibuffer, cx| {
+                        multibuffer.set_title(note.title.clone(), cx);
+                    });
+                });
+                workspace.add_item_to_active_pane(Box::new(editor.clone()), None, true, window, cx);
+            })?;
+
+            panel.update(cx, |panel, cx| {
+                panel.watch_note_buffer(note_id, note_title, buffer, cx);
+            })?;
+            anyhow::Ok(())
+        })
+        .detach_and_log_err(cx);
+    }
+
+    fn watch_note_buffer(
+        &mut self,
+        note_id: u64,
+        note_title: String,
+        buffer: Entity<Buffer>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.note_buffer_subscriptions.contains_key(&note_id) {
+            return;
+        }
+        self.note_buffer_subscriptions.insert(
+            note_id,
+            (
+                buffer.clone(),
+                cx.observe(&buffer, move |this, buffer, cx| {
+                    let text = buffer.read(cx).text();
+                    if let Some(note) = this
+                        .local_notes
+                        .iter_mut()
+                        .find(|note| note.title == note_title)
+                    {
+                        if note.text != text {
+                            note.text = text;
+                            this.persist_local_notes(cx);
+                        }
+                    }
+                }),
+            ),
+        );
+    }
+
     fn has_subchannels(&self, ix: usize) -> bool {
         self.entries.get(ix).is_some_and(|entry| {
             if let ListEntry::Channel { has_children, .. } = entry {
@@ -1914,10 +2188,15 @@ impl CollabPanel {
                 ListEntry::ChannelNotes { channel_id } => {
                     self.open_channel_notes(*channel_id, window, cx)
                 }
+                ListEntry::LocalNote { note_id, .. } => self.open_local_note(*note_id, window, cx),
                 ListEntry::OutgoingRequest(_) => {}
                 ListEntry::ChannelEditor { .. } => {}
             }
         }
+    }
+
+    fn new_local_note(&mut self, _: &NewLocalNote, window: &mut Window, cx: &mut Context<Self>) {
+        self.create_local_note(window, cx);
     }
 
     fn insert_space(&mut self, _: &InsertSpace, window: &mut Window, cx: &mut Context<Self>) {
@@ -2703,7 +2982,9 @@ impl CollabPanel {
     }
 
     fn render_signed_out(&mut self, cx: &mut Context<Self>) -> Div {
-        let collab_blurb = "Work with your team in realtime with collaborative editing, voice, shared notes and more.";
+        let collab_blurb =
+            "Sign in to share projects, edit together in realtime, and talk over voice call.";
+        let has_local_notes = !self.local_notes.is_empty();
 
         // Two distinct "not connected" states:
         //   - Authenticated (has credentials): user just needs to connect.
@@ -2731,30 +3012,83 @@ impl CollabPanel {
         };
 
         v_flex()
-            .p_4()
-            .gap_4()
             .size_full()
-            .text_center()
-            .justify_center()
-            .child(Label::new(collab_blurb))
+            .gap_1()
+            .when(has_local_notes, |this| {
+                this.child(
+                    div().size_full().child(
+                        uniform_list(
+                            "collab-panel-entries",
+                            self.entries.len(),
+                            cx.processor(|this, range: Range<usize>, window, cx| {
+                                range
+                                    .map(|ix| this.render_list_entry(ix, window, cx))
+                                    .collect()
+                            }),
+                        )
+                        .size_full()
+                        .track_scroll(&self.scroll_handle)
+                        .with_decoration(
+                            ui::indent_guides(px(20.), IndentGuideColors::panel(cx))
+                                .with_left_offset(ui::LIST_ITEM_INDENT_GUIDE_LEFT_OFFSET)
+                                .with_compute_indents_fn(cx.entity(), |this, range, _, _| {
+                                    range
+                                        .map(|ix| match this.entries.get(ix) {
+                                            Some(ListEntry::Channel { depth, .. })
+                                            | Some(ListEntry::ChannelEditor { depth }) => *depth,
+                                            _ => 0,
+                                        })
+                                        .collect()
+                                }),
+                        ),
+                    ),
+                )
+            })
+            .when(!has_local_notes, |this| {
+                this.child(
+                    v_flex()
+                        .p_4()
+                        .gap_4()
+                        .size_full()
+                        .text_center()
+                        .justify_center()
+                        .child(Label::new(collab_blurb)),
+                )
+            })
             .child(
-                Button::new(button_id, button_label)
-                    .full_width()
-                    .start_icon(Icon::new(button_icon).color(Color::Muted))
-                    .style(ButtonStyle::Outlined)
-                    .disabled(is_busy)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        let client = this.client.clone();
-                        let workspace = this.workspace.clone();
-                        cx.spawn_in(window, async move |_, mut cx| {
-                            client
-                                .connect(true, &mut cx)
-                                .await
-                                .into_response()
-                                .notify_workspace_async_err(workspace, &mut cx);
-                        })
-                        .detach()
-                    })),
+                h_flex()
+                    .flex_none()
+                    .p_2()
+                    .gap_2()
+                    .justify_center()
+                    .border_t_1()
+                    .border_color(cx.theme().colors().border)
+                    .child(
+                        Button::new(button_id, button_label)
+                            .start_icon(Icon::new(button_icon).color(Color::Muted))
+                            .style(ButtonStyle::Outlined)
+                            .disabled(is_busy)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                let client = this.client.clone();
+                                let workspace = this.workspace.clone();
+                                cx.spawn_in(window, async move |_, mut cx| {
+                                    client
+                                        .connect(true, &mut cx)
+                                        .await
+                                        .into_response()
+                                        .notify_workspace_async_err(workspace, &mut cx);
+                                })
+                                .detach()
+                            })),
+                    )
+                    .child(
+                        Button::new("new-local-note", "New Local Note")
+                            .start_icon(Icon::new(IconName::Plus).color(Color::Muted))
+                            .style(ButtonStyle::Subtle)
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.create_local_note(window, cx)
+                            })),
+                    ),
             )
     }
 
@@ -2842,6 +3176,9 @@ impl CollabPanel {
                 .into_any_element(),
             ListEntry::ChannelNotes { channel_id } => self
                 .render_channel_notes(channel_id, is_selected, window, cx)
+                .into_any_element(),
+            ListEntry::LocalNote { note_id, title } => self
+                .render_local_note(note_id, title, is_selected, cx)
                 .into_any_element(),
         }
     }
@@ -2988,6 +3325,7 @@ impl CollabPanel {
                     SharedString::from("Current Call")
                 }
             }
+            Section::LocalNotes => SharedString::from("Local Notes"),
             Section::FavoriteChannels => SharedString::from("Favorites"),
             Section::ContactRequests => SharedString::from("Requests"),
             Section::Contacts => SharedString::from("Contacts"),
@@ -3046,6 +3384,13 @@ impl CollabPanel {
                     )
                     .into_any_element(),
             ),
+            Section::LocalNotes => Some(
+                IconButton::new("add-local-note", IconName::Plus)
+                    .icon_size(IconSize::Small)
+                    .on_click(cx.listener(|this, _, window, cx| this.create_local_note(window, cx)))
+                    .tooltip(Tooltip::text("New Local Note"))
+                    .into_any_element(),
+            ),
             Section::Contacts => Some(
                 IconButton::new("add-contact", IconName::Plus)
                     .icon_size(IconSize::Small)
@@ -3094,7 +3439,8 @@ impl CollabPanel {
             | Section::Contacts
             | Section::FavoriteChannels => false,
 
-            Section::ChannelInvites
+            Section::LocalNotes
+            | Section::ChannelInvites
             | Section::ContactRequests
             | Section::Online
             | Section::Offline => true,
@@ -3908,6 +4254,7 @@ impl Render for CollabPanel {
             .on_action(cx.listener(CollabPanel::start_move_selected_channel))
             .on_action(cx.listener(CollabPanel::move_channel_up))
             .on_action(cx.listener(CollabPanel::move_channel_down))
+            .on_action(cx.listener(CollabPanel::new_local_note))
             .track_focus(&self.focus_handle)
             .size_full()
             .bg(cx.theme().colors().editor_background)
@@ -3936,8 +4283,9 @@ impl Panel for CollabPanel {
     fn activation_focus_handle(&self, cx: &App) -> FocusHandle {
         let status = *self.client.status().borrow();
         let is_collaboration_disabled = self.is_collaboration_disabled_by_organization(cx);
+        let signed_in_view = Self::is_signed_in_view_visible(status, is_collaboration_disabled);
 
-        if Self::is_signed_in_view_visible(status, is_collaboration_disabled) {
+        if signed_in_view || !self.local_notes.is_empty() {
             self.filter_editor.focus_handle(cx)
         } else {
             self.focus_handle.clone()
@@ -4078,6 +4426,14 @@ impl PartialEq for ListEntry {
                 } = other
                 {
                     return channel_id == other_id;
+                }
+            }
+            ListEntry::LocalNote { note_id, .. } => {
+                if let ListEntry::LocalNote {
+                    note_id: other_id, ..
+                } = other
+                {
+                    return note_id == other_id;
                 }
             }
             ListEntry::ChannelInvite(channel_1) => {
@@ -4313,6 +4669,9 @@ impl CollabPanel {
                 }
                 ListEntry::ChannelNotes { .. } => {
                     string_entries.push(format!("  (notes){selected_marker}"));
+                }
+                ListEntry::LocalNote { title, .. } => {
+                    string_entries.push(format!("  (note) {title}{selected_marker}"));
                 }
                 ListEntry::ChannelEditor { depth } => {
                     let indent = "  ".repeat(*depth + 1);

@@ -2,9 +2,9 @@ use crate::{
     AddActiveFileToEvidence, BrowseRunningSessions, CloseWindow, MultiWorkspace, NewCenterTerminal,
     NewFile, NewTerminal, OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible,
     RemoveActiveFileFromEvidence, RevealBuiltInAgent, RevealCollab, RevealDebug, RevealFiles,
-    RevealGitChanges, RevealOutline,
-    SidebarSide, SplitDirection, ToggleAgentPane, ToggleFileFinder, ToggleProjectPane,
-    ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    RevealGitChanges, RevealOutline, SidebarSide, SplitDirection, ToggleAgentPane,
+    ToggleFileFinder, ToggleProjectPane, ToggleProjectSymbols, ToggleZoom, Workspace,
+    WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -3576,7 +3576,11 @@ impl Pane {
         let has_file_icon = icon.is_some();
 
         let capability = item.capability(cx);
-        let accessibility_label = format!("Open {tab_accessibility_label}");
+        let accessibility_label = if is_preview {
+            format!("Open {tab_accessibility_label}, preview")
+        } else {
+            format!("Open {tab_accessibility_label}")
+        };
         let tab = Tab::new(ix)
             .density(canvas_tab_density(cx))
             .radius(canvas_tab_radius(cx))

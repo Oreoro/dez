@@ -891,7 +891,7 @@ impl WelcomePage {
                 Button::new("retry-recent-workspaces", "Retry")
                     .tab_index(tab_index as isize)
                     .full_width()
-                    .label_size(LabelSize::XSmall)
+                    .label_size(LabelSize::Small)
                     .on_click(move |_, window, cx| {
                         welcome_page
                             .update(cx, |welcome_page, cx| {
@@ -1250,7 +1250,7 @@ impl Render for WelcomePage {
                                         .min_w_0()
                                         .gap_0p5()
                                         .child(
-                                            Label::new(page_title)
+                                            Label::new(page_title.clone())
                                                 .size(LabelSize::XSmall)
                                                 .color(Color::Muted),
                                         )
@@ -1293,6 +1293,20 @@ impl Render for WelcomePage {
                                         .font_weight(FontWeight::MEDIUM)
                                         .child(Headline::new(page_title).size(HeadlineSize::Large)),
                                 )
+                                .when(installation_required, |this| {
+                                    this.child(
+                                        Label::new("Install Dez to continue")
+                                            .size(welcome_primary_label_size(APP_NAME))
+                                            .color(Color::Muted),
+                                    )
+                                })
+                                .when(!installation_required, |this| {
+                                    this.child(
+                                        Label::new(page_summary)
+                                            .size(welcome_primary_label_size(APP_NAME))
+                                            .color(Color::Muted),
+                                    )
+                                })
                                 .when(!installation_required, |this| {
                                     this.child(
                                         Label::new(page_summary)
@@ -1306,16 +1320,23 @@ impl Render for WelcomePage {
                         .when(!installation_required, |this| this.child(sections))
                         .when(show_onboarding_return, |this| {
                             this.child(
-                                v_flex().gap_4().child(Divider::horizontal()).child(
-                                    Button::new("welcome-exit", "Return to Onboarding")
-                                        .tab_index((action_tab_offset + next_tab_index) as isize)
-                                        .full_width()
-                                        .label_size(LabelSize::XSmall)
-                                        .on_click(|_, window, cx| {
-                                            window
-                                                .dispatch_action(OpenOnboarding.boxed_clone(), cx);
-                                        }),
-                                ),
+                                v_flex()
+                                    .gap_4()
+                                    .child(Divider::horizontal().color(DividerColor::BorderVariant))
+                                    .child(
+                                        Button::new("welcome-exit", "Return to Onboarding")
+                                            .tab_index(
+                                                (action_tab_offset + next_tab_index) as isize,
+                                            )
+                                            .full_width()
+                                            .label_size(LabelSize::XSmall)
+                                            .on_click(|_, window, cx| {
+                                                window.dispatch_action(
+                                                    OpenOnboarding.boxed_clone(),
+                                                    cx,
+                                                );
+                                            }),
+                                    ),
                             )
                         }),
                 )

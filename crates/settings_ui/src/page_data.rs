@@ -4749,7 +4749,7 @@ fn dez_sidebar_chrome_setting_visible(app_name: &str, json_path: Option<&str>) -
 }
 
 fn dez_network_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {
-    app_name == "Zed" || matches!(json_path, Some("proxy"))
+    app_name == "Zed" || matches!(json_path, Some("proxy") | Some("server_url"))
 }
 
 fn dez_edit_prediction_setting_visible(app_name: &str, json_path: Option<&str>) -> bool {

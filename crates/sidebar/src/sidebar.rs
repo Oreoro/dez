@@ -8601,6 +8601,7 @@ impl Sidebar {
                     (APP_NAME == "Zed"
                         || external_multiplexer_project_group(session, &project_group_keys)
                             .is_none())
+                        && workspace_activity_multiplexer_visible(APP_NAME, session.state)
                         && (query.is_empty()
                             || external_multiplexer_session_matches_query(session, &query))
                 })
@@ -18376,6 +18377,7 @@ impl Sidebar {
                 APP_NAME == "Zed"
                     || external_multiplexer_project_group(session, &project_group_keys).is_none()
             })
+            .filter(|session| workspace_activity_multiplexer_visible(APP_NAME, session.state))
             .filter(|session| {
                 query.is_empty() || external_multiplexer_session_matches_query(session, &query)
             })

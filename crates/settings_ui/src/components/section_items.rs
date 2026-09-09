@@ -4,6 +4,8 @@ use ui::{Divider, DividerColor, prelude::*};
 use workspace::DesignSystemSettings;
 
 fn canvas_section_padding_x(density: settings::CanvasDensity) -> Pixels {
+    // Row cards sit at `mx_6()` (24px) plus their own inner padding; headers
+    // align with the card edge so they read as section titles, not row content.
     match density {
         settings::CanvasDensity::Compact => px(18.),
         settings::CanvasDensity::Balanced => px(24.),
@@ -69,6 +71,7 @@ impl RenderOnce for SettingsSectionHeader {
             .aria_level(2)
             .aria_label(label_text)
             .w_full()
+            .mx_6()
             .when(!self.no_padding, |this| {
                 this.px(canvas_section_padding_x(design_system.density))
             })
