@@ -8987,7 +8987,12 @@ impl Sidebar {
                 if APP_NAME == "Zed" {
                     thread
                 } else {
-                    h_flex().w_full().pl_3().child(thread).into_any_element()
+                    h_flex()
+                        .w_full()
+                        .pl_3()
+                        .pr_3()
+                        .child(thread)
+                        .into_any_element()
                 }
             }
             ListEntry::Terminal(terminal) => {
@@ -8995,7 +9000,12 @@ impl Sidebar {
                 if APP_NAME == "Zed" {
                     terminal
                 } else {
-                    h_flex().w_full().pl_3().child(terminal).into_any_element()
+                    h_flex()
+                        .w_full()
+                        .pl_3()
+                        .pr_3()
+                        .child(terminal)
+                        .into_any_element()
                 }
             }
         };
@@ -9071,7 +9081,7 @@ impl Sidebar {
             );
 
         if !activity_disclosure_available {
-            return content.px_3().pt_1().pb_0p5().into_any_element();
+            return content.px_2().pt_1().pb_0p5().into_any_element();
         }
 
         let accessibility_label = if activity_expanded {
@@ -13944,12 +13954,7 @@ impl Sidebar {
                 });
 
             let remove_task = multi_workspace.update(cx, |multi_workspace, cx| {
-                multi_workspace.remove(
-                    workspaces_to_remove,
-                    RemovalIntent::KeepProject,
-                    window,
-                    cx,
-                )
+                multi_workspace.remove(workspaces_to_remove, RemovalIntent::KeepProject, window, cx)
             });
 
             let metadata = metadata.clone();
@@ -16936,12 +16941,7 @@ impl Sidebar {
                 });
 
             let remove_task = multi_workspace.update(cx, |multi_workspace, cx| {
-                multi_workspace.remove(
-                    workspaces_to_remove,
-                    RemovalIntent::KeepProject,
-                    window,
-                    cx,
-                )
+                multi_workspace.remove(workspaces_to_remove, RemovalIntent::KeepProject, window, cx)
             });
 
             let workspace = workspace.clone();
@@ -18304,6 +18304,11 @@ impl Sidebar {
         let tab_density = workspace_navigation_tab_density(APP_NAME, design_density);
         let (control_size, icon_size) =
             workspace_navigation_control_metrics(APP_NAME, design_density);
+        let search_padding_x = match design_density {
+            settings::CanvasDensity::Compact => px(6.0),
+            settings::CanvasDensity::Balanced => px(8.0),
+            settings::CanvasDensity::Spacious => px(10.0),
+        };
 
         h_flex()
             .id("session-search")
@@ -18311,7 +18316,7 @@ impl Sidebar {
             .aria_label(session_rail_search_label(APP_NAME))
             .flex_none()
             .h(tab_density.content_height(cx))
-            .px_1p5()
+            .px(search_padding_x)
             .gap_1()
             .border_b_1()
             .border_color(cx.theme().colors().border)

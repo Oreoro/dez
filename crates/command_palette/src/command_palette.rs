@@ -1452,7 +1452,7 @@ mod tests {
     fn each_product_hides_commands_that_do_not_belong_to_it() {
         assert_eq!(
             product_hidden_action_namespaces("Dez"),
-            &["collab", "feedback", "terminal_panel"]
+            &["feedback", "terminal_panel"]
         );
         assert!(product_hidden_action_namespaces("Zed").is_empty());
 

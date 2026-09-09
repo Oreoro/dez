@@ -73,10 +73,10 @@ use util::{
 use workspace::{
     DesignSystemSettings, DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible,
     PaneKind, PreviewTabsSettings, SelectedEntry, SplitDirection, Workspace, WorkspaceSettings,
+    copy_file_permalink,
     dock::{DockPosition, Panel, PanelEvent},
     focus_follows_mouse::FocusFollowsMouse as _,
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},
-    copy_file_permalink,
     open_file_permalink,
 };
 use worktree::CreatedEntry;

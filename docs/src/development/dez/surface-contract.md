@@ -37,7 +37,7 @@ Window
 ├── Main Work Area (authoritative native pane and tab model)
 │   ├── Home, files, diffs, search, Settings, browser, diagnostics
 │   ├── TerminalView surfaces for shells, agents, tmux, and Herdr
-│   ├── Files, Outline, Git, Debug, and Built-in Agent tools
+│   ├── Files, Outline, Git, Debug, Collab, and Built-in Agent tools
 │   └── user-created panes and splits
 └── Status bar (durable context and navigation)
 ```

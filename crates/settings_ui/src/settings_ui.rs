@@ -1114,8 +1114,11 @@ fn open_settings_editor_with(
         let default_rem_size = 16.0;
         let scale_factor = current_rem_size / default_rem_size;
         let scaled_bounds: gpui::Size<Pixels> = default_bounds.map(|axis| axis * scale_factor);
-
         let app_id = ReleaseChannel::global(cx).app_id();
+        let nav_width = canvas_settings_nav_width(
+            paths::APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let window_decorations = match std::env::var("ZED_WINDOW_DECORATIONS") {
             Ok(val) if val == "server" => gpui::WindowDecorations::Server,
             Ok(val) if val == "client" => gpui::WindowDecorations::Client,
@@ -1146,7 +1149,7 @@ fn open_settings_editor_with(
                     // otherwise, the space used to display the actual content
                     // gets so small that certain sections grow too tall due
                     // to intense text wrapping.
-                    width: SIDEBAR_WIDTH + CONTENT_MIN_WIDTH,
+                    width: nav_width + CONTENT_MIN_WIDTH,
                     height: px(240.0),
                 }),
                 window_bounds: Some(WindowBounds::centered(scaled_bounds, cx)),
@@ -3477,8 +3480,8 @@ impl SettingsWindow {
         };
         let search_padding_y = match canvas_density {
             settings::CanvasDensity::Compact => px(4.),
-            settings::CanvasDensity::Balanced => px(5.),
-            settings::CanvasDensity::Spacious => px(7.),
+            settings::CanvasDensity::Balanced => px(6.),
+            settings::CanvasDensity::Spacious => px(8.),
         };
         let search_margin_bottom = match canvas_density {
             settings::CanvasDensity::Compact => px(8.),
@@ -3772,8 +3775,8 @@ impl SettingsWindow {
                 h_flex()
                     .w_full()
                     .h_8()
-                    .p_2()
-                    .pb_0p5()
+                    .px(canvas_settings_nav_padding(canvas_density))
+                    .py_1p5()
                     .flex_shrink_0()
                     .border_t_1()
                     .border_color(nav_border_color)
@@ -4244,12 +4247,9 @@ impl SettingsWindow {
                                 .role(Role::Heading)
                                 .aria_level(1)
                                 .aria_label(title)
-                                .child(
-                                    Label::new(title)
-                                        .size(LabelSize::Large)
-                                        .mt_2()
-                                        .mb_3(),
-                                ),
+                                .mt_2()
+                                .mb_3()
+                                .child(Label::new(title).size(LabelSize::Large)),
                         )
                     })
                 })

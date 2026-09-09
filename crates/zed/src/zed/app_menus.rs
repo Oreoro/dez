@@ -180,6 +180,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                 MenuItem::action(outline_surface_label, outline_panel::ToggleFocus),
                 MenuItem::action(git_surface_label, git_panel::ToggleFocus),
                 MenuItem::action(debugger_surface_label, debug_panel::ToggleFocus),
+                MenuItem::action("Collab", workspace::RevealCollab),
                 MenuItem::separator(),
                 MenuItem::action(agent_surface_label, assistant::ToggleFocus),
             ])),
