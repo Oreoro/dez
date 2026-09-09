@@ -18797,11 +18797,11 @@ impl Sidebar {
                 .min_w_0()
                 .gap_2()
                 .px_2()
-                .py_1p5()
+                .py_2()
                 .child(empty_state_icon)
                 .child(
                     Label::new(empty_label)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_1(),
                 )

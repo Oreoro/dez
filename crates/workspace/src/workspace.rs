@@ -7706,6 +7706,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         if let Some((_, _, panel)) = self.panel_item_for_proto_id(panel_id, cx) {
+            self.yield_sidebar_to_revealed_panel(&panel, window, cx);
             return self.activate_panel_item_for_id(panel.panel_id(), true, window, cx);
         }
 
@@ -7717,6 +7718,7 @@ impl Workspace {
                     .find(|panel| panel.remote_id() == Some(panel_id))
             })
         {
+            self.yield_sidebar_to_revealed_panel(&panel, window, cx);
             self.add_panel_handle_to_panel_pane(panel.clone(), false, window, cx);
             return self.activate_panel_item_for_id(panel.panel_id(), true, window, cx);
         }
@@ -8009,15 +8011,6 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for_id(panel_id, cx)?;
-        if paths::APP_NAME != "Zed" && panel.panel_key() == "ProjectPanel" {
-            if let Some(multi_workspace) = self.multi_workspace.clone() {
-                multi_workspace
-                    .update(cx, |multi_workspace, cx| {
-                        multi_workspace.yield_sidebar_to_project_panel(window, cx)
-                    })
-                    .log_err();
-            }
-        }
         let competing_pane_hidden =
             self.prepare_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), window, cx);
         let was_hidden = pane.update(cx, |pane, cx| {
@@ -8051,6 +8044,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         if let Some((_, _, panel)) = self.panel_item_for_key(panel_key, cx) {
+            self.yield_sidebar_to_revealed_panel(&panel, window, cx);
             return self.activate_panel_item_for_id(panel.panel_id(), focus, window, cx);
         }
 
@@ -8060,8 +8054,30 @@ impl Workspace {
                 .into_iter()
                 .find(|panel| panel.panel_key() == panel_key)
         })?;
+        self.yield_sidebar_to_revealed_panel(&panel, window, cx);
         self.add_panel_handle_to_panel_pane(panel.clone(), false, window, cx);
         self.activate_panel_item_for_id(panel.panel_id(), focus, window, cx)
+    }
+
+    /// Lets the revealed panel take the window edge when the Sessions sidebar
+    /// is open but idle. Only the Files panel participates today; the sidebar
+    /// itself decides whether it actually yields.
+    fn yield_sidebar_to_revealed_panel(
+        &self,
+        panel: &Arc<dyn PanelHandle>,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        if paths::APP_NAME == "Zed" || panel.panel_key() != "ProjectPanel" {
+            return;
+        }
+        if let Some(multi_workspace) = self.multi_workspace.clone() {
+            multi_workspace
+                .update(cx, |multi_workspace, cx| {
+                    multi_workspace.yield_sidebar_to_project_panel(window, cx)
+                })
+                .log_err();
+        }
     }
 
     fn toggle_panel_item_for_key(
@@ -8114,6 +8130,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for::<T>(cx)?;
+        self.yield_sidebar_to_revealed_panel(&panel, window, cx);
         let competing_pane_hidden =
             self.prepare_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), window, cx);
         let was_hidden = pane.update(cx, |pane, cx| {

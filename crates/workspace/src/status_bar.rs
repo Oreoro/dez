@@ -927,7 +927,7 @@ impl StatusBar {
             });
 
         h_flex()
-            .gap_0p5()
+            .gap_1()
             .when(on_right, |this| {
                 this.child(Divider::vertical().color(ui::DividerColor::Border))
             })

@@ -1790,13 +1790,13 @@ impl SidebarChrome {
             client::Status::UpgradeRequired => {
                 let auto_updater = auto_update::AutoUpdater::get(cx);
                 let label = match auto_updater.map(|auto_update| auto_update.read(cx).status()) {
-                    Some(AutoUpdateStatus::Updated { .. }) => "Restart Dez to use Collaboration",
+                    Some(AutoUpdateStatus::Updated { .. }) => "Restart to use Collaboration",
                     Some(AutoUpdateStatus::Installing { .. })
                     | Some(AutoUpdateStatus::Downloading { .. })
                     | Some(AutoUpdateStatus::Checking) => "Updating...",
                     Some(AutoUpdateStatus::Idle)
                     | Some(AutoUpdateStatus::Errored { .. })
-                    | None => "Collaboration needs a newer Dez build",
+                    | None => "Collaboration needs a newer build",
                 };
 
                 Some(
@@ -1998,7 +1998,7 @@ impl SidebarChrome {
                 .child(
                     h_flex()
                         .when_some(business_organization, |this, organization| {
-                            this.gap_2()
+                            this.gap_1()
                                 .child(Label::new(&organization.name).size(LabelSize::Small))
                         })
                         .children(avatar),
@@ -2099,7 +2099,7 @@ impl SidebarChrome {
                                     move |_window, _cx| {
                                         h_flex()
                                             .w_full()
-                                            .gap_4()
+                                            .gap_2()
                                             .justify_between()
                                             .child(
                                                 h_flex()

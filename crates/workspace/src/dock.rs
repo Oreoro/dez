@@ -1430,6 +1430,12 @@ impl Render for PanelButtons {
 
         let dock_entity = self.dock.clone();
         let workspace = dock.workspace.clone();
+        let icon_size = match workspace::DesignSystemSettings::get_global(cx).density {
+            settings::CanvasDensity::Compact => IconSize::XSmall,
+            settings::CanvasDensity::Balanced | settings::CanvasDensity::Spacious => {
+                IconSize::Small
+            }
+        };
         let mut buttons: Vec<_> = dock
             .panel_entries
             .iter()
@@ -1571,7 +1577,7 @@ impl Render for PanelButtons {
                                 None => icon_tooltip.to_string(),
                             };
                             let button = IconButton::new((name, is_active_button as u64), icon)
-                                .icon_size(IconSize::Small)
+                                .icon_size(icon_size)
                                 .toggle_state(is_active_button)
                                 .tab_index(0isize)
                                 .aria_label(aria_label)
