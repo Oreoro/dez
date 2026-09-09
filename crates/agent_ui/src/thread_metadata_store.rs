@@ -142,6 +142,7 @@ fn migrate_thread_metadata(cx: &mut App) -> Task<anyhow::Result<()>> {
                         worktree_paths: WorktreePaths::from_folder_paths(&entry.folder_paths),
                         remote_connection: None,
                         archived: true,
+                        has_reviewable_changes: false,
                     })
                 })
                 .collect::<Vec<_>>()
@@ -323,6 +324,10 @@ pub struct ThreadMetadata {
     pub worktree_paths: WorktreePaths,
     pub remote_connection: Option<RemoteConnectionOptions>,
     pub archived: bool,
+    /// Last observed review-ready signal (unreviewed diff changes). Persisted
+    /// so a completed session with reviewable work stays visible in Activity
+    /// after its thread is evicted or the app restarts.
+    pub has_reviewable_changes: bool,
 }
 
 impl ThreadMetadata {
@@ -732,6 +737,29 @@ impl ThreadMetadataStore {
         let metadata = ThreadMetadata {
             title: Some(title),
             title_override: None,
+            ..existing.clone()
+        };
+        self.save(metadata, cx);
+    }
+
+    /// Records whether a thread's changes are still awaiting review.
+    ///
+    /// Only writes when the value flips, so sidebar-driven updates settle
+    /// instead of looping through the store's observers.
+    pub fn set_reviewable_changes(
+        &mut self,
+        thread_id: ThreadId,
+        has_reviewable_changes: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(existing) = self.entry(thread_id) else {
+            return;
+        };
+        if existing.has_reviewable_changes == has_reviewable_changes {
+            return;
+        }
+        let metadata = ThreadMetadata {
+            has_reviewable_changes,
             ..existing.clone()
         };
         self.save(metadata, cx);
@@ -1349,6 +1377,9 @@ impl ThreadMetadataStore {
             updated_at,
             worktree_paths,
             remote_connection,
+            has_reviewable_changes: existing_thread
+                .map(|t| t.has_reviewable_changes)
+                .unwrap_or(false),
             archived,
         };
 
@@ -1462,6 +1493,9 @@ impl Domain for ThreadMetadataDb {
         sql!(
             ALTER TABLE sidebar_threads ADD COLUMN title_override TEXT;
         ),
+        sql!(
+            ALTER TABLE sidebar_threads ADD COLUMN has_reviewable_changes INTEGER DEFAULT 0;
+        ),
     ];
 }
 
@@ -1478,7 +1512,7 @@ impl ThreadMetadataDb {
 
     const LIST_QUERY: &str = "SELECT thread_id, session_id, agent_id, title, updated_at, \
         created_at, interacted_at, folder_paths, folder_paths_order, archived, main_worktree_paths, \
-        main_worktree_paths_order, remote_connection, title_override \
+        main_worktree_paths_order, remote_connection, title_override, has_reviewable_changes \
         FROM sidebar_threads \
         ORDER BY updated_at DESC";
 
@@ -1531,10 +1565,11 @@ impl ThreadMetadataDb {
         let title_override = row.title_override.as_ref().map(|t| t.to_string());
         let thread_id = row.thread_id;
         let archived = row.archived;
+        let has_reviewable_changes = row.has_reviewable_changes;
 
         self.write(move |conn| {
-            let sql = "INSERT INTO sidebar_threads(thread_id, session_id, agent_id, title, updated_at, created_at, interacted_at, folder_paths, folder_paths_order, archived, main_worktree_paths, main_worktree_paths_order, remote_connection, title_override) \
-                       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14) \
+            let sql = "INSERT INTO sidebar_threads(thread_id, session_id, agent_id, title, updated_at, created_at, interacted_at, folder_paths, folder_paths_order, archived, main_worktree_paths, main_worktree_paths_order, remote_connection, title_override, has_reviewable_changes) \
+                       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15) \
                        ON CONFLICT(thread_id) DO UPDATE SET \
                            session_id = excluded.session_id, \
                            agent_id = excluded.agent_id, \
@@ -1548,7 +1583,8 @@ impl ThreadMetadataDb {
                            main_worktree_paths = excluded.main_worktree_paths, \
                            main_worktree_paths_order = excluded.main_worktree_paths_order, \
                            remote_connection = excluded.remote_connection, \
-                           title_override = excluded.title_override";
+                           title_override = excluded.title_override, \
+                           has_reviewable_changes = excluded.has_reviewable_changes";
             let mut stmt = Statement::prepare(conn, sql)?;
             let mut i = stmt.bind(&thread_id, 1)?;
             i = stmt.bind(&session_id, i)?;
@@ -1563,7 +1599,8 @@ impl ThreadMetadataDb {
             i = stmt.bind(&main_worktree_paths, i)?;
             i = stmt.bind(&main_worktree_paths_order, i)?;
             i = stmt.bind(&remote_connection, i)?;
-            stmt.bind(&title_override, i)?;
+            i = stmt.bind(&title_override, i)?;
+            stmt.bind(&has_reviewable_changes, i)?;
             stmt.exec()
         })
         .await
@@ -1721,6 +1758,7 @@ impl Column for ThreadMetadata {
         let (remote_connection_json, next): (Option<String>, i32) =
             Column::column(statement, next)?;
         let (title_override, next): (Option<String>, i32) = Column::column(statement, next)?;
+        let (has_reviewable_changes, next): (bool, i32) = Column::column(statement, next)?;
 
         let agent_id = agent_id
             .map(|id| AgentId::new(id))
@@ -1787,6 +1825,7 @@ impl Column for ThreadMetadata {
                 worktree_paths,
                 remote_connection,
                 archived,
+                has_reviewable_changes,
             },
             next,
         ))
@@ -1864,6 +1903,7 @@ mod tests {
         ThreadMetadata {
             thread_id: ThreadId::new(),
             archived: false,
+            has_reviewable_changes: false,
             session_id: Some(acp::SessionId::new(session_id)),
             agent_id: agent::ZED_AGENT_ID.clone(),
             title: if title.is_empty() {
@@ -2171,6 +2211,7 @@ mod tests {
             worktree_paths: WorktreePaths::from_folder_paths(&second_paths),
             remote_connection: None,
             archived: false,
+            has_reviewable_changes: false,
         };
 
         cx.update(|cx| {
@@ -2256,6 +2297,7 @@ mod tests {
             worktree_paths: WorktreePaths::from_folder_paths(&project_a_paths),
             remote_connection: None,
             archived: false,
+            has_reviewable_changes: false,
         };
 
         cx.update(|cx| {
@@ -2382,6 +2424,7 @@ mod tests {
             worktree_paths: WorktreePaths::from_folder_paths(&project_paths),
             remote_connection: None,
             archived: false,
+            has_reviewable_changes: false,
         };
 
         cx.update(|cx| {
@@ -3117,6 +3160,7 @@ mod tests {
         let local_linked_thread = ThreadMetadata {
             thread_id: ThreadId::new(),
             archived: false,
+            has_reviewable_changes: false,
             session_id: Some(acp::SessionId::new("local-linked")),
             agent_id: agent::ZED_AGENT_ID.clone(),
             title: Some("Local Linked".into()),
@@ -3131,6 +3175,7 @@ mod tests {
         let remote_linked_thread = ThreadMetadata {
             thread_id: ThreadId::new(),
             archived: false,
+            has_reviewable_changes: false,
             session_id: Some(acp::SessionId::new("remote-linked")),
             agent_id: agent::ZED_AGENT_ID.clone(),
             title: Some("Remote Linked".into()),
@@ -3362,6 +3407,7 @@ mod tests {
                 entries,
                 vec![ThreadMetadata {
                     archived: true,
+                    has_reviewable_changes: false,
                     ..metadata
                 }]
             );

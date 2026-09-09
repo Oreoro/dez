@@ -1112,6 +1112,7 @@ impl ConversationView {
                     worktree_paths,
                     remote_connection,
                     archived,
+                    has_reviewable_changes: false,
                 },
                 cx,
             );
@@ -5437,6 +5438,7 @@ pub(crate) mod tests {
                         worktree_paths: WorktreePaths::from_folder_paths(&PathList::default()),
                         remote_connection: None,
                         archived: false,
+                        has_reviewable_changes: false,
                     },
                     cx,
                 );

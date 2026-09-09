@@ -8009,6 +8009,15 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> Option<Arc<dyn PanelHandle>> {
         let (pane, ix, panel) = self.panel_item_for_id(panel_id, cx)?;
+        if paths::APP_NAME != "Zed" && panel.panel_key() == "ProjectPanel" {
+            if let Some(multi_workspace) = self.multi_workspace.clone() {
+                multi_workspace
+                    .update(cx, |multi_workspace, cx| {
+                        multi_workspace.yield_sidebar_to_project_panel(window, cx)
+                    })
+                    .log_err();
+            }
+        }
         let competing_pane_hidden =
             self.prepare_dez_auxiliary_pane_for_reveal(pane.read(cx).pane_kind(), window, cx);
         let was_hidden = pane.update(cx, |pane, cx| {
@@ -12842,7 +12851,9 @@ impl Workspace {
             anyhow::bail!("no id for view");
         };
         let id = ViewId::from_proto(id)?;
-        let panel_id = view.panel_id.and_then(|panel_id| proto::PanelId::try_from(panel_id).ok());
+        let panel_id = view
+            .panel_id
+            .and_then(|panel_id| proto::PanelId::try_from(panel_id).ok());
 
         let pane = this.update(cx, |this, _cx| {
             let state = this
@@ -14476,16 +14487,16 @@ impl Workspace {
                     workspace.activate_panel_for_proto_id(PanelId::DebugPanel, window, cx);
                 }),
             )
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &RevealCollab, window, cx| {
+            .on_action(
+                cx.listener(|workspace: &mut Workspace, _: &RevealCollab, window, cx| {
                     workspace.activate_panel_item_for_key("CollaborationPanel", true, window, cx);
-                },
-            ))
-            .on_action(cx.listener(
-                |workspace: &mut Workspace, _: &RevealOutline, window, cx| {
+                }),
+            )
+            .on_action(
+                cx.listener(|workspace: &mut Workspace, _: &RevealOutline, window, cx| {
                     workspace.activate_panel_item_for_key("OutlinePanel", true, window, cx);
-                },
-            ))
+                }),
+            )
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &RevealBuiltInAgent, window, cx| {
                     workspace.activate_panel_for_proto_id(PanelId::AssistantPanel, window, cx);

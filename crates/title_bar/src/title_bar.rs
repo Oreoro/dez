@@ -1256,7 +1256,7 @@ impl SidebarChrome {
                         .selected_style(ButtonStyle::Tinted(TintColor::Accent))
                         .child(
                             h_flex()
-                                .gap_2()
+                                .gap_1()
                                 .max_w_32()
                                 .child(
                                     IconWithIndicator::new(
@@ -1851,6 +1851,13 @@ impl SidebarChrome {
         Some(
             h_flex()
                 .id("canvas-prefix-indicator")
+                .role(gpui::Role::Status)
+                .aria_label(format!(
+                    "Prefix mode awaiting next key. Prefix {}. {}. {}",
+                    multiplexer_settings.prefix,
+                    density_label,
+                    contrast_label
+                ))
                 .when(
                     design_system.density == settings::CanvasDensity::Compact,
                     |this| this.h_4().gap_0p5().px_1(),

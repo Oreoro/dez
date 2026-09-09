@@ -1180,6 +1180,26 @@ impl MultiWorkspace {
         }
     }
 
+    /// Lets the Files panel take the window edge when the Sessions sidebar is
+    /// open but idle. The sidebar yields only when it holds neither focus nor
+    /// an attention signal, and never when the user pinned it open with
+    /// `always_open`.
+    pub fn yield_sidebar_to_project_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.sidebar_open() || SidebarSettings::get_global(cx).always_open {
+            return;
+        }
+        let Some(sidebar) = &self.sidebar else {
+            return;
+        };
+        if sidebar.focus_handle(cx).contains_focused(window, cx) {
+            return;
+        }
+        if sidebar.attention_count(cx) > 0 {
+            return;
+        }
+        self.apply_close_sidebar(false, window, true, cx);
+    }
+
     pub fn close_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.sidebar_auto_close_pending = false;
         if SidebarSettings::get_global(cx).always_open {
@@ -1640,12 +1660,7 @@ impl MultiWorkspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<bool>> {
-        self.remove(
-            [workspace.clone()],
-            RemovalIntent::CloseProject,
-            window,
-            cx,
-        )
+        self.remove([workspace.clone()], RemovalIntent::CloseProject, window, cx)
     }
 
     pub fn remove_project_group(

@@ -1568,7 +1568,7 @@ impl Render for PanelButtons {
                                 .and_then(|label| label.parse::<usize>().ok());
                             let aria_label = match badge_count {
                                 Some(count) => format!("{icon_tooltip}, {count} unread"),
-                                None => icon_tooltip.clone(),
+                                None => icon_tooltip.to_string(),
                             };
                             let button = IconButton::new((name, is_active_button as u64), icon)
                                 .icon_size(IconSize::Small)

@@ -2541,6 +2541,7 @@ fn terminal_thread_status(
     agent: Option<&TerminalAgentSnapshot>,
     runtime: Option<&TerminalRuntimeInfo>,
     needs_attention: bool,
+    identity_from_live_process: bool,
 ) -> AgentThreadStatus {
     if agent.is_some_and(|agent| agent.state == TerminalAgentState::Failed)
         || runtime.is_some_and(|runtime| {
@@ -2576,7 +2577,8 @@ fn terminal_thread_status(
                 | TerminalRuntimeState::Detached
                 | TerminalRuntimeState::Reconnecting
         )
-    }) {
+    }) && identity_from_live_process
+    {
         AgentThreadStatus::Running
     } else {
         AgentThreadStatus::Completed
@@ -4077,17 +4079,20 @@ mod terminal_runtime_label_tests {
         let exited = TerminalRuntimeInfo {
             state: TerminalRuntimeState::Exited,
         };
+        let live = TerminalRuntimeInfo {
+            state: TerminalRuntimeState::Live,
+        };
 
         assert_eq!(
-            terminal_run_review_state(Some(&agent), Some(&detached)),
+            terminal_run_review_state(Some(&agent), Some(&detached), true),
             RunReviewState::Detached
         );
         assert_eq!(
-            terminal_run_review_state(Some(&agent), Some(&missing)),
+            terminal_run_review_state(Some(&agent), Some(&missing), true),
             RunReviewState::Missing
         );
         assert_eq!(
-            terminal_run_review_state(Some(&agent), Some(&exited)),
+            terminal_run_review_state(Some(&agent), Some(&exited), true),
             RunReviewState::Exited
         );
         assert_eq!(
@@ -4097,8 +4102,18 @@ mod terminal_runtime_label_tests {
                     ..agent
                 }),
                 Some(&exited),
+                true,
             ),
             RunReviewState::Completed
+        );
+        assert_eq!(
+            terminal_run_review_state(None, Some(&live), false),
+            RunReviewState::Idle,
+            "a title-only detected agent must not claim Running without live-process identity"
+        );
+        assert_eq!(
+            terminal_run_review_state(None, Some(&live), true),
+            RunReviewState::Running
         );
     }
 }
@@ -4175,6 +4190,7 @@ fn standalone_terminal_metadata(
             TerminalRuntimeState::Live
         },
     };
+    let identity_from_live_process = detected_agent_command.is_some();
 
     let project = workspace.read(cx).project().clone();
     let project = project.read(cx);
@@ -4199,7 +4215,12 @@ fn standalone_terminal_metadata(
         detected_agent_command,
         metadata.detected_agent_kind(),
     );
-    (metadata, detected_agent_kind, runtime)
+    (
+        metadata,
+        detected_agent_kind,
+        identity_from_live_process,
+        runtime,
+    )
 }
 
 fn workspace_for_local_terminal_session(
@@ -4343,6 +4364,10 @@ struct ThreadEntry {
 struct TerminalEntry {
     metadata: TerminalThreadMetadata,
     detected_agent_kind: Option<TerminalAgentKind>,
+    /// Whether the agent identity was observed from a live signal (structured
+    /// adapter state or the foreground process) rather than only the terminal
+    /// title, which can outlive the agent that set it.
+    identity_from_live_process: bool,
     workspace: ThreadEntryWorkspace,
     source: TerminalEntrySource,
     runtime: Option<TerminalRuntimeInfo>,
@@ -5346,6 +5371,7 @@ enum TerminalAttentionAction {
 fn terminal_run_review_state(
     agent: Option<&TerminalAgentSnapshot>,
     runtime: Option<&TerminalRuntimeInfo>,
+    identity_from_live_process: bool,
 ) -> RunReviewState {
     match runtime.map(|runtime| runtime.state) {
         Some(TerminalRuntimeState::Detached) => return RunReviewState::Detached,
@@ -5368,8 +5394,10 @@ fn terminal_run_review_state(
 
     agent.map_or_else(
         || {
-            if runtime.is_some() {
+            if runtime.is_some() && identity_from_live_process {
                 RunReviewState::Running
+            } else if runtime.is_some() {
+                RunReviewState::Idle
             } else {
                 RunReviewState::Saved
             }
@@ -5418,6 +5446,9 @@ impl ThreadEntry {
         self.is_title_generating = info.is_title_generating;
         self.diff_stats = info.diff_stats;
         self.changed_files = info.changed_files.clone();
+        self.metadata.has_reviewable_changes = self.diff_stats.lines_added > 0
+            || self.diff_stats.lines_removed > 0
+            || !self.changed_files.is_empty();
     }
 
     fn review_brief(&self, cx: &App) -> RunReviewBrief {
@@ -5515,7 +5546,11 @@ impl ThreadEntry {
 
 impl TerminalEntry {
     fn review_brief(&self, cx: &App) -> RunReviewBrief {
-        let state = terminal_run_review_state(self.agent.as_ref(), self.runtime.as_ref());
+        let state = terminal_run_review_state(
+            self.agent.as_ref(),
+            self.runtime.as_ref(),
+            self.identity_from_live_process,
+        );
         let commands = self
             .agent
             .iter()
@@ -6023,7 +6058,7 @@ mod attention_state_tests {
     #[test]
     fn terminal_transport_and_attention_map_to_visible_row_statuses() {
         assert_eq!(
-            terminal_thread_status(None, None, true),
+            terminal_thread_status(None, None, true, true),
             AgentThreadStatus::WaitingForConfirmation
         );
         assert_eq!(
@@ -6033,6 +6068,7 @@ mod attention_state_tests {
                     state: TerminalRuntimeState::Reconnecting,
                 }),
                 false,
+                true,
             ),
             AgentThreadStatus::Running
         );
@@ -6043,6 +6079,7 @@ mod attention_state_tests {
                     state: TerminalRuntimeState::Missing,
                 }),
                 false,
+                true,
             ),
             AgentThreadStatus::Error
         );
@@ -6053,8 +6090,21 @@ mod attention_state_tests {
                     state: TerminalRuntimeState::Live,
                 }),
                 false,
+                true,
             ),
             AgentThreadStatus::Running
+        );
+        assert_eq!(
+            terminal_thread_status(
+                None,
+                Some(&TerminalRuntimeInfo {
+                    state: TerminalRuntimeState::Live,
+                }),
+                false,
+                false,
+            ),
+            AgentThreadStatus::Completed,
+            "a title-only detected agent must not count as running work"
         );
         assert_eq!(
             terminal_thread_status(
@@ -6063,6 +6113,7 @@ mod attention_state_tests {
                     state: TerminalRuntimeState::Detached,
                 }),
                 false,
+                true,
             ),
             AgentThreadStatus::Running
         );
@@ -6073,6 +6124,7 @@ mod attention_state_tests {
                     state: TerminalRuntimeState::Exited,
                 }),
                 false,
+                true,
             ),
             AgentThreadStatus::Completed
         );
@@ -7636,17 +7688,20 @@ impl Sidebar {
                         || live_notification
                         || adapter_attention;
                     let attention_priority = terminal_attention_priority(&metadata, agent.as_ref());
+                    let structured_kind = terminal_agent_kind_from_snapshot(agent.as_ref());
+                    let foreground_kind = host_snapshot
+                        .and_then(|snapshot| snapshot.foreground_command.as_deref())
+                        .and_then(detect_terminal_agent_command);
                     let detected_agent_kind = detect_terminal_agents
                         .then(|| {
                             terminal_agent_kind_from_evidence(
-                                terminal_agent_kind_from_snapshot(agent.as_ref()),
-                                host_snapshot
-                                    .and_then(|snapshot| snapshot.foreground_command.as_deref())
-                                    .and_then(detect_terminal_agent_command),
+                                structured_kind,
+                                foreground_kind,
                                 metadata.detected_agent_kind(),
                             )
                         })
                         .flatten();
+                    let identity_from_live_process = agent.is_some() || foreground_kind.is_some();
                     if !terminal_entry_visible_in_session_rail(
                         APP_NAME,
                         matches!(
@@ -7691,6 +7746,7 @@ impl Sidebar {
                         agent,
                         metadata,
                         detected_agent_kind,
+                        identity_from_live_process,
                         workspace,
                         source,
                         worktrees,
@@ -7767,7 +7823,7 @@ impl Sidebar {
                             .standalone_terminal_created_at
                             .entry(terminal_id)
                             .or_insert_with(Utc::now);
-                        let (metadata, detected_agent_kind, runtime) =
+                        let (metadata, detected_agent_kind, identity_from_live_process, runtime) =
                             standalone_terminal_metadata(ws, &terminal_view, *created_at, cx);
                         if !seen_terminal_ids.insert(metadata.terminal_id) {
                             continue;
@@ -7800,6 +7856,8 @@ impl Sidebar {
                                     .then_some(detected_agent_kind)
                                     .flatten()
                             });
+                        let identity_from_live_process =
+                            agent.is_some() || identity_from_live_process;
                         if !terminal_entry_visible_in_session_rail(
                             APP_NAME,
                             false,
@@ -7811,6 +7869,7 @@ impl Sidebar {
                         terminals.push(TerminalEntry {
                             metadata,
                             detected_agent_kind,
+                            identity_from_live_process,
                             workspace: ThreadEntryWorkspace::Open(ws.clone()),
                             source: TerminalEntrySource::WorkspaceItem(terminal_view),
                             runtime: Some(runtime),
@@ -7859,18 +7918,21 @@ impl Sidebar {
                         }),
                     };
                     let agent = snapshot.agent.clone();
+                    let structured_kind = terminal_agent_kind_from_snapshot(agent.as_ref());
+                    let foreground_kind = snapshot
+                        .foreground_command
+                        .as_deref()
+                        .and_then(detect_terminal_agent_command);
                     let detected_agent_kind = detect_terminal_agents
                         .then(|| {
                             terminal_agent_kind_from_evidence(
-                                terminal_agent_kind_from_snapshot(agent.as_ref()),
-                                snapshot
-                                    .foreground_command
-                                    .as_deref()
-                                    .and_then(detect_terminal_agent_command),
+                                structured_kind,
+                                foreground_kind,
                                 metadata.detected_agent_kind(),
                             )
                         })
                         .flatten();
+                    let identity_from_live_process = agent.is_some() || foreground_kind.is_some();
                     if !terminal_entry_visible_in_session_rail(
                         APP_NAME,
                         false,
@@ -7889,6 +7951,7 @@ impl Sidebar {
                     terminals.push(TerminalEntry {
                         metadata,
                         detected_agent_kind,
+                        identity_from_live_process,
                         workspace: ThreadEntryWorkspace::Open(workspace.clone()),
                         source: TerminalEntrySource::HostSession(snapshot.session_id),
                         runtime: failed_terminal_activations
@@ -7923,7 +7986,11 @@ impl Sidebar {
             terminals.retain(|terminal| {
                 workspace_activity_terminal_visible(
                     APP_NAME,
-                    terminal_run_review_state(terminal.agent.as_ref(), terminal.runtime.as_ref()),
+                    terminal_run_review_state(
+                        terminal.agent.as_ref(),
+                        terminal.runtime.as_ref(),
+                        terminal.identity_from_live_process,
+                    ),
                     self.active_entry.as_ref().is_some_and(|entry| {
                         entry.is_active_terminal(terminal.metadata.terminal_id)
                     }),
@@ -8030,7 +8097,8 @@ impl Sidebar {
                     matches!(
                         terminal_run_review_state(
                             terminal.agent.as_ref(),
-                            terminal.runtime.as_ref()
+                            terminal.runtime.as_ref(),
+                            terminal.identity_from_live_process,
                         ),
                         RunReviewState::Running
                     )
@@ -8218,6 +8286,24 @@ impl Sidebar {
                         if let Some(info) = live_info_by_session.get(&session_id) {
                             let status = info.status;
                             let thread_id = thread.metadata.thread_id;
+                            let has_reviewable_changes = info.diff_stats.lines_added > 0
+                                || info.diff_stats.lines_removed > 0
+                                || !info.changed_files.is_empty();
+                            // Persist the review-ready signal so a completed
+                            // session with unreviewed changes stays visible in
+                            // Activity after the thread is evicted or Dez
+                            // restarts. A live thread reporting no changes
+                            // clears the flag, reconciling stale signals once
+                            // the diff is actually reviewed or committed.
+                            if has_reviewable_changes != thread.metadata.has_reviewable_changes {
+                                ThreadMetadataStore::global(cx).update(cx, |store, cx| {
+                                    store.set_reviewable_changes(
+                                        thread_id,
+                                        has_reviewable_changes,
+                                        cx,
+                                    );
+                                });
+                            }
                             Arc::make_mut(thread).apply_active_info(info);
                             new_live_statuses.insert(session_id, (status, thread_id));
                         }
@@ -8251,7 +8337,8 @@ impl Sidebar {
                         .active_entry
                         .as_ref()
                         .is_some_and(|entry| entry.is_active_thread(&thread.metadata.thread_id));
-                    let has_reviewable_changes = thread.diff_stats.lines_added > 0
+                    let has_reviewable_changes = thread.metadata.has_reviewable_changes
+                        || thread.diff_stats.lines_added > 0
                         || thread.diff_stats.lines_removed > 0
                         || !thread.changed_files.is_empty();
                     workspace_activity_thread_visible(
@@ -16192,6 +16279,7 @@ impl Sidebar {
                 terminal.agent.as_ref(),
                 terminal.runtime.as_ref(),
                 needs_attention,
+                terminal.identity_from_live_process,
             )
         };
         let context_review_workspace = review_workspace.clone();
