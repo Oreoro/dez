@@ -1781,6 +1781,8 @@ impl SidebarChrome {
             | client::Status::ReconnectionError { .. } => Some(
                 div()
                     .id("disconnected")
+                    .role(gpui::Role::Status)
+                    .aria_label("Disconnected from the collaboration server")
                     .child(Icon::new(IconName::Disconnected).size(IconSize::Small))
                     .tooltip(Tooltip::text("Disconnected"))
                     .into_any_element(),

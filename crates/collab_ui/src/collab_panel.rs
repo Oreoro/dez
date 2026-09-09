@@ -362,9 +362,8 @@ fn persist_local_notes(notes: &[LocalNote], cx: &App) {
             return;
         }
     };
-    db::write_and_log(cx, move || {
-        KeyValueStore::global(cx).write_kvp(LOCAL_NOTES_KEY.into(), serialized)
-    });
+    let db = KeyValueStore::global(cx);
+    db::write_and_log(cx, move || db.write_kvp(LOCAL_NOTES_KEY.into(), serialized));
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, PartialOrd, Ord)]
@@ -1604,9 +1603,11 @@ impl CollabPanel {
         let panel = cx.weak_entity();
         cx.spawn_in(window, async move |_, mut cx| {
             let buffer = create.await?;
+            // The persisted text already carries the title line from the
+            // first open; re-inserting it here would duplicate it on every
+            // reopen. The tab title comes from `set_title` below.
             buffer.update(&mut cx, |buffer, cx| {
                 buffer.set_text(note_text, cx);
-                buffer.edit([(0..0, note.title.clone())], None, cx);
             });
             workspace.update_in(&mut cx, |workspace, window, cx| {
                 let editor = cx.new(|cx| {
@@ -1638,25 +1639,29 @@ impl CollabPanel {
         if self.note_buffer_subscriptions.contains_key(&note_id) {
             return;
         }
-        self.note_buffer_subscriptions.insert(
-            note_id,
-            (
-                buffer.clone(),
-                cx.observe(&buffer, move |this, buffer, cx| {
-                    let text = buffer.read(cx).text();
-                    if let Some(note) = this
-                        .local_notes
-                        .iter_mut()
-                        .find(|note| note.title == note_title)
-                    {
-                        if note.text != text {
-                            note.text = text;
-                            this.persist_local_notes(cx);
-                        }
-                    }
-                }),
-            ),
-        );
+        let change_subscription = cx.observe(&buffer, move |this, buffer, cx| {
+            let text = buffer.read(cx).text();
+            if let Some(note) = this
+                .local_notes
+                .iter_mut()
+                .find(|note| note.title == note_title)
+            {
+                if note.text != text {
+                    note.text = text;
+                    this.persist_local_notes(cx);
+                }
+            }
+        });
+        // Closed note tabs must not pin their buffers in memory: drop the
+        // map entry (and with it the strong handle) when the buffer is
+        // released.
+        let release_subscription = cx.observe_release(&buffer, move |this, _buffer, cx| {
+            this.note_buffer_subscriptions.remove(&note_id);
+            cx.notify();
+        });
+        release_subscription.detach();
+        self.note_buffer_subscriptions
+            .insert(note_id, (buffer, change_subscription));
     }
 
     fn has_subchannels(&self, ix: usize) -> bool {
