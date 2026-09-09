@@ -1,7 +1,10 @@
 use crate::focus_follows_mouse::FocusFollowsMouse as _;
 use crate::persistence::model::DockData;
 use crate::status_bar::HideStatusItem;
-use crate::{DraggedDock, Event, FocusFollowsMouse, ModalLayer, Pane, WorkspaceSettings};
+use crate::{
+    DraggedDock, Event, FocusFollowsMouse, ModalLayer, Pane, WorkspaceSettings,
+    workspace_settings::DesignSystemSettings,
+};
 use crate::{Workspace, status_bar::StatusItemView};
 use anyhow::Context as _;
 use client::proto;
@@ -1430,7 +1433,7 @@ impl Render for PanelButtons {
 
         let dock_entity = self.dock.clone();
         let workspace = dock.workspace.clone();
-        let icon_size = match workspace::DesignSystemSettings::get_global(cx).density {
+        let icon_size = match DesignSystemSettings::get_global(cx).density {
             settings::CanvasDensity::Compact => IconSize::XSmall,
             settings::CanvasDensity::Balanced | settings::CanvasDensity::Spacious => {
                 IconSize::Small
