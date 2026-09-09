@@ -76,6 +76,7 @@ use workspace::{
     dock::{DockPosition, Panel, PanelEvent},
     focus_follows_mouse::FocusFollowsMouse as _,
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},
+    copy_file_permalink,
     open_file_permalink,
 };
 use worktree::CreatedEntry;
