@@ -7215,6 +7215,7 @@ impl Sidebar {
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -7253,6 +7254,7 @@ impl Sidebar {
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -8917,7 +8919,7 @@ impl Sidebar {
         // Header controls must stay reachable by keyboard, not only by hover:
         // while they are hidden, their hitboxes and accessibility nodes are
         // never registered, so Tab cannot reach them.
-        let rail_contains_focus = self.focus_handle.contains_focused(window, cx);
+        let _rail_contains_focus = self.focus_handle.contains_focused(window, cx);
         // is_selected means the keyboard selector is here.
         let is_selected = is_focused && self.selection == Some(ix);
 
@@ -12342,6 +12344,7 @@ impl Sidebar {
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -13298,6 +13301,7 @@ impl Sidebar {
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
                 None,
                 OpenMode::Activate,
+                None,
                 window,
                 cx,
             )
@@ -13612,6 +13616,7 @@ impl Sidebar {
                 |options, window, cx| connect_remote(active_workspace, options, window, cx),
                 None,
                 OpenMode::Add,
+                None,
                 window,
                 cx,
             )
@@ -13925,7 +13930,7 @@ impl Sidebar {
                 workspace,
                 ThreadEntryWorkspace::Open(workspace) if workspaces_to_remove.contains(workspace)
             );
-            let (fallback_paths, project_group_key) = neighbor
+            let (_fallback_paths, _project_group_key) = neighbor
                 .as_ref()
                 .map(|neighbor| neighbor.project_location(cx))
                 .unwrap_or_else(|| {
@@ -14455,7 +14460,7 @@ impl Sidebar {
             let multi_workspace = self.multi_workspace.upgrade().unwrap();
             let session_id = session_id.clone();
 
-            let (fallback_paths, project_group_key) = neighbor
+            let (_fallback_paths, _project_group_key) = neighbor
                 .as_ref()
                 .map(|neighbor| neighbor.project_location(cx))
                 .unwrap_or_else(|| {
@@ -16917,7 +16922,7 @@ impl Sidebar {
                 workspace,
                 ThreadEntryWorkspace::Open(workspace) if workspaces_to_remove.contains(workspace)
             );
-            let (fallback_paths, project_group_key) = neighbor
+            let (_fallback_paths, _project_group_key) = neighbor
                 .as_ref()
                 .map(|neighbor| neighbor.project_location(cx))
                 .unwrap_or_else(|| {
