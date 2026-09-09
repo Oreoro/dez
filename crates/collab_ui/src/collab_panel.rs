@@ -361,7 +361,9 @@ fn persist_local_notes(notes: &[LocalNote], cx: &App) {
             return;
         }    };
     let db = KeyValueStore::global(cx);
-    db::write_and_log(cx, move || db.write_kvp(LOCAL_NOTES_KEY.into(), serialized));
+    db::write_and_log(cx, move || async move {
+        db.write_kvp(LOCAL_NOTES_KEY.into(), serialized).await
+    });
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, PartialOrd, Ord)]
@@ -3072,7 +3074,7 @@ impl CollabPanel {
                             .on_click(cx.listener(|this, _, window, cx| {
                                 let client = this.client.clone();
                                 let workspace = this.workspace.clone();
-                                cx.spawn_in(window, async move |_, mut cx| {
+        cx.spawn_in(window, async move |_, cx| {
                                     client
                                         .connect(true, &mut cx)
                                         .await
