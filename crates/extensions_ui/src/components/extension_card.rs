@@ -1,3 +1,4 @@
+use crate::canvas;
 use std::{collections::BTreeSet, sync::Arc};
 
 use cloud_api_types::{ExtensionApiManifest, ExtensionMetadata, ExtensionProvides};
