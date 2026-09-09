@@ -821,7 +821,7 @@ fn session_overview_status_label(
                 "{workspace_label} · {attention_count} {attention_noun} {attention_verb} attention"
             )
         } else {
-            format!("{workspace_label} · {session_count} active")
+            format!("{workspace_label} · {session_count} {session_noun}")
         }
     } else if attention_count > 0 {
         let attention_verb = if attention_count == 1 {

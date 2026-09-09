@@ -6307,11 +6307,11 @@ fn pane_tab_end_control_requires_hover(
 
 fn pane_tab_end_control_is_keyboard_focusable(
     app_name: &str,
-    is_active: bool,
+    _is_active: bool,
     is_pinned: bool,
     has_indicator: bool,
 ) -> bool {
-    app_name != "Zed" && is_active && (!is_pinned || !has_indicator)
+    app_name != "Zed" && (!is_pinned || !has_indicator)
 }
 
 pub(crate) fn render_toggle_zoom_button(pane: &Pane, cx: &mut Context<Pane>) -> IconButton {
@@ -7288,6 +7288,9 @@ mod tests {
         );
         assert!(pane_tab_end_control_is_keyboard_focusable(
             "Dez", true, false, false
+        ));
+        assert!(pane_tab_end_control_is_keyboard_focusable(
+            "Dez", false, false, false
         ));
         assert!(!pane_tab_end_control_is_keyboard_focusable(
             "Dez", true, true, true

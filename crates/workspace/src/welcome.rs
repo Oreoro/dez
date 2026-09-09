@@ -469,31 +469,25 @@ const ZED_CONTENT: (Section, Section) = (
     },
 );
 
-const DEZ_CONTENT: (Section, Section) = (
-    Section {
-        title: "Start a Workspace",
-        entries: &[
-            SectionEntry {
-                icon: IconName::FolderOpen,
-                title: "Open Workspace",
-                meta: Some("Local folder"),
-                action: &OPEN_WORKSPACE,
-                visibility_guard: SectionVisibility::Always,
-            },
-            SectionEntry {
-                icon: IconName::CloudDownload,
-                title: "Clone Repository",
-                meta: Some("From Git"),
-                action: &GitClone,
-                visibility_guard: SectionVisibility::Always,
-            },
-        ],
-    },
-    Section {
-        title: "",
-        entries: &[],
-    },
-);
+const DEZ_CONTENT: Section = Section {
+    title: "Start a Workspace",
+    entries: &[
+        SectionEntry {
+            icon: IconName::FolderOpen,
+            title: "Open Workspace",
+            meta: Some("Local folder"),
+            action: &OPEN_WORKSPACE,
+            visibility_guard: SectionVisibility::Always,
+        },
+        SectionEntry {
+            icon: IconName::CloudDownload,
+            title: "Clone Repository",
+            meta: Some("From Git"),
+            action: &GitClone,
+            visibility_guard: SectionVisibility::Always,
+        },
+    ],
+};
 
 const DEZ_WORKSPACE_CONTENT: (Section, Section) = (
     Section {
@@ -951,15 +945,17 @@ impl Render for WelcomePage {
         );
         let installation_action_count = usize::from(installation_required);
         let action_tab_offset = installation_action_count;
-        let (first_section, second_section) = if APP_NAME == "Zed" {
-            ZED_CONTENT
+        let (first_section, second_section): (Section, Option<Section>) = if APP_NAME == "Zed" {
+            (ZED_CONTENT.0, Some(ZED_CONTENT.1))
         } else if has_workspace {
-            DEZ_WORKSPACE_CONTENT
+            (DEZ_WORKSPACE_CONTENT.0, Some(DEZ_WORKSPACE_CONTENT.1))
         } else {
-            DEZ_CONTENT
+            (DEZ_CONTENT, None)
         };
         let first_section_entries = first_section.visible_entry_count(local_workspace);
-        let second_section_entries = second_section.visible_entry_count(local_workspace);
+        let second_section_entries = second_section
+            .as_ref()
+            .map_or(0, |section| section.visible_entry_count(local_workspace));
         let welcome_page = cx.weak_entity();
 
         let recent_projects = self
@@ -1028,20 +1024,23 @@ impl Render for WelcomePage {
             ),
             WelcomeRecentState::Hidden => None,
         };
-        let workspace_content = (second_section_entries > 0).then(|| {
+        let workspace_content =
             second_section
-                .render(
-                    action_tab_offset + first_section_entries + recent_action_count,
-                    &self.focus_handle,
-                    false,
-                    true,
-                    None,
-                    None,
-                    None,
-                    local_workspace,
-                )
-                .into_any_element()
-        });
+                .filter(|_| second_section_entries > 0)
+                .map(|section| {
+                    section
+                        .render(
+                            action_tab_offset + first_section_entries + recent_action_count,
+                            &self.focus_handle,
+                            false,
+                            true,
+                            None,
+                            None,
+                            None,
+                            local_workspace,
+                        )
+                        .into_any_element()
+                });
         let secondary_content = if installation_required {
             None
         } else if is_dez {
@@ -1633,12 +1632,12 @@ mod tests {
         assert!(!welcome_forces_tab_bar("Zed"));
         assert_eq!(welcome_tab_icon("Dez"), Some(DEZ_HOME_ICON));
         assert_eq!(welcome_tab_icon("Zed"), None);
-        assert_eq!(DEZ_CONTENT.0.entries[0].title, "Open Workspace");
-        assert_eq!(DEZ_CONTENT.0.entries[0].meta, Some("Local folder"));
-        assert_eq!(DEZ_CONTENT.0.entries[1].title, "Clone Repository");
-        assert_eq!(DEZ_CONTENT.0.entries[1].meta, Some("From Git"));
+        assert_eq!(DEZ_CONTENT.entries[0].title, "Open Workspace");
+        assert_eq!(DEZ_CONTENT.entries[0].meta, Some("Local folder"));
+        assert_eq!(DEZ_CONTENT.entries[1].title, "Clone Repository");
+        assert_eq!(DEZ_CONTENT.entries[1].meta, Some("From Git"));
         assert_eq!(
-            DEZ_CONTENT.0.entries.len(),
+            DEZ_CONTENT.entries.len(),
             2,
             "the empty Dez window must not offer a pathless agent-terminal dead end"
         );
@@ -1744,10 +1743,6 @@ mod tests {
         );
         assert_eq!(DEZ_WORKSPACE_CONTENT.1.entries[1].title, "Open Files");
         assert_eq!(DEZ_WORKSPACE_CONTENT.1.entries[2].title, "Review Changes");
-        assert!(
-            DEZ_CONTENT.1.entries.is_empty(),
-            "Dez Welcome should leave configuration to normal application navigation"
-        );
         assert_eq!(DEZ_WORKSPACE_CONTENT.1.entries.len(), 3);
         assert!(
             !ZED_CONTENT.1.entries.is_empty(),
