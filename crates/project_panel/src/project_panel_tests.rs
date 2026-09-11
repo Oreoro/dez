@@ -4663,11 +4663,9 @@ async fn test_file_drag_paths_use_worktree_snapshot(cx: &mut gpui::TestAppContex
                 worktree_id,
                 entry_id: existing_b_id,
             },
-            SelectedEntry {
-                worktree_id,
-                entry_id: deleted_directory_id,
-            },
         ]),
+        source_pane: None,
+        active_selection_is_file: true,
     };
 
     let paths = cx
@@ -4727,6 +4725,8 @@ async fn test_external_paths_for_dragged_selection_uses_active_selection_unless_
             worktree_id,
             entry_id: marked_id,
         }]),
+        source_pane: None,
+        active_selection_is_file: true,
     };
 
     let paths = cx
@@ -4788,6 +4788,8 @@ async fn test_external_paths_for_dragged_selection_resolves_folded_directory(
     let dragged_selection = panel.read_with(cx, |panel, _| DraggedSelection {
         active_selection: panel.selection.unwrap(),
         marked_selections: Arc::from(panel.marked_entries.clone()),
+        source_pane: None,
+        active_selection_is_file: true,
     });
     let paths = cx
         .update(|_, cx| {
@@ -4824,6 +4826,8 @@ async fn test_external_paths_for_dragged_selection_skips_remote_worktrees(
             worktree_id: remote_worktree_id,
             entry_id: ProjectEntryId::from_usize(1),
         }]),
+        source_pane: None,
+        active_selection_is_file: true,
     };
 
     let paths = cx.update(|cx| {

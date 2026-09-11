@@ -1853,12 +1853,19 @@ async fn test_neighboring_activatable_entry_stays_within_project(cx: &mut TestAp
     let header = |path: &str| ListEntry::ProjectHeader {
         key: ProjectGroupKey::new(None, PathList::new(&[std::path::PathBuf::from(path)])),
         label: path.into(),
+        full_label: path.into(),
         highlight_positions: Vec::new(),
+        layout_label: None,
         has_running_threads: false,
-        waiting_thread_count: 0,
+        running_terminal_agent_label: None,
+        attention_thread_count: 0,
         has_notifications: false,
         is_active: false,
         has_threads: true,
+        activity_count: 0,
+        activity_expanded: false,
+        activity_disclosure_available: false,
+        external_sessions: Vec::new(),
     };
     let thread = |name: &str| {
         ListEntry::Thread(Arc::new(ThreadEntry {
@@ -1887,6 +1894,7 @@ async fn test_neighboring_activatable_entry_stays_within_project(cx: &mut TestAp
             highlight_positions: Vec::new(),
             worktrees: Vec::new(),
             diff_stats: DiffStats::default(),
+            changed_files: Vec::new(),
         }))
     };
 
