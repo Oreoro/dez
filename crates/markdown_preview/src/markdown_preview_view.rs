@@ -2387,8 +2387,8 @@ mod tests {
     };
 
     use super::{
-        MarkdownPreviewView, filter_non_rendered_matches, open_preview_url,
-        reset_persisted_font_size,
+        MarkdownPreviewOpenMode, MarkdownPreviewView, filter_non_rendered_matches,
+        open_preview_url, reset_persisted_font_size, update_settings_file,
     };
 
     #[test]
