@@ -8306,8 +8306,7 @@ impl Sidebar {
                                                 cx,
                                             );
                                         });
-                                    })
-                                    .log_err();
+                                    });
                                 })
                                 .detach();
                             }
