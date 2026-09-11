@@ -923,7 +923,11 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
 
     settings.theme.ui_font_family = Some(ui_font);
     settings.theme.buffer_font_family = Some(code_font.clone());
-    settings.theme.markdown_preview_code_font_family = Some(code_font.clone());
+    settings
+        .theme
+        .markdown_preview
+        .get_or_insert_default()
+        .code_font_family = Some(code_font.clone());
     settings.theme.theme = Some(settings::ThemeSelection::Dynamic {
         mode: settings::ThemeAppearanceMode::System,
         light: settings::ThemeName(Arc::from("Lumin Light")),
