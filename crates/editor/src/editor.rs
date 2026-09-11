@@ -10549,7 +10549,7 @@ impl Editor {
                                 let allow_new_preview = PreviewTabsSettings::get_global(cx)
                                     .enable_preview_from_multibuffer;
                                 workspace.open_project_item::<Self>(
-                                    pane.clone(),
+                                    Some(pane.clone()),
                                     buffer,
                                     true,
                                     true,

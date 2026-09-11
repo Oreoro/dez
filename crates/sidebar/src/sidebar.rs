@@ -4155,6 +4155,7 @@ fn standalone_terminal_metadata(
 ) -> (
     TerminalThreadMetadata,
     Option<TerminalAgentKind>,
+    bool,
     TerminalRuntimeInfo,
 ) {
     let terminal_id = standalone_terminal_id(workspace, terminal_view, cx);
@@ -8296,13 +8297,19 @@ impl Sidebar {
                             // clears the flag, reconciling stale signals once
                             // the diff is actually reviewed or committed.
                             if has_reviewable_changes != thread.metadata.has_reviewable_changes {
-                                ThreadMetadataStore::global(cx).update(cx, |store, cx| {
-                                    store.set_reviewable_changes(
-                                        thread_id,
-                                        has_reviewable_changes,
-                                        cx,
-                                    );
-                                });
+                                cx.spawn(async move |cx| {
+                                    cx.update(|cx| {
+                                        ThreadMetadataStore::global(cx).update(cx, |store, cx| {
+                                            store.set_reviewable_changes(
+                                                thread_id,
+                                                has_reviewable_changes,
+                                                cx,
+                                            );
+                                        });
+                                    })
+                                    .log_err();
+                                })
+                                .detach();
                             }
                             Arc::make_mut(thread).apply_active_info(info);
                             new_live_statuses.insert(session_id, (status, thread_id));

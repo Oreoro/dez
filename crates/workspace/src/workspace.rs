@@ -11092,7 +11092,7 @@ impl Workspace {
 
     pub fn open_project_item<T>(
         &mut self,
-        mut pane: Entity<Pane>,
+        pane: Option<Entity<Pane>>,
         project_item: Entity<T::Item>,
         activate_pane: bool,
         focus_item: bool,
@@ -11104,9 +11104,29 @@ impl Workspace {
     where
         T: ProjectItem,
     {
-        if !pane.read(cx).can_host_tabs() {
-            pane = self.ensure_tabbed_pane(window, cx);
-        }
+        let reveal_if_open = pane.is_none() && WorkspaceSettings::get_global(cx).reveal_if_open;
+        let requested_pane = pane.unwrap_or_else(|| self.active_pane().clone());
+        let existing_item = self
+            .find_project_item(&requested_pane, &project_item, cx)
+            .map(|item| (requested_pane.clone(), item))
+            .or_else(|| {
+                if reveal_if_open {
+                    self.panes.iter().find_map(|pane| {
+                        if pane == &requested_pane {
+                            None
+                        } else {
+                            self.find_project_item(pane, &project_item, cx)
+                                .map(|item| (pane.clone(), item))
+                        }
+                    })
+                } else {
+                    None
+                }
+            });
+        let pane = existing_item
+            .as_ref()
+            .map(|(pane, _)| pane.clone())
+            .unwrap_or(requested_pane);
 
         let old_item_id = pane.read(cx).active_item().map(|item| item.item_id());
 
