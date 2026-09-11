@@ -10033,6 +10033,7 @@ dependencies = [
  "project",
  "settings",
  "ui",
+ "util",
  "workspace",
 ]
 
@@ -18042,6 +18043,7 @@ dependencies = [
  "project",
  "proptest",
  "serde_json",
+ "settings",
  "text",
  "ui",
  "util",
