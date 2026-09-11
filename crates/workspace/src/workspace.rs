@@ -11108,7 +11108,7 @@ impl Workspace {
         let requested_pane = pane.unwrap_or_else(|| self.active_pane().clone());
         let existing_item = self
             .find_project_item(&requested_pane, &project_item, cx)
-            .map(|item| (requested_pane.clone(), item))
+            .map(|item: Entity<T>| (requested_pane.clone(), item))
             .or_else(|| {
                 if reveal_if_open {
                     self.panes.iter().find_map(|pane| {
