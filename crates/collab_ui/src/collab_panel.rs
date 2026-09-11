@@ -4644,6 +4644,7 @@ impl CollabPanel {
                 ListEntry::Header(section) => {
                     let name = match section {
                         Section::ActiveCall => "Active Call",
+                        Section::LocalNotes => "Local Notes",
                         Section::FavoriteChannels => "Favorites",
                         Section::Channels => "Channels",
                         Section::ChannelInvites => "Channel Invites",
