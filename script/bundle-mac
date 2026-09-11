@@ -115,7 +115,7 @@ fi
 rustup target add $target_triple
 
 echo "Compiling zed binaries"
-cargo --config .cargo/bundle-config.toml build ${build_flag} --package zed --package cli --target $target_triple
+cargo --config .cargo/bundle-config.toml build ${build_flag} --package zed --package cli --package dez_terminal_host --target $target_triple
 # Build remote_server in a separate invocation so feature unification from the
 # app does not influence its required dynamic libraries. Machine-focused builds
 # can omit the unrelated remote server entirely.
@@ -342,15 +342,17 @@ function extract_debug_symbols() {
         return
     fi
     debug_symbols_extracted=true
-    if ! dsymutil --flat "target/${target_triple}/${target_dir}/zed" 2> target/dsymutil.log; then
+    if ! dsymutil --flat "target/${target_triple}/${target_dir}/dez" 2> target/dsymutil.log; then
         echo "dsymutil failed"
         cat target/dsymutil.log
         exit 1
     fi
-    if ! dsymutil --flat "target/${target_triple}/${target_dir}/remote_server" 2> target/dsymutil.log; then
-        echo "dsymutil failed"
-        cat target/dsymutil.log
-        exit 1
+    if [[ -f "target/${target_triple}/${target_dir}/remote_server" ]]; then
+        if ! dsymutil --flat "target/${target_triple}/${target_dir}/remote_server" 2> target/dsymutil.log; then
+            echo "dsymutil failed"
+            cat target/dsymutil.log
+            exit 1
+        fi
     fi
 }
 
@@ -387,13 +389,16 @@ upload_debug_symbols
 # also keep symbols recoverable when the sentry upload is skipped.
 if [[ "$target_dir" == "release" && "$local_install" != true ]]; then
     extract_debug_symbols
-    strip -x "target/${target_triple}/${target_dir}/zed"
+    strip -x "target/${target_triple}/${target_dir}/dez"
     strip -x "target/${target_triple}/${target_dir}/cli"
-    strip -x "target/${target_triple}/${target_dir}/remote_server"
+    if [[ -f "target/${target_triple}/${target_dir}/remote_server" ]]; then
+        strip -x "target/${target_triple}/${target_dir}/remote_server"
+    fi
 fi
 
-cp target/${target_triple}/${target_dir}/zed "${app_path}/Contents/MacOS/zed"
+cp target/${target_triple}/${target_dir}/dez "${app_path}/Contents/MacOS/dez"
 cp target/${target_triple}/${target_dir}/cli "${app_path}/Contents/MacOS/cli"
+cp target/${target_triple}/${target_dir}/dez-terminal-host "${app_path}/Contents/MacOS/dez-terminal-host"
 sign_app_binaries
 
 if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then
