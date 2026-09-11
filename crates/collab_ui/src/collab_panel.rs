@@ -1598,7 +1598,7 @@ impl CollabPanel {
 
         let create = project.update(cx, |project, cx| project.create_buffer(None, true, cx));
         let panel = cx.weak_entity();
-        cx.spawn_in(window, async move |_, mut cx| {
+        cx.spawn_in(window, async move |_, cx| {
             let buffer = create.await?;
             // The persisted text already carries the title line from the
             // first open; re-inserting it here would duplicate it on every
@@ -3074,7 +3074,7 @@ impl CollabPanel {
                             .on_click(cx.listener(|this, _, window, cx| {
                                 let client = this.client.clone();
                                 let workspace = this.workspace.clone();
-        cx.spawn_in(window, async move |_, cx| {
+        cx.spawn_in(window, async move |_, mut cx| {
                                     client
                                         .connect(true, &mut cx)
                                         .await

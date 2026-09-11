@@ -15,8 +15,14 @@ DATETIME_FORMAT: str = "%B %d, %Y %I:%M %p"
 ISSUES_PER_SECTION: int = 50
 ISSUES_TO_FETCH: int = 100
 
-REPO_OWNER = "zed-industries"
-REPO_NAME = "zed"
+# Defaults to the upstream repo, but when run in GitHub Actions the
+# GITHUB_REPOSITORY env var overrides it so the token has write access.
+_default_repo_owner, _default_repo_name = "zed-industries", "zed"
+_github_repository = os.getenv("GITHUB_REPOSITORY")
+if _github_repository and "/" in _github_repository:
+    _default_repo_owner, _default_repo_name = _github_repository.split("/", 1)
+REPO_OWNER = _default_repo_owner
+REPO_NAME = _default_repo_name
 GITHUB_API_BASE_URL = "https://api.github.com"
 
 EXCLUDE_LABEL = "ignore top-ranking issues"
