@@ -1015,11 +1015,10 @@ impl TerminalBuilder {
             Shell::WithArguments { title_override, .. } => title_override.clone(),
             Shell::System | Shell::Program(_) => None,
         };
-        builder.terminal.hyperlink_regex_searches =
-            RegexSearches::new(
-                &path_hyperlink_regexes,
-                Duration::from_millis(path_hyperlink_timeout_ms),
-            );
+        builder.terminal.hyperlink_regex_searches = RegexSearches::new(
+            &path_hyperlink_regexes,
+            Duration::from_millis(path_hyperlink_timeout_ms),
+        );
         builder.terminal.activation_script = activation_script.clone();
         builder.terminal.template = CopyTemplate {
             shell: shell.clone(),

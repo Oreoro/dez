@@ -24,7 +24,6 @@ paths.workspace = true
 picker.workspace = true
 project.workspace = true
 task.workspace = true
-serde.workspace = true
 settings.workspace = true
 tree-sitter.workspace = true
 tree-sitter-json.workspace = true

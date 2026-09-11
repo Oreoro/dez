@@ -9,9 +9,9 @@ use crate::session::running::breakpoint_list::BreakpointList;
 use crate::{
     ClearAllBreakpoints, Continue, ContinueThread, CopyDebugAdapterArguments, Detach,
     FocusBreakpointList, FocusConsole, FocusFrames, FocusLoadedSources, FocusModules,
-    FocusTerminal, FocusVariables, NewProcessModal, NewProcessMode, Pause, StepInto,
-    StepOut, StepOver, Stop, ToggleExpandItem, ToggleSessionPicker, ToggleThreadPicker,
-    persistence, spawn_task_or_modal,
+    FocusTerminal, FocusVariables, NewProcessModal, NewProcessMode, Pause, StepInto, StepOut,
+    StepOver, Stop, ToggleExpandItem, ToggleSessionPicker, ToggleThreadPicker, persistence,
+    spawn_task_or_modal,
 };
 use anyhow::{Context as _, Result, anyhow};
 use collections::IndexMap;
@@ -999,7 +999,8 @@ impl DebugPanel {
                                                             .tab_index(0isize)
                                                             .aria_label("Continue Thread")
                                                             .disabled(
-                                                                thread_status != ThreadStatus::Stopped,
+                                                                thread_status
+                                                                    != ThreadStatus::Stopped,
                                                             )
                                                             .on_click(window.listener_for(
                                                                 running_state,
@@ -1008,7 +1009,8 @@ impl DebugPanel {
                                                                 },
                                                             ))
                                                             .tooltip({
-                                                                let focus_handle = focus_handle.clone();
+                                                                let focus_handle =
+                                                                    focus_handle.clone();
                                                                 move |_window, cx| {
                                                                     Tooltip::for_action_in(
                                                                         "Continue Thread",

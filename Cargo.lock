@@ -511,7 +511,6 @@ dependencies = [
  "parking_lot",
  "paths",
  "picker",
- "platform_title_bar",
  "postage",
  "pretty_assertions",
  "project",
@@ -10033,7 +10032,6 @@ dependencies = [
  "project",
  "settings",
  "ui",
- "util",
  "workspace",
 ]
 
@@ -18137,7 +18135,6 @@ dependencies = [
  "paths",
  "picker",
  "project",
- "serde",
  "serde_json",
  "settings",
  "task",
@@ -18628,7 +18625,6 @@ dependencies = [
  "gpui",
  "icons",
  "livekit_client",
- "notifications",
  "paths",
  "platform_title_bar",
  "project",

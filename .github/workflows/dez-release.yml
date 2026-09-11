@@ -933,7 +933,7 @@ jobs:
           find ./artifacts -name 'dez-linux-aarch64.tar.gz' -exec cp {} release-artifacts/dez-linux-aarch64.tar.gz \;
           find ./artifacts -name 'Dez-x86_64.exe' -exec cp {} release-artifacts/Dez-x86_64.exe \;
           find ./artifacts -name 'Dez-aarch64.exe' -exec cp {} release-artifacts/Dez-aarch64.exe \;
-          (cd release-artifacts && shasum -a 256 * > SHA256SUMS.txt)
+          (cd release-artifacts && shasum -a 256 ./* > SHA256SUMS.txt)
           ls -l release-artifacts/
 
       - name: Create or update the draft Dez release
@@ -955,7 +955,7 @@ jobs:
       - name: Validate Dez release assets
         run: |
           set -euo pipefail
-          staged="$(ls release-artifacts | sort)"
+          staged="$(find release-artifacts -maxdepth 1 -type f -exec basename {} \; | sort)"
           uploaded="$(gh release view "$DEZ_TAG" --repo="$GITHUB_REPOSITORY" --json assets -q '[.assets[].name]' | jq -r '.[]' | sort)"
           missing="$(comm -23 <(printf '%s\n' "$staged") <(printf '%s\n' "$uploaded"))"
           if [ -n "$missing" ]; then

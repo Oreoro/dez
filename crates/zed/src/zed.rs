@@ -2874,11 +2874,7 @@ const AI_ACTION_NAMESPACES: &[&str] = &[
     "zeta::",
 ];
 
-const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &[
-    "channel_modal::",
-    "collab::",
-    "terminal_panel::",
-];
+const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &["channel_modal::", "collab::", "terminal_panel::"];
 const DEZ_HIDDEN_ACTIONS: &[&str] = &["workspace::FollowNextCollaborator"];
 
 fn is_ai_keybinding(binding: &KeyBinding) -> bool {

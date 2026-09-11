@@ -9,14 +9,13 @@ use std::{
 
 use crate::table_data_engine::{DisplayToDataMapping, TableDataEngine};
 use ui::{
-    AbsoluteLength, FluentBuilder as _, ResizableColumnsState, SharedString, TableInteractionState,
+    AbsoluteLength, ResizableColumnsState, SharedString, TableInteractionState,
     TableResizeBehavior, prelude::*,
 };
 use workspace::{Item, Pane, Workspace};
 
 use crate::{parser::EditorState, settings::TabularDataPreviewSettings, types::TableLikeContent};
 
-mod canvas;
 mod parser;
 mod renderer;
 mod settings;

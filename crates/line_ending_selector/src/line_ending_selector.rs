@@ -9,7 +9,6 @@ use picker::{Picker, PickerDelegate};
 use project::Project;
 use std::sync::Arc;
 use ui::{ListItem, prelude::*};
-use util::ResultExt;
 use workspace::ModalView;
 
 actions!(
