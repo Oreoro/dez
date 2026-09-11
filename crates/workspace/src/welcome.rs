@@ -1249,7 +1249,7 @@ impl Render for WelcomePage {
                                         .min_w_0()
                                         .gap_0p5()
                                         .child(
-                                            Label::new(page_title.clone())
+                                            Label::new(page_title)
                                                 .size(LabelSize::XSmall)
                                                 .color(Color::Muted),
                                         )
