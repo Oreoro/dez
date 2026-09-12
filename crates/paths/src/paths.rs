@@ -44,7 +44,7 @@ pub const APP_NAME_LOWERCASE: &str = {
             );
             assert!(
                 APP_NAME.as_bytes()[i] >= 0x20,
-                "APP_NAME must not contain control characters"
+                "APP_NAME must not contain control characters",
             );
             bytes[i] = APP_NAME.as_bytes()[i];
             i += 1;
@@ -52,6 +52,59 @@ pub const APP_NAME_LOWERCASE: &str = {
         bytes.make_ascii_lowercase();
         bytes
     };
+    match std::str::from_utf8(&BYTES) {
+        Ok(s) => s,
+        Err(_) => unreachable!(),
+    }
+};
+
+/// The release channel this build was produced for.
+///
+/// Read from the same `crates/zed/RELEASE_CHANNEL` file the bundler rewrites
+/// per channel, so parallel channel installations can be told apart without
+/// adding a dependency on `release_channel`.
+const BUILD_CHANNEL: &str = include_str!("../../zed/RELEASE_CHANNEL").trim();
+
+/// Returns the storage-directory suffix for this build's release channel.
+///
+/// The channel is taken from `ZED_RELEASE_CHANNEL` when set (mirroring
+/// `release_channel::RELEASE_CHANNEL_NAME`), otherwise from the
+/// `crates/zed/RELEASE_CHANNEL` file captured at compile time.
+///
+/// Stable builds use the unsuffixed legacy storage identity so existing
+/// stable installations keep their data. Every other channel gets its own
+/// suffixed directories so Preview, Nightly, and dev builds never share
+/// settings, databases, caches, or runtime state with each other or with
+/// stable.
+pub fn storage_channel_suffix() -> Option<String> {
+    let channel = env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| BUILD_CHANNEL.to_string());
+    match channel.as_str() {
+        "stable" | "" => None,
+        _ => Some(channel),
+    }
+}
+
+fn storage_dir_name(display: bool) -> &'static str {
+    static CACHED: LazyLock<(&'static str, &'static str)> = LazyLock::new(|| {
+        // The stored identity must stay "Superzed" for stable; see
+        // APP_STORAGE_NAME. The suffix strings are intentionally channel
+        // names, which are validated by the bundler before the build.
+        match storage_channel_suffix() {
+            None => (APP_STORAGE_NAME, APP_STORAGE_NAME_LOWERCASE),
+            Some(channel) => (
+                Box::leak(format!("{APP_STORAGE_NAME} {channel}").into_boxed_str()),
+                Box::leak(format!("{APP_STORAGE_NAME_LOWERCASE}-{channel}").into_boxed_str()),
+            ),
+        }
+        .into()
+    });
+    let (display_name, lowercase_name) = *CACHED;
+    if display {
+        display_name
+    } else {
+        lowercase_name
+    }
+}
     match std::str::from_utf8(&BYTES) {
         Ok(s) => s,
         Err(_) => unreachable!(),
@@ -138,16 +191,16 @@ pub fn config_dir() -> &'static PathBuf {
         } else if cfg!(target_os = "windows") {
             dirs::config_dir()
                 .expect("failed to determine RoamingAppData directory")
-                .join(APP_STORAGE_NAME)
+                .join(storage_dir_name(true))
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             if let Ok(flatpak_xdg_config) = std::env::var("FLATPAK_XDG_CONFIG_HOME") {
                 flatpak_xdg_config.into()
             } else {
                 dirs::config_dir().expect("failed to determine XDG_CONFIG_HOME directory")
             }
-            .join(APP_STORAGE_NAME_LOWERCASE)
+            .join(storage_dir_name(false))
         } else {
-            home_dir().join(".config").join(APP_STORAGE_NAME_LOWERCASE)
+            home_dir().join(".config").join(storage_dir_name(false))
         }
     })
 }
@@ -160,18 +213,18 @@ pub fn data_dir() -> &'static PathBuf {
         } else if cfg!(target_os = "macos") {
             home_dir()
                 .join("Library/Application Support")
-                .join(APP_STORAGE_NAME)
+                .join(storage_dir_name(true))
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             if let Ok(flatpak_xdg_data) = std::env::var("FLATPAK_XDG_DATA_HOME") {
                 flatpak_xdg_data.into()
             } else {
                 dirs::data_local_dir().expect("failed to determine XDG_DATA_HOME directory")
             }
-            .join(APP_STORAGE_NAME_LOWERCASE)
+            .join(storage_dir_name(false))
         } else if cfg!(target_os = "windows") {
             dirs::data_local_dir()
                 .expect("failed to determine LocalAppData directory")
-                .join(APP_STORAGE_NAME)
+                .join(storage_dir_name(true))
         } else {
             config_dir().clone() // Fallback
         }
@@ -185,7 +238,7 @@ pub fn state_dir() -> &'static PathBuf {
             return home_dir()
                 .join(".local")
                 .join("state")
-                .join(APP_STORAGE_NAME);
+                .join(storage_dir_name(true));
         }
 
         if cfg!(any(target_os = "linux", target_os = "freebsd")) {
@@ -194,12 +247,12 @@ pub fn state_dir() -> &'static PathBuf {
             } else {
                 dirs::state_dir().expect("failed to determine XDG_STATE_HOME directory")
             }
-            .join(APP_STORAGE_NAME_LOWERCASE);
+            .join(storage_dir_name(false));
         } else {
             // Windows
             return dirs::data_local_dir()
                 .expect("failed to determine LocalAppData directory")
-                .join(APP_STORAGE_NAME);
+                .join(storage_dir_name(true));
         }
     })
 }
@@ -211,13 +264,13 @@ pub fn temp_dir() -> &'static PathBuf {
         if cfg!(target_os = "macos") {
             return dirs::cache_dir()
                 .expect("failed to determine cachesDirectory directory")
-                .join(APP_STORAGE_NAME);
+                .join(storage_dir_name(true));
         }
 
         if cfg!(target_os = "windows") {
             return dirs::cache_dir()
                 .expect("failed to determine LocalAppData directory")
-                .join(APP_STORAGE_NAME);
+                .join(storage_dir_name(true));
         }
 
         if cfg!(any(target_os = "linux", target_os = "freebsd")) {
@@ -226,10 +279,10 @@ pub fn temp_dir() -> &'static PathBuf {
             } else {
                 dirs::cache_dir().expect("failed to determine XDG_CACHE_HOME directory")
             }
-            .join(APP_STORAGE_NAME_LOWERCASE);
+            .join(storage_dir_name(false));
         }
 
-        home_dir().join(".cache").join(APP_STORAGE_NAME_LOWERCASE)
+        home_dir().join(".cache").join(storage_dir_name(false))
     })
 }
 
@@ -244,7 +297,7 @@ pub fn logs_dir() -> &'static PathBuf {
     static LOGS_DIR: OnceLock<PathBuf> = OnceLock::new();
     LOGS_DIR.get_or_init(|| {
         if cfg!(target_os = "macos") {
-            home_dir().join("Library/Logs").join(APP_STORAGE_NAME)
+            home_dir().join("Library/Logs").join(storage_dir_name(true))
         } else {
             data_dir().join("logs")
         }

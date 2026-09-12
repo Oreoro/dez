@@ -224,11 +224,29 @@ fn prepare_runtime_endpoint() -> Result<TerminalHostEndpoint> {
 }
 
 fn terminal_host_runtime_directory(state_dir: &Path, app_name: &str) -> PathBuf {
+    terminal_host_runtime_directory_for_channel(state_dir, app_name, storage_channel())
+}
+
+fn terminal_host_runtime_directory_for_channel(
+    state_dir: &Path,
+    app_name: &str,
+    channel: Option<&str>,
+) -> PathBuf {
     if app_name == "Zed" {
-        state_dir.join("terminal-host")
-    } else {
-        state_dir.join(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY)
+        return state_dir.join("terminal-host");
     }
+    let directory = state_dir.join(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY);
+    // Parallel channel installations must never share a runtime socket or
+    // auth token: a helper left running by another channel would reject
+    // this app's handshake. Stable keeps the unsuffixed directory.
+    match channel {
+        None => directory,
+        Some(channel) => directory.join(channel),
+    }
+}
+
+fn storage_channel() -> Option<String> {
+    paths::storage_channel_suffix()
 }
 
 #[cfg(unix)]
@@ -375,6 +393,23 @@ mod tests {
         assert_eq!(
             terminal_host_runtime_directory(state_dir, "Zed"),
             state_dir.join("terminal-host")
+        );
+    }
+
+    #[test]
+    fn non_stable_channels_isolate_their_runtime_directory() {
+        let state_dir = Path::new("/state");
+        for channel in ["preview", "nightly", "dev"] {
+            assert_eq!(
+                terminal_host_runtime_directory_for_channel(state_dir, "Dez", Some(channel)),
+                state_dir.join("dez-terminal-host-v1").join(channel),
+                "channel {channel} must own its runtime directory"
+            );
+        }
+        assert_eq!(
+            terminal_host_runtime_directory_for_channel(state_dir, "Dez", None),
+            state_dir.join("dez-terminal-host-v1"),
+            "stable must keep the unsuffixed runtime directory"
         );
     }
 }

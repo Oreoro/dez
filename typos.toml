@@ -118,3 +118,11 @@ check-filename = true
 [default.extend-words]
 scap = "scap"
 writeable = "writeable"
+# Terminal application names matched case-insensitively.
+iterm = "iterm"
+# Commit SHA fragments in historical notes.
+ba = "ba"
+daa = "daa"
+ede = "ede"
+# Part of "mis-scoping" in a guard description.
+mis = "mis"

@@ -240,7 +240,12 @@ jobs:
       - name: Verify and package the launchable application
         run: |
           set -euo pipefail
-          dmg=target/aarch64-apple-darwin/release/Dez-aarch64.dmg
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            expected_name=Dez
+          else
+            expected_name="Dez Preview"
+          fi
+          dmg="target/aarch64-apple-darwin/release/${expected_name}-aarch64.dmg"
           test -f "$dmg"
           hdiutil verify "$dmg"
 
@@ -255,11 +260,9 @@ jobs:
           trap 'hdiutil detach "$mount_dir" >/dev/null' EXIT
 
           if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
-            expected_name=Dez
             expected_bundle_id=dev.dez.Dez
             artifact_label=Dez
           else
-            expected_name="Dez Preview"
             expected_bundle_id=dev.dez.Dez-Preview
             artifact_label=Dez-Preview
           fi

@@ -289,7 +289,13 @@ function sign_app_binaries() {
     else
         dmg_target_directory="target/${target_triple}/${target_dir}"
         dmg_source_directory="${dmg_target_directory}/dmg"
-        dmg_file_path="${dmg_target_directory}/Dez-${arch_suffix}.dmg"
+        # Name the DMG after the bundle identity so parallel channel builds
+        # never overwrite each other's artifacts.
+        dmg_channel_label=""
+        if [[ "$channel" != "stable" ]]; then
+            dmg_channel_label="${channel^}-"
+        fi
+        dmg_file_path="${dmg_target_directory}/Dez-${dmg_channel_label}${arch_suffix}.dmg"
         xcode_bin_dir_path="$(xcode-select -p)/usr/bin"
 
         rm -rf ${dmg_source_directory}

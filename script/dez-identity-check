@@ -1546,8 +1546,14 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn dez_layout_uses_single_work_area.*?CanvasLayoutRecipe::Full.*?CanvasLayoutRecipe::AgentControl.*?CanvasLayoutRecipe::EditorFocus.*?CanvasLayoutRecipe::Review.*?CanvasLayoutRecipe::Debug.*?fn normalize_restored_dez_main_work_area.*?active_canvas_layout_recipe.*?is_some_and\(dez_layout_uses_single_work_area\).*?consolidate_dez_main_work_area.*?fn apply_dez_single_work_area_destination.*?consolidate_dez_main_work_area.*?select_dez_essential_canvas_recipe_panel.*?fn consolidate_dez_main_work_area.*?join_pane_into_active.*?fn test_restore_consolidates_single_work_area_dez_layouts.*?with_label\("review\.diff"\).*?normalize_restored_dez_main_work_area.*?primary_pane\.read\(cx\)\.items_len\(\), 1.*?!workspace\.pane_is_in_center\(&restored_review_pane\).*?fn test_restore_promotes_visible_user_work_over_stale_empty_active_pane.*?with_label\("Session unavailable"\).*?normalize_restored_dez_main_work_area.*?!stale_empty_pane\.read\(cx\)\.is_visible\(\).*?user_work_pane\.read\(cx\)\.is_visible\(\).*?workspace\.active_pane\(\).*?&user_work_pane' \
     'Workspace destinations can regress to restored duplicate panes or lose populated surfaces instead of consolidating them as tabs'
 require_multiline_pattern crates/zed/src/terminal_host_runtime.rs \
-    'DEZ_TERMINAL_HOST_GENERATION: &str = "v1".*?DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v1".*?fn prepare_runtime_endpoint.*?TerminalHostEndpoint::new.*?DEZ_TERMINAL_HOST_GENERATION.*?fn terminal_host_runtime_directory.*?state_dir\.join\("terminal-host"\).*?state_dir\.join\(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY\).*?fn generated_dez_host_does_not_reuse_a_legacy_terminal_host_socket' \
+    'DEZ_TERMINAL_HOST_GENERATION: &str = "v1".*?DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v1".*?fn prepare_runtime_endpoint.*?TerminalHostEndpoint::new.*?DEZ_TERMINAL_HOST_GENERATION.*?fn terminal_host_runtime_directory.*?state_dir\.join\("terminal-host"\).*?state_dir\.join\(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY\).*?fn generated_dez_host_does_not_reuse_a_legacy_terminal_host_socket.*?fn non_stable_channels_isolate_their_runtime_directory' \
     'a generated Dez Host can regress to sharing the identity or endpoint of a legacy terminal owner'
+require_multiline_pattern crates/zed/src/terminal_host_runtime.rs \
+    'fn terminal_host_runtime_directory_for_channel.*?match channel.*?None => directory.*?Some\(channel\) => directory\.join\(channel\).*?fn non_stable_channels_isolate_their_runtime_directory.*?join\("dez-terminal-host-v1"\)\.join\(channel\)' \
+    'parallel release-channel installations can regress to sharing one terminal host runtime socket'
+require_multiline_pattern crates/paths/src/paths.rs \
+    'const BUILD_CHANNEL: &str = include_str!\("\.\./\.\./zed/RELEASE_CHANNEL"\)\.trim\(\).*?pub fn storage_channel_suffix.*?"stable" \| "" => None.*?fn storage_dir_name.*?Box::leak\(format!\("\{APP_STORAGE_NAME\} \{channel\}"\).*?Box::leak\(format!\("\{APP_STORAGE_NAME_LOWERCASE\}-\{channel\}"\)' \
+    'parallel release-channel installations can regress to sharing one storage identity'
 require_multiline_pattern crates/terminal/src/session_host/transport.rs \
     'pub struct TerminalHostEndpoint.*?socket_path.*?token_file_path.*?generation.*?pub struct TerminalHostConnection.*?endpoint: TerminalHostEndpoint.*?pub fn endpoint\(&self\) -> &TerminalHostEndpoint' \
     'the terminal connection can lose its authoritative generated endpoint'
@@ -3419,7 +3425,7 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'const DEZ_DOCS_URL: &str = "https://github\.com/Oreoro/dez/blob/main/docs/src/dez\.md".*?fn product_docs_url\(app_name: &str\).*?if app_name == "Zed" \{[[:space:]]*ZED_DOCS_URL[[:space:]]*\} else \{[[:space:]]*DEZ_DOCS_URL.*?register_action\(\|_, _: &OpenDocs, _, cx\| cx\.open_url\(product_docs_url\(APP_NAME\)\)\).*?fn documentation_routes_follow_the_product_identity' \
     'Help can regress to routing Dez Documentation through the upstream Zed site'
 require_pattern crates/zed/src/zed.rs \
-    '"terminal_panel::",' \
+    '"terminal_panel::"' \
     'inherited Terminal Panel keybindings can reintroduce the removed Dez surface'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn dez_terminal_panel_setting_visible.*?"terminal\.button" \| "terminal\.default_width" \| "terminal\.default_height"' \

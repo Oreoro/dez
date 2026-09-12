@@ -90,7 +90,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: Dez-nightly-macOS-M2-${{ github.sha }}
-          path: target/aarch64-apple-darwin/release/Dez-aarch64.dmg
+          path: target/aarch64-apple-darwin/release/Dez-Nightly-aarch64.dmg
           if-no-files-found: error
           retention-days: 14
 
