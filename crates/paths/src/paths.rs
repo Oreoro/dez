@@ -63,7 +63,7 @@ pub const APP_NAME_LOWERCASE: &str = {
 /// Read from the same `crates/zed/RELEASE_CHANNEL` file the bundler rewrites
 /// per channel, so parallel channel installations can be told apart without
 /// adding a dependency on `release_channel`.
-const BUILD_CHANNEL: &str = include_str!("../../zed/RELEASE_CHANNEL").trim();
+const BUILD_CHANNEL: &str = include_str!("../../zed/RELEASE_CHANNEL");
 
 /// Returns the storage-directory suffix for this build's release channel.
 ///
@@ -77,7 +77,8 @@ const BUILD_CHANNEL: &str = include_str!("../../zed/RELEASE_CHANNEL").trim();
 /// settings, databases, caches, or runtime state with each other or with
 /// stable.
 pub fn storage_channel_suffix() -> Option<String> {
-    let channel = env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| BUILD_CHANNEL.to_string());
+    let channel = env::var("ZED_RELEASE_CHANNEL")
+        .unwrap_or_else(|_| BUILD_CHANNEL.trim().to_string());
     match channel.as_str() {
         "stable" | "" => None,
         _ => Some(channel),
@@ -91,12 +92,14 @@ fn storage_dir_name(display: bool) -> &'static str {
         // names, which are validated by the bundler before the build.
         match storage_channel_suffix() {
             None => (APP_STORAGE_NAME, APP_STORAGE_NAME_LOWERCASE),
-            Some(channel) => (
-                Box::leak(format!("{APP_STORAGE_NAME} {channel}").into_boxed_str()),
-                Box::leak(format!("{APP_STORAGE_NAME_LOWERCASE}-{channel}").into_boxed_str()),
-            ),
+            Some(channel) => {
+                let display_name: &'static str =
+                    Box::leak(format!("{APP_STORAGE_NAME} {channel}").into_boxed_str());
+                let lowercase_name: &'static str =
+                    Box::leak(format!("{APP_STORAGE_NAME_LOWERCASE}-{channel}").into_boxed_str());
+                (display_name, lowercase_name)
+            }
         }
-        .into()
     });
     let (display_name, lowercase_name) = *CACHED;
     if display {
