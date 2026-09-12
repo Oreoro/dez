@@ -224,7 +224,11 @@ fn prepare_runtime_endpoint() -> Result<TerminalHostEndpoint> {
 }
 
 fn terminal_host_runtime_directory(state_dir: &Path, app_name: &str) -> PathBuf {
-    terminal_host_runtime_directory_for_channel(state_dir, app_name, storage_channel())
+    terminal_host_runtime_directory_for_channel(
+        state_dir,
+        app_name,
+        storage_channel().as_deref(),
+    )
 }
 
 fn terminal_host_runtime_directory_for_channel(
