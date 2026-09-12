@@ -125,7 +125,12 @@ async fn connect_or_launch(
     .await
     {
         Ok(connection) => return Ok(connection),
-        Err(error) if is_identity_rejection(&error) => return Err(error.into()),
+        // A helper from another installation or identity generation may still
+        // own the runtime socket. Remove it so the helper launched below binds
+        // a fresh socket that matches this app's identity.
+        Err(error) if is_identity_rejection(&error) => {
+            remove_stale_socket(endpoint.socket_path())?;
+        }
         Err(error) if is_stale_socket_error(&error) => remove_stale_socket(endpoint.socket_path())?,
         Err(error) => return Err(error.into()),
     }
