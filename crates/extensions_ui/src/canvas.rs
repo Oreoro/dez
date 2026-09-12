@@ -30,6 +30,15 @@ pub(crate) fn extensions_border(cx: &App) -> Hsla {
     }
 }
 
+pub(crate) fn extensions_card_overlay_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.alpha(0.72),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background.alpha(0.8),
+        settings::CanvasContrast::High => colors.element_background.alpha(0.88),
+    }
+}
+
 pub(crate) fn extensions_padding(cx: &App) -> Pixels {
     match DesignSystemSettings::get_global(cx).density {
         settings::CanvasDensity::Compact => px(12.),

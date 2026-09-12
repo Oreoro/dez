@@ -8,6 +8,7 @@ use gpui::{
 };
 use project::Project;
 use ui::{Button, ButtonCommon, Clickable, LabelSize, Tooltip};
+use settings::Settings as _;
 use workspace::{
     EncodingDisplayOptions, HideStatusItem, StatusBarSettings, StatusItemView, Workspace,
     item::ItemHandle,
