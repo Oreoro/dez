@@ -1,6 +1,6 @@
 use gpui::App;
 use picker::{PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius};
-use settings::Settings;
+use settings::Settings as _;
 use workspace::{DesignSystemSettings, ui::ListItemSpacing};
 
 pub(crate) fn project_symbols_picker_density(cx: &App) -> PickerSurfaceDensity {

@@ -10,7 +10,7 @@ use project::Project;
 use ui::{Button, ButtonCommon, Clickable, LabelSize, Tooltip};
 use workspace::{
     EncodingDisplayOptions, HideStatusItem, StatusBarSettings, StatusItemView, Workspace,
-    item::{ItemHandle, Settings},
+    item::ItemHandle,
 };
 
 pub struct ActiveBufferEncoding {

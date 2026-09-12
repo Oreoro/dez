@@ -1,6 +1,6 @@
 use gpui::{App, Hsla, Pixels, px};
 use picker::{PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius};
-use settings::Settings;
+use settings::Settings as _;
 use ui::{ActiveTheme, ListItemSpacing};
 use workspace::DesignSystemSettings;
 

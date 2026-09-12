@@ -23,7 +23,7 @@ use livekit::webrtc::{
 use log::info;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
-use settings::Settings;
+use settings::Settings as _;
 use std::cell::RefCell;
 use std::sync::Weak;
 use std::sync::atomic::{AtomicI32, AtomicU64, Ordering};

@@ -1,5 +1,5 @@
 use gpui::{App, Div, Hsla, Pixels, prelude::*, px};
-use settings::Settings;
+use settings::Settings as _;
 use ui::ActiveTheme;
 use workspace::DesignSystemSettings;
 

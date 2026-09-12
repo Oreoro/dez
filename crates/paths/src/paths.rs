@@ -105,11 +105,6 @@ fn storage_dir_name(display: bool) -> &'static str {
         lowercase_name
     }
 }
-    match std::str::from_utf8(&BYTES) {
-        Ok(s) => s,
-        Err(_) => unreachable!(),
-    }
-};
 
 /// A custom data directory override, set only by `set_custom_data_dir`.
 /// This is used to override the default data directory location.
