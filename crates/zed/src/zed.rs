@@ -1136,10 +1136,7 @@ fn register_actions(
                 }
                 Err(e) => {
                     workspace.show_error(
-                        format!(
-                            "Opening this URL in a browser failed because the URL is invalid: {}\n\nError was: {e}",
-                            action.url
-                        ),
+                        format!("Could not open URL in browser: {}\n\n{e}", action.url),
                         cx,
                     );
                 }
@@ -1396,7 +1393,7 @@ fn register_actions(
                         workspace.show_toast(
                             Toast::new(
                                 NotificationId::unique::<RestoreDezVisualProfile>(),
-                                "Restored Lumin, spacious density, IBM Plex Sans, Lilex, Dez icons, native tab navigation, TUI terminal chrome, and the focused Workspace status line.",
+                                "Restored the Dez visual profile.",
                             ),
                             cx,
                         );
@@ -1476,7 +1473,7 @@ fn register_actions(
                                 workspace.show_toast(
                                     Toast::new(
                                         NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
-                                        "Dez could not open the native folder picker. Nothing changed; retry, or allow Files and Folders access in System Settings.",
+                                        "Could not open the folder picker. Nothing changed; retry, or allow Files and Folders access in System Settings.",
                                     )
                                     .autohide(),
                                     cx,
@@ -1533,7 +1530,7 @@ fn register_actions(
                                 Toast::new(
                                     NotificationId::unique::<WorkspaceAccessGrantFeedback>(),
                                     format!(
-                                        "Dez still cannot read “{root_label}”. Nothing changed; choose that exact folder in the macOS picker or allow Files and Folders access in System Settings."
+                                        "Still cannot read “{root_label}”. Nothing changed; choose that exact folder in the picker or allow Files and Folders access in System Settings."
                                     ),
                                 )
                                 .autohide(),
@@ -1554,15 +1551,15 @@ fn register_actions(
                         };
                         let message = if remaining_count == 0 {
                             format!(
-                                "Access granted for “{root_label}”. Dez kept the current layout. Relaunch Dez to retry startup restoration, or use File > Open Recent Workspaces if a Workspace is still missing."
+                                "Access granted for “{root_label}”. Dez kept the current layout. Relaunch to retry startup restoration, or use File > Open Recent Workspaces if a Workspace is still missing."
                             )
                         } else if remaining_count == 1 {
                             format!(
-                                "Access granted for “{root_label}”. One Workspace folder still needs access; Dez kept the current layout."
+                                "Access granted for “{root_label}”. One Workspace folder still needs access; the current layout is kept."
                             )
                         } else {
                             format!(
-                                "Access granted for “{root_label}”. {remaining_count} Workspace folders still need access; Dez kept the current layout."
+                                "Access granted for “{root_label}”. {remaining_count} Workspace folders still need access; the current layout is kept."
                             )
                         };
                         workspace.show_toast(
@@ -1594,7 +1591,7 @@ fn register_actions(
                 let message = if crate::terminal_host_runtime::TerminalHostRuntime::retry(cx) {
                     "Retrying the terminal service…"
                 } else {
-                    "The terminal service cannot retry in place. Relaunch Dez; if the problem returns, open the local diagnostics log."
+                    "The terminal service cannot retry in place. Relaunch Dez; if the problem returns, open the local log."
                 };
                 workspace.show_toast(
                     Toast::new(NotificationId::unique::<RetryTerminalService>(), message)

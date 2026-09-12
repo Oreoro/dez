@@ -1453,7 +1453,7 @@ impl WorkspaceDb {
                 }
 
                 for (path, bps) in map.iter() {
-                    log::info!(
+                    log::debug!(
                         "Got {} breakpoints from database at path: {}",
                         bps.len(),
                         path.to_string_lossy()

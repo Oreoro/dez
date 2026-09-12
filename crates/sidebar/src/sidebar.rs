@@ -711,17 +711,17 @@ fn terminal_host_status_presentation(
         TerminalHostStartupState::Connecting => Some(TerminalHostStatusPresentation {
             kind: TerminalHostStatusKind::Connecting,
             title: "Preparing terminals",
-            description: "New terminals will open when the terminal service is ready. Dez has not started a shell yet.",
+            description: "New terminals will open when the terminal service is ready.",
         }),
         TerminalHostStartupState::Reconnecting { .. } => Some(TerminalHostStatusPresentation {
             kind: TerminalHostStatusKind::Reconnecting,
             title: "Terminal service is reconnecting",
-            description: "Running terminal processes remain untouched. New terminals wait until the connection returns. If this does not recover, restart Dez.",
+            description: "Running terminal processes remain untouched. New terminals wait until the connection returns; if this does not recover, restart Dez.",
         }),
         TerminalHostStartupState::Failed { .. } => Some(TerminalHostStatusPresentation {
             kind: TerminalHostStatusKind::Failed,
             title: "Terminal service is unavailable",
-            description: "Dez could not start its terminal service. Retry without replacing any running process; if the problem returns, open the local log.",
+            description: "Retry without replacing any running process; if the problem returns, open the local log.",
         }),
     }
 }
@@ -742,14 +742,14 @@ fn workspace_restore_status_presentation(
         0 => None,
         1 => Some(WorkspaceRestoreStatusPresentation {
             title: "Workspace could not reopen".to_owned(),
-            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove the recovery entry from Workspaces without deleting recent Workspace data.",
+            description: "Dez kept a recovery entry. Open Recent Workspaces to try again, or remove it from Workspaces without deleting recent Workspace data.",
             remove_label: "Remove Recovery Entry",
             remove_aria_label: "Remove Unavailable Workspace Recovery Entry".to_owned(),
             remove_tooltip: "Remove only the unavailable recovery entry from Workspaces; recent Workspace data remains available",
         }),
         count => Some(WorkspaceRestoreStatusPresentation {
             title: format!("{count} Workspaces could not reopen"),
-            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove the recovery entries from Workspaces without deleting recent Workspace data.",
+            description: "Dez kept recovery entries. Open Recent Workspaces to try again, or remove them from Workspaces without deleting recent Workspace data.",
             remove_label: "Remove Recovery Entries",
             remove_aria_label: format!("Remove {count} Unavailable Workspace Recovery Entries"),
             remove_tooltip: "Remove only the unavailable recovery entries from Workspaces; recent Workspace data remains available",
@@ -2697,7 +2697,7 @@ fn legacy_terminal_termination_confirmation_copy(title: &str) -> (&'static str, 
     (
         "Terminate legacy session?",
         format!(
-            "“{title}” is still owned by an older Dez Host. Terminating it stops its shell and foreground command. Dez cannot migrate or restore that process."
+            "“{title}” is still owned by an older Dez Host. Terminating it stops its shell and foreground command; it cannot be migrated or restored."
         ),
     )
 }
@@ -3715,7 +3715,7 @@ mod terminal_host_status_tests {
             terminal_host_status_presentation(&TerminalHostStartupState::Connecting).unwrap();
         assert_eq!(connecting.kind, TerminalHostStatusKind::Connecting);
         assert_eq!(connecting.title, "Preparing terminals");
-        assert!(connecting.description.contains("has not started a shell"));
+        assert!(connecting.description.contains("terminal service is ready"));
 
         let reconnecting =
             terminal_host_status_presentation(&TerminalHostStartupState::Reconnecting {
@@ -5044,9 +5044,9 @@ fn cmux_integration_status_presentation(
         MultiplexerSourceAvailability::MissingExecutable => None,
         MultiplexerSourceAvailability::AccessRequired => {
             let description = if had_successful_scan {
-                "cmux stopped sharing live Workspace activity with Dez. Last-known rows remain visible; Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows. Dez never changes this setting."
+                "cmux stopped sharing live Workspace activity with Dez. Last-known rows remain visible; Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows."
             } else {
-                "cmux is installed and keeping its secure process-only API boundary. Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows in Dez. Dez never changes this setting."
+                "cmux is installed and keeps its secure process-only API boundary. Open Workspace in cmux still works. Enable cross-app API access only if you want live cmux rows in Dez."
             };
             Some(CmuxIntegrationStatusPresentation {
                 title: "cmux activity sharing is off",
@@ -5633,7 +5633,7 @@ impl TerminalEntry {
                 && !agent.capabilities.permission_responses
             {
                 observed_risks.push(
-                    "The adapter reports a permission request but does not provide a scoped, auditable response contract; respond in the owning terminal."
+                    "This adapter reports permission requests but cannot answer them; respond in the owning terminal."
                         .to_owned(),
                 );
             }
@@ -5683,7 +5683,7 @@ impl TerminalEntry {
         }
         if self.needs_attention {
             observed_risks.push(
-                "The terminal has an active attention condition; opening it only acknowledges the presentation and does not resolve the condition."
+                "The terminal needs attention; opening it acknowledges the notice but does not resolve the underlying condition."
                     .to_owned(),
             );
         }
@@ -19135,12 +19135,12 @@ impl Sidebar {
             .collect::<Vec<_>>();
         let description = if root_labels.len() == 1 {
             format!(
-                "“{}” needs access before Git, search, agents, or terminals can start. Grant access to that exact folder once; Dez will keep the current layout.",
+                "“{}” needs access before Git, search, agents, or terminals can start. Grant access to that exact folder once; Dez keeps the current layout.",
                 root_labels[0]
             )
         } else {
             format!(
-                "{} Workspace folders need access before Git, search, agents, or terminals can start. Grant each exact folder once; Dez will keep the current layout.",
+                "{} Workspace folders need access before Git, search, agents, or terminals can start. Grant each exact folder once; Dez keeps the current layout.",
                 root_labels.len()
             )
         };

@@ -11549,7 +11549,7 @@ impl Workspace {
                     item.item_focus_handle(cx).focus(window, cx);
                 } else {
                     log::error!(
-                        "Could not find a focus target when in switching focus in {direction} direction for a pane",
+                        "Could not find a focus target when switching focus in {direction} direction for a pane",
                     );
                 }
             }
@@ -11560,7 +11560,7 @@ impl Workspace {
                     if let Some(panel) = dock.active_panel() {
                         panel.activation_focus_handle(cx).focus(window, cx);
                     } else {
-                        log::error!("Could not find a focus target when in switching focus in {direction} direction for a {:?} dock", dock.position());
+                        log::error!("Could not find a focus target when switching focus in {direction} direction for a {:?} dock", dock.position());
                     }
                 })
             }
