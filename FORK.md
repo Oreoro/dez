@@ -77,6 +77,18 @@ older API surface.
   entry point. This preserves extension behavior while still gating LSP
   binary operations on user settings.
 
+## Workspace shell (dez_sidebar)
+
+| Divergence | Location | Why |
+|---|---|---|
+| New `dez_sidebar` crate implementing `workspace::Sidebar` | `crates/dez_sidebar/` | dez's flagship workspace navigator; Flint removed the sidebar implementation but kept the workspace-side trait |
+| Browser-like view model (Home/Files/Git/Settings) | `crates/dez_sidebar/src/sidebar.rs` | dez's product identity: every Zed capability reachable as a sidebar surface |
+| Multi-root group headers with joined names + active branch | `crates/dez_sidebar/src/sidebar.rs` | Workspace structure is dez's differentiator |
+| Files/Git/Settings tabs dispatch panel/settings actions | `crates/dez_sidebar/src/sidebar.rs` | Makes the sidebar a launcher for Zed features, not a static view |
+| `AgentThreadStore::attention_count` public API | `crates/agent_threads/src/store.rs` | Lets chrome outside the agent panel (the sidebar) surface attention; additive, ≤20 lines |
+| `dez_sidebar` settings section (`starts_open`) | `crates/settings_content/src/dez_sidebar.rs`, `assets/settings/default.json` | Configurable default-open behavior |
+| Sidebar registration + default-open on window creation | `crates/dez/src/dez.rs` | Wires the shell into the app; deferred open avoids acting mid-construction |
+
 ## Considered and not adopted
 
 | Candidate | Source | Why not |

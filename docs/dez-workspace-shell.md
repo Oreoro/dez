@@ -74,6 +74,23 @@ crates/dez_sidebar/             # navigator / activity / discovery / headers
   `agent_threads` (see MERGE.md §2.2 mapping). Tests port per-module;
   ACP-plumbing tests are deleted.
 
+## Implementation status
+
+- [x] `dez_sidebar` crate implementing `workspace::Sidebar` (placement,
+      resizing, and persistence owned by `MultiWorkspace`)
+- [x] Browser-like view model: Home / Files / Git / Settings
+- [x] Home navigator over project groups with joined names and active branch
+- [x] Workspace rows activate their workspace
+- [x] Files / Git / Settings tabs dispatch the corresponding Zed panel or
+      settings actions
+- [x] Attention notifications from agent threads
+- [x] Width and active-view persistence; `dez_sidebar.starts_open` setting
+- [ ] Surfaces: draggable/splittable tabs in the main work area
+- [ ] Activity section with per-thread states (Running / Needs Input /
+      Waiting for Permission / Review-ready)
+- [ ] Session discovery-and-attach for tmux, Herdr, cmux
+- [ ] Review-ready detection from git changed-file counts
+
 ## Acceptance for Phase 1
 
 - Parity with dez v0's README feature list (workspace navigator, activity
