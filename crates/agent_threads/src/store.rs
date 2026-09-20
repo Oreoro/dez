@@ -807,6 +807,21 @@ impl AgentThreadStore {
         })
     }
 
+    /// Count of live threads that currently need the user's attention, for
+    /// chrome outside the agent panel (for example the workspace sidebar).
+    /// Mirrors the panel's rollup: blocked threads and finished-but-unseen
+    /// threads both count.
+    pub fn attention_count(&self) -> usize {
+        self.threads
+            .values()
+            .filter(|entry| match entry.attention {
+                Some(ThreadAttention::Blocked) => true,
+                Some(ThreadAttention::Idle) => !entry.finished_seen,
+                None => false,
+            })
+            .count()
+    }
+
     /// Live threads' worktree roots, summarized for a cross-project rollup:
     /// how many live threads each is tied to, and whether any of them needs
     /// attention. This intentionally skips the deleted-worktree fallback

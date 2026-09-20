@@ -54,6 +54,26 @@ require_pattern Cargo.toml \
     '^dez_actions = \{ path = "crates/dez_actions" \}' \
     'the dez_actions crate must be wired into workspace dependencies'
 
+require_pattern Cargo.toml \
+    '"crates/dez_sidebar"' \
+    'the workspace member list must include crates/dez_sidebar'
+
+require_pattern Cargo.toml \
+    '^dez_sidebar = \{ path = "crates/dez_sidebar" \}' \
+    'the dez_sidebar crate must be wired into workspace dependencies'
+
+require_pattern crates/dez_sidebar/Cargo.toml \
+    '^name = "dez_sidebar"' \
+    'the workspace sidebar crate must be named dez_sidebar'
+
+require_pattern crates/dez/Cargo.toml \
+    '^dez_sidebar\.workspace = true' \
+    'the dez binary must depend on dez_sidebar'
+
+require_pattern crates/dez/src/dez.rs \
+    'dez_sidebar::DezSidebar::new' \
+    'the dez binary must register the workspace sidebar'
+
 # --- Main crate identity ---
 
 require_pattern crates/dez/Cargo.toml \

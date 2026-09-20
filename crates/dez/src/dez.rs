@@ -428,6 +428,19 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         .detach_and_log_err(cx);
     }
 
+    // The dez workspace sidebar is dez's primary navigator. Register it on
+    // every MultiWorkspace so it participates in window chrome, resizing, and
+    // persistence, and so the workspace owns its placement and width.
+    cx.observe_new(|multi_workspace: &mut MultiWorkspace, window, cx| {
+        let Some(_window) = window else {
+            return;
+        };
+        let multi_workspace_weak = cx.weak_entity();
+        let sidebar = cx.new(|cx| dez_sidebar::DezSidebar::new(multi_workspace_weak, cx));
+        multi_workspace.register_sidebar(sidebar, cx);
+    })
+    .detach();
+
     // Startup restore only materializes a window's *active* workspace; the
     // rest stay sidebar entries until first activated. Restore each such
     // workspace's agent threads the moment it actually loads.

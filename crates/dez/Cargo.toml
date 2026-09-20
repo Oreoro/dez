@@ -170,6 +170,7 @@ which_key.workspace = true
 workspace.workspace = true
 dez_actions.workspace = true
 dez_env_vars.workspace = true
+dez_sidebar.workspace = true
 zlog.workspace = true
 zlog_settings.workspace = true
 
