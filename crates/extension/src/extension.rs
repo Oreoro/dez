@@ -8,7 +8,7 @@ mod types;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ::lsp::LanguageServerName;
+use ::lsp::{LanguageServerBinaryOptions, LanguageServerName};
 use anyhow::{Context as _, Result, bail};
 use async_trait::async_trait;
 use gpui::{App, Task};
@@ -63,6 +63,7 @@ pub trait Extension: Send + Sync + 'static {
         &self,
         language_server_id: LanguageServerName,
         language_name: LanguageName,
+        binary_options: LanguageServerBinaryOptions,
         worktree: Arc<dyn WorktreeDelegate>,
     ) -> Result<Command>;
 

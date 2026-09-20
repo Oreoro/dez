@@ -11,7 +11,7 @@ mod since_v0_8_0;
 use extension::{DebugTaskDefinition, KeyValueStoreDelegate, WorktreeDelegate};
 use gpui::BackgroundExecutor;
 use language::LanguageName;
-use lsp::LanguageServerName;
+use lsp::{LanguageServerBinaryOptions, LanguageServerName};
 use release_channel::ReleaseChannel;
 use task::{DebugRequest, DebugScenario, dezDebugConfig, SpawnInTerminal, TaskTemplate};
 
@@ -226,8 +226,13 @@ impl Extension {
         store: &mut Store<WasmState>,
         language_server_id: &LanguageServerName,
         language_name: &LanguageName,
+        binary_options: &LanguageServerBinaryOptions,
         resource: Resource<Arc<dyn WorktreeDelegate>>,
     ) -> Result<Result<Command, String>> {
+        store
+            .data()
+            .capability_granter
+            .set_binary_options(&binary_options.into());
         match self {
             Extension::V0_8_0(ext) => {
                 ext.call_language_server_command(store, &language_server_id.0, resource)

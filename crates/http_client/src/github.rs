@@ -33,13 +33,17 @@ pub struct GithubReleaseAsset {
     pub digest: Option<String>,
 }
 
+pub fn releases_url(repo: &str) -> String {
+    format!("{GITHUB_API_URL}/repos/{repo}/releases")
+}
+
 pub async fn latest_github_release(
     repo_name_with_owner: &str,
     require_assets: bool,
     pre_release: bool,
     http: Arc<dyn HttpClient>,
 ) -> anyhow::Result<GithubRelease> {
-    let url = format!("{GITHUB_API_URL}/repos/{repo_name_with_owner}/releases");
+    let url = releases_url(repo_name_with_owner);
 
     let request = Request::get(&url)
         .follow_redirects(crate::RedirectPolicy::FollowAll)
@@ -96,12 +100,16 @@ pub async fn latest_github_release(
     Ok(release)
 }
 
+pub fn tags_url(repo: &str, tag: &str) -> String {
+    format!("{GITHUB_API_URL}/repos/{repo}/releases/tags/{tag}")
+}
+
 pub async fn get_release_by_tag_name(
     repo_name_with_owner: &str,
     tag: &str,
     http: Arc<dyn HttpClient>,
 ) -> anyhow::Result<GithubRelease> {
-    let url = format!("{GITHUB_API_URL}/repos/{repo_name_with_owner}/releases/tags/{tag}");
+    let url = tags_url(repo_name_with_owner, tag);
 
     let request = Request::get(&url)
         .follow_redirects(crate::RedirectPolicy::FollowAll)

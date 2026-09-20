@@ -23,7 +23,7 @@ use futures::{
 use gpui::{App, AsyncApp, BackgroundExecutor, Task};
 use http_client::HttpClient;
 use language::LanguageName;
-use lsp::LanguageServerName;
+use lsp::{LanguageServerBinaryOptions, LanguageServerName};
 use moka::sync::Cache;
 use node_runtime::NodeRuntime;
 use release_channel::ReleaseChannel;
@@ -88,6 +88,7 @@ impl extension::Extension for WasmExtension {
         &self,
         language_server_id: LanguageServerName,
         language_name: LanguageName,
+        binary_options: LanguageServerBinaryOptions,
         worktree: Arc<dyn WorktreeDelegate>,
     ) -> Result<Command> {
         self.call(|extension, store| {
@@ -98,6 +99,7 @@ impl extension::Extension for WasmExtension {
                         store,
                         &language_server_id,
                         &language_name,
+                        &binary_options,
                         resource,
                     )
                     .await?
@@ -444,6 +446,10 @@ impl extension::Extension for WasmExtension {
         self.call(|extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
+                store
+                    .data()
+                    .capability_granter
+                    .set_binary_options(&crate::capability_granter::BinaryOptions::permissive());
                 let dap_binary = extension
                     .call_get_dap_binary(store, dap_name, config, user_installed_path, resource)
                     .await?
@@ -886,6 +892,10 @@ impl WasmExtension {
         self.tx
             .unbounded_send(Box::new(move |extension, store| {
                 async {
+                    store
+                        .data()
+                        .capability_granter
+                        .set_binary_options(&crate::capability_granter::BinaryOptions::permissive());
                     let result = f(extension, store).await;
                     return_tx.send(result).ok();
                 }

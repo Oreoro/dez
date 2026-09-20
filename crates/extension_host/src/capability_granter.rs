@@ -2,11 +2,47 @@ use std::sync::Arc;
 
 use anyhow::{Result, bail};
 use extension::{ExtensionCapability, ExtensionManifest};
+use lsp::LanguageServerBinaryOptions;
+use parking_lot::RwLock;
 use url::Url;
+
+#[derive(Debug, Clone)]
+pub struct BinaryOptions {
+    pub allow_path_lookup: bool,
+    pub allow_binary_download: bool,
+}
+
+impl Default for BinaryOptions {
+    fn default() -> Self {
+        Self {
+            allow_path_lookup: true,
+            allow_binary_download: true,
+        }
+    }
+}
+
+impl BinaryOptions {
+    pub fn permissive() -> Self {
+        Self {
+            allow_path_lookup: true,
+            allow_binary_download: true,
+        }
+    }
+}
+
+impl From<&LanguageServerBinaryOptions> for BinaryOptions {
+    fn from(item: &LanguageServerBinaryOptions) -> Self {
+        Self {
+            allow_path_lookup: item.allow_path_lookup,
+            allow_binary_download: item.allow_binary_download,
+        }
+    }
+}
 
 pub struct CapabilityGranter {
     granted_capabilities: Vec<ExtensionCapability>,
     manifest: Arc<ExtensionManifest>,
+    binary_options: RwLock<BinaryOptions>,
 }
 
 impl CapabilityGranter {
@@ -17,7 +53,13 @@ impl CapabilityGranter {
         Self {
             granted_capabilities,
             manifest,
+            binary_options: RwLock::new(BinaryOptions::default()),
         }
+    }
+
+    pub fn set_binary_options(&self, binary_options: &BinaryOptions) {
+        let mut writer = self.binary_options.write();
+        *writer = binary_options.clone();
     }
 
     pub fn grant_exec(
@@ -25,6 +67,10 @@ impl CapabilityGranter {
         desired_command: &str,
         desired_args: &[impl AsRef<str> + std::fmt::Debug],
     ) -> Result<()> {
+        if !self.binary_options.read().allow_path_lookup {
+            bail!("path lookup not allowed for {desired_command} {desired_args:?}");
+        }
+
         self.manifest.allow_exec(desired_command, desired_args)?;
 
         let is_allowed = self
@@ -47,6 +93,10 @@ impl CapabilityGranter {
     }
 
     pub fn grant_download_file(&self, desired_url: &Url) -> Result<()> {
+        if !self.binary_options.read().allow_binary_download {
+            bail!("binary download not allowed for {desired_url}");
+        }
+
         let is_allowed = self
             .granted_capabilities
             .iter()
@@ -65,6 +115,10 @@ impl CapabilityGranter {
     }
 
     pub fn grant_npm_install_package(&self, package_name: &str) -> Result<()> {
+        if !self.binary_options.read().allow_binary_download {
+            bail!("binary download not allowed for {package_name}");
+        }
+
         let is_allowed = self
             .granted_capabilities
             .iter()
@@ -114,6 +168,34 @@ mod tests {
             debug_locators: Default::default(),
             language_model_providers: BTreeMap::default(),
         }
+    }
+
+    #[test]
+    fn test_grant_binary_options() {
+        let manifest = Arc::new(ExtensionManifest {
+            capabilities: vec![ExtensionCapability::ProcessExec(ProcessExecCapability {
+                command: "*".to_string(),
+                args: vec!["**".to_string()],
+            })],
+            ..extension_manifest()
+        });
+        let granter = CapabilityGranter::new(
+            vec![ExtensionCapability::ProcessExec(ProcessExecCapability {
+                command: "*".to_string(),
+                args: vec!["**".to_string()],
+            })],
+            manifest,
+        );
+
+        // Permissive by default: the granted capability alone allows execution.
+        assert!(granter.grant_exec("ls", &["-la"]).is_ok());
+
+        // Disabling path lookup denies execution even though the capability is granted.
+        granter.set_binary_options(&BinaryOptions {
+            allow_path_lookup: false,
+            allow_binary_download: true,
+        });
+        assert!(granter.grant_exec("ls", &["-la"]).is_err());
     }
 
     #[test]

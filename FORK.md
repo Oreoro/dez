@@ -45,6 +45,38 @@ lists what, where, and why. If a divergence isn't listed here, it's a bug.
 | `TerminalHostRuntime` wiring | `crates/dez/src/terminal_host_runtime.rs`, `main.rs` | Connects GUI to host daemon; host id derived from stable `installation_id` KVP |
 | `polling`, `net`, `uuid` deps added to `terminal` | `crates/terminal/Cargo.toml` | session_host requirements |
 
+## Extension security hardening (ported from Gram)
+
+Adapted from Gram commits `ce82a212e` ("Close capability holes in extensions")
+and `7a6951c46` ("Improved permissions for LSP and DAP from extensions") by
+Kristoffer Grönlund. dez's base predates these; the port is adapted to the
+older API surface.
+
+| Divergence | Location | Why |
+|---|---|---|
+| Gate `fetch`, `fetch_stream`, `download_file`, `latest_github_release`, `github_release_by_tag_name` on manifest download capability | `crates/extension_host/src/wasm_host/wit/since_v0_1_0.rs`, `since_v0_8_0.rs` | Closes the hole where extensions could download arbitrary URLs without a declared `download_file` capability |
+| Gate `make_file_executable` on manifest process-exec capability | same | Extensions must declare `process:exec` before making a downloaded file executable |
+| `releases_url` / `tags_url` helpers | `crates/http_client/src/github.rs` | Lets the WIT layer check the exact URL a GitHub release request targets |
+| `BinaryOptions` on `CapabilityGranter`, gating `grant_exec` on path lookup and `grant_download_file`/`grant_npm_install_package` on binary download | `crates/extension_host/src/capability_granter.rs` | Routes the user's LSP binary settings into every extension binary operation |
+| Thread `LanguageServerBinaryOptions` into `Extension::language_server_command` | `crates/extension/src/extension.rs`, `crates/extension_host/src/wasm_host.rs`, `wit.rs`, `crates/language_extension/src/extension_lsp_adapter.rs` | LSP-provided language servers now respect `allow_path_lookup` / `allow_binary_download` |
+| Reset granter binary options to permissive at the start of every extension call; set them from LSP settings for LSP calls | `crates/extension_host/src/wasm_host.rs`, `wit.rs` | Prevents restrictive LSP settings from leaking into unrelated extension calls |
+
+### Adaptation notes (differences from Gram)
+
+- Gram's `BinaryOptions` has an `enable_auto_updates` field sourced from
+  `LanguageServerBinaryOptions::enable_auto_updates`; dez's base only has
+  `pre_release`, so dez's `BinaryOptions` has two fields
+  (`allow_path_lookup`, `allow_binary_download`). The auto-update dimension is
+  not gated yet.
+- Gram sources DAP options from a `DapSettings` type that dez's base does not
+  have. dez therefore resets DAP calls to permissive defaults instead of
+  gating them; LSP calls are gated. Adding `DapSettings` is a candidate for a
+  future upstream sync.
+- dez's default is permissive-with-per-call-reset rather than Gram's
+  default-deny, because dez's base does not set options on every extension
+  entry point. This preserves extension behavior while still gating LSP
+  binary operations on user settings.
+
 ## Deferred (Phase 1, per MERGE.md)
 
 - `TerminalType::Hosted { controller }` variant in `Terminal` — full
