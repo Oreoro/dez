@@ -30,8 +30,8 @@ mod windows_control;
 const MAX_DISCOVERY_RECORDS: usize = 64;
 const MAX_ANCESTRY_DEPTH: usize = 32;
 const PENDING_REGISTRATION_LIFETIME: Duration = Duration::from_secs(10 * 60);
-const MANAGED_BLOCK_BEGIN_PREFIX: &str = "<!-- Flint managed agent-thread instructions: begin v";
-const MANAGED_BLOCK_END: &str = "<!-- Flint managed agent-thread instructions: end -->";
+const MANAGED_BLOCK_BEGIN_PREFIX: &str = "<!-- dez managed agent-thread instructions: begin v";
+const MANAGED_BLOCK_END: &str = "<!-- dez managed agent-thread instructions: end -->";
 const REMOTE_MANAGED_BLOCK_VERSION: u32 = 4;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -146,14 +146,14 @@ fn install_command_at(
         .parent()
         .context("remote server executable has no parent directory")?;
     #[cfg(unix)]
-    let command = parent.join("flintctl");
+    let command = parent.join("dezctl");
     #[cfg(windows)]
-    let command = parent.join("flintctl.exe");
+    let command = parent.join("dezctl.exe");
     std::fs::create_dir_all(scoped_directory)?;
     #[cfg(unix)]
-    let scoped_command = scoped_directory.join("flintctl");
+    let scoped_command = scoped_directory.join("dezctl");
     #[cfg(windows)]
-    let scoped_command = scoped_directory.join("flintctl.exe");
+    let scoped_command = scoped_directory.join("dezctl.exe");
 
     install_command_file(server_executable, &scoped_command)?;
 
@@ -161,7 +161,7 @@ fn install_command_at(
     std::fs::create_dir_all(
         marker_path
             .parent()
-            .context("remote flintctl marker has no parent")?,
+            .context("remote dezctl marker has no parent")?,
     )?;
     let temporary_marker = marker_path.with_extension(format!("{}.tmp", std::process::id()));
     std::fs::write(
@@ -184,18 +184,18 @@ fn install_command_file(server_executable: &Path, target: &Path) -> Result<()> {
     if let Err(error) = std::fs::remove_file(&temporary)
         && error.kind() != std::io::ErrorKind::NotFound
     {
-        return Err(error).context("failed to remove stale flintctl link");
+        return Err(error).context("failed to remove stale dezctl link");
     }
-    symlink(server_executable, &temporary).context("failed to create flintctl link")?;
-    replace_file(&temporary, target).context("failed to replace flintctl link")
+    symlink(server_executable, &temporary).context("failed to create dezctl link")?;
+    replace_file(&temporary, target).context("failed to replace dezctl link")
 }
 
 #[cfg(windows)]
 fn install_command_file(server_executable: &Path, target: &Path) -> Result<()> {
     let temporary = target.with_extension(format!("{}.tmp.exe", std::process::id()));
     std::fs::copy(server_executable, &temporary)
-        .context("failed to copy remote flintctl executable")?;
-    replace_file(&temporary, target).context("failed to install remote flintctl")
+        .context("failed to copy remote dezctl executable")?;
+    replace_file(&temporary, target).context("failed to install remote dezctl")
 }
 
 fn synchronize_remote_instructions(home: &Path, marker_path: &Path) -> Result<()> {
@@ -235,7 +235,7 @@ fn remote_unix_instruction_block(marker_path: &Path) -> String {
     let marker_path = marker_path.to_string_lossy();
     format!(
         "{MANAGED_BLOCK_BEGIN_PREFIX}{REMOTE_MANAGED_BLOCK_VERSION} -->\n\
-         This block is managed by Flint. It applies only to Agent Threads that Flint launches.\n\n\
+         This block is managed by dez. It applies only to Agent Threads that dez launches.\n\n\
          ## Worktree creation\n\n\
          After you create a git worktree, read this executable marker:\n\n\
              {marker_path}\n\n\
@@ -257,7 +257,7 @@ fn remote_windows_instruction_block(marker_path: &Path) -> String {
     let marker_path = marker_path.to_string_lossy().replace('\'', "''");
     format!(
         "{MANAGED_BLOCK_BEGIN_PREFIX}{REMOTE_MANAGED_BLOCK_VERSION} -->\n\
-         This block is managed by Flint. It applies only to Agent Threads that Flint launches.\n\n\
+         This block is managed by dez. It applies only to Agent Threads that dez launches.\n\n\
          ## Worktree creation\n\n\
          After you create a git worktree, read this executable marker in PowerShell:\n\n\
              $control = (Get-Content -Raw '{marker_path}' | ConvertFrom-Json).executable\n\n\
@@ -278,7 +278,7 @@ fn synchronize_remote_instructions_content(path: &Path, block: String) -> Result
     let content = if let Some(start) = existing.find(MANAGED_BLOCK_BEGIN_PREFIX) {
         let relative_end = existing[start..]
             .find(MANAGED_BLOCK_END)
-            .context("Flint managed instruction block has no end marker")?;
+            .context("dez managed instruction block has no end marker")?;
         let mut end = start + relative_end + MANAGED_BLOCK_END.len();
         if existing.as_bytes().get(end) == Some(&b'\n') {
             end += 1;
@@ -369,7 +369,7 @@ pub(crate) fn start(session: AnyProtoClient, cx: &mut gpui::App) -> Result<()> {
             let registrations = registrations.clone();
             cx.spawn(async move |_cx| {
                 if let Err(error) = handle_connection(stream, session, registrations).await {
-                    log::warn!("remote flintctl connection failed: {error:#}");
+                    log::warn!("remote dezctl connection failed: {error:#}");
                 }
             })
             .detach();
@@ -679,7 +679,7 @@ fn run_unix_client(request: &ControlRequest, directory: &Path) -> Result<Control
         if discovery.version_mismatch {
             return Ok(ControlResponse::error(
                 ControlErrorCode::RemoteVersionMismatch,
-                "the installed flintctl protocol does not match the available remote session",
+                "the installed dezctl protocol does not match the available remote session",
             ));
         }
         if attempt == RETRY_BACKOFFS.len() {
@@ -693,7 +693,7 @@ fn run_unix_client(request: &ControlRequest, directory: &Path) -> Result<Control
     }
     Ok(ControlResponse::error(
         ControlErrorCode::CallerNotRecognized,
-        "this process is not in a controllable Flint remote terminal",
+        "this process is not in a controllable dez remote terminal",
     ))
 }
 
@@ -704,7 +704,7 @@ pub(crate) fn run_client(request: ControlRequest) -> Result<ControlResponse> {
 
 #[cfg(not(any(unix, windows)))]
 pub(crate) fn run_client(_request: ControlRequest) -> Result<ControlResponse> {
-    bail!("remote flintctl is not supported on this platform")
+    bail!("remote dezctl is not supported on this platform")
 }
 
 #[cfg(unix)]
@@ -731,7 +731,7 @@ pub(crate) fn register_current_terminal(
             }
         }
     }
-    bail!("no matching Flint remote control endpoint is available")
+    bail!("no matching dez remote control endpoint is available")
 }
 
 #[cfg(windows)]
@@ -1339,7 +1339,7 @@ mod tests {
         let path = directory.path().join("AGENTS.md");
         std::fs::write(
             &path,
-            "before\n\n<!-- Flint managed agent-thread instructions: begin v2 -->\nold\n<!-- Flint managed agent-thread instructions: end -->\nafter\n",
+            "before\n\n<!-- dez managed agent-thread instructions: begin v2 -->\nold\n<!-- dez managed agent-thread instructions: end -->\nafter\n",
         )
         .expect("write instructions");
 
@@ -1395,7 +1395,7 @@ mod tests {
         let control_directory = directory.path().join("control/stable/1.2.3");
         let home = directory.path().join("home");
         std::fs::create_dir_all(&server_directory).expect("create server directory");
-        let server = server_directory.join("flint-remote-server-stable-1.2.3");
+        let server = server_directory.join("dez-remote-server-stable-1.2.3");
         std::fs::write(&server, "server").expect("write server executable");
         for (installed_directory, _) in remote_instruction_locations(&home) {
             std::fs::create_dir_all(installed_directory).expect("create agent directory");
@@ -1404,11 +1404,11 @@ mod tests {
         install_command_at(&server, &control_directory, &home).expect("install remote command");
 
         assert_eq!(
-            std::fs::canonicalize(server_directory.join("flintctl"))
+            std::fs::canonicalize(server_directory.join("dezctl"))
                 .expect("resolve sibling command"),
             std::fs::canonicalize(&server).expect("resolve server")
         );
-        let scoped_command = control_directory.join("flintctl");
+        let scoped_command = control_directory.join("dezctl");
         assert_eq!(
             std::fs::canonicalize(&scoped_command).expect("resolve scoped command"),
             std::fs::canonicalize(&server).expect("resolve server")

@@ -1,5 +1,5 @@
 key-context-title = Keyboard Context
-key-context-description = This view lets you determine the current context stack for creating custom key bindings in Flint. When a keyboard shortcut is triggered, it also shows all the possible contexts it could have triggered in, and which one matched.
+key-context-description = This view lets you determine the current context stack for creating custom key bindings in dez. When a keyboard shortcut is triggered, it also shows all the possible contexts it could have triggered in, and which one matched.
 key-context-open-documentation = Open Documentation
 key-context-view-default-keymap = View Default Keymap
 key-context-edit-keymap = Edit Keymap File

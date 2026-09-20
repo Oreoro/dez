@@ -6,7 +6,7 @@ use crate::{
     actions::{Format, FormatSelections},
     selections_collection::SelectionsCollection,
 };
-use flint_actions::preview::{
+use dez_actions::preview::{
     markdown::OpenPreview as OpenMarkdownPreview, svg::OpenPreview as OpenSvgPreview,
 };
 use gpui::prelude::FluentBuilder;

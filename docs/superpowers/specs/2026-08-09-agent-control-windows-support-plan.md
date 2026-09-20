@@ -4,7 +4,7 @@
 
 `docs/superpowers/specs/2026-08-07-worktree-tied-agent-threads-panel-design.md`
 ("Stage 2") deliberately scoped agent-initiated worktree control
-(`flint-agent-control retie-thread` / `create-thread`) to local Unix hosts.
+(`dez-agent-control retie-thread` / `create-thread`) to local Unix hosts.
 The implementation later replaced per-thread bearer tokens with kernel-verified
 peer identity (`LOCAL_PEERPID`/`SO_PEERCRED`, process-ancestry walking, and a
 cwd/kind fallback for CLIs such as Codex that delegate shell execution to a
@@ -65,10 +65,10 @@ Unix-only at the baseline commit:
   call in `spawn_thread_task_inner`.
 - The control transport and peer-PID functions in `control.rs`.
 - `agent_control_cli`'s `std::os::unix::net::UnixStream` client.
-- `util::get_flint_agent_control_path`, including the function-level
+- `util::get_dez_agent_control_path`, including the function-level
   `#[cfg(unix)]`.
-- Building, signing, and packaging `flint-agent-control.exe` in
-  `script/bundle-windows.ps1` and `crates/flint/resources/windows/flint.iss`.
+- Building, signing, and packaging `dez-agent-control.exe` in
+  `script/bundle-windows.ps1` and `crates/dez/resources/windows/dez.iss`.
 
 Windows already has AF_UNIX support in this repository:
 
@@ -95,7 +95,7 @@ transport works:
 2. Named pipes provide `GetNamedPipeClientProcessId`, the identity primitive this
    feature needs.
 
-Flint already uses `net::async_net::UnixListener` for askpass on Windows, so this
+dez already uses `net::async_net::UnixListener` for askpass on Windows, so this
 choice does not imply that AF_UNIX is generally unavailable or unsupported there.
 It is specifically unsuitable for agent control because it cannot report the peer
 PID required by this authorization model.
@@ -129,7 +129,7 @@ Do not rely on
 [`CreateNamedPipeW`'s default security descriptor](https://learn.microsoft.com/windows/win32/ipc/named-pipe-security-and-access-rights).
 The Terminal Services session ID is only a naming/isolation value; it is not a
 securable principal. Independently obtain the current logon SID (`S-1-5-5-X-Y`)
-from Flint's process token and use it as the client principal in the pipe DACL.
+from dez's process token and use it as the client principal in the pipe DACL.
 Unlike a user SID, the logon SID scopes access to that logon session, including for
 the same account connected through another Terminal Services session. Grant the
 individual client read/write rights required by the protocol without granting
@@ -138,7 +138,7 @@ principals. Reject remote clients with `PIPE_REJECT_REMOTE_CLIENTS` and make han
 non-inheritable.
 
 Create the initial owning instance with `FILE_FLAG_FIRST_PIPE_INSTANCE` before
-creating the rest of the pool without that flag. This prevents a second Flint from
+creating the rest of the pool without that flag. This prevents a second dez from
 silently joining or stealing an existing endpoint while still allowing the owner
 to create concurrent instances. A same-name live owner should disable the new
 server instance with a clear log, matching the Unix behavior.
@@ -159,7 +159,7 @@ Its Windows filename must contain the same Terminal Services session ID as the p
 name.
 Write it only after the named-pipe server owns its endpoint, and remove it on clean
 shutdown only if that server instance wrote that session-specific marker. This
-preserves the Unix invariant that one endpoint owner owns one marker: two Flint
+preserves the Unix invariant that one endpoint owner owns one marker: two dez
 instances for the same Windows user in different Terminal Services sessions must
 never overwrite or remove each other's marker.
 
@@ -176,7 +176,7 @@ Use the workspace-standard `windows` crate, whose configured features already
 include `Win32_System_Pipes` and `Win32_Security`, rather than introducing
 `windows-sys`. Add the currently missing `Win32_Security_Authorization` feature
 for constructing the explicit pipe DACL. Reuse the repository's named-pipe
-patterns in `crates/flint/src/flint/windows_only_instance.rs` where helpful, but do
+patterns in `crates/dez/src/dez/windows_only_instance.rs` where helpful, but do
 not copy its single small inbound-message assumptions: agent control is duplex and
 its JSON is variable-sized.
 
@@ -288,7 +288,7 @@ Also validate the cwd fallback before treating any delegating-daemon CLI as
 supported. For those CLIs, ancestry never reaches the tracked terminal and cwd/kind
 matching is the only authorization path. Native x86_64 and aarch64 tests must prove
 that the chosen process inspection can read the real daemon child's cwd across the
-architectures Flint supports, including relevant WOW64 combinations. Record this
+architectures dez supports, including relevant WOW64 combinations. Record this
 as a per-kind Windows authorization capability alongside the instruction
 capability. If cwd inspection is unavailable or unreliable for a kind, do not offer
 the Windows instruction nudge for it and show the unsupported authorization reason
@@ -310,7 +310,7 @@ Enabling Windows requires updating every existing Unix-only boundary:
 - Broaden the store's control-server handle and caller-candidate helpers to Windows.
 - Offer the worktree-instructions nudge for local Windows threads after a supported
   Windows instruction block exists.
-- Remove or broaden `util::get_flint_agent_control_path`'s function-level Unix gate
+- Remove or broaden `util::get_dez_agent_control_path`'s function-level Unix gate
   before adding its Windows branch.
 - Replace `agent_control_cli`'s non-Unix stub with the Windows client while retaining
   a stub for targets supporting neither implementation.
@@ -362,7 +362,7 @@ known global instructions path alone is insufficient.
 
 For PowerShell-backed agents, the block should discover
 the marker for the current PowerShell process's session under
-`%LOCALAPPDATA%\Flint` rather than reading markers belonging to every session. For
+`%LOCALAPPDATA%\dez` rather than reading markers belonging to every session. For
 example, derive the session with `(Get-Process -Id $PID).SessionId`, match only
 `agent-control-*-$sessionId-executable.json`, and invoke the discovered quoted
 executable with the call operator:
@@ -376,20 +376,20 @@ tests that unsupported pairs do not receive a nudge.
 
 ## Executable delivery
 
-Place `flint-agent-control.exe` beside `Flint.exe` in installed and development
+Place `dez-agent-control.exe` beside `dez.exe` in installed and development
 layouts. Then make every delivery step explicit:
 
-- Broaden `util::get_flint_agent_control_path` to Windows and search
-  `./flint-agent-control.exe` relative to the running Flint executable.
+- Broaden `util::get_dez_agent_control_path` to Windows and search
+  `./dez-agent-control.exe` relative to the running dez executable.
 - Add `agent_control_cli` to the Windows release `cargo build` invocation.
-- Copy `flint-agent-control.exe` to the Windows staging root.
+- Copy `dez-agent-control.exe` to the Windows staging root.
 - Add an explicit `[Files]` entry to
-  `crates/flint/resources/windows/flint.iss`; that manifest does not wildcard other
+  `crates/dez/resources/windows/dez.iss`; that manifest does not wildcard other
   executables in the staging root.
-- Add the executable to `SignFlintAndItsFriends`.
-- Add `flint-agent-control.pdb` to `ZipFlintAndItsFriendsDebug`.
+- Add the executable to `SigndezAndItsFriends`.
+- Add `dez-agent-control.pdb` to `ZipdezAndItsFriendsDebug`.
 - Update `crates/auto_update_helper`'s explicit job list to move the old
-  `flint-agent-control.exe` into `old\`, move the replacement from `install\`
+  `dez-agent-control.exe` into `old\`, move the replacement from `install\`
   into the application root, and restore the old executable during rollback if a
   later update job fails. Add apply and rollback tests covering the new file.
 - Verify the installed executable location is the same path written to the marker,
@@ -434,7 +434,7 @@ Treat `clippy_windows` as a required gate. Also run the Windows `agent_threads`,
 `agent_control_cli`, `agent_control_protocol`, and `net` tests, build the Windows
 installer, and inspect its file list. Resolve the repository's existing minimum-OS
 mismatch as part of this work: `docs/src/installation.md` declares Windows 10 1903
-and later supported, while `flint.iss` still permits 1709. Raise the installer
+and later supported, while `dez.iss` still permits 1709. Raise the installer
 `MinVersion` to Windows 10 1903 (`10.0.18362`) so the documented and enforced floors
 agree. Before merging, smoke-test the installed executable on a locally managed,
 pinned Windows 10 1903 VM and record the OS build, installer artifact, and commands

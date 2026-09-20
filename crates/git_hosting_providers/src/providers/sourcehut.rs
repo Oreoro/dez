@@ -34,7 +34,7 @@ impl SourceHut {
         }
 
         // TODO: detecting self hosted instances by checking whether "sourcehut" is in the url or not
-        // is not very reliable. See https://github.com/zed-industries/flint/issues/26393 for more
+        // is not very reliable. See https://github.com/zed-industries/dez/issues/26393 for more
         // information.
         if !host.contains("sourcehut") {
             bail!("not a SourceHut URL");
@@ -135,14 +135,14 @@ mod tests {
     #[test]
     fn test_parse_remote_url_given_ssh_url() {
         let parsed_remote = SourceHut::public_instance()
-            .parse_remote_url("git@git.sr.ht:~zed-industries/flint")
+            .parse_remote_url("git@git.sr.ht:~zed-industries/dez")
             .unwrap();
 
         assert_eq!(
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             }
         );
     }
@@ -150,14 +150,14 @@ mod tests {
     #[test]
     fn test_parse_remote_url_given_ssh_url_with_git_suffix() {
         let parsed_remote = SourceHut::public_instance()
-            .parse_remote_url("git@git.sr.ht:~zed-industries/flint.git")
+            .parse_remote_url("git@git.sr.ht:~zed-industries/dez.git")
             .unwrap();
 
         assert_eq!(
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint.git".into(),
+                repo: "dez.git".into(),
             }
         );
     }
@@ -165,21 +165,21 @@ mod tests {
     #[test]
     fn test_parse_remote_url_given_https_url() {
         let parsed_remote = SourceHut::public_instance()
-            .parse_remote_url("https://git.sr.ht/~zed-industries/flint")
+            .parse_remote_url("https://git.sr.ht/~zed-industries/dez")
             .unwrap();
 
         assert_eq!(
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             }
         );
     }
 
     #[test]
     fn test_parse_remote_url_given_self_hosted_ssh_url() {
-        let remote_url = "git@sourcehut.org:~zed-industries/flint";
+        let remote_url = "git@sourcehut.org:~zed-industries/dez";
 
         let parsed_remote = SourceHut::from_remote_url(remote_url)
             .unwrap()
@@ -190,14 +190,14 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             }
         );
     }
 
     #[test]
     fn test_parse_remote_url_given_self_hosted_ssh_url_with_git_suffix() {
-        let remote_url = "git@sourcehut.org:~zed-industries/flint.git";
+        let remote_url = "git@sourcehut.org:~zed-industries/dez.git";
 
         let parsed_remote = SourceHut::from_remote_url(remote_url)
             .unwrap()
@@ -208,14 +208,14 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint.git".into(),
+                repo: "dez.git".into(),
             }
         );
     }
 
     #[test]
     fn test_parse_remote_url_given_self_hosted_https_url() {
-        let remote_url = "https://sourcehut.org/~zed-industries/flint";
+        let remote_url = "https://sourcehut.org/~zed-industries/dez";
 
         let parsed_remote = SourceHut::from_remote_url(remote_url)
             .unwrap()
@@ -226,7 +226,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             }
         );
     }
@@ -236,7 +236,7 @@ mod tests {
         let permalink = SourceHut::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             },
             BuildPermalinkParams::new(
                 "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -245,7 +245,7 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/flint/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://git.sr.ht/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -254,7 +254,7 @@ mod tests {
         let permalink = SourceHut::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint.git".into(),
+                repo: "dez.git".into(),
             },
             BuildPermalinkParams::new(
                 "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -263,18 +263,18 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/flint.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://git.sr.ht/~zed-industries/dez.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink() {
-        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/flint")
+        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez")
             .unwrap()
             .build_permalink(
                 ParsedGitRemote {
                     owner: "zed-industries".into(),
-                    repo: "flint".into(),
+                    repo: "dez".into(),
                 },
                 BuildPermalinkParams::new(
                     "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -283,19 +283,19 @@ mod tests {
                 ),
             );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/flint/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://sourcehut.org/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink_with_git_suffix() {
         let permalink =
-            SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/flint.git")
+            SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez.git")
                 .unwrap()
                 .build_permalink(
                     ParsedGitRemote {
                         owner: "zed-industries".into(),
-                        repo: "flint.git".into(),
+                        repo: "dez.git".into(),
                     },
                     BuildPermalinkParams::new(
                         "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -304,7 +304,7 @@ mod tests {
                     ),
                 );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/flint.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://sourcehut.org/~zed-industries/dez.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -313,7 +313,7 @@ mod tests {
         let permalink = SourceHut::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             },
             BuildPermalinkParams::new(
                 "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -322,7 +322,7 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/flint/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
+        let expected_url = "https://git.sr.ht/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -331,7 +331,7 @@ mod tests {
         let permalink = SourceHut::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "flint".into(),
+                repo: "dez".into(),
             },
             BuildPermalinkParams::new(
                 "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -340,18 +340,18 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/flint/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
+        let expected_url = "https://git.sr.ht/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink_with_single_line_selection() {
-        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/flint")
+        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez")
             .unwrap()
             .build_permalink(
                 ParsedGitRemote {
                     owner: "zed-industries".into(),
-                    repo: "flint".into(),
+                    repo: "dez".into(),
                 },
                 BuildPermalinkParams::new(
                     "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -360,18 +360,18 @@ mod tests {
                 ),
             );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/flint/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
+        let expected_url = "https://sourcehut.org/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink_with_multi_line_selection() {
-        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/flint")
+        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez")
             .unwrap()
             .build_permalink(
                 ParsedGitRemote {
                     owner: "zed-industries".into(),
-                    repo: "flint".into(),
+                    repo: "dez".into(),
                 },
                 BuildPermalinkParams::new(
                     "faa6f979be417239b2e070dbbf6392b909224e0b",
@@ -380,7 +380,7 @@ mod tests {
                 ),
             );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/flint/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
+        let expected_url = "https://sourcehut.org/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 }

@@ -111,7 +111,7 @@ use serde::Deserialize;
 use session::AppSession;
 use settings::{CenteredPaddingSettings, Settings, SettingsLocation, SettingsStore};
 
-use flint_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
+use dez_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 use sqlez::{
     bindable::{Bind, Column, StaticColumnCount},
     statement::Statement,
@@ -7968,11 +7968,11 @@ pub async fn apply_restored_multiworkspace_state(
 }
 
 actions!(
-    flint,
+    dez,
     [
-        /// Opens the Flint log file.
+        /// Opens the dez log file.
         OpenLog,
-        /// Reveals the Flint log file in the system file manager.
+        /// Reveals the dez log file in the system file manager.
         RevealLogInFileManager
     ]
 );
@@ -7997,7 +7997,7 @@ pub async fn get_any_active_multi_workspace(
         })
         .await?;
     }
-    activate_any_workspace_window(&mut cx).context("could not open flint")
+    activate_any_workspace_window(&mut cx).context("could not open dez")
 }
 
 pub fn activate_any_workspace_window(cx: &mut AsyncApp) -> Option<WindowHandle<MultiWorkspace>> {
@@ -8164,7 +8164,7 @@ pub enum WorkspaceMatching {
     /// Match paths against existing worktrees including subdirectories, and
     /// fall back to any existing window if no worktree matched.
     ///
-    /// For example, `flint -a foo/bar` will activate the `bar` workspace if it
+    /// For example, `dez -a foo/bar` will activate the `bar` workspace if it
     /// exists, otherwise it will open a new window with `foo/bar` as the root.
     MatchSubdirectory,
 }
@@ -10063,7 +10063,7 @@ mod tests {
         assert!(task.await.unwrap());
     }
 
-    // See https://github.com/zed-industries/flint/issues/55726.
+    // See https://github.com/zed-industries/dez/issues/55726.
     //
     // macOS only: on Linux/Windows, closing the last window sets
     // `save_last_workspace`, which preserves the session (same as `Quit`),
@@ -10142,7 +10142,7 @@ mod tests {
         assert!(task.await.unwrap());
     }
 
-    // See https://github.com/zed-industries/flint/issues/55726.
+    // See https://github.com/zed-industries/dez/issues/55726.
     #[gpui::test]
     async fn test_replace_window_without_worktrees_prompts(cx: &mut TestAppContext) {
         init_test(cx);
@@ -14490,7 +14490,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_toggle_theme_mode_persists_and_updates_active_theme(cx: &mut TestAppContext) {
-        use flint_actions::theme::ToggleMode;
+        use dez_actions::theme::ToggleMode;
         use settings::{ThemeName, ThemeSelection};
         use theme::SystemAppearance;
 

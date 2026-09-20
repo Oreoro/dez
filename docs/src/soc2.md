@@ -1,10 +1,10 @@
 ---
-title: SOC2 - Flint
-description: Flint's SOC2 certification status.
+title: SOC2 - dez
+description: dez's SOC2 certification status.
 ---
 
 # SOC2
 
-Flint is working toward SOC2 Type 1 certification.
+dez is working toward SOC2 Type 1 certification.
 
-For updates or compliance questions, email [sales@flint.dev](mailto:sales@flint.dev).
+For updates or compliance questions, email [sales@dez.dev](mailto:sales@dez.dev).

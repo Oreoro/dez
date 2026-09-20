@@ -1,11 +1,11 @@
 ---
-title: Editing Code in Flint
-description: Core code editing features in Flint including multi-cursor, refactoring, code actions, and language server integration.
+title: Editing Code in dez
+description: Core code editing features in dez including multi-cursor, refactoring, code actions, and language server integration.
 ---
 
 # Editing Code
 
-Flint provides tools to help you write and modify code efficiently. This section covers the core editing features that work alongside your language server.
+dez provides tools to help you write and modify code efficiently. This section covers the core editing features that work alongside your language server.
 
 ## What's in This Section
 
@@ -17,7 +17,7 @@ Flint provides tools to help you write and modify code efficiently. This section
 
 ## How These Features Work Together
 
-When you're editing code, Flint combines input from multiple sources:
+When you're editing code, dez combines input from multiple sources:
 
 1. **Language servers** provide completions, diagnostics, and quick fixes based on your project's types and structure
 2. **Edit predictions** suggest multi-character or multi-line changes as you type

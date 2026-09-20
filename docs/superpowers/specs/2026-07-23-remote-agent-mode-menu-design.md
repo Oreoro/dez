@@ -6,9 +6,9 @@
 ## Problem
 
 The Agent Threads new-thread dropdown exposes explicit
-**New — Flint-managed** entries and remote sign-out actions while an SSH
+**New — dez-managed** entries and remote sign-out actions while an SSH
 connection uses Direct agent routing. Direct mode is intended to use only the
-remote server's ambient agent commands. Flint-managed agents are reserved for
+remote server's ambient agent commands. dez-managed agents are reserved for
 Tunneled mode.
 
 Pi also supports the same `agent_threads.<kind>.hidden` setting and panel
@@ -21,19 +21,19 @@ For a remote SSH project using Direct agent routing:
 
 - new and resumed threads use only the configured ambient commands on the
   remote server;
-- the dropdown contains no explicit Flint-managed launch entry; and
-- the dropdown contains no Flint-managed credential action, including remote
+- the dropdown contains no explicit dez-managed launch entry; and
+- the dropdown contains no dez-managed credential action, including remote
   sign-out.
 
 For a remote SSH project using Tunneled agent routing:
 
 - every ordinary new-thread and resume entry point resolves the pinned
-  Flint-managed agent binary on the remote server;
+  dez-managed agent binary on the remote server;
 - the managed agent's network traffic continues through the tunnel provided by
-  local Flint;
+  local dez;
 - Codex and Claude retain their remote sign-out actions, which resolve the same
   managed binary and require the Tunneled route; and
-- the dropdown contains no separate Flint-managed launch entry because all
+- the dropdown contains no separate dez-managed launch entry because all
   ordinary launch entries are already managed.
 
 Local and route-less workspaces do not expose remote credential actions or
@@ -45,7 +45,7 @@ same user-settings scope as the existing controls.
 
 ## Implementation
 
-Remove the obsolete explicit Flint-managed dropdown row and its panel-only
+Remove the obsolete explicit dez-managed dropdown row and its panel-only
 label/status helpers. Keep managed provisioning behind the store's
 route-authoritative ordinary launch path.
 
@@ -62,7 +62,7 @@ The launch and transport implementation remains authoritative:
 - Direct selects configured ambient commands and never enters managed
   provisioning.
 - Tunneled selects managed provisioning, requires the selected route to remain
-  Tunneled until launch, and applies Flint's existing remote egress tunnel.
+  Tunneled until launch, and applies dez's existing remote egress tunnel.
 
 ## Error Handling
 
@@ -92,9 +92,9 @@ affected crates before delivery.
 ## Acceptance Criteria
 
 - Direct remote menus show only ambient-agent launch and resume choices.
-- Direct launches never provision or run Flint-managed agents.
-- Tunneled launches and resumes use Flint-managed agents on the remote host and
-  route their traffic through local Flint.
+- Direct launches never provision or run dez-managed agents.
+- Tunneled launches and resumes use dez-managed agents on the remote host and
+  route their traffic through local dez.
 - Tunneled Codex and Claude menus retain remote sign-out without a separate
   managed launch row. The remote sign-out dropdown option uses the same small
   font as the other options.

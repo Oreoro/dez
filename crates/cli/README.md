@@ -2,14 +2,14 @@
 
 ## Testing
 
-You can test your changes to the `cli` crate by first building the main flint binary:
+You can test your changes to the `cli` crate by first building the main dez binary:
 
 ```
-cargo build -p flint
+cargo build -p dez
 ```
 
 And then building and running the `cli` crate with the following parameters:
 
 ```
- cargo run -p cli -- --flint ./target/debug/flint.exe
+ cargo run -p cli -- --dez ./target/debug/dez.exe
 ```

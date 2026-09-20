@@ -1,6 +1,6 @@
 ## Why
 
-Flint's goal is a lean editor that intentionally excludes AI. The current codebase carries ~36 AI-specific crates (agent, copilot, language models, MCP servers, edit predictions) that are disabled by default but still compiled, tested, and maintained on every upstream sync — adding ongoing cost with no user value.
+dez's goal is a lean editor that intentionally excludes AI. The current codebase carries ~36 AI-specific crates (agent, copilot, language models, MCP servers, edit predictions) that are disabled by default but still compiled, tested, and maintained on every upstream sync — adding ongoing cost with no user value.
 
 ## What Changes
 

@@ -692,7 +692,7 @@ mod tests {
             &r#"
             {
                 "features": {
-                    "inline_completion_provider": "flint"
+                    "inline_completion_provider": "dez"
                 },
             }
             "#
@@ -701,7 +701,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "flint"
+                        "provider": "dez"
                     }
                 }
                 "#
@@ -2891,7 +2891,7 @@ mod tests {
             &r#"
             {
                 "features": {
-                    "edit_prediction_provider": "flint"
+                    "edit_prediction_provider": "dez"
                 },
                 "edit_predictions": {
                     "mode": "eager"
@@ -2903,7 +2903,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "flint",
+                        "provider": "dez",
                         "mode": "eager"
                     }
                 }
@@ -2946,7 +2946,7 @@ mod tests {
             &r#"
             {
                 "edit_predictions": {
-                    "provider": "flint"
+                    "provider": "dez"
                 }
             }
             "#
@@ -3053,7 +3053,7 @@ mod tests {
                 },
                 "macos": {
                     "features": {
-                        "edit_prediction_provider": "flint"
+                        "edit_prediction_provider": "dez"
                     }
                 },
                 "profiles": {
@@ -3074,7 +3074,7 @@ mod tests {
                     },
                     "macos": {
                         "edit_predictions": {
-                            "provider": "flint"
+                            "provider": "dez"
                         }
                     },
                     "profiles": {
@@ -3186,7 +3186,7 @@ mod tests {
             &r#"
             {
                 "edit_predictions": {
-                    "provider": "flint"
+                    "provider": "dez"
                 }
             }
             "#
@@ -3212,7 +3212,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "flint"
+                        "provider": "dez"
                     }
                 }
                 "#
@@ -3887,7 +3887,7 @@ mod tests {
             Some(&"{\n    \"agent\": {\n        \n    }\n}\n"),
         );
 
-        // Project-local settings (.flint/settings.json) with always_allow_tool_actions
+        // Project-local settings (.dez/settings.json) with always_allow_tool_actions
         // These files have no platform/channel overrides or root-level profiles.
         assert_migrate_with_migrations(
             &[MigrationType::Json(

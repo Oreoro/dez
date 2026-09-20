@@ -1,8 +1,8 @@
 ---
 title: Billing
-description: "Compatibility note for the removed Flint account service."
+description: "Compatibility note for the removed dez account service."
 ---
 
 # Billing
 
-Flint has no account, subscription, plan, or billing service. Provider subscriptions and API usage are managed directly with the provider.
+dez has no account, subscription, plan, or billing service. Provider subscriptions and API usage are managed directly with the provider.

@@ -3982,7 +3982,7 @@ mod tests {
     #[gpui::test]
     fn test_frontmatter_falls_back_to_code_block_for_nested_yaml(cx: &mut TestAppContext) {
         let rendered = render_markdown_with_options(
-            "---\ntags:\n  - flint\n---\nBody",
+            "---\ntags:\n  - dez\n---\nBody",
             None,
             MarkdownOptions {
                 render_metadata_blocks: true,
@@ -3990,7 +3990,7 @@ mod tests {
             },
             cx,
         );
-        assert_eq!(rendered.text_for_range(0..28), "tags:\n  - flint\nBody");
+        assert_eq!(rendered.text_for_range(0..28), "tags:\n  - dez\nBody");
     }
 
     fn render_markdown_with_code_span_link(

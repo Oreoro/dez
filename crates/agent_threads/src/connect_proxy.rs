@@ -23,7 +23,7 @@ impl ProxyCapability {
     }
 
     fn authorization(&self) -> String {
-        format!("Basic {}", STANDARD.encode(format!("flint:{}", self.0)))
+        format!("Basic {}", STANDARD.encode(format!("dez:{}", self.0)))
     }
 }
 
@@ -118,7 +118,7 @@ pub struct ConnectProxyLease {
 impl ConnectProxyLease {
     pub fn proxy_url(&self) -> String {
         format!(
-            "http://flint:{}@127.0.0.1:{}",
+            "http://dez:{}@127.0.0.1:{}",
             self.capability.0, self.remote_port
         )
     }

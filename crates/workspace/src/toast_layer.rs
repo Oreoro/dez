@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use flint_actions::toast;
+use dez_actions::toast;
 use gpui::{
     AnyView, DismissEvent, Entity, EntityId, FocusHandle, ManagedView, MouseButton, Subscription,
     Task,

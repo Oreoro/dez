@@ -99,7 +99,7 @@ util.workspace = true
 uuid.workspace = true
 vim_mode_setting.workspace = true
 workspace.workspace = true
-flint_actions.workspace = true
+dez_actions.workspace = true
 zlog.workspace = true
 
 [dev-dependencies]

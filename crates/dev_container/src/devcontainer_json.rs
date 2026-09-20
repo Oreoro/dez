@@ -127,12 +127,12 @@ impl std::fmt::Display for FeatureOptionValue {
 }
 
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, Default)]
-pub(crate) struct FlintCustomizationsWrapper {
-    pub(crate) flint: FlintCustomization,
+pub(crate) struct dezCustomizationsWrapper {
+    pub(crate) dez: dezCustomization,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Default)]
-pub(crate) struct FlintCustomization {
+pub(crate) struct dezCustomization {
     #[serde(default)]
     pub(crate) extensions: Vec<String>,
 }
@@ -221,7 +221,7 @@ pub(crate) struct DevContainer {
     pub(crate) mounts: Option<Vec<MountDefinition>>,
     pub(crate) features: Option<HashMap<String, FeatureOptions>>,
     pub(crate) override_feature_install_order: Option<Vec<String>>,
-    pub(crate) customizations: Option<FlintCustomizationsWrapper>,
+    pub(crate) customizations: Option<dezCustomizationsWrapper>,
     pub(crate) build: Option<ContainerBuild>,
     #[serde(default, deserialize_with = "deserialize_app_port")]
     pub(crate) app_port: Vec<String>,
@@ -306,24 +306,24 @@ impl DevContainer {
 }
 
 // Custom deserializer that parses the entire customizations object as a
-// serde_json_lenient::Value first, then extracts the "flint" portion.
+// serde_json_lenient::Value first, then extracts the "dez" portion.
 // This avoids a bug in serde_json_lenient's `ignore_value` codepath which
 // does not handle trailing commas in skipped values.
-impl<'de> Deserialize<'de> for FlintCustomizationsWrapper {
+impl<'de> Deserialize<'de> for dezCustomizationsWrapper {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let value = Value::deserialize(deserializer)?;
-        let flint = value
-            .get("flint")
-            .map(|flint_value| {
-                serde_json_lenient::from_value::<FlintCustomization>(flint_value.clone())
+        let dez = value
+            .get("dez")
+            .map(|dez_value| {
+                serde_json_lenient::from_value::<dezCustomization>(dez_value.clone())
             })
             .transpose()
             .map_err(serde::de::Error::custom)?
             .unwrap_or_default();
-        Ok(FlintCustomizationsWrapper { flint })
+        Ok(dezCustomizationsWrapper { dez })
     }
 }
 
@@ -630,7 +630,7 @@ mod test {
         devcontainer_api::DevContainerError,
         devcontainer_json::{
             ContainerBuild, DevContainer, DevContainerBuildType, FeatureOptions,
-            FlintCustomization, FlintCustomizationsWrapper, ForwardPort, HostRequirements,
+            dezCustomization, dezCustomizationsWrapper, ForwardPort, HostRequirements,
             LifecycleCommand, LifecycleScript, MountDefinition, OnAutoForward,
             PortAttributeProtocol, PortAttributes, ShutdownAction, UserEnvProbe,
             deserialize_devcontainer_json,
@@ -649,7 +649,7 @@ mod test {
                       "GitHub.vscode-pull-request-github",
                     ],
                   },
-                  "flint": {
+                  "dez": {
                     "extensions": ["vue", "ruby"],
                   },
                   "codespaces": {
@@ -676,8 +676,8 @@ mod test {
         let devcontainer = result.expect("ok");
         assert_eq!(
             devcontainer.customizations,
-            Some(FlintCustomizationsWrapper {
-                flint: FlintCustomization {
+            Some(dezCustomizationsWrapper {
+                dez: dezCustomization {
                     extensions: vec!["vue".to_string(), "ruby".to_string()]
                 }
             })
@@ -685,8 +685,8 @@ mod test {
     }
 
     #[test]
-    fn should_deserialize_customizations_without_flint_key() {
-        let json_without_flint = r#"
+    fn should_deserialize_customizations_without_dez_key() {
+        let json_without_dez = r#"
             {
                 "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
                 "customizations": {
@@ -697,18 +697,18 @@ mod test {
             }
         "#;
 
-        let result = deserialize_devcontainer_json(json_without_flint);
+        let result = deserialize_devcontainer_json(json_without_dez);
 
         assert!(
             result.is_ok(),
-            "Should handle missing flint key in customizations, but got: {:?}",
+            "Should handle missing dez key in customizations, but got: {:?}",
             result.err()
         );
         let devcontainer = result.expect("ok");
         assert_eq!(
             devcontainer.customizations,
-            Some(FlintCustomizationsWrapper {
-                flint: FlintCustomization { extensions: vec![] }
+            Some(dezCustomizationsWrapper {
+                dez: dezCustomization { extensions: vec![] }
             })
         );
     }
@@ -818,7 +818,7 @@ mod test {
                     "vscode": {
                         // Just confirm that this can be included and ignored
                     },
-                    "flint": {
+                    "dez": {
                         "extensions": [
                             "html"
                         ]
@@ -950,8 +950,8 @@ mod test {
                     target: "/workspaces/app".to_string(),
                     mount_type: Some("bind".to_string())
                 }),
-                customizations: Some(FlintCustomizationsWrapper {
-                    flint: FlintCustomization {
+                customizations: Some(dezCustomizationsWrapper {
+                    dez: dezCustomization {
                         extensions: vec!["html".to_string()]
                     }
                 }),
@@ -1594,7 +1594,7 @@ mod test {
                     "vscode": {
                         // Just confirm that this can be included and ignored
                     },
-                    "flint": {
+                    "dez": {
                         "extensions": [
                             "html"
                         ]
@@ -1632,7 +1632,7 @@ mod test {
                     "vscode": {
                         // Just confirm that this can be included and ignored
                     },
-                    "flint": {
+                    "dez": {
                         "extensions": [
                             "html"
                         ]
@@ -1669,7 +1669,7 @@ mod test {
                     "vscode": {
                         // Just confirm that this can be included and ignored
                     },
-                    "flint": {
+                    "dez": {
                         "extensions": [
                             "html"
                         ]

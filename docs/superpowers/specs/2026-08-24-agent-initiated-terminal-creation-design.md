@@ -5,10 +5,10 @@
 Implemented on 2026-08-24.
 
 **Scope authority is
-`docs/superpowers/specs/2026-08-21-flintctl-terminal-control-design.md`.** That
+`docs/superpowers/specs/2026-08-21-dezctl-terminal-control-design.md`.** That
 document's Goal already includes terminal creation in its first version, and its
 implementation stages 7 and 8 cover these commands.
-`docs/superpowers/specs/2026-08-22-flintctl-remote-dev-design.md` requires the
+`docs/superpowers/specs/2026-08-22-dezctl-remote-dev-design.md` requires the
 same commands on the remote route. This document is not a separate proposal and
 does not defer that work; it holds the implementation detail for those stages,
 split out of `2026-08-24-agent-control-caller-disambiguation-design.md`, which had
@@ -70,11 +70,11 @@ This is no longer a small drive-by fix, and it should not be scheduled as one.
 ## Proposed commands
 
 ```text
-flintctl terminal open [--cwd <path>] [--focus] [--json]
-flintctl terminal split (--current|--terminal <terminal-id>) \
+dezctl terminal open [--cwd <path>] [--focus] [--json]
+dezctl terminal split (--current|--terminal <terminal-id>) \
   --direction <left|right|up|down> [--cwd <path>] [--focus] [--json]
 
-flintctl thread create --worktree <current|new> [--name <name>] \
+dezctl thread create --worktree <current|new> [--name <name>] \
   --agent <agent> --prompt <prompt> \
   [--split <left|right|up|down>] [--focus] [--json]
 ```
@@ -88,7 +88,7 @@ command that starts an agent.
 
 An agent that knows tmux already has a working model for `terminal split`: a new
 rectangular region appears beside the current one, holding one new shell, with a
-draggable divider between them. Flint matches that model exactly. `Pane::split`
+draggable divider between them. dez matches that model exactly. `Pane::split`
 creates a new `Pane` holding one new terminal with its own PTY
 (`new_pane_with_active_terminal`, `SplitMode::EmptyPane` in `TerminalPanel`).
 The divider is the same resize handle a user drags by hand.
@@ -108,10 +108,10 @@ Two consequences:
    address. Do not add a pane ID to the protocol. An agent thinking in tmux terms
    would treat a pane ID as a terminal, address the wrong thing, and get no error.
 
-## Reuse Flint's own creation path
+## Reuse dez's own creation path
 
 Every command here must create its terminal through the same functions the normal
-UI actions call. Do not build a parallel path. A terminal Flint creates through
+UI actions call. Do not build a parallel path. A terminal dez creates through
 its own path is a managed terminal: `TerminalPanel` owns it, it gets a tab,
 `Pane::add_item` records it for workspace serialization, and
 `TerminalControlRegistry` registers it. Registration is automatic, because
@@ -266,7 +266,7 @@ after decoding. Only `left`, `right`, `up`, and `down` are valid. The CLI still
 uses a value enum and rejects an invalid command-line value before sending.
 Malformed JSON stays `invalid-request`.
 
-`flintctl status --json` reports `terminal-open` and `terminal-split` separately.
+`dezctl status --json` reports `terminal-open` and `terminal-split` separately.
 A client must not infer support from the protocol minor version alone.
 
 ## Access and remote boundaries
@@ -279,7 +279,7 @@ shapes, focus behavior, and workspace checks.
 
 The owning workspace controls the new PTY host. A local workspace creates only
 local terminals; a remote workspace creates only remote terminals through its
-authenticated connection. A remote `--cwd` is a remote path. Local Flint owns pane
+authenticated connection. A remote `--cwd` is a remote path. Local dez owns pane
 placement and metadata for both routes; the remote server owns only the remote PTY
 and its registration. There is no per-terminal route choice — a registry entry
 must match its workspace route, and a mismatch returns `terminal-route-mismatch`.
@@ -292,7 +292,7 @@ of a failed creation may outlive the other.
 
 Placement options must not change executable, credential, or traffic routing.
 Direct uses the configured ambient remote executable. Tunneled uses the pinned
-Flint-managed remote executable and its existing tunnel.
+dez-managed remote executable and its existing tunnel.
 
 ## Skill guidance
 
@@ -312,7 +312,7 @@ the current one at the same time.**
 coding agent, or when the work needs a delegated thread rather than a plain shell.
 The skill preserves the caller's working directory unless asked otherwise, does
 not request focus unless asked, and must not create a worktree or Agent Thread
-when a plain terminal is enough. Use Flint's meaning of "pane" in anything the
+when a plain terminal is enough. Use dez's meaning of "pane" in anything the
 user reads.
 
 ## Rejected: spatial addressing
@@ -335,7 +335,7 @@ its answer would agree with what the user sees.
 
 ## Non-goals
 
-- Moving, closing, resizing, or reordering existing panes through `flintctl`.
+- Moving, closing, resizing, or reordering existing panes through `dezctl`.
 - A public pane ID in the control protocol.
 
 ## Verification

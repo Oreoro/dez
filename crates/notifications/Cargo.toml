@@ -23,7 +23,7 @@ gpui.workspace = true
 localization.workspace = true
 ui.workspace = true
 workspace.workspace = true
-flint_actions.workspace = true
+dez_actions.workspace = true
 
 [dev-dependencies]
 gpui = { workspace = true, features = ["test-support"] }

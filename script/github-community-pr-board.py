@@ -56,8 +56,8 @@ MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 5
 
 GITHUB_API_URL = "https://api.github.com"
-REPO_OWNER = "flint-industries"
-REPO_NAME = "flint"
+REPO_OWNER = "dez-industries"
+REPO_NAME = "dez"
 STAFF_TEAM_SLUG = "staff"
 
 SKIP_LABELS = {"staff", "bot"}

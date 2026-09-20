@@ -326,9 +326,9 @@ Several features that might require plugins in other editors are built into Zed:
 - rust-analyzer integration
 - rustfmt formatting
 
-### What's Not in Flint
+### What's Not in dez
 
-Here's what RustRover offers that Flint doesn't have:
+Here's what RustRover offers that dez doesn't have:
 
 - **Profiler integration** — Use `cargo flamegraph`, `perf`, or external profiling tools
 - **Database tools** — Use DataGrip, DBeaver, or TablePlus
@@ -337,7 +337,7 @@ Here's what RustRover offers that Flint doesn't have:
 
 ## A Note on Licensing and Privacy
 
-Flint is open source and has no telemetry, account, or collaboration service. Logs and reliability diagnostics remain local. Flint preserves SSH remote editing for working on another machine, but SSH is not a multi-user collaboration system.
+dez is open source and has no telemetry, account, or collaboration service. Logs and reliability diagnostics remain local. dez preserves SSH remote editing for working on another machine, but SSH is not a multi-user collaboration system.
 
 ## Using AI in Zed
 

@@ -21,13 +21,13 @@ fn process_settings(cx: &mut App) {
     if settings.use_system_prompts && cfg!(not(any(target_os = "linux", target_os = "freebsd"))) {
         cx.reset_prompt_builder();
     } else {
-        cx.set_prompt_builder(flint_prompt_renderer);
+        cx.set_prompt_builder(dez_prompt_renderer);
     }
 }
 
 /// Use this function in conjunction with [App::set_prompt_builder] to force
 /// GPUI to use the internal prompt system.
-pub fn flint_prompt_renderer(
+pub fn dez_prompt_renderer(
     level: PromptLevel,
     message: &str,
     detail: Option<&str>,
@@ -37,7 +37,7 @@ pub fn flint_prompt_renderer(
     cx: &mut App,
 ) -> RenderablePromptHandle {
     let renderer = cx.new({
-        |cx| FlintPromptRenderer {
+        |cx| dezPromptRenderer {
             _level: level,
             message: cx.new(|cx| Markdown::new(SharedString::new(message), None, None, cx)),
             actions: actions.to_vec(),
@@ -54,7 +54,7 @@ pub fn flint_prompt_renderer(
     handle.with_view(renderer, window, cx)
 }
 
-pub struct FlintPromptRenderer {
+pub struct dezPromptRenderer {
     _level: PromptLevel,
     message: Entity<Markdown>,
     actions: Vec<PromptButton>,
@@ -65,7 +65,7 @@ pub struct FlintPromptRenderer {
     has_long_detail: bool,
 }
 
-impl FlintPromptRenderer {
+impl dezPromptRenderer {
     fn confirm(&mut self, _: &menu::Confirm, _window: &mut Window, cx: &mut Context<Self>) {
         cx.emit(PromptResponse(self.active_action_id));
     }
@@ -111,7 +111,7 @@ impl FlintPromptRenderer {
     }
 }
 
-impl Render for FlintPromptRenderer {
+impl Render for dezPromptRenderer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let settings = ThemeSettings::get_global(cx);
 
@@ -218,9 +218,9 @@ fn markdown_style(main_message: bool, window: &Window, cx: &App) -> MarkdownStyl
     }
 }
 
-impl EventEmitter<PromptResponse> for FlintPromptRenderer {}
+impl EventEmitter<PromptResponse> for dezPromptRenderer {}
 
-impl Focusable for FlintPromptRenderer {
+impl Focusable for dezPromptRenderer {
     fn focus_handle(&self, _: &crate::App) -> FocusHandle {
         self.focus.clone()
     }

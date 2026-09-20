@@ -6,7 +6,7 @@ use std::{
 };
 
 use command_palette_hooks::CommandPaletteFilter;
-use flint_actions::OpenPerformanceProfiler;
+use dez_actions::OpenPerformanceProfiler;
 use gpui::{
     App, AppContext, ClipboardItem, Context, Div, Entity, Hsla, InteractiveElement,
     ParentElement as _, ProfilingCollector, Render, SerializedLocation, SerializedTaskTiming,

@@ -15,18 +15,18 @@
 
 ---
 
-title: Finding and Navigating Code - Flint
-description: Navigate your codebase in Flint with file finder, project search, go to definition, symbol search, and the command palette.
+title: Finding and Navigating Code - dez
+description: Navigate your codebase in dez with file finder, project search, go to definition, symbol search, and the command palette.
 
 ---
 
 # Finding & Navigating
 
-Flint provides several ways to move around your codebase quickly. Here's an overview of the main navigation tools.
+dez provides several ways to move around your codebase quickly. Here's an overview of the main navigation tools.
 
 ## Command Palette {#command-palette}
 
-The Command Palette ({#kb command_palette::Toggle}) is your gateway to almost everything in Flint. Type a few characters to filter commands, then press Enter to execute.
+The Command Palette ({#kb command_palette::Toggle}) is your gateway to almost everything in dez. Type a few characters to filter commands, then press Enter to execute.
 
 [Learn more about the Command Palette →](./command-palette.md)
 

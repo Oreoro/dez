@@ -180,7 +180,7 @@ mod tests {
     fn github_release_includes_local_release_note_fields() {
         let release: GithubRelease = serde_json::from_value(serde_json::json!({
             "tag_name": "v1.2.3",
-            "name": "Flint 1.2.3",
+            "name": "dez 1.2.3",
             "body": "## Improvements",
             "prerelease": false,
             "assets": [],
@@ -189,7 +189,7 @@ mod tests {
         }))
         .expect("valid GitHub release response");
 
-        assert_eq!(release.name.as_deref(), Some("Flint 1.2.3"));
+        assert_eq!(release.name.as_deref(), Some("dez 1.2.3"));
         assert_eq!(release.body.as_deref(), Some("## Improvements"));
     }
 

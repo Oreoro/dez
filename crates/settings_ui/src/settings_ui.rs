@@ -41,7 +41,7 @@ use ui::{
     prelude::*,
 };
 
-use flint_actions::{OpenProjectSettings, OpenSettings, OpenSettingsAt, OpenSettingsAtTarget};
+use dez_actions::{OpenProjectSettings, OpenSettings, OpenSettingsAt, OpenSettingsAtTarget};
 use util::{ResultExt as _, paths::PathStyle, rel_path::RelPath};
 use workspace::{
     AppState, MultiWorkspace, OpenOptions, OpenVisible, Workspace, WorkspaceSettings,
@@ -1379,7 +1379,7 @@ fn render_settings_item_link(
                 .tooltip(Tooltip::text(localization::text(cx, "settings-copy-link")))
                 .when_some(json_path, |this, path| {
                     this.on_click(cx.listener(move |this, _, _, cx| {
-                        let link = format!("flint://settings/{}", path);
+                        let link = format!("dez://settings/{}", path);
                         cx.write_to_clipboard(ClipboardItem::new_string(link));
                         this.last_copied_link_path = Some(path);
                         cx.notify();
@@ -1462,11 +1462,11 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
             "settings-general-private-files-description"
         }
         "CLI Default Open Behavior" => "settings-general-cli-default-open-behavior-title",
-        "How `flint <path>` opens directories when no flag is specified." => {
+        "How `dez <path>` opens directories when no flag is specified." => {
             "settings-general-cli-default-open-behavior-description"
         }
         "Trust All Projects By Default" => "settings-general-trust-all-projects-title",
-        "When opening Flint, avoid Restricted Mode by auto-trusting all projects, enabling use of all features without having to give permission to each new project." => {
+        "When opening dez, avoid Restricted Mode by auto-trusting all projects, enabling use of all features without having to give permission to each new project." => {
             "settings-general-trust-all-projects-description"
         }
         "Restore Unsaved Buffers" => "settings-general-restore-unsaved-buffers-title",
@@ -1474,11 +1474,11 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
             "settings-general-restore-unsaved-buffers-description"
         }
         "Restore On Startup" => "settings-general-restore-on-startup-title",
-        "What to restore from the previous session when opening Flint." => {
+        "What to restore from the previous session when opening dez." => {
             "settings-general-restore-on-startup-description"
         }
         "Preview Channel" => "settings-general-preview-channel-title",
-        "Which settings should be activated only in Preview build of Flint." => {
+        "Which settings should be activated only in Preview build of dez." => {
             "settings-general-preview-channel-description"
         }
         "Settings Profiles" => "settings-general-settings-profiles-title",
@@ -1487,7 +1487,7 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         }
         "Feature Flags" => "settings-feature-flags",
         "Performance Profiler" => "settings-performance-profiler",
-        "Collect timing data for foreground and background executor tasks so they can be inspected via `flint: open performance profiler`. May lead to increased memory usage." => {
+        "Collect timing data for foreground and background executor tasks so they can be inspected via `dez: open performance profiler`. May lead to increased memory usage." => {
             "settings-collect-timing-data-for-foreground-and"
         }
         "Instrumentation" => "settings-instrumentation",
@@ -1574,10 +1574,10 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "Determines how much space the file finder can take up in relation to the available window width." => {
             "settings-determines-how-much-space-the-file-finder-can"
         }
-        "Files or globs of files that will be excluded by Flint entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"" => {
+        "Files or globs of files that will be excluded by dez entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"" => {
             "settings-files-or-globs-of-files-that-will-be-excluded"
         }
-        "Files or globs of files that will be included by Flint, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down Flint's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions" => {
+        "Files or globs of files that will be included by dez, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down dez's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions" => {
             "settings-files-or-globs-of-files-that-will-be-included"
         }
         "Include ignored files in search results by default." => {
@@ -1647,8 +1647,8 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "Debounce threshold in milliseconds after which changes are reflected in the Git gutter." => {
             "settings-debounce-threshold-in-milliseconds-after-which"
         }
-        "Disable all Git integration features in Flint." => {
-            "settings-disable-all-git-integration-features-in-flint"
+        "Disable all Git integration features in dez." => {
+            "settings-disable-all-git-integration-features-in-dez"
         }
         "Environment variables added to the generator command." => {
             "settings-environment-variables-added-to-the-generator"
@@ -1665,8 +1665,8 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "Padding between the end of the source line and the start of the inline blame in columns." => {
             "settings-padding-between-the-end-of-the-source-line-and"
         }
-        "Preview, install, update, or uninstall the optional Flint control skill for Codex, Pi, OpenCode, or Claude Code. Flint does not add this skill to global instruction files." => {
-            "settings-preview-install-update-or-uninstall-flint-control-skill"
+        "Preview, install, update, or uninstall the optional dez control skill for Codex, Pi, OpenCode, or Claude Code. dez does not add this skill to global instruction files." => {
+            "settings-preview-install-update-or-uninstall-dez-control-skill"
         }
         "Should the name or path be displayed first in the git view." => {
             "settings-should-the-name-or-path-be-displayed-first-in"
@@ -1712,7 +1712,7 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "Display Settings" => "settings-display-settings",
         "Environment" => "settings-environment",
         "Font" => "settings-font",
-        "Flint Control Skill" => "settings-flint-control-skill",
+        "dez Control Skill" => "settings-dez-control-skill",
         "Layout Settings" => "settings-layout-settings",
         "Scrollbar" => "settings-scrollbar",
         "Toolbar" => "settings-toolbar",
@@ -1896,8 +1896,8 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "The OpenType features to enable for rendering in text buffers." => {
             "settings-the-opentype-features-to-enable-for-rendering-2"
         }
-        "The custom set of icons Flint will associate with files and directories." => {
-            "settings-the-custom-set-of-icons-flint-will-associate"
+        "The custom set of icons dez will associate with files and directories." => {
+            "settings-the-custom-set-of-icons-dez-will-associate"
         }
         "The font fallbacks to use for rendering in text buffers." => {
             "settings-the-font-fallbacks-to-use-for-rendering-in-text"
@@ -1994,8 +1994,8 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "(Linux only) choose how window control buttons are laid out in the titlebar." => {
             "settings-linux-only-choose-how-window-control-buttons"
         }
-        "(Linux only) whether Flint or your compositor should draw window decorations." => {
-            "settings-linux-only-whether-flint-or-your-compositor"
+        "(Linux only) whether dez or your compositor should draw window decorations." => {
+            "settings-linux-only-whether-dez-or-your-compositor"
         }
         "(macOS only) whether to allow Windows to tab together." => {
             "settings-macos-only-whether-to-allow-windows-to-tab"
@@ -2777,8 +2777,8 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "Toggles inlay hints (hides or shows) when the user presses the modifiers specified." => {
             "settings-toggles-inlay-hints-hides-or-shows-when-the"
         }
-        "Use LSP tasks over Flint language extension tasks." => {
-            "settings-use-lsp-tasks-over-flint-language-extension"
+        "Use LSP tasks over dez language extension tasks." => {
+            "settings-use-lsp-tasks-over-dez-language-extension"
         }
         "Visible character used to render space characters when show_whitespaces is enabled (default: \"•\")" => {
             "settings-visible-character-used-to-render-space"
@@ -2838,10 +2838,10 @@ fn settings_item_message_id(source: &str) -> Option<&'static str> {
         "Whether to automatically replace emoji shortcodes with emoji characters." => {
             "settings-whether-to-automatically-replace-emoji"
         }
-        "Whether to automatically surround text with characters for you. For example, when you select text and type '(', Flint will automatically surround text with ()." => {
+        "Whether to automatically surround text with characters for you. For example, when you select text and type '(', dez will automatically surround text with ()." => {
             "settings-whether-to-automatically-surround-text-with"
         }
-        "Whether to automatically type closing characters for you. For example, when you type '(', Flint will automatically add a closing ')' at the correct position." => {
+        "Whether to automatically type closing characters for you. For example, when you type '(', dez will automatically add a closing ')' at the correct position." => {
             "settings-whether-to-automatically-type-closing"
         }
         "Whether to colorize brackets in the editor." => {
@@ -3202,7 +3202,7 @@ fn all_language_names(cx: &App) -> Vec<SharedString> {
         .languages
         .language_names()
         .into_iter()
-        .filter(|name| name.as_ref() != "Flint Keybind Context")
+        .filter(|name| name.as_ref() != "dez Keybind Context")
         .map(Into::into)
         .collect()
 }
@@ -3925,7 +3925,7 @@ impl SettingsWindow {
                                 setting_item.title.as_ref(),
                                 setting_item.description.as_ref(),
                                 "Language",
-                                "Select the language that Flint uses for its interface.",
+                                "Select the language that dez uses for its interface.",
                             ]),
                         });
                         push_candidates(
@@ -5602,7 +5602,7 @@ impl SettingsWindow {
 
                 let worktree_id = *worktree_id;
 
-                // TODO: move flint::open_local_file() APIs to this crate, and
+                // TODO: move dez::open_local_file() APIs to this crate, and
                 // re-implement the "initial_contents" behavior
                 let workspace_weak = corresponding_workspace.downgrade();
                 workspace_window
@@ -7385,7 +7385,7 @@ mod project_settings_update_tests {
         let fs = FakeFs::new(cx.executor());
         let tree = if let Some(settings_content) = initial_settings {
             json!({
-                ".flint": {
+                ".dez": {
                     "settings.json": settings_content
                 },
                 "src": { "main.rs": "" }
@@ -7402,7 +7402,7 @@ mod project_settings_update_tests {
             (worktree.read(cx).id(), worktree.downgrade())
         });
 
-        let rel_path: Arc<RelPath> = RelPath::unix(".flint/settings.json")
+        let rel_path: Arc<RelPath> = RelPath::unix(".dez/settings.json")
             .expect("valid path")
             .into_arc();
         let project_path = ProjectPath {
@@ -7632,7 +7632,7 @@ mod project_settings_update_tests {
 
         let file_content = setup
             .fs
-            .load("/project/.flint/settings.json".as_ref())
+            .load("/project/.dez/settings.json".as_ref())
             .await
             .unwrap();
         assert_eq!(
@@ -7665,7 +7665,7 @@ mod project_settings_update_tests {
         setup
             .fs
             .save(
-                "/project/.flint/settings.json".as_ref(),
+                "/project/.dez/settings.json".as_ref(),
                 &r#"{ "tab_size": 99 }"#.into(),
                 Default::default(),
             )

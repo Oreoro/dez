@@ -5,8 +5,8 @@ set -euo pipefail
 repository_root=$(git rev-parse --show-toplevel)
 cd "$repository_root"
 
-version=$(script/get-crate-version flint)
-channel=$(cat crates/flint/RELEASE_CHANNEL)
+version=$(script/get-crate-version dez)
+channel=$(cat crates/dez/RELEASE_CHANNEL)
 
 if [[ "$channel" != "stable" ]]; then
     echo "main must build the stable channel, found: $channel" >&2

@@ -1,28 +1,28 @@
 use extension_host::ExtensionStore;
-use flint_actions::feedback::{EmailFlint, FileBugReport, RequestFeature};
+use dez_actions::feedback::{Emaildez, FileBugReport, RequestFeature};
 use gpui::{App, ClipboardItem, PromptButton, PromptLevel, actions};
 use system_specs::{CopySystemSpecsIntoClipboard, SystemSpecs, os_name, os_version};
 use util::ResultExt;
 use workspace::Workspace;
 
 actions!(
-    flint,
+    dez,
     [
-        /// Opens the Flint repository on GitHub.
-        OpenFlintRepo,
+        /// Opens the dez repository on GitHub.
+        OpendezRepo,
         /// Copies installed extensions to the clipboard for bug reports.
         CopyInstalledExtensionsIntoClipboard
     ]
 );
 
-const ZED_REPO_URL: &str = "https://github.com/shenghsi/flint";
+const ZED_REPO_URL: &str = "https://github.com/shenghsi/dez";
 
-const REQUEST_FEATURE_URL: &str = "https://github.com/shenghsi/flint/discussions/new/choose";
+const REQUEST_FEATURE_URL: &str = "https://github.com/shenghsi/dez/discussions/new/choose";
 
 fn file_bug_report_url(specs: &SystemSpecs) -> String {
     format!(
         concat!(
-            "https://github.com/shenghsi/flint/issues/new",
+            "https://github.com/shenghsi/dez/issues/new",
             "?",
             "template=10_bug_report.yml",
             "&",
@@ -32,10 +32,10 @@ fn file_bug_report_url(specs: &SystemSpecs) -> String {
     )
 }
 
-fn email_flint_url(specs: &SystemSpecs) -> String {
+fn email_dez_url(specs: &SystemSpecs) -> String {
     format!(
         concat!(
-            "https://github.com/shenghsi/flint/issues/new",
+            "https://github.com/shenghsi/dez/issues/new",
             "?",
             "body={}"
         ),
@@ -103,18 +103,18 @@ pub fn init(cx: &mut App) {
                 })
                 .detach();
             })
-            .register_action(move |_, _: &EmailFlint, window, cx| {
+            .register_action(move |_, _: &Emaildez, window, cx| {
                 let specs = SystemSpecs::new(window, cx, os_name(), os_version());
                 cx.spawn_in(window, async move |_, cx| {
                     let specs = specs.await;
                     cx.update(|_, cx| {
-                        cx.open_url(&email_flint_url(&specs));
+                        cx.open_url(&email_dez_url(&specs));
                     })
                     .log_err();
                 })
                 .detach();
             })
-            .register_action(move |_, _: &OpenFlintRepo, _, cx| {
+            .register_action(move |_, _: &OpendezRepo, _, cx| {
                 cx.open_url(ZED_REPO_URL);
             });
     })

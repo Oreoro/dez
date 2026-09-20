@@ -18,7 +18,7 @@ use ui::{
     prelude::*,
 };
 
-pub use flint_actions::{Rerun, Spawn};
+pub use dez_actions::{Rerun, Spawn};
 use util::{ResultExt, truncate_and_trailoff};
 use workspace::{ModalView, Workspace};
 
@@ -769,7 +769,7 @@ mod tests {
         fs.insert_tree(
             path!("/dir"),
             json!({
-                ".flint": {
+                ".dez": {
                     "tasks.json": r#"[
                         {
                             "label": "example task",
@@ -942,7 +942,7 @@ mod tests {
         fs.insert_tree(
             path!("/dir"),
             json!({
-                ".flint": {
+                ".dez": {
                     "tasks.json": r#"[
                         {
                             "label": "hello from $ZED_FILE:$ZED_ROW:$ZED_COLUMN",

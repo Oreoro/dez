@@ -1,6 +1,6 @@
-# Flint Documentation Conventions
+# dez Documentation Conventions
 
-This document covers structural conventions for Flint documentation: what to document, how to organize it, and when to create new pages.
+This document covers structural conventions for dez documentation: what to document, how to organize it, and when to create new pages.
 
 For voice, tone, and writing style, see the [brand-voice/](./brand-voice/) directory, which contains:
 
@@ -25,7 +25,7 @@ For voice, tone, and writing style, see the [brand-voice/](./brand-voice/) direc
 - **New UI panels or views** — Any new panel, sidebar, or view users interact with
 - **Public extension APIs** — For extension developers
 - **Breaking changes** — Even if the fix is simple, document what changed
-- **Version-specific behavior changes** — Include version callouts (e.g., "In Flint v0.224.0 and above...")
+- **Version-specific behavior changes** — Include version callouts (e.g., "In dez v0.224.0 and above...")
 
 ### Skip
 
@@ -43,7 +43,7 @@ For voice, tone, and writing style, see the [brand-voice/](./brand-voice/) direc
 
 - Introducing a **major feature** with multiple sub-features (e.g., Git integration, Vim mode)
 - The topic requires **extensive configuration examples**
-- Users would search for it **by name** (e.g., "Flint terminal", "Flint snippets")
+- Users would search for it **by name** (e.g., "dez terminal", "dez snippets")
 - It's a **new category** (e.g., a new AI provider type)
 
 ### Add to an existing page when:
@@ -73,12 +73,12 @@ Every doc page needs YAML frontmatter:
 
 ```yaml
 ---
-title: Feature Name - Flint
+title: Feature Name - dez
 description: One sentence describing what this page covers. Used in search results.
 ---
 ```
 
-- `title`: Feature name, optionally with "- Flint" suffix for SEO
+- `title`: Feature name, optionally with "- dez" suffix for SEO
 - `description`: Concise summary for search engines and link previews
 - Keep frontmatter values as simple single-line `key: value` entries (no
   multiline values, no quotes) for compatibility with the docs postprocessor
@@ -136,13 +136,13 @@ Use inline `code` for:
 - Setting names: `vim_mode`, `buffer_font_size`
 - Keybindings: `cmd-shift-p`, `ctrl-w h`
 - Commands: `:w`, `:q`
-- File paths: `~/.config/flint/settings.json`
+- File paths: `~/.config/dez/settings.json`
 - Action names: `git::Commit`
 - Values: `true`, `false`, `"eager"`
 
 ### Action and Keybinding References
 
-Use Flint's special syntax for dynamic rendering:
+Use dez's special syntax for dynamic rendering:
 
 - {#action git::Commit} — Renders the action name
 - {#kb git::Commit} — Renders the keybinding for that action
@@ -215,7 +215,7 @@ Use blockquote callouts for tips, notes, and warnings:
 When behavior differs by version, be explicit:
 
 ```markdown
-> **Note:** In Flint v0.224.0 and above, tool approval is controlled by `agent.tool_permissions.default`.
+> **Note:** In dez v0.224.0 and above, tool approval is controlled by `agent.tool_permissions.default`.
 ```
 
 Include the version number and what changed. This helps users on older versions understand why their behavior differs.
@@ -233,7 +233,7 @@ Link to other docs using relative paths:
 
 ### External Links
 
-- Link to `flint.dev` pages when appropriate
+- Link to `dez.dev` pages when appropriate
 - Link to upstream documentation (e.g., Tree-sitter, language servers) when explaining integrations
 
 ### "See Also" Sections
@@ -259,7 +259,7 @@ End pages with related links when helpful:
 - Use descriptive link text that tells users what they will get on the linked
   page
 - For main feature pages with a matching marketing page, include a relevant
-  `flint.dev` marketing link in addition to docs links
+  `dez.dev` marketing link in addition to docs links
 
 ---
 
@@ -274,7 +274,7 @@ Language docs in `src/languages/` follow a consistent structure:
 5. Language-specific settings
 6. Known limitations (if any)
 
-Keep language docs focused on Flint-specific configuration, not general language tutorials.
+Keep language docs focused on dez-specific configuration, not general language tutorials.
 
 ---
 
@@ -291,7 +291,7 @@ When documenting settings:
 
 Example:
 
-> Configure inline blame in Settings ({#kb flint::OpenSettings}) by searching for "inline blame", or add to your settings file:
+> Configure inline blame in Settings ({#kb dez::OpenSettings}) by searching for "inline blame", or add to your settings file:
 >
 > ```json [settings]
 > {
@@ -305,17 +305,17 @@ Example:
 
 For JSON-only settings (complex types without UI support), note this and link to instructions:
 
-> Add the following to your settings file ([how to edit](./configuring-flint.md#settings-files)):
+> Add the following to your settings file ([how to edit](./configuring-dez.md#settings-files)):
 
 ### Settings File Locations
 
-- **macOS/Linux:** `~/.config/flint/settings.json`
-- **Windows:** `%AppData%\Flint\settings.json`
+- **macOS/Linux:** `~/.config/dez/settings.json`
+- **Windows:** `%AppData%\dez\settings.json`
 
 ### Keymap File Locations
 
-- **macOS/Linux:** `~/.config/flint/keymap.json`
-- **Windows:** `%AppData%\Flint\keymap.json`
+- **macOS/Linux:** `~/.config/dez/keymap.json`
+- **Windows:** `%AppData%\dez\keymap.json`
 
 ---
 
@@ -363,7 +363,7 @@ Before finalizing documentation:
 - [ ] Version callouts where behavior differs by release
 - [ ] No orphan pages (linked from somewhere)
 - [ ] Non-reference pages include at least 3 useful internal docs links
-- [ ] Main feature pages include a relevant `flint.dev` marketing link
+- [ ] Main feature pages include a relevant `dez.dev` marketing link
 - [ ] Passes Prettier formatting check
 - [ ] Passes brand voice rubric (see `brand-voice/rubric.md`)
 

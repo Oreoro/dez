@@ -64,7 +64,7 @@ if ($Help) {
     exit 0
 }
 
-Push-Location -Path crates/flint
+Push-Location -Path crates/dez
 $channel = Get-Content "RELEASE_CHANNEL"
 $env:ZED_RELEASE_CHANNEL = $channel
 $env:RELEASE_CHANNEL = $channel
@@ -119,7 +119,7 @@ function PrepareForBundle {
         Remove-Item -Path "$innoDir" -Recurse -Force
     }
     New-Item -Path "$innoDir" -ItemType Directory -Force
-    Copy-Item -Path "$env:ZED_WORKSPACE\crates\flint\resources\windows\*" -Destination "$innoDir" -Recurse -Force
+    Copy-Item -Path "$env:ZED_WORKSPACE\crates\dez\resources\windows\*" -Destination "$innoDir" -Recurse -Force
     New-Item -Path "$innoDir\make_appx" -ItemType Directory -Force
     New-Item -Path "$innoDir\appx" -ItemType Directory -Force
     New-Item -Path "$innoDir\bin" -ItemType Directory -Force
@@ -132,14 +132,14 @@ function GenerateLicenses {
     . $PSScriptRoot/generate-licenses.ps1
 }
 
-function BuildFlintAndItsFriends {
-    Write-Output "Building Flint and its friends, for channel: $channel"
-    # Build Flint and its companion executables.
-    cargo build --release --package flint --package cli --package auto_update_helper --package agent_control_cli --target $target
-    Copy-Item -Path ".\$CargoOutDir\flint.exe" -Destination "$innoDir\Flint.exe" -Force
+function BuilddezAndItsFriends {
+    Write-Output "Building dez and its friends, for channel: $channel"
+    # Build dez and its companion executables.
+    cargo build --release --package dez --package cli --package auto_update_helper --package agent_control_cli --target $target
+    Copy-Item -Path ".\$CargoOutDir\dez.exe" -Destination "$innoDir\dez.exe" -Force
     Copy-Item -Path ".\$CargoOutDir\cli.exe" -Destination "$innoDir\cli.exe" -Force
     Copy-Item -Path ".\$CargoOutDir\auto_update_helper.exe" -Destination "$innoDir\auto_update_helper.exe" -Force
-    Copy-Item -Path ".\$CargoOutDir\flintctl.exe" -Destination "$innoDir\flintctl.exe" -Force
+    Copy-Item -Path ".\$CargoOutDir\dezctl.exe" -Destination "$innoDir\dezctl.exe" -Force
     # Build explorer_command_injector.dll
     switch ($channel) {
         "stable" {
@@ -152,7 +152,7 @@ function BuildFlintAndItsFriends {
             cargo build --release --package explorer_command_injector --target $target
         }
     }
-    Copy-Item -Path ".\$CargoOutDir\explorer_command_injector.dll" -Destination "$innoDir\flint_explorer_command_injector.dll" -Force
+    Copy-Item -Path ".\$CargoOutDir\explorer_command_injector.dll" -Destination "$innoDir\dez_explorer_command_injector.dll" -Force
 }
 
 function BuildRemoteServer {
@@ -167,24 +167,24 @@ function BuildRemoteServer {
         & "$innoDir\sign.ps1" $remoteServerSrc
     }
 
-    $remoteServerDst = "$env:ZED_WORKSPACE\target\flint-remote-server-windows-$Architecture.zip"
+    $remoteServerDst = "$env:ZED_WORKSPACE\target\dez-remote-server-windows-$Architecture.zip"
     Write-Output "Compressing remote_server to $remoteServerDst"
     Compress-Archive -Path $remoteServerSrc -DestinationPath $remoteServerDst -Force
 
     Write-Output "Remote server compressed successfully"
 }
 
-function ZipFlintAndItsFriendsDebug {
+function ZipdezAndItsFriendsDebug {
     $items = @(
-        ".\$CargoOutDir\flint.pdb",
+        ".\$CargoOutDir\dez.pdb",
         ".\$CargoOutDir\cli.pdb",
         ".\$CargoOutDir\auto_update_helper.pdb",
-        ".\$CargoOutDir\flintctl.pdb",
+        ".\$CargoOutDir\dezctl.pdb",
         ".\$CargoOutDir\explorer_command_injector.pdb",
         ".\$CargoOutDir\remote_server.pdb"
     )
 
-    Compress-Archive -Path $items -DestinationPath ".\$CargoOutDir\flint-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip" -Force
+    Compress-Archive -Path $items -DestinationPath ".\$CargoOutDir\dez-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip" -Force
 }
 
 
@@ -204,10 +204,10 @@ function MakeAppx {
     # Add makeAppx.exe to Path
     $sdk = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64"
     $env:Path += ';' + $sdk
-    makeAppx.exe pack /d "$innoDir\make_appx" /p "$innoDir\flint_explorer_command_injector.appx" /nv
+    makeAppx.exe pack /d "$innoDir\make_appx" /p "$innoDir\dez_explorer_command_injector.appx" /nv
 }
 
-function SignFlintAndItsFriends {
+function SigndezAndItsFriends {
     if (-not $env:CI -or -not $script:canCodeSign) {
         if ($env:CI) {
             Write-Output "Azure signing not configured, skipping code signing"
@@ -215,7 +215,7 @@ function SignFlintAndItsFriends {
         return
     }
 
-    $files = "$innoDir\Flint.exe,$innoDir\cli.exe,$innoDir\auto_update_helper.exe,$innoDir\flintctl.exe,$innoDir\flint_explorer_command_injector.dll,$innoDir\flint_explorer_command_injector.appx"
+    $files = "$innoDir\dez.exe,$innoDir\cli.exe,$innoDir\auto_update_helper.exe,$innoDir\dezctl.exe,$innoDir\dez_explorer_command_injector.dll,$innoDir\dez_explorer_command_injector.appx"
     & "$innoDir\sign.ps1" $files
 }
 
@@ -237,10 +237,10 @@ function DownloadConpty {
 }
 
 function CollectFiles {
-    Move-Item -Path "$innoDir\flint_explorer_command_injector.appx" -Destination "$innoDir\appx\flint_explorer_command_injector.appx" -Force
-    Move-Item -Path "$innoDir\flint_explorer_command_injector.dll" -Destination "$innoDir\appx\flint_explorer_command_injector.dll" -Force
-    Move-Item -Path "$innoDir\cli.exe" -Destination "$innoDir\bin\flint.exe" -Force
-    Move-Item -Path "$innoDir\flint.sh" -Destination "$innoDir\bin\flint" -Force
+    Move-Item -Path "$innoDir\dez_explorer_command_injector.appx" -Destination "$innoDir\appx\dez_explorer_command_injector.appx" -Force
+    Move-Item -Path "$innoDir\dez_explorer_command_injector.dll" -Destination "$innoDir\appx\dez_explorer_command_injector.dll" -Force
+    Move-Item -Path "$innoDir\cli.exe" -Destination "$innoDir\bin\dez.exe" -Force
+    Move-Item -Path "$innoDir\dez.sh" -Destination "$innoDir\bin\dez" -Force
     Move-Item -Path "$innoDir\auto_update_helper.exe" -Destination "$innoDir\tools\auto_update_helper.exe" -Force
     if($Architecture -eq "aarch64") {
         New-Item -Type Directory -Path "$innoDir\arm64" -Force
@@ -258,63 +258,63 @@ function CollectFiles {
 }
 
 function BuildInstaller {
-    $issFilePath = "$innoDir\flint.iss"
+    $issFilePath = "$innoDir\dez.iss"
     switch ($channel) {
         "stable" {
             $appId = "{{2DB0DA96-CA55-49BB-AF4F-64AF36A86712}"
             $appIconName = "app-icon"
-            $appName = "Flint"
-            $appDisplayName = "Flint"
-            $appSetupName = "Flint-$Architecture"
-            # The mutex name here should match the mutex name in crates\flint\src\flint\windows_only_instance.rs
-            $appMutex = "Flint-Stable-Instance-Mutex"
-            $appExeName = "Flint"
-            $regValueName = "Flint"
-            $appUserId = "FlintIndustries.Flint"
+            $appName = "dez"
+            $appDisplayName = "dez"
+            $appSetupName = "dez-$Architecture"
+            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
+            $appMutex = "dez-Stable-Instance-Mutex"
+            $appExeName = "dez"
+            $regValueName = "dez"
+            $appUserId = "dezIndustries.dez"
             $appShellNameShort = "Z&ed"
-            $appAppxFullName = "FlintIndustries.Flint_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "dezIndustries.dez_1.0.0.0_neutral__japxn1gcva8rg"
         }
         "preview" {
             $appId = "{{F70E4811-D0E2-4D88-AC99-D63752799F95}"
             $appIconName = "app-icon-preview"
-            $appName = "Flint Preview"
-            $appDisplayName = "Flint Preview"
-            $appSetupName = "Flint-$Architecture"
-            # The mutex name here should match the mutex name in crates\flint\src\flint\windows_only_instance.rs
-            $appMutex = "Flint-Preview-Instance-Mutex"
-            $appExeName = "Flint"
-            $regValueName = "FlintPreview"
-            $appUserId = "FlintIndustries.Flint.Preview"
+            $appName = "dez Preview"
+            $appDisplayName = "dez Preview"
+            $appSetupName = "dez-$Architecture"
+            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
+            $appMutex = "dez-Preview-Instance-Mutex"
+            $appExeName = "dez"
+            $regValueName = "dezPreview"
+            $appUserId = "dezIndustries.dez.Preview"
             $appShellNameShort = "Z&ed Preview"
-            $appAppxFullName = "FlintIndustries.Flint.Preview_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "dezIndustries.dez.Preview_1.0.0.0_neutral__japxn1gcva8rg"
         }
         "nightly" {
             $appId = "{{1BDB21D3-14E7-433C-843C-9C97382B2FE0}"
             $appIconName = "app-icon-nightly"
-            $appName = "Flint Nightly"
-            $appDisplayName = "Flint Nightly"
-            $appSetupName = "Flint-$Architecture"
-            # The mutex name here should match the mutex name in crates\flint\src\flint\windows_only_instance.rs
-            $appMutex = "Flint-Nightly-Instance-Mutex"
-            $appExeName = "Flint"
-            $regValueName = "FlintNightly"
-            $appUserId = "FlintIndustries.Flint.Nightly"
+            $appName = "dez Nightly"
+            $appDisplayName = "dez Nightly"
+            $appSetupName = "dez-$Architecture"
+            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
+            $appMutex = "dez-Nightly-Instance-Mutex"
+            $appExeName = "dez"
+            $regValueName = "dezNightly"
+            $appUserId = "dezIndustries.dez.Nightly"
             $appShellNameShort = "Z&ed Editor Nightly"
-            $appAppxFullName = "FlintIndustries.Flint.Nightly_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "dezIndustries.dez.Nightly_1.0.0.0_neutral__japxn1gcva8rg"
         }
         "dev" {
             $appId = "{{8357632E-24A4-4F32-BA97-E575B4D1FE5D}"
             $appIconName = "app-icon-dev"
-            $appName = "Flint Dev"
-            $appDisplayName = "Flint Dev"
-            $appSetupName = "Flint-$Architecture"
-            # The mutex name here should match the mutex name in crates\flint\src\flint\windows_only_instance.rs
-            $appMutex = "Flint-Dev-Instance-Mutex"
-            $appExeName = "Flint"
-            $regValueName = "FlintDev"
-            $appUserId = "FlintIndustries.Flint.Dev"
+            $appName = "dez Dev"
+            $appDisplayName = "dez Dev"
+            $appSetupName = "dez-$Architecture"
+            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
+            $appMutex = "dez-Dev-Instance-Mutex"
+            $appExeName = "dez"
+            $regValueName = "dezDev"
+            $appUserId = "dezIndustries.dez.Dev"
             $appShellNameShort = "Z&ed Dev"
-            $appAppxFullName = "FlintIndustries.Flint.Dev_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "dezIndustries.dez.Dev_1.0.0.0_neutral__japxn1gcva8rg"
         }
         default {
             Write-Error "can't bundle installer for $channel."
@@ -372,19 +372,19 @@ function BuildInstaller {
     }
 }
 
-ParseFlintWorkspace
+ParsedezWorkspace
 $innoDir = "$env:ZED_WORKSPACE\inno\$Architecture"
-$debugArchive = "$CargoOutDir\flint-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
-$debugStoreKey = "$env:ZED_RELEASE_CHANNEL/flint-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
+$debugArchive = "$CargoOutDir\dez-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
+$debugStoreKey = "$env:ZED_RELEASE_CHANNEL/dez-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
 
 CheckEnvironmentVariables
 PrepareForBundle
 GenerateLicenses
-BuildFlintAndItsFriends
+BuilddezAndItsFriends
 BuildRemoteServer
 MakeAppx
-SignFlintAndItsFriends
-ZipFlintAndItsFriendsDebug
+SigndezAndItsFriends
+ZipdezAndItsFriendsDebug
 DownloadAMDGpuServices
 DownloadConpty
 CollectFiles
@@ -396,8 +396,8 @@ if($env:CI) {
 if ($buildSuccess) {
     Write-Output "Build successful"
     if ($Install) {
-        Write-Output "Installing Flint..."
-        Start-Process -FilePath "$env:ZED_WORKSPACE/target/FlintEditorUserSetup-x64-$env:RELEASE_VERSION.exe"
+        Write-Output "Installing dez..."
+        Start-Process -FilePath "$env:ZED_WORKSPACE/target/dezEditorUserSetup-x64-$env:RELEASE_VERSION.exe"
     }
     exit 0
 }

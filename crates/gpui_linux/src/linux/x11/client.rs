@@ -2963,7 +2963,7 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(keycode), expected_text);
     }
 
-    // https://github.com/zed-industries/flint/issues/14282
+    // https://github.com/zed-industries/dez/issues/14282
     #[test]
     fn capslock_toggle_produces_uppercase() {
         let keymap = test_keymap("us");
@@ -2992,7 +2992,7 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(keycode), "A");
     }
 
-    // https://github.com/zed-industries/flint/issues/14282
+    // https://github.com/zed-industries/dez/issues/14282
     #[test]
     fn neo2_level3_via_capslock_produces_ellipsis() {
         // Neo 2 is a German keyboard layout that repurposes CapsLock as a
@@ -3013,7 +3013,7 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(keycode), "\u{2026}");
     }
 
-    // https://github.com/zed-industries/flint/issues/14282
+    // https://github.com/zed-industries/dez/issues/14282
     #[test]
     fn neo2_latched_mod5_preserved() {
         // Neo 2 also supports "latching" the level 3 modifier (via Caps+Tab),
@@ -3041,7 +3041,7 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(keycode), "\u{2026}");
     }
 
-    // https://github.com/zed-industries/flint/pull/31193
+    // https://github.com/zed-industries/dez/pull/31193
     #[test]
     fn german_layout_correct_key_resolution() {
         // Standard German keyboard layout.
@@ -3058,8 +3058,8 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(keycode), "7");
     }
 
-    // https://github.com/zed-industries/flint/issues/26468
-    // https://github.com/zed-industries/flint/issues/16667
+    // https://github.com/zed-industries/dez/issues/26468
+    // https://github.com/zed-industries/dez/issues/16667
     #[test]
     fn space_works_with_cyrillic_layout_active() {
         // US + Russian dual-layout keyboard.
@@ -3082,7 +3082,7 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(space), " ");
     }
 
-    // https://github.com/zed-industries/flint/issues/40678
+    // https://github.com/zed-industries/dez/issues/40678
     #[test]
     fn macro_shift_bracket_produces_brace() {
         let keymap = test_keymap("us");
@@ -3104,7 +3104,7 @@ mod tests {
         assert_eq!(key_event_state.key_get_utf8(bracket), "}");
     }
 
-    // https://github.com/zed-industries/flint/issues/49329
+    // https://github.com/zed-industries/dez/issues/49329
     #[test]
     fn sequential_key_events_do_not_corrupt_state() {
         let keymap = test_keymap("us");
@@ -3143,7 +3143,7 @@ mod tests {
         assert_eq!(server_state.serialize_layout(STATE_LAYOUT_EFFECTIVE), 0);
     }
 
-    // https://github.com/zed-industries/flint/issues/26468
+    // https://github.com/zed-industries/dez/issues/26468
     #[test]
     fn space_works_with_czech_layout_active() {
         // US + Czech dual-layout keyboard.

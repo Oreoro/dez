@@ -1088,8 +1088,8 @@ struct PlatformWindowCreateContext {
 // Toast notifications are keyed by an "Application User Model ID"; unpackaged
 // desktop apps have no identity of their own to derive one from, so we just
 // pick a fixed id (shared across release channels, unlike the bundle
-// identifiers used elsewhere) good enough to group Flint's own toasts.
-const TOAST_APP_ID: &str = "Flint.Editor";
+// identifiers used elsewhere) good enough to group dez's own toasts.
+const TOAST_APP_ID: &str = "dez.Editor";
 
 fn show_toast_notification(title: &str, body: Option<&str>) -> windows_core::Result<()> {
     unsafe {
@@ -1358,7 +1358,7 @@ fn handle_gpu_device_lost(
     Ok(())
 }
 
-const PLATFORM_WINDOW_CLASS_NAME: PCWSTR = w!("Flint::PlatformWindow");
+const PLATFORM_WINDOW_CLASS_NAME: PCWSTR = w!("dez::PlatformWindow");
 
 fn register_platform_window_class() {
     let wc = WNDCLASSW {

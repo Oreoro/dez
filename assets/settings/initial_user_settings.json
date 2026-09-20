@@ -1,10 +1,10 @@
-// Flint settings
+// dez settings
 //
-// For information on how to configure Flint, see the Flint
-// documentation: https://flint.dev/docs/configuring-flint
+// For information on how to configure dez, see the dez
+// documentation: https://dez.dev/docs/configuring-dez
 //
-// To see all of Flint's default settings without changing your
-// custom settings, run `flint: open default settings` from the
+// To see all of dez's default settings without changing your
+// custom settings, run `dez: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
   "ui_font_size": 16,

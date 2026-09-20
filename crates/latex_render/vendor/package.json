@@ -1,5 +1,5 @@
 {
-  "name": "flint-latex-render-bundle",
+  "name": "dez-latex-render-bundle",
   "version": "0.1.0",
   "private": true,
   "description": "Build tooling for the bundled MathJax tex->SVG renderer used by the latex_render crate.",

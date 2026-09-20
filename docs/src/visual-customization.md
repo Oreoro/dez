@@ -1,24 +1,24 @@
 ---
 title: Visual Customization
-description: "Various aspects of Flint's visual layout can be configured in the Settings Editor or settings file."
+description: "Various aspects of dez's visual layout can be configured in the Settings Editor or settings file."
 ---
 
 # Visual Customization
 
-Various aspects of Flint's visual layout can be configured in the Settings Editor ({#kb flint::OpenSettings}) or in your settings file ({#kb flint::OpenSettingsFile}).
+Various aspects of dez's visual layout can be configured in the Settings Editor ({#kb dez::OpenSettings}) or in your settings file ({#kb dez::OpenSettingsFile}).
 
 See [All Settings](./reference/all-settings.md) for additional information and other non-visual settings.
 
 ## Themes
 
-You can install many [themes](./themes.md) and [icon themes](./icon-themes.md) in form of extensions by running {#action flint::Extensions} from the command palette.
+You can install many [themes](./themes.md) and [icon themes](./icon-themes.md) in form of extensions by running {#action dez::Extensions} from the command palette.
 
 You can preview/choose amongst your installed themes and icon themes with {#action theme_selector::Toggle} ({#kb theme_selector::Toggle}) and {#action icon_theme_selector::Toggle} which will modify the following settings:
 
 ```json [settings]
 {
   "theme": "One Dark",
-  "icon_theme": "Flint (Default)"
+  "icon_theme": "dez (Default)"
 }
 ```
 
@@ -33,8 +33,8 @@ If you would like to use distinct themes for light mode/dark mode that can be se
     "mode": "system"
   },
   "icon_theme": {
-    "dark": "Flint (Default)",
-    "light": "Flint (Default)",
+    "dark": "dez (Default)",
+    "light": "dez (Default)",
     // Mode to use (dark, light) or "system" to follow the OS's light/dark mode (default)
     "mode": "system"
   }
@@ -76,7 +76,7 @@ If you would like to use distinct themes for light mode/dark mode that can be se
 
 ### Font ligatures
 
-By default Flint enables font ligatures which will visually combine certain adjacent characters.
+By default dez enables font ligatures which will visually combine certain adjacent characters.
 
 For example `=>` will be displayed as `→` and `!=` will be `≠`.
 This is purely cosmetic and the individual characters remain unchanged.
@@ -132,10 +132,10 @@ To disable this behavior use:
 
 ```json [settings]
 {
-  // Force usage of Flint build in path prompts (file and directory pickers)
+  // Force usage of dez build in path prompts (file and directory pickers)
   // instead of OS native pickers (false).
   "use_system_path_prompts": true,
-  // Force usage of Flint built in confirmation prompts ("Do you want to save?")
+  // Force usage of dez built in confirmation prompts ("Do you want to save?")
   // instead of OS native prompts (false). On linux this is ignored (always false).
   "use_system_prompts": true,
 
@@ -510,7 +510,7 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
 }
 ```
 
-See [Flint AI Documentation](./ai/overview.md) for additional non-visual AI settings.
+See [dez AI Documentation](./ai/overview.md) for additional non-visual AI settings.
 
 ## Terminal Panel
 

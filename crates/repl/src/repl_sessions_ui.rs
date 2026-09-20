@@ -228,7 +228,7 @@ impl Render for ReplSessionsPage {
             )
         });
 
-        // When there are no kernel specifications, show a link to the Flint docs explaining how to
+        // When there are no kernel specifications, show a link to the dez docs explaining how to
         // install kernels. It can be assumed they don't have a running kernel if we have no
         // specifications.
         if kernel_specifications.is_empty() {
@@ -245,7 +245,7 @@ impl Render for ReplSessionsPage {
                             .child(Label::new(localization::text(cx, "repl-install-kernels")))
                             .on_click(move |_, _, cx| {
                                 cx.open_url(
-                                    "https://github.com/shenghsi/flint/blob/main/docs/src/repl.md#language-specific-instructions",
+                                    "https://github.com/shenghsi/dez/blob/main/docs/src/repl.md#language-specific-instructions",
                                 )
                             }),
                     ),

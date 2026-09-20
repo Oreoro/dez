@@ -59,7 +59,7 @@ pub(super) fn start(session: AnyProtoClient, cx: &mut gpui::App) -> Result<()> {
     let directory = control_directory();
     std::fs::create_dir_all(&directory)?;
     let instance = uuid::Uuid::new_v4().simple().to_string();
-    let pipe_name = format!(r"\\.\pipe\flint-remote-control-{instance}");
+    let pipe_name = format!(r"\\.\pipe\dez-remote-control-{instance}");
     let record_path = directory.join(format!("{instance}.json"));
     let logon_sid = current_logon_sid_string()?;
     let first_pipe = create_pipe(&pipe_name, &logon_sid, true)?;
@@ -71,7 +71,7 @@ pub(super) fn start(session: AnyProtoClient, cx: &mut gpui::App) -> Result<()> {
     restrict_pipe_dacl(
         pipes
             .first()
-            .context("remote flintctl named-pipe pool is empty")?,
+            .context("remote dezctl named-pipe pool is empty")?,
         &logon_sid,
     )?;
     for pipe in pipes {
@@ -79,9 +79,9 @@ pub(super) fn start(session: AnyProtoClient, cx: &mut gpui::App) -> Result<()> {
         let registrations = registrations.clone();
         let shutdown = shutdown.clone();
         std::thread::Builder::new()
-            .name("remote-flintctl-pipe".to_string())
+            .name("remote-dezctl-pipe".to_string())
             .spawn(move || worker_loop(pipe, session, registrations, shutdown))
-            .context("failed to start remote flintctl named-pipe worker")?;
+            .context("failed to start remote dezctl named-pipe worker")?;
     }
     write_discovery_record(&record_path, Path::new(&pipe_name))?;
     cx.on_app_quit(move |_cx| {
@@ -103,7 +103,7 @@ fn worker_loop(
         if let Err(error) = serve_one(&pipe, &session, &registrations)
             && !shutdown.load(Ordering::Acquire)
         {
-            log::warn!("remote flintctl named-pipe request failed: {error:#}");
+            log::warn!("remote dezctl named-pipe request failed: {error:#}");
         }
         // SAFETY: pipe owns a valid named-pipe server handle.
         unsafe { DisconnectNamedPipe(pipe.0) }.ok();
@@ -122,12 +122,12 @@ fn serve_one(
     if let Err(error) = unsafe { ConnectNamedPipe(pipe.0, None) }
         && error.code() != WIN32_ERROR(ERROR_PIPE_CONNECTED.0).into()
     {
-        return Err(error).context("failed to accept remote flintctl named-pipe client");
+        return Err(error).context("failed to accept remote dezctl named-pipe client");
     }
     let mut peer_process_id = 0;
     // SAFETY: the pipe is connected and the output points to valid storage.
     unsafe { GetNamedPipeClientProcessId(pipe.0, &mut peer_process_id) }
-        .context("failed to read remote flintctl peer process id")?;
+        .context("failed to read remote dezctl peer process id")?;
     let request = read_message(pipe, MAX_REQUEST_BYTES + FRAME_LENGTH_BYTES)?;
     let request = agent_control_protocol::decode_frame(&request, MAX_REQUEST_BYTES)?;
     let response = if let Ok(EndpointRequest::RegisterTerminal {
@@ -319,7 +319,7 @@ pub(super) fn run_client(request: ControlRequest) -> Result<ControlResponse> {
         if discovery.version_mismatch {
             return Ok(ControlResponse::error(
                 ControlErrorCode::RemoteVersionMismatch,
-                "the installed flintctl protocol does not match the available remote session",
+                "the installed dezctl protocol does not match the available remote session",
             ));
         }
         if attempt == RETRY_BACKOFFS.len() {
@@ -333,7 +333,7 @@ pub(super) fn run_client(request: ControlRequest) -> Result<ControlResponse> {
     }
     Ok(ControlResponse::error(
         ControlErrorCode::CallerNotRecognized,
-        "this process is not in a controllable Flint remote terminal",
+        "this process is not in a controllable dez remote terminal",
     ))
 }
 
@@ -368,7 +368,7 @@ pub(super) fn register_current_terminal(
             }
         }
     }
-    bail!("no matching Flint remote control endpoint is available")
+    bail!("no matching dez remote control endpoint is available")
 }
 
 fn open_pipe(name: &str) -> Result<Option<Pipe>> {
@@ -390,17 +390,17 @@ fn open_pipe(name: &str) -> Result<Option<Pipe>> {
         Err(error) if error.code() == WIN32_ERROR(ERROR_PIPE_BUSY.0).into() => {
             // SAFETY: name remains valid for the duration of the wait.
             if let Err(error) = unsafe { WaitNamedPipeW(PCWSTR(name.as_ptr()), 1_000) }.ok() {
-                log::debug!("failed waiting for busy remote flintctl named pipe: {error}");
+                log::debug!("failed waiting for busy remote dezctl named pipe: {error}");
             }
             return Ok(None);
         }
-        Err(error) => return Err(error).context("failed to open remote flintctl named pipe"),
+        Err(error) => return Err(error).context("failed to open remote dezctl named pipe"),
     };
     let pipe = Pipe(handle);
     let mode = NAMED_PIPE_MODE(PIPE_READMODE_MESSAGE.0);
     // SAFETY: pipe is a connected named-pipe client handle.
     unsafe { SetNamedPipeHandleState(pipe.0, Some(&mode), None, None) }
-        .context("failed to set remote flintctl pipe mode")?;
+        .context("failed to set remote dezctl pipe mode")?;
     Ok(Some(pipe))
 }
 
@@ -448,7 +448,7 @@ fn read_message(pipe: &Pipe, maximum: usize) -> Result<Vec<u8>> {
     let mut transferred = 0;
     // SAFETY: buffer is valid and pipe owns a connected handle.
     unsafe { ReadFile(pipe.0, Some(&mut bytes), Some(&mut transferred), None) }
-        .context("failed to read remote flintctl named pipe")?;
+        .context("failed to read remote dezctl named pipe")?;
     bytes.truncate(transferred as usize);
     Ok(bytes)
 }
@@ -457,7 +457,7 @@ fn write_all(pipe: &Pipe, bytes: &[u8]) -> Result<()> {
     let mut transferred = 0;
     // SAFETY: bytes remain valid and pipe owns a connected handle.
     unsafe { WriteFile(pipe.0, Some(bytes), Some(&mut transferred), None) }
-        .context("failed to write remote flintctl named pipe")?;
+        .context("failed to write remote dezctl named pipe")?;
     if transferred as usize != bytes.len() {
         bail!(
             "named-pipe write stopped after {transferred} of {} bytes",
@@ -494,7 +494,7 @@ impl SecurityDescriptor {
                 None,
             )
         }
-        .context("failed to construct remote flintctl pipe security descriptor")?;
+        .context("failed to construct remote dezctl pipe security descriptor")?;
         Ok(Self(descriptor))
     }
 
@@ -517,9 +517,9 @@ fn restrict_pipe_dacl(pipe: &Pipe, logon_sid: &str) -> Result<()> {
             &mut dacl_defaulted,
         )
     }
-    .context("failed to read remote flintctl named-pipe DACL")?;
+    .context("failed to read remote dezctl named-pipe DACL")?;
     if !dacl_present.as_bool() || dacl.is_null() {
-        bail!("remote flintctl named-pipe security descriptor has no DACL");
+        bail!("remote dezctl named-pipe security descriptor has no DACL");
     }
     // SAFETY: pipe is live and dacl remains valid through SetSecurityInfo.
     unsafe {
@@ -534,7 +534,7 @@ fn restrict_pipe_dacl(pipe: &Pipe, logon_sid: &str) -> Result<()> {
         )
     }
     .ok()
-    .context("failed to restrict remote flintctl named-pipe DACL")
+    .context("failed to restrict remote dezctl named-pipe DACL")
 }
 
 impl Drop for SecurityDescriptor {
@@ -597,7 +597,7 @@ mod tests {
     #[test]
     fn named_pipe_accepts_current_logon_and_reports_peer_process() {
         let name = format!(
-            r"\\.\pipe\flint-remote-control-test-{}",
+            r"\\.\pipe\dez-remote-control-test-{}",
             uuid::Uuid::new_v4().simple()
         );
         let logon_sid = current_logon_sid_string().expect("current logon SID");

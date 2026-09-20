@@ -318,7 +318,7 @@ pub enum Event {
     LanguageServerRemoved(LanguageServerId),
     LanguageServerLog(LanguageServerId, LanguageServerLogType, String),
     // [`lsp::notification::DidOpenTextDocument`] was sent to this server using the buffer data.
-    // Flint's buffer-related data is updated accordingly.
+    // dez's buffer-related data is updated accordingly.
     LanguageServerBufferRegistered {
         server_id: LanguageServerId,
         buffer_id: BufferId,
@@ -2882,7 +2882,7 @@ impl Project {
                         notification_id: format!("local-tasks-{path:?}").into(),
                         link: Some(ToastLink {
                             label: "Open Tasks Documentation",
-                            url: "https://github.com/shenghsi/flint/blob/main/docs/src/tasks.md",
+                            url: "https://github.com/shenghsi/dez/blob/main/docs/src/tasks.md",
                         }),
                         message,
                     });

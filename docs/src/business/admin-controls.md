@@ -5,4 +5,4 @@ description: "Compatibility note for removed organization controls."
 
 # Admin Controls
 
-Flint has no hosted organization administration or policy service.
+dez has no hosted organization administration or policy service.

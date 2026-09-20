@@ -173,11 +173,12 @@ members = [
     "crates/workspace",
     "crates/worktree",
     "crates/worktree_benchmarks",
-    "crates/flint",
-    "crates/flint_actions",
+    "crates/dez",
+    "crates/dez_actions",
+    "crates/dez_terminal_host",
     "crates/windows_resources",
-    "crates/flint_credentials_provider",
-    "crates/flint_env_vars",
+    "crates/dez_credentials_provider",
+    "crates/dez_env_vars",
     "crates/zlog",
     "crates/zlog_settings",
     "crates/ztracing",
@@ -200,7 +201,7 @@ members = [
     "tooling/perf",
     "tooling/xtask",
 ]
-default-members = ["crates/flint"]
+default-members = ["crates/dez"]
 
 [workspace.package]
 publish = false
@@ -380,10 +381,10 @@ which_key = { path = "crates/which_key" }
 watch = { path = "crates/watch" }
 workspace = { path = "crates/workspace" }
 worktree = { path = "crates/worktree" }
-flint = { path = "crates/flint" }
-flint_actions = { path = "crates/flint_actions" }
-flint_credentials_provider = { path = "crates/flint_credentials_provider" }
-flint_env_vars = { path = "crates/flint_env_vars" }
+dez = { path = "crates/dez" }
+dez_actions = { path = "crates/dez_actions" }
+dez_credentials_provider = { path = "crates/dez_credentials_provider" }
+dez_env_vars = { path = "crates/dez_env_vars" }
 zlog = { path = "crates/zlog" }
 zlog_settings = { path = "crates/zlog_settings" }
 ztracing = { path = "crates/ztracing" }
@@ -580,7 +581,7 @@ quote = "1.0.9"
 rand = "0.9"
 rayon = "1.8"
 regex = "1.5"
-# WARNING: If you change this, you must also publish a new version of flint-reqwest to crates.io
+# WARNING: If you change this, you must also publish a new version of dez-reqwest to crates.io
 reqwest = { git = "https://github.com/zed-industries/reqwest.git", rev = "c15662463bda39148ba154100dd44d3fba5873a4", default-features = false, features = [
     "charset",
     "http2",
@@ -853,7 +854,7 @@ snippets_ui = { codegen-units = 1 }
 theme_selector = { codegen-units = 1 }
 time_format = { codegen-units = 1 }
 ui_input = { codegen-units = 1 }
-flint_actions = { codegen-units = 1 }
+dez_actions = { codegen-units = 1 }
 
 [profile.release]
 debug = "limited"
@@ -861,7 +862,7 @@ lto = "thin"
 codegen-units = 1
 
 [profile.release.package]
-flint = { codegen-units = 16 }
+dez = { codegen-units = 16 }
 
 [profile.release-fast]
 inherits = "release"
@@ -882,7 +883,7 @@ redundant_clone = "deny"
 disallowed_methods = "deny"
 
 # We currently do not restrict any style rules
-# as it slows down shipping code to Flint.
+# as it slows down shipping code to Dez.
 #
 # Running ./script/clippy can take several minutes, and so it's
 # common to skip that step and let CI do it. Any unexpected failures
@@ -890,7 +891,7 @@ disallowed_methods = "deny"
 # to an old branch, manual fixing, and re-pushing.
 #
 # In the future we could improve this by either making sure
-# Flint can surface clippy errors in diagnostics (in addition to the
+# Dez can surface clippy errors in diagnostics (in addition to the
 # rust-analyzer errors), or by having CI fix style nits automatically.
 style = { level = "allow", priority = -1 }
 

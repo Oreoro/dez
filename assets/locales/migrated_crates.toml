@@ -17,7 +17,7 @@ crates = [
   "extensions_ui",
   "feedback",
   "file_finder",
-  "flint",
+  "dez",
   "go_to_line",
   "git_ui",
   "image_viewer",

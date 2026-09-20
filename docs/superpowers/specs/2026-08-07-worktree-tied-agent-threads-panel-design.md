@@ -24,7 +24,7 @@ over, on a fresh branch off `main`, with a much smaller design:
 - The panel highlights the row whose terminal is the currently active item, derived from
   the workspace's own active item rather than from separate click-selection state.
 - Also confirmed in scope: **agent-initiated worktree creation/tying** — a thread's own
-  CLI process (Codex, Claude Code, etc., running in its terminal) can ask Flint to (a)
+  CLI process (Codex, Claude Code, etc., running in its terminal) can ask dez to (a)
   re-tie itself to a different/new worktree, or (b) create a brand-new worktree and
   start a new sibling thread tied to it. Scoped to **local-only** for this pass —
   Windows/remote-SSH transport is an explicit non-goal, to avoid re-growing the
@@ -65,7 +65,7 @@ during planning (not the diverged working tree).
   - **Correction to note**: `feature_flags::CreateThreadToolFeatureFlag`
     (`flags.rs:66-79`) is *not* usable prior art for this — despite the similar name,
     it gates a different, never-implemented Zed-native-assistant tool ("the agent
-    panel sidebar") that has no relation to Flint's terminal-hosted `agent_threads`
+    panel sidebar") that has no relation to dez's terminal-hosted `agent_threads`
     CLIs; there is no `assistant_tools`/native-agent crate in this codebase at all.
     Don't reuse it — and don't add a replacement flag either; use a real setting
     instead, for the reasons worked through in Stage 2.
@@ -284,9 +284,9 @@ returns `Result`.
    `in_memory_only` (see the keying discussion above); a genuine write failure is
    reported as such rather than as success.
 
-> **Retie does not move the process.** Reparenting is Flint-side only: the running CLI's
+> **Retie does not move the process.** Reparenting is dez-side only: the running CLI's
 > cwd is unchanged, so its relative commands, file writes, and tools all still operate in
-> the *original* worktree. `retie-thread` changes Flint's ownership, panel grouping,
+> the *original* worktree. `retie-thread` changes dez's ownership, panel grouping,
 > history filtering, and restore routing — nothing about the process. The command's own
 > help text and its JSON response must say this plainly, and an agent that wants to work
 > in the new worktree must `cd` there itself. Leaving this implicit invites an agent to
@@ -374,14 +374,14 @@ worktree of its repo, the thread resolves to that repo's main worktree instead.*
   asserts — the earlier prose, which implied such a tie would record some repo's root and
   surface there, contradicted that test and was wrong.
 - *Lazy and display-only, not an eager rewrite at deletion time.* The stored tie is left
-  untouched; only its resolution changes. This covers deletion performed outside Flint
+  untouched; only its resolution changes. This covers deletion performed outside dez
   (`git worktree remove` in any terminal, or a plain `rm -rf`) identically to deletion
-  through Flint's own picker, needs no `git_ui` → `agent_threads` deletion hook, and is
+  through dez's own picker, needs no `git_ui` → `agent_threads` deletion hook, and is
   self-healing: recreating the worktree at the same path silently restores the original
   association. An eager rewrite would achieve none of those and is explicitly rejected.
-- *Note on in-Flint deletion.* `can_delete_worktree` (`worktree_picker.rs:465-467`)
+- *Note on in-dez deletion.* `can_delete_worktree` (`worktree_picker.rs:465-467`)
   already refuses to delete a worktree that any workspace in the project group has open,
-  so Flint's own delete path only ever affects ties whose workspace is closed. External
+  so dez's own delete path only ever affects ties whose workspace is closed. External
   deletion is the unconstrained case, which is the main reason the check must be lazy —
   and the reason condition 2 above exists.
 
@@ -390,7 +390,7 @@ worktree deleted *externally while its workspace is still open* reintroduces exa
 tie/ownership divergence that reparenting was introduced to eliminate. Walk it through
 with main worktree `M`, linked worktree `X`, workspace_X open, thread `T` running in
 workspace_X's pane and tied to `X`, and someone running `git worktree remove X` in a
-terminal (Flint's own picker would have refused, but an external command does not care):
+terminal (dez's own picker would have refused, but an external command does not care):
 
 1. Git state refreshes and `X` drops out of `linked_worktrees()`.
 2. Condition-1-only resolution calls the tie dangling and falls back to `M`.
@@ -409,7 +409,7 @@ universally. Concretely:
   panel next to its terminal.
 - Close workspace_X afterwards → nothing holds the tie live, the fallback applies, and
   `T` surfaces under `M`.
-- Delete `X` with no workspace open (the only case Flint's picker permits) → falls back
+- Delete `X` with no workspace open (the only case dez's picker permits) → falls back
   to `M` immediately.
 
 *Rejected alternative:* reparenting `T` into `M`'s workspace when the fallback fires.
@@ -509,8 +509,8 @@ redundant.
 
 **Command surface** (two verbs, matching exactly the two requested capabilities):
 ```sh
-"$FLINT_AGENT_CONTROL" retie-thread --worktree <existing-abs-path> [--json]
-"$FLINT_AGENT_CONTROL" create-thread --worktree current|new [--name <name>] --agent <kind-id> --prompt "<task>" [--json]
+"$DEZ_AGENT_CONTROL" retie-thread --worktree <existing-abs-path> [--json]
+"$DEZ_AGENT_CONTROL" create-thread --worktree current|new [--name <name>] --agent <kind-id> --prompt "<task>" [--json]
 ```
 - `retie-thread`: ensure a **background** workspace exists for the target path, then run
   the retie orchestration.
@@ -560,11 +560,11 @@ redundant.
 - `crates/agent_control_protocol`: plain serde request/response types only
   (`RetieThreadRequest`, `CreateThreadRequest`, `ControlResponse`) — no GPUI/terminal
   deps, keeps the client binary small.
-- `crates/agent_control_cli` (binary `flint-agent-control`, `#[cfg(unix)]` only for
-  this pass): parses argv, reads `FLINT_AGENT_CONTROL_SOCKET` +
-  `FLINT_AGENT_CONTROL_TOKEN` env vars, sends one JSON request over the Unix socket,
+- `crates/agent_control_cli` (binary `dez-agent-control`, `#[cfg(unix)]` only for
+  this pass): parses argv, reads `DEZ_AGENT_CONTROL_SOCKET` +
+  `DEZ_AGENT_CONTROL_TOKEN` env vars, sends one JSON request over the Unix socket,
   prints the JSON response, exits with a matching status code. (Deliberately drop a
-  `FLINT_AGENT_THREAD_ID` env var from the contract — the token alone should resolve
+  `DEZ_AGENT_THREAD_ID` env var from the contract — the token alone should resolve
   caller identity server-side; nothing else the client sends should be trusted.)
 
   - **It must still compile on Windows.** As a workspace member it participates in
@@ -575,31 +575,31 @@ redundant.
     Windows build. Add a Windows-target check to verification rather than discovering
     this in CI.
 
-**Executable delivery and location** (the `$FLINT_AGENT_CONTROL` the command examples
+**Executable delivery and location** (the `$DEZ_AGENT_CONTROL` the command examples
 above invoke). Three separate pieces, none of which come for free:
 
-- *Locating it at runtime.* Add `get_flint_agent_control_path() -> Result<PathBuf>` to
-  `crates/util/src/util.rs`, directly mirroring the existing `get_flint_cli_path()`
+- *Locating it at runtime.* Add `get_dez_agent_control_path() -> Result<PathBuf>` to
+  `crates/util/src/util.rs`, directly mirroring the existing `get_dez_cli_path()`
   (`util.rs:311-349`): resolve from `std::env::current_exe()`'s parent against a
   platform-specific candidate list, `canonicalize()`, and verify it isn't the running
-  executable itself. Candidates: `./flint-agent-control` on macOS (both the bundle's
-  `Contents/MacOS/` and the dev `target/<triple>/debug/` layout put it beside `flint`),
-  and `["../libexec/flint-agent-control", "./flint-agent-control"]` on Linux/FreeBSD
+  executable itself. Candidates: `./dez-agent-control` on macOS (both the bundle's
+  `Contents/MacOS/` and the dev `target/<triple>/debug/` layout put it beside `dez`),
+  and `["../libexec/dez-agent-control", "./dez-agent-control"]` on Linux/FreeBSD
   (installed vs. dev target dir). Its absolute resolved path is what gets injected as
-  `FLINT_AGENT_CONTROL`.
-- *Building and bundling it.* `script/bundle-mac` currently builds only `flint` and
+  `DEZ_AGENT_CONTROL`.
+- *Building and bundling it.* `script/bundle-mac` currently builds only `dez` and
   `cli` (line 90) and copies only those two into the bundle (lines 324-325) — add the
   package to the `cargo build` invocation and a matching `cp` into
-  `Contents/MacOS/flint-agent-control`. `script/bundle-linux` likewise builds only
-  `flint`/`cli` (line 85) and installs into `libexec/flint-editor` + `bin/flint`
-  (lines 123-124) — add a `cp` into `libexec/flint-agent-control` to match the
+  `Contents/MacOS/dez-agent-control`. `script/bundle-linux` likewise builds only
+  `dez`/`cli` (line 85) and installs into `libexec/dez-editor` + `bin/dez`
+  (lines 123-124) — add a `cp` into `libexec/dez-agent-control` to match the
   candidate list above.
 - *Signing it.* macOS only: add the new binary to `sign_app_binaries`, which currently
   hard-codes a `codesign` call for `Contents/MacOS/cli` (`bundle-mac:211`). An unsigned
   extra Mach-O inside a signed bundle invalidates the bundle signature.
 - Known trap when verifying locally: `script/bundle-tmp-app` exits non-zero on an
   unrelated `remote_server` release-artifact step even when the app built fine, and
-  that failure happens *before* its `cp -R` to `/tmp/Flint-Local.app` — so the target
+  that failure happens *before* its `cp -R` to `/tmp/dez-Local.app` — so the target
   app is silently left stale. Check the real exit code and copy the fresh bundle by
   hand if needed (already documented in `CLAUDE.md`).
 
@@ -610,12 +610,12 @@ above invoke). Three separate pieces, none of which come for free:
 
 - **Server ownership and cleanup must be specified, not left to the implementation.** A
   release-channel-only pathname otherwise means a crash leaves a stale socket that blocks
-  the next launch, or tempts the code into unlinking a socket owned by another live Flint
+  the next launch, or tempts the code into unlinking a socket owned by another live dez
   process. Required behavior:
   - *Started exactly once*, from `agent_threads::init`, with the accept-loop `Task` stored
     on the `AgentThreadStore` global so its lifetime is the app's, not a caller's.
   - *Stale vs. live*: before unlinking an existing socket, attempt to connect to it. A
-    successful connect means another live Flint owns it — do not unlink; log and leave
+    successful connect means another live dez owns it — do not unlink; log and leave
     the control surface disabled for this instance. Connection refused means it is stale
     and safe to remove.
   - *Permissions*: create with mode `0600` so only the current user can connect; the
@@ -623,7 +623,7 @@ above invoke). Three separate pieces, none of which come for free:
   - *Shutdown*: remove the socket on graceful shutdown, and treat leftover files as the
     stale case above rather than assuming they are ours.
 - **Token lifecycle must straddle the spawn**, because the child process is live with
-  the token in its environment well before Flint knows the thread's `EntityId`: in
+  the token in its environment well before dez knows the thread's `EntityId`: in
   `spawn_thread_task_inner`, the `SpawnInTerminal` task (carrying the env vars) is built
   and handed to `add_center_terminal_view`/`create_terminal_task`, and `register()` only
   runs *after* `terminal_view_task.await?` resolves. A CLI that calls control immediately
@@ -645,7 +645,7 @@ above invoke). Three separate pieces, none of which come for free:
   project only (no `remote_client()`), Unix host, and a **new user setting**
   `agent_threads.agent_control` (bool, default `true`) on `AgentThreadSettings`.
 - **Use a setting, not a feature flag.** Verified against `feature_flags`'s resolution
-  order (`store.rs:165-190`) plus a repo-wide grep, Flint's flag system cannot express
+  order (`store.rs:165-190`) plus a repo-wide grep, dez's flag system cannot express
   this gate at all in a release build:
   - `enabled_for_all() -> true` returns at `:167-169`, *before* user overrides — so it
     is permanently on and cannot be turned off by anything.
@@ -653,8 +653,8 @@ above invoke). Three separate pieces, none of which come for free:
     `cfg!(debug_assertions) || self.staff` — and nothing outside the `feature_flags`
     crate ever calls `set_staff`, so in a release build overrides are ignored entirely.
   - Server-delivered flags (`:184-187`) are never populated either: nothing outside the
-    crate calls `update_flags`. Flint has no cloud backend to deliver them.
-  - Net: a Flint release build can only ever have a flag permanently on
+    crate calls `update_flags`. dez has no cloud backend to deliver them.
+  - Net: a dez release build can only ever have a flag permanently on
     (`enabled_for_all`) or permanently off (`enabled_for_staff`). A real
     `AgentThreadSettings` field is the only gate that actually works for users, and it
     doubles as the local kill-switch. Register the Settings Editor control for it too,
@@ -753,7 +753,7 @@ logic.
   has an open background workspace (the regression test for the `activate`-on-found
   trap above).
 - `agent_threads.agent_control = false` suppresses env-var injection entirely (no
-  `FLINT_AGENT_CONTROL*` vars in the spawned task's env), and the Settings Editor
+  `DEZ_AGENT_CONTROL*` vars in the spawned task's env), and the Settings Editor
   control for it renders rather than falling back to "NO RENDERER".
 
 Standard verification for every change in this plan, matching session conventions:

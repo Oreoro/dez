@@ -8,7 +8,7 @@ Design owner: Codex.
 
 ## Problem
 
-Selecting `New — Flint-managed Codex` immediately begins acquiring the pinned
+Selecting `New — dez-managed Codex` immediately begins acquiring the pinned
 official Codex artifact but presents no confirmation or visible progress. Each
 selection constructs a separate artifact cache whose acquisition lock is local
 to that instance. Repeated clicks therefore start concurrent downloads of the
@@ -20,13 +20,13 @@ the user intended one launch.
 
 ## User Experience
 
-When the pinned executable is already present and verified in Flint's local
-artifact cache, Flint skips download confirmation and proceeds with the
+When the pinned executable is already present and verified in dez's local
+artifact cache, dez skips download confirmation and proceeds with the
 single-flight remote installation.
 
-When a local download is required, Flint asks:
+When a local download is required, dez asks:
 
-> Flint needs to download the official Codex CLI v0.144.6 locally and upload it
+> dez needs to download the official Codex CLI v0.144.6 locally and upload it
 > to this remote host.
 
 The actions are `Download and launch` and `Cancel`. Cancellation performs no
@@ -39,7 +39,7 @@ After confirmation, a persistent notification displays:
 - the percentage and transferred bytes, for example
   `37% · 18.4 MB / 49.7 MB`; and
 - an indeterminate spinner plus transferred bytes when the total length is not
-  available. Flint does not display a fabricated percentage.
+  available. dez does not display a fabricated percentage.
 
 Progress is monotonic and updates are throttled so reading each network chunk
 does not cause an unnecessary render. After the download completes, the same
@@ -111,7 +111,7 @@ remote digest and version, and commits atomically. The coordinator exposes
 coarse upload and installation phases but does not weaken rollback behavior.
 
 The managed executable is launched by its absolute versioned path. This change
-does not make `codex` ambient on the remote `PATH`, alter the Through-Flint
+does not make `codex` ambient on the remote `PATH`, alter the Through-dez
 network route, or make ordinary `New Codex thread` automatically provision an
 agent.
 
@@ -145,6 +145,6 @@ Add deterministic tests at the cache, coordinator, and GPUI action seams:
   absolute-path assertions.
 
 Run focused `agent_threads` tests, formatting, and workspace clippy. Package a
-fresh `/tmp/Flint-Local.app` and manually verify one confirmed download, repeated
+fresh `/tmp/dez-Local.app` and manually verify one confirmed download, repeated
 click behavior, progress updates, remote installation, and one resulting Codex
 thread.

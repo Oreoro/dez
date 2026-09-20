@@ -40,7 +40,7 @@ use ui_input::ErasedEditor;
 use workspace::ProjectGroupKey;
 
 use dev_container::{DevContainerContext, find_devcontainer_configs};
-use flint_actions::{OpenDevContainer, OpenRecent, OpenRemote};
+use dez_actions::{OpenDevContainer, OpenRecent, OpenRemote};
 use ui::{
     ButtonLike, ContextMenu, Divider, HighlightedLabel, KeyBinding, ListItem, ListItemSpacing,
     ListSubHeader, PopoverMenu, PopoverMenuHandle, TintColor, Tooltip, prelude::*,
@@ -280,7 +280,7 @@ fn get_branch_for_worktree(
 pub fn init(cx: &mut App) {
     #[cfg(target_os = "windows")]
     cx.on_action(
-        |open_wsl: &flint_actions::wsl_actions::OpenFolderInWsl, cx| {
+        |open_wsl: &dez_actions::wsl_actions::OpenFolderInWsl, cx| {
             let create_new_window = open_wsl.create_new_window;
             with_active_or_new_workspace(cx, move |workspace, window, cx| {
                 use gpui::PathPromptOptions;
@@ -390,7 +390,7 @@ pub fn init(cx: &mut App) {
     );
 
     #[cfg(target_os = "windows")]
-    cx.on_action(|open_wsl: &flint_actions::wsl_actions::OpenWsl, cx| {
+    cx.on_action(|open_wsl: &dez_actions::wsl_actions::OpenWsl, cx| {
         let create_new_window = open_wsl.create_new_window;
         with_active_or_new_workspace(cx, move |workspace, window, cx| {
             let handle = cx.entity().downgrade();

@@ -619,8 +619,8 @@ pub struct GitExcludeOverride {
 }
 
 impl GitExcludeOverride {
-    const START_BLOCK_MARKER: &str = "\n\n#  ====== Auto-added by Flint: =======\n";
-    const END_BLOCK_MARKER: &str = "\n#  ====== End of auto-added by Flint =======\n";
+    const START_BLOCK_MARKER: &str = "\n\n#  ====== Auto-added by dez: =======\n";
+    const END_BLOCK_MARKER: &str = "\n#  ====== End of auto-added by dez =======\n";
 
     pub async fn new(git_exclude_path: PathBuf) -> Result<Self> {
         let original_excludes =
@@ -684,7 +684,7 @@ impl GitExcludeOverride {
             }
         }
 
-        // Older versions of Flint didn't have end-of-block markers,
+        // Older versions of dez didn't have end-of-block markers,
         // so it's impossible to determine auto-generated lines.
         // Conservatively remove the standard list of excludes
         let standard_excludes = format!(
@@ -3802,12 +3802,12 @@ fn parse_upstream_track(upstream_track: &str) -> Result<UpstreamTracking> {
 
 fn checkpoint_author_envs() -> HashMap<String, String> {
     HashMap::from_iter([
-        ("GIT_AUTHOR_NAME".to_string(), "Flint".to_string()),
-        ("GIT_AUTHOR_EMAIL".to_string(), "hi@flint.dev".to_string()),
-        ("GIT_COMMITTER_NAME".to_string(), "Flint".to_string()),
+        ("GIT_AUTHOR_NAME".to_string(), "dez".to_string()),
+        ("GIT_AUTHOR_EMAIL".to_string(), "hi@dez.dev".to_string()),
+        ("GIT_COMMITTER_NAME".to_string(), "dez".to_string()),
         (
             "GIT_COMMITTER_EMAIL".to_string(),
-            "hi@flint.dev".to_string(),
+            "hi@dez.dev".to_string(),
         ),
     ])
 }
@@ -3844,9 +3844,9 @@ mod tests {
             .env("GIT_CONFIG_GLOBAL", "")
             .env("GIT_CONFIG_SYSTEM", "")
             .env("GIT_AUTHOR_NAME", "test")
-            .env("GIT_AUTHOR_EMAIL", "test@flint.dev")
+            .env("GIT_AUTHOR_EMAIL", "test@dez.dev")
             .env("GIT_COMMITTER_NAME", "test")
-            .env("GIT_COMMITTER_EMAIL", "test@flint.dev")
+            .env("GIT_COMMITTER_EMAIL", "test@dez.dev")
             .output()
             .expect("failed to run git command");
         assert!(
@@ -4837,14 +4837,14 @@ mod tests {
     fn test_branches_parsing() {
         // suppress "help: octal escapes are not supported, `\0` is always null"
         #[allow(clippy::octal_escapes)]
-        let input = "*\0060964da10574cd9bf06463a53bf6e0769c5c45e\0\0refs/heads/flint-patches\0refs/remotes/origin/flint-patches\0\01733187470\0John Doe\0generated protobuf\n";
+        let input = "*\0060964da10574cd9bf06463a53bf6e0769c5c45e\0\0refs/heads/dez-patches\0refs/remotes/origin/dez-patches\0\01733187470\0John Doe\0generated protobuf\n";
         assert_eq!(
             parse_branch_input(input).unwrap(),
             vec![Branch {
                 is_head: true,
-                ref_name: "refs/heads/flint-patches".into(),
+                ref_name: "refs/heads/dez-patches".into(),
                 upstream: Some(Upstream {
-                    ref_name: "refs/remotes/origin/flint-patches".into(),
+                    ref_name: "refs/remotes/origin/dez-patches".into(),
                     tracking: UpstreamTracking::Tracked(UpstreamTrackingStatus {
                         ahead: 0,
                         behind: 0
@@ -4864,7 +4864,7 @@ mod tests {
     #[test]
     fn test_branches_parsing_containing_refs_with_missing_fields() {
         #[allow(clippy::octal_escapes)]
-        let input = " \090012116c03db04344ab10d50348553aa94f1ea0\0refs/heads/broken\n \0eb0cae33272689bd11030822939dd2701c52f81e\0895951d681e5561478c0acdd6905e8aacdfd2249\0refs/heads/dev\0\0\01762948725\0Flint\0Add feature\n*\0895951d681e5561478c0acdd6905e8aacdfd2249\0\0refs/heads/main\0\0\01762948695\0Flint\0Initial commit\n";
+        let input = " \090012116c03db04344ab10d50348553aa94f1ea0\0refs/heads/broken\n \0eb0cae33272689bd11030822939dd2701c52f81e\0895951d681e5561478c0acdd6905e8aacdfd2249\0refs/heads/dev\0\0\01762948725\0dez\0Add feature\n*\0895951d681e5561478c0acdd6905e8aacdfd2249\0\0refs/heads/main\0\0\01762948695\0dez\0Initial commit\n";
 
         let branches = parse_branch_input(input).unwrap();
         assert_eq!(branches.len(), 2);
@@ -4879,7 +4879,7 @@ mod tests {
                         sha: "eb0cae33272689bd11030822939dd2701c52f81e".into(),
                         subject: "Add feature".into(),
                         commit_timestamp: 1762948725,
-                        author_name: SharedString::new_static("Flint"),
+                        author_name: SharedString::new_static("dez"),
                         has_parent: true,
                     })
                 },
@@ -4891,7 +4891,7 @@ mod tests {
                         sha: "895951d681e5561478c0acdd6905e8aacdfd2249".into(),
                         subject: "Initial commit".into(),
                         commit_timestamp: 1762948695,
-                        author_name: SharedString::new_static("Flint"),
+                        author_name: SharedString::new_static("dez"),
                         has_parent: false,
                     })
                 }
@@ -5345,20 +5345,20 @@ mod tests {
     fn test_original_repo_path_from_common_dir() {
         // Normal repo: common_dir is <work_dir>/.git
         assert_eq!(
-            original_repo_path_from_common_dir(Path::new("/code/flint5/.git")),
-            Some(PathBuf::from("/code/flint5"))
+            original_repo_path_from_common_dir(Path::new("/code/dez5/.git")),
+            Some(PathBuf::from("/code/dez5"))
         );
 
         // Worktree: common_dir is the main repo's .git
         // (same result — that's the point, it always traces back to the original)
         assert_eq!(
-            original_repo_path_from_common_dir(Path::new("/code/flint5/.git")),
-            Some(PathBuf::from("/code/flint5"))
+            original_repo_path_from_common_dir(Path::new("/code/dez5/.git")),
+            Some(PathBuf::from("/code/dez5"))
         );
 
         // Bare repo: no .git suffix, returns None (no working-tree root)
         assert_eq!(
-            original_repo_path_from_common_dir(Path::new("/code/flint5.git")),
+            original_repo_path_from_common_dir(Path::new("/code/dez5.git")),
             None
         );
 

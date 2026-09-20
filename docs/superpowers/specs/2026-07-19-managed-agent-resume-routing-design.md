@@ -5,25 +5,25 @@
 
 ## Problem
 
-Flint can install a pinned official Codex CLI on an SSH remote and launch it by
+dez can install a pinned official Codex CLI on an SSH remote and launch it by
 absolute path. Historical resume currently discards that executable choice and
 rebuilds the command from the global Agent Threads setting. On an offline host
 without ambient `codex` on `PATH`, a session originally launched with
-Flint-managed Codex therefore fails to resume with:
+dez-managed Codex therefore fails to resume with:
 
 ```text
 env: codex: No such file or directory
 ```
 
 The network route is a separate concern. A remote project opened with
-**Through Flint** must launch official Codex with Flint-provided egress even if
-the remote host has direct internet. Flint must never probe connectivity,
+**Through dez** must launch official Codex with dez-provided egress even if
+the remote host has direct internet. dez must never probe connectivity,
 silently choose direct networking, or fall back to direct networking after a
 tunnel failure. A project opened with **Direct** must launch without
-a Flint egress lease or Flint proxy environment.
+a dez egress lease or dez proxy environment.
 
-Selecting **New — Flint-managed Codex** again can also look like a second
-download or upload while Flint hashes and validates an existing 299 MB remote
+Selecting **New — dez-managed Codex** again can also look like a second
+download or upload while dez hashes and validates an existing 299 MB remote
 installation. Reuse must be distinguishable from provisioning in the UI.
 
 ## Scope
@@ -51,31 +51,31 @@ It does not:
 Every manual resume and automatic restoration reads the current route for the
 active SSH connection identity.
 
-- **Through Flint** requires Flint-managed Codex and a live Flint egress lease.
-  Flint launches nothing until both are available. Provisioning failure,
+- **Through dez** requires dez-managed Codex and a live dez egress lease.
+  dez launches nothing until both are available. Provisioning failure,
   tunnel failure, route change, or proxy setup failure produces an error and no
   process. There is no ambient-executable or direct-network fallback.
-- **Direct** uses the configured or ambient Codex command. Flint does
+- **Direct** uses the configured or ambient Codex command. dez does
   not resolve or provision a managed executable, acquire an egress lease, or
-  inject Flint proxy variables.
+  inject dez proxy variables.
 
 The route used when the historical session was created is irrelevant. The
 current host route controls the next process.
 
-The Through-Flint guarantee is a Flint launch guarantee for the supported
-official Codex CLI. Flint supplies the required proxy configuration and does
+The Through-dez guarantee is a dez launch guarantee for the supported
+official Codex CLI. dez supplies the required proxy configuration and does
 not implement a fallback. It is not a security boundary against a modified or
 malicious executable deliberately opening direct sockets through a remote host
 that has its own internet access.
 
 ### Managed installation is shared
 
-Flint installs one pinned executable per remote identity, agent, version, and
+dez installs one pinned executable per remote identity, agent, version, and
 platform. All matching threads launch separate processes from the same verified
 path, for example:
 
 ```text
-~/.local/share/flint/agents/codex/0.144.6/linux-x86_64-glibc/codex
+~/.local/share/dez/agents/codex/0.144.6/linux-x86_64-glibc/codex
 ```
 
 Threads do not receive private executable copies. Each thread retains its own
@@ -85,7 +85,7 @@ connection-scoped proxy and SSH reverse forward already managed by
 normally between those processes.
 
 New pinned releases install side by side. Already running processes are not
-replaced. A later resume resolves the release pinned by the running Flint
+replaced. A later resume resolves the release pinned by the running dez
 version.
 
 ## Resume Policy
@@ -100,15 +100,15 @@ For **Direct**, the history provider continues to build its resume
 arguments from the configured `AgentLaunchCommand`. The resulting command is
 launched without egress.
 
-For **Through Flint**, Flint resolves the pinned release for the detected remote
+For **Through dez**, dez resolves the pinned release for the detected remote
 platform, ensures the shared managed installation, replaces the command with
 the verified absolute path, and then appends the history provider's resume
 arguments and the agent's self-update policy. It acquires egress, applies the
-proxy environment, verifies that the route is still **Through Flint**, and only
+proxy environment, verifies that the route is still **Through dez**, and only
 then creates the terminal process.
 
 Codex history does not record executable provenance and Codex cannot currently
-be assigned a session ID by Flint at fresh launch. The design therefore does
+be assigned a session ID by dez at fresh launch. The design therefore does
 not attempt unreliable per-session provenance inference. The current route is
 the explicit and sufficient resume policy.
 
@@ -168,13 +168,13 @@ or remote cannot download the same pinned artifact concurrently.
 ## Route Races and Lifecycle
 
 Managed validation and provisioning are asynchronous. Before process creation,
-Flint compares the current connection route with the route that selected the
+dez compares the current connection route with the route that selected the
 managed resume path.
 
-If the route changed, Flint drops any acquired egress lease, creates no
+If the route changed, dez drops any acquired egress lease, creates no
 terminal, and reports that the route changed while the session was being
-prepared. The user can resume again under the new route. Flint does not carry a
-managed command prepared for **Through Flint** into a **Direct**
+prepared. The user can resume again under the new route. dez does not carry a
+managed command prepared for **Through dez** into a **Direct**
 launch, or vice versa.
 
 The `AgentEgressLease` is stored in the live Agent Thread entry and remains
@@ -212,13 +212,13 @@ Regression tests must cover the real resume and restoration seams.
 
 ### Policy and launch tests
 
-- Manual **Through Flint** resume uses the pinned managed absolute path, keeps
+- Manual **Through dez** resume uses the pinned managed absolute path, keeps
   the provider's session ID and resume options, applies self-update policy,
-  acquires egress, injects the Flint proxy environment, and retains the lease.
-- Automatic **Through Flint** restoration uses the same managed and routed
+  acquires egress, injects the dez proxy environment, and retains the lease.
+- Automatic **Through dez** restoration uses the same managed and routed
   launch path.
 - **Direct** resume uses the configured or ambient command and has
-  no managed resolution, egress lease, or Flint proxy variables.
+  no managed resolution, egress lease, or dez proxy variables.
 - A route change during managed preparation creates no terminal.
 - Managed-resolution or egress failure creates no terminal and does not retry
   through another route or executable.
@@ -237,50 +237,50 @@ Regression tests must cover the real resume and restoration seams.
 
 ### Regression suites
 
-Run the Agent Threads and remote-server library tests, formatting, Flint's
+Run the Agent Threads and remote-server library tests, formatting, dez's
 clippy wrapper for affected crates, and the Linux musl remote-server build used
 by the debug application bundle.
 
 ## Live Validation
 
-Build and install a fresh `/tmp/Flint-Local.app`, preserve the prior bundle, and
+Build and install a fresh `/tmp/dez-Local.app`, preserve the prior bundle, and
 open the existing offline SSH project.
 
-1. Set the host to **Through Flint**.
+1. Set the host to **Through dez**.
 2. Resume a known Codex historical session.
 3. Confirm the status says the installed Codex is being checked and reused,
    with no local cache or remote executable timestamp change.
 4. Confirm the remote process uses the managed absolute path and the expected
    resume arguments.
-5. Confirm the process receives Flint's proxy environment and is owned by a
+5. Confirm the process receives dez's proxy environment and is owned by a
    live egress lease.
 6. Confirm an egress-start failure creates no Codex process.
 7. Set the host to **Direct** and confirm resume uses the configured
-   command without Flint proxy variables or a reverse-forward lease.
+   command without dez proxy variables or a reverse-forward lease.
 
 ## Alternatives Rejected
 
 ### Persist original per-session executable provenance
 
 This cannot reliably cover existing Codex history or fresh managed Codex
-sessions because Flint does not know the CLI-generated session ID at process
+sessions because dez does not know the CLI-generated session ID at process
 creation. Correlating later history by time or project would be ambiguous.
 
 ### Add a separate managed resume action
 
-A **Resume — Flint-managed Codex** action leaves ordinary resume able to launch
-bare `codex` under **Through Flint**, contradicting the approved invariant.
+A **Resume — dez-managed Codex** action leaves ordinary resume able to launch
+bare `codex` under **Through dez**, contradicting the approved invariant.
 
 ### Prefer managed only when ambient command lookup fails
 
 This makes behavior depend on remote availability and allows a host's ambient
-installation to replace the pinned executable under **Through Flint**. It also
+installation to replace the pinned executable under **Through dez**. It also
 requires a speculative probe before every resume. The route is the explicit
 policy and must determine the source without fallback.
 
 ### Enforce networking with a firewall or namespace
 
 OS-enforced isolation would require host-specific privileges or facilities and
-is outside the accepted Flint launch guarantee. Flint configures the supported
+is outside the accepted dez launch guarantee. dez configures the supported
 official CLI to use its required proxy and fails closed within the launch
 workflow.

@@ -1,5 +1,5 @@
 key-context-title = 键盘上下文
-key-context-description = 此视图可用于确定 Flint 中创建自定义键位绑定时的当前上下文栈。触发键盘快捷键时，它还会显示所有可能触发的上下文及实际匹配的上下文。
+key-context-description = 此视图可用于确定 dez 中创建自定义键位绑定时的当前上下文栈。触发键盘快捷键时，它还会显示所有可能触发的上下文及实际匹配的上下文。
 key-context-open-documentation = 打开文档
 key-context-view-default-keymap = 查看默认键位映射
 key-context-edit-keymap = 编辑键位映射文件

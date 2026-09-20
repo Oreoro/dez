@@ -3,7 +3,7 @@
 ## Goal
 
 Add English (`en-US`) and Simplified Chinese (`zh-CN`) user interfaces to
-Flint. English remains the default language. Users can select either language
+dez. English remains the default language. Users can select either language
 in the Settings Editor.
 
 The design must permit more languages, such as Traditional Chinese, in the
@@ -14,7 +14,7 @@ coverage. This prevents a mixed English and Chinese interface.
 
 ## Localization boundary
 
-Translate all text that Flint owns:
+Translate all text that dez owns:
 
 - application and native operating system menus;
 - Command Palette action names and search terms;
@@ -42,7 +42,7 @@ Do not translate this data:
 - JSON keys, action identifiers, command names, and protocol values; and
 - logs that developers use for diagnosis.
 
-For an external error, translate the explanation that Flint owns. Preserve the
+For an external error, translate the explanation that dez owns. Preserve the
 original error detail.
 
 Translate the controls around release notes in `crates/auto_update_ui`. Show
@@ -166,7 +166,7 @@ application.
 
 ### Native menus
 
-Replace the English labels in `crates/flint/src/flint/app_menus.rs` with
+Replace the English labels in `crates/dez/src/dez/app_menus.rs` with
 message identifiers.
 
 Rebuild these items after a language change:
@@ -175,7 +175,7 @@ Rebuild these items after a language change:
 - submenus;
 - dock menus;
 - Windows jump-list entries; and
-- operating system prompt buttons that Flint supplies.
+- operating system prompt buttons that dez supplies.
 
 ### Command Palette and actions
 
@@ -243,7 +243,7 @@ Use this order:
 7. Auto-update, installation, About, feedback, trust, and failure interfaces.
 8. CLI, helper processes, platform-specific prompts, and accessibility text.
 
-Keep proper names such as Flint, Codex, Claude, GitHub, Rust, and JSON unchanged
+Keep proper names such as dez, Codex, Claude, GitHub, Rust, and JSON unchanged
 unless Chinese has a standard display form.
 
 ## Chinese layout and text support
@@ -256,7 +256,7 @@ Linux.
 Bundle the required Noto Sans CJK SC regular font data for Linux so a fresh
 installation works without a Chinese font package. Load it through GPUI before
 the first Chinese interface renders. Include the upstream SIL Open Font
-License 1.1 notice in Flint's license assets. Measure and record the app size
+License 1.1 notice in dez's license assets. Measure and record the app size
 change in the pull request. If the size is too large, use an upstream
 Simplified Chinese subset that retains all catalog glyphs. Do not create an
 unreviewed font subset.
@@ -289,7 +289,7 @@ Use the selected UI language for display text such as:
 - percentages.
 
 Keep the operating system time-cycle preference, such as 12-hour or 24-hour
-time, unless the user has an explicit Flint setting. Update the current locale
+time, unless the user has an explicit dez setting. Update the current locale
 handling in `crates/time_format/src/time_format.rs` so language and time-cycle
 rules do not conflict.
 
@@ -367,7 +367,7 @@ cargo fmt --all -- --check
 ./script/clippy
 ```
 
-Run affected crate tests. Build `/tmp/Flint-Local.app` for final macOS
+Run affected crate tests. Build `/tmp/dez-Local.app` for final macOS
 verification.
 
 ## Release sequence
@@ -390,7 +390,7 @@ The work is complete when:
 
 - users can select English or 简体中文 in the Settings Editor;
 - the selection persists and applies without a restart;
-- all visible and accessibility text that Flint owns uses the selected
+- all visible and accessibility text that dez owns uses the selected
   language;
 - Chinese mode contains no unintended English text;
 - external content and stable identifiers remain unchanged;

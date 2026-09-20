@@ -33,7 +33,7 @@
     "Rust": {
       "tasks": {
         "variables": {
-          "RUST_DEFAULT_PACKAGE_RUN": "flint",
+          "RUST_DEFAULT_PACKAGE_RUN": "dez",
         },
       },
     },

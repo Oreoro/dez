@@ -24,7 +24,7 @@ use gpui::{App, BorrowAppContext};
 use javascript::JsDebugAdapter;
 use python::PythonDebugAdapter;
 use serde_json::json;
-use task::{DebugScenario, FlintDebugConfig};
+use task::{DebugScenario, dezDebugConfig};
 
 pub fn init(cx: &mut App) {
     cx.update_default_global(|registry: &mut DapRegistry, _cx| {

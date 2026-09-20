@@ -1,5 +1,5 @@
 #![cfg_attr(target_family = "wasm", no_main)]
-//! Renders a div with deep children hierarchy. This example is useful to exemplify that Flint can
+//! Renders a div with deep children hierarchy. This example is useful to exemplify that dez can
 //! handle deep hierarchies (even though it cannot just yet!).
 use std::sync::LazyLock;
 

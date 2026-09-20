@@ -3,7 +3,7 @@
 ## Problem
 
 When a window contains a foreground local project and a background remote
-project, Flint restores only the foreground workspace after restarting. The
+project, dez restores only the foreground workspace after restarting. The
 background project remains visible under **This Window** because its
 `ProjectGroupKey` is persisted, including its remote connection options and
 paths.
@@ -60,7 +60,7 @@ be extended to also check any currently loaded workspace belonging to the
 group via the existing but not-yet-called
 `MultiWorkspace::workspaces_for_project_group`, since the last-active
 reference can be stale (dropped) while another workspace for the same group
-is still open. If either lookup finds a workspace, Flint will activate it.
+is still open. If either lookup finds a workspace, dez will activate it.
 This broader check is new behavior, not a restatement of today's lookup.
 
 If no workspace is loaded:

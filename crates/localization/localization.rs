@@ -282,7 +282,7 @@ pub const fn simplified_chinese_ui_ready() -> bool {
 
 pub fn effective_development_language(language: UiLanguage) -> UiLanguage {
     #[cfg(debug_assertions)]
-    if std::env::var_os("FLINT_PSEUDO_LANGUAGE").is_some() {
+    if std::env::var_os("DEZ_PSEUDO_LANGUAGE").is_some() {
         return UiLanguage::Pseudo;
     }
     language

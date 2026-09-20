@@ -8,7 +8,7 @@ instead of a full-pane tab the user must explicitly open, (2) awareness of
 sessions that exist on disk but aren't open in this app session, and (3)
 scoping to the current project instead of one global cross-project list. Both
 `claude` and `codex` CLIs already persist resumable session history
-(`claude --resume <id>`, `codex resume <id>`) — Flint should surface that
+(`claude --resume <id>`, `codex resume <id>`) — dez should surface that
 instead of only tracking its own in-memory state.
 
 ## Goals / Non-Goals
@@ -35,11 +35,11 @@ instead of only tracking its own in-memory state.
 - User-configurable custom agent definitions via settings.json
 - Perfect dedup for multiple concurrent same-kind threads in the same project
   (documented heuristic limitation, see Decisions)
-- Detecting that a historical session is currently live in a terminal Flint
+- Detecting that a historical session is currently live in a terminal dez
   didn't spawn (e.g. the user ran `claude --resume <id>` directly in iTerm,
   or over a bare SSH shell). The history providers can't distinguish "this
   session ended" from "this session is open elsewhere" — only sessions
-  launched through Flint are tracked as live. Resuming a session that's
+  launched through dez are tracked as live. Resuming a session that's
   already open elsewhere is the user's responsibility, no different from
   manually running a resume command twice in two terminals
 - Incremental/paginated "Show more" (v1 reveals everything once expanded)
@@ -89,7 +89,7 @@ project's connection:
 
 Alternative considered: scope remote-project support out of v1 entirely
 (local-only, as originally drafted). Rejected once traced through
-`terminals.rs` — remote projects are an existing, supported Flint workflow,
+`terminals.rs` — remote projects are an existing, supported dez workflow,
 and silently showing wrong-host (or no) history for them would be an actual
 correctness gap rather than a reasonable cut corner.
 

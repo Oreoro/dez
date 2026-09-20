@@ -36,7 +36,7 @@ const NOUNS: &[&str] = &[
     "coyote", "crane", "crater", "creek", "crest", "curlew", "daisy", "dale", "dawn", "den",
     "dove", "drake", "drift", "drum", "dune", "dusk", "eagle", "eel", "egret", "elk", "emu",
     "falcon", "fawn", "fennel", "fern", "ferret", "ferry", "fig", "finch", "fjord", "flicker",
-    "flint", "flower", "fox", "frost", "gale", "garnet", "gate", "gazelle", "geyser", "glade",
+    "dez", "flower", "fox", "frost", "gale", "garnet", "gate", "gazelle", "geyser", "glade",
     "glen", "gorge", "granite", "grove", "gull", "harbor", "hare", "haven", "hawk", "hazel",
     "heath", "hedge", "heron", "hill", "hollow", "horizon", "ibis", "inlet", "isle", "ivy",
     "jackal", "jasper", "juniper", "kinglet", "kitten", "knoll", "lagoon", "lake", "lantern",

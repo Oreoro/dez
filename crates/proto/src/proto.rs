@@ -14,7 +14,7 @@ use std::{
 };
 pub use typed_envelope::*;
 
-include!(concat!(env!("OUT_DIR"), "/flint.messages.rs"));
+include!(concat!(env!("OUT_DIR"), "/dez.messages.rs"));
 
 pub const REMOTE_SERVER_PEER_ID: PeerId = PeerId { owner_id: 0, id: 0 };
 pub const REMOTE_SERVER_PROJECT_ID: u64 = 0;
@@ -753,14 +753,14 @@ mod remote_management_tests {
     #[test]
     fn remote_mutation_requests_keep_their_safety_flags() {
         let create = CreatePrivateRemoteDirectory {
-            path: "/tmp/flint/agents".to_string(),
+            path: "/tmp/dez/agents".to_string(),
         };
         let rename = RenameRemotePath {
-            source: "/tmp/flint/staged".to_string(),
-            destination: "/tmp/flint/agent".to_string(),
+            source: "/tmp/dez/staged".to_string(),
+            destination: "/tmp/dez/agent".to_string(),
         };
         let remove = RemoveRemotePath {
-            path: "/tmp/flint/old".to_string(),
+            path: "/tmp/dez/old".to_string(),
             recursive: true,
             ignore_if_missing: false,
         };

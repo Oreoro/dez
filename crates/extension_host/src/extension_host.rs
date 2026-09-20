@@ -71,7 +71,7 @@ pub use extension_settings::ExtensionSettings;
 pub const RELOAD_DEBOUNCE_DURATION: Duration = Duration::from_millis(200);
 const FS_WATCH_LATENCY: Duration = Duration::from_millis(100);
 
-/// The current extension [`SchemaVersion`] supported by Flint.
+/// The current extension [`SchemaVersion`] supported by dez.
 const CURRENT_SCHEMA_VERSION: SchemaVersion = SchemaVersion(1);
 const UPSTREAM_ZED_EXTENSION_SERVER_URL: &str = "https://zed.dev";
 
@@ -99,7 +99,7 @@ static SUPPRESSED_EXTENSIONS: LazyLock<FxHashSet<&str>> = LazyLock::new(|| {
     ])
 });
 
-/// Returns the [`SchemaVersion`] range that is compatible with this version of Flint.
+/// Returns the [`SchemaVersion`] range that is compatible with this version of dez.
 pub fn schema_version_range() -> RangeInclusive<SchemaVersion> {
     SchemaVersion::ZERO..=CURRENT_SCHEMA_VERSION
 }
@@ -113,7 +113,7 @@ fn upstream_zed_extension_http_client(http_client: Arc<dyn HttpClient>) -> Arc<H
     ))
 }
 
-/// Returns whether the given extension version is compatible with this version of Flint.
+/// Returns whether the given extension version is compatible with this version of dez.
 pub fn is_version_compatible(
     release_channel: ReleaseChannel,
     extension_version: &ExtensionMetadata,
@@ -259,7 +259,7 @@ pub struct ExtensionIndexLanguageEntry {
 }
 
 actions!(
-    flint,
+    dez,
     [
         /// Reloads all installed extensions.
         ReloadExtensions
@@ -654,7 +654,7 @@ impl ExtensionStore {
         self.fetch_extensions_from_api(&format!("/extensions/{extension_id}"), &[], cx)
     }
 
-    /// Installs any extensions that should be included with Flint by default.
+    /// Installs any extensions that should be included with dez by default.
     ///
     /// This can be used to make certain functionality provided by extensions
     /// available out-of-the-box.
@@ -731,7 +731,7 @@ impl ExtensionStore {
         query: &[(&str, &str)],
         cx: &mut Context<ExtensionStore>,
     ) -> Task<Result<Vec<ExtensionMetadata>>> {
-        let url = self.http_client.build_flint_api_url(path, query);
+        let url = self.http_client.build_dez_api_url(path, query);
         let http_client = self.http_client.clone();
         cx.spawn(async move |_, _| {
             let mut response = http_client
@@ -895,7 +895,7 @@ impl ExtensionStore {
 
         let Some(url) = self
             .http_client
-            .build_flint_api_url(
+            .build_dez_api_url(
                 &format!("/extensions/{extension_id}/download"),
                 &[
                     ("min_schema_version", &schema_versions.start().to_string()),
@@ -940,7 +940,7 @@ impl ExtensionStore {
         log::info!("installing extension {extension_id} {version}");
         let Some(url) = self
             .http_client
-            .build_flint_api_url(
+            .build_dez_api_url(
                 &format!("/extensions/{extension_id}/{version}/download"),
                 &[],
             )
@@ -2018,7 +2018,7 @@ mod tests {
         ));
 
         let extension_client = upstream_zed_extension_http_client(configured_client);
-        let url = extension_client.build_flint_api_url("/extensions", &[("filter", "rust")])?;
+        let url = extension_client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
 
         assert_eq!(
             extension_client.base_url(),

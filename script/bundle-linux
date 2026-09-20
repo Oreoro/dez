@@ -44,10 +44,10 @@ done
 
 export ZED_BUNDLE=true
 
-channel=$(<crates/flint/RELEASE_CHANNEL)
+channel=$(<crates/dez/RELEASE_CHANNEL)
 target_dir="${CARGO_TARGET_DIR:-target}"
 
-version="$(script/get-crate-version flint)"
+version="$(script/get-crate-version dez)"
 # Set RELEASE_VERSION so it's compiled into GPUI and it knows about the version.
 export RELEASE_VERSION="${version}"
 
@@ -82,7 +82,7 @@ if [[ "$(uname -m)" == "aarch64" ]]; then
 else
     export RUSTFLAGS="${RUSTFLAGS:-} -C link-args=-Wl,--disable-new-dtags,-rpath,\$ORIGIN/../lib"
 fi
-cargo build --release --target "${target_triple}" --package flint --package cli --package agent_control_cli
+cargo build --release --target "${target_triple}" --package dez --package cli --package agent_control_cli
 # Build remote_server in separate invocation to prevent feature unification from other crates
 # from influencing dynamic libraries required by it.
 if [[ "$remote_server_triple" == "$musl_triple" ]]; then
@@ -95,9 +95,9 @@ cargo build --release --target "${remote_server_triple}" --package remote_server
 # Strip debug symbols and save them for upload to DigitalOcean.
 # We use llvm-objcopy because GNU objcopy on older distros (e.g. Ubuntu 20.04)
 # doesn't understand CREL sections produced by newer LLVM.
-llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/flint"
+llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/dez"
 llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/cli"
-llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/flintctl"
+llvm-objcopy --strip-debug "${target_dir}/${target_triple}/release/dezctl"
 llvm-objcopy --strip-debug "${target_dir}/${remote_server_triple}/release/remote_server"
 
 # Ensure that remote_server does not depend on libssl nor libcrypto, as we got rid of these deps.
@@ -117,66 +117,66 @@ fi
 # Move everything that should end up in the final package
 # into a temp directory.
 temp_dir=$(mktemp -d)
-flint_dir="${temp_dir}/flint$suffix.app"
+dez_dir="${temp_dir}/dez$suffix.app"
 
 # Binary
-mkdir -p "${flint_dir}/bin" "${flint_dir}/libexec"
-cp "${target_dir}/${target_triple}/release/flint" "${flint_dir}/libexec/flint-editor"
-cp "${target_dir}/${target_triple}/release/cli" "${flint_dir}/bin/flint"
-cp "${target_dir}/${target_triple}/release/flintctl" "${flint_dir}/libexec/flintctl"
+mkdir -p "${dez_dir}/bin" "${dez_dir}/libexec"
+cp "${target_dir}/${target_triple}/release/dez" "${dez_dir}/libexec/dez-editor"
+cp "${target_dir}/${target_triple}/release/cli" "${dez_dir}/bin/dez"
+cp "${target_dir}/${target_triple}/release/dezctl" "${dez_dir}/libexec/dezctl"
 
 # Libs
 # Bundle libstdc++ so older supported systems can run binaries built with our
 # toolchain even when their system libstdc++.so.6 lacks required GLIBCXX symbols.
 find_libs() {
-    ldd ${target_dir}/${target_triple}/release/flint |\
+    ldd ${target_dir}/${target_triple}/release/dez |\
         cut -d' ' -f3 |\
         grep -v '\<\(libc.so\|libgcc_s.so\|libm.so\|libpthread.so\|libdl.so\|libasound.so\)'
 }
 
-mkdir -p "${flint_dir}/lib"
-rm -rf "${flint_dir}/lib/*"
-cp $(find_libs) "${flint_dir}/lib"
+mkdir -p "${dez_dir}/lib"
+rm -rf "${dez_dir}/lib/*"
+cp $(find_libs) "${dez_dir}/lib"
 
 # Icons
-mkdir -p "${flint_dir}/share/icons/hicolor/512x512/apps"
-cp "crates/flint/resources/app-icon$suffix.png" "${flint_dir}/share/icons/hicolor/512x512/apps/flint.png"
-mkdir -p "${flint_dir}/share/icons/hicolor/1024x1024/apps"
-cp "crates/flint/resources/app-icon$suffix@2x.png" "${flint_dir}/share/icons/hicolor/1024x1024/apps/flint.png"
+mkdir -p "${dez_dir}/share/icons/hicolor/512x512/apps"
+cp "crates/dez/resources/app-icon$suffix.png" "${dez_dir}/share/icons/hicolor/512x512/apps/dez.png"
+mkdir -p "${dez_dir}/share/icons/hicolor/1024x1024/apps"
+cp "crates/dez/resources/app-icon$suffix@2x.png" "${dez_dir}/share/icons/hicolor/1024x1024/apps/dez.png"
 
 # .desktop
 export DO_STARTUP_NOTIFY="true"
-export APP_CLI="flint"
-export APP_ICON="flint"
+export APP_CLI="dez"
+export APP_ICON="dez"
 export APP_ARGS="%U"
 if [[ "$channel" == "preview" ]]; then
-  export APP_NAME="Flint Preview"
-  APP_ID="dev.flint.Flint-Preview"
+  export APP_NAME="dez Preview"
+  APP_ID="dev.dez.dez-Preview"
 elif [[ "$channel" == "nightly" ]]; then
-  export APP_NAME="Flint Nightly"
-  APP_ID="dev.flint.Flint-Nightly"
+  export APP_NAME="dez Nightly"
+  APP_ID="dev.dez.dez-Nightly"
 elif [[ "$channel" == "dev" ]]; then
-  export APP_NAME="Flint Devel"
-  APP_ID="dev.flint.Flint-Dev"
+  export APP_NAME="dez Devel"
+  APP_ID="dev.dez.dez-Dev"
 else
-  export APP_NAME="Flint"
-  APP_ID="dev.flint.Flint"
+  export APP_NAME="dez"
+  APP_ID="dev.dez.dez"
 fi
 
-mkdir -p "${flint_dir}/share/applications"
-envsubst < "crates/flint/resources/flint.desktop.in" > "${flint_dir}/share/applications/$APP_ID.desktop"
-chmod +x "${flint_dir}/share/applications/$APP_ID.desktop"
+mkdir -p "${dez_dir}/share/applications"
+envsubst < "crates/dez/resources/dez.desktop.in" > "${dez_dir}/share/applications/$APP_ID.desktop"
+chmod +x "${dez_dir}/share/applications/$APP_ID.desktop"
 
 # Copy generated licenses so they'll end up in archive too
-cp "assets/licenses.md" "${flint_dir}/licenses.md"
+cp "assets/licenses.md" "${dez_dir}/licenses.md"
 
 # Create archive out of everything that's in the temp directory
 arch=$(uname -m)
-archive="flint-linux-${arch}.tar.gz"
+archive="dez-linux-${arch}.tar.gz"
 
 rm -rf "${archive}"
-remove_match="flint(-[a-zA-Z0-9]+)?-linux-$(uname -m)\.tar\.gz"
+remove_match="dez(-[a-zA-Z0-9]+)?-linux-$(uname -m)\.tar\.gz"
 ls "${target_dir}/release" | grep -E ${remove_match} | xargs -d "\n" -I {} rm -f "${target_dir}/release/{}" || true
-tar -czvf "${target_dir}/release/$archive" -C ${temp_dir} "flint$suffix.app"
+tar -czvf "${target_dir}/release/$archive" -C ${temp_dir} "dez$suffix.app"
 
-gzip -f --stdout --best "${target_dir}/${remote_server_triple}/release/remote_server" > "${target_dir}/flint-remote-server-linux-${arch}.gz"
+gzip -f --stdout --best "${target_dir}/${remote_server_triple}/release/remote_server" > "${target_dir}/dez-remote-server-linux-${arch}.gz"

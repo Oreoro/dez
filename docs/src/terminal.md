@@ -1,11 +1,11 @@
 ---
-title: Built-in Terminal - Flint
-description: Flint's integrated terminal with multiple instances, custom shells, and deep editor integration.
+title: Built-in Terminal - dez
+description: dez's integrated terminal with multiple instances, custom shells, and deep editor integration.
 ---
 
 # Terminal
 
-Flint includes a built-in terminal emulator that supports multiple terminal instances, custom shells, and deep integration with the editor.
+dez includes a built-in terminal emulator that supports multiple terminal instances, custom shells, and deep integration with the editor.
 
 ## Opening Terminals
 
@@ -32,7 +32,7 @@ Split terminals horizontally with `Cmd+D` (macOS) or `Ctrl+Shift+5` (Linux/Windo
 
 ## Configuring the Shell
 
-By default, Flint uses your system's default shell (from `/etc/passwd` on Unix systems). To use a different shell:
+By default, dez uses your system's default shell (from `/etc/passwd` on Unix systems). To use a different shell:
 
 ```json [settings]
 {
@@ -87,7 +87,7 @@ Add environment variables to all terminal sessions:
 {
   "terminal": {
     "env": {
-      "EDITOR": "flint --wait",
+      "EDITOR": "dez --wait",
       "MY_VAR": "value"
     }
   }
@@ -98,7 +98,7 @@ Add environment variables to all terminal sessions:
 
 ### Python Virtual Environment Detection
 
-Flint can automatically activate Python virtual environments when opening a terminal. By default, it searches for `.env`, `env`, `.venv`, and `venv` directories:
+dez can automatically activate Python virtual environments when opening a terminal. By default, it searches for `.env`, `env`, `.venv`, and `venv` directories:
 
 ```json [settings]
 {
@@ -167,7 +167,7 @@ Blinking options: `"off"`, `"terminal_controlled"` (default), `"on"`
 
 ### Minimum Contrast
 
-Flint adjusts terminal colors to maintain readability. The default value of `45` ensures text remains visible. Set to `0` to disable contrast adjustment and use exact theme colors:
+dez adjusts terminal colors to maintain readability. The default value of `45` ensures text remains visible. Set to `0` to disable contrast adjustment and use exact theme colors:
 
 ```json [settings]
 {
@@ -274,7 +274,7 @@ When enabled, mouse scroll events are converted to arrow key presses in applicat
 
 ## Path Hyperlinks
 
-Flint detects file paths in terminal output and makes them clickable. `Cmd+Click` (macOS) or `Ctrl+Click` (Linux/Windows) opens the file in Flint, jumping to the line number if one is detected.
+dez detects file paths in terminal output and makes them clickable. `Cmd+Click` (macOS) or `Ctrl+Click` (Linux/Windows) opens the file in dez, jumping to the line number if one is detected.
 
 Common formats recognized:
 
@@ -351,7 +351,7 @@ The title can be set by your shell using the escape sequence `\e]2;Title\007`.
 
 ## Integration with Tasks
 
-The terminal integrates with Flint's [task system](./tasks.md). When you run a task, it executes in the terminal. Rerun the last task from a terminal with:
+The terminal integrates with dez's [task system](./tasks.md). When you run a task, it executes in the terminal. Rerun the last task from a terminal with:
 
 - macOS: `Cmd+Alt+R`
 - Linux/Windows: `Ctrl+Shift+R` or `Alt+T`
@@ -385,6 +385,6 @@ For the complete list of terminal settings, see the [Terminal section in All Set
 
 ## What's Next
 
-- [Tasks](./tasks.md) — Run commands and scripts from Flint
+- [Tasks](./tasks.md) — Run commands and scripts from dez
 - [REPL](./repl.md) — Interactive code execution
-- [CLI Reference](./reference/cli.md) — Command-line interface for opening files in Flint
+- [CLI Reference](./reference/cli.md) — Command-line interface for opening files in dez

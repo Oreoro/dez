@@ -329,7 +329,7 @@ mod tests {
         time::Duration,
     };
 
-    use flint_actions::editor::{MoveDown, MoveUp};
+    use dez_actions::editor::{MoveDown, MoveUp};
     use futures::StreamExt as _;
     use gpui::TestAppContext;
     use settings::{DocumentSymbols, SettingsStore};

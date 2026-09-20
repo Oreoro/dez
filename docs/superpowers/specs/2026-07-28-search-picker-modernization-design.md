@@ -18,7 +18,7 @@ Wave 6 change:
 - add stable, accessible multi-selection to File Finder and Text Finder.
 
 The implementation must extend the preview infrastructure landed in Tasks 6.1
-and 6.2, preserve Flint's existing search and navigation behavior by default,
+and 6.2, preserve dez's existing search and navigation behavior by default,
 and avoid importing upstream collaboration, account, or cloud behavior.
 
 ## Upstream provenance
@@ -35,8 +35,8 @@ The implementation adapts behavior from these merged Zed changes:
 | Picker multi-select | #59931 | `94b6d377badf9c2202850b551c4700a54b83895f` |
 | Multi-select controls | #60919 | `90b3aa0b3bd3b453775b11a386907c7ac9acd997` |
 
-This is a reimplementation against Flint's current architecture. In
-particular, Flint will not retain and reveal a dismissed live modal as upstream
+This is a reimplementation against dez's current architecture. In
+particular, dez will not retain and reveal a dismissed live modal as upstream
 #59912 does.
 
 ## Architecture
@@ -188,7 +188,7 @@ remaining selected identities may still reopen in multi-select mode when that
 was the recorded state.
 
 Multi-confirm opens valid selections in deterministic result order. Individual
-open failures are surfaced through Flint's existing error-notification path;
+open failures are surfaced through dez's existing error-notification path;
 they are not silently discarded.
 
 ## Error handling

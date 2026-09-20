@@ -8,7 +8,7 @@ Design owner: Codex.
 
 ## Problem
 
-Flint uploads a pinned managed-agent executable into a private staging
+dez uploads a pinned managed-agent executable into a private staging
 directory, verifies its digest and version on the remote host, and commits the
 directory with a no-overwrite rename. On Linux, the remote server implements
 that operation with `renameat2(..., RENAME_NOREPLACE)`.
@@ -20,7 +20,7 @@ The verified upload therefore fails only at the final commit step.
 
 ## Compatibility Behavior
 
-The Linux no-overwrite rename remains the preferred operation. Flint uses a
+The Linux no-overwrite rename remains the preferred operation. dez uses a
 compatibility fallback only when it fails with an error that specifically
 indicates an unsupported primitive:
 
@@ -29,10 +29,10 @@ indicates an unsupported primitive:
 - `EOPNOTSUPP`.
 
 The fallback applies only when the source is a directory, which is the managed
-agent install and rollback case. Flint checks the destination with
+agent install and rollback case. dez checks the destination with
 `symlink_metadata` so a dangling symlink also counts as existing. If anything
 already occupies the destination, the operation returns `AlreadyExists`
-without modifying either path. Otherwise Flint performs a same-filesystem
+without modifying either path. Otherwise dez performs a same-filesystem
 plain directory rename.
 
 File renames do not use the fallback because a plain POSIX file rename can
@@ -51,11 +51,11 @@ The compatibility path preserves the existing managed-agent transaction:
 6. restore the rollback if the new commit fails.
 
 All managed paths are sibling directories on the same remote filesystem. The
-application-level coordinator prevents duplicate provisioning from one Flint
+application-level coordinator prevents duplicate provisioning from one dez
 process. On filesystems without an atomic no-replace primitive, a destination
 created between the existence check and plain rename remains a platform
 limitation. A competing valid managed installation is non-empty, so POSIX
-directory rename will reject replacing it; Flint never deliberately removes a
+directory rename will reject replacing it; dez never deliberately removes a
 destination to make the fallback succeed.
 
 ## Error Handling
@@ -81,6 +81,6 @@ rename result and assert that:
 - the existing managed-agent rollback tests remain green.
 
 Run the focused remote-management and managed-agent tests, formatting, and
-clippy. Package a fresh `/tmp/Flint-Local.app`, reconnect so Flint uploads the
-new debug remote server, and retry `New — Flint-managed Codex` on the ParaStor
+clippy. Package a fresh `/tmp/dez-Local.app`, reconnect so dez uploads the
+new debug remote server, and retry `New — dez-managed Codex` on the ParaStor
 host.

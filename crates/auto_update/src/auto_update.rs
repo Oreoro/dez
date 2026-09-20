@@ -316,12 +316,12 @@ fn release_notes_url_for(release_channel: ReleaseChannel, current_version: &Vers
             let mut current_version = current_version.clone();
             current_version.pre = semver::Prerelease::EMPTY;
             current_version.build = semver::BuildMetadata::EMPTY;
-            format!("https://github.com/shenghsi/flint/releases/tag/v{current_version}")
+            format!("https://github.com/shenghsi/dez/releases/tag/v{current_version}")
         }
         ReleaseChannel::Nightly => {
-            "https://github.com/shenghsi/flint/releases/tag/nightly".to_owned()
+            "https://github.com/shenghsi/dez/releases/tag/nightly".to_owned()
         }
-        ReleaseChannel::Dev => "https://github.com/shenghsi/flint/commits/main".to_owned(),
+        ReleaseChannel::Dev => "https://github.com/shenghsi/dez/commits/main".to_owned(),
     }
 }
 
@@ -339,7 +339,7 @@ impl InstallerDir {
     async fn new() -> Result<Self> {
         Ok(Self(
             tempfile::Builder::new()
-                .prefix("flint-auto-update")
+                .prefix("dez-auto-update")
                 .tempdir()?,
         ))
     }
@@ -357,7 +357,7 @@ impl InstallerDir {
     async fn new() -> Result<Self> {
         let installer_dir = std::env::current_exe()?
             .parent()
-            .context("No parent dir for Flint.exe")?
+            .context("No parent dir for dez.exe")?
             .join("updates");
         if smol::fs::metadata(&installer_dir).await.is_ok() {
             smol::fs::remove_dir_all(&installer_dir).await?;
@@ -396,7 +396,7 @@ impl AutoUpdater {
         // On windows, executable files cannot be overwritten while they are
         // running, so we must wait to overwrite the application until quitting
         // or restarting. When quitting the app, we spawn the auto update helper
-        // to finish the auto update process after Flint exits. When restarting
+        // to finish the auto update process after dez exits. When restarting
         // the app after an update, we use `set_restart_path` to run the auto
         // update helper instead of the app, so that it can overwrite the app
         // and then spawn the new binary.
@@ -507,7 +507,7 @@ impl AutoUpdater {
         true
     }
 
-    // If you are packaging Flint and need to override the place it downloads SSH remotes from,
+    // If you are packaging dez and need to override the place it downloads SSH remotes from,
     // you can override this function. You should also update get_remote_server_release_url to return
     // Ok(None).
     pub async fn download_remote_server_release(
@@ -530,7 +530,7 @@ impl AutoUpdater {
             &this,
             release_channel,
             version,
-            "flint-remote-server",
+            "dez-remote-server",
             os,
             arch,
             cx,
@@ -547,7 +547,7 @@ impl AutoUpdater {
 
         if smol::fs::metadata(&version_path).await.is_err() {
             log::info!(
-                "downloading flint-remote-server {os} {arch} version {}",
+                "downloading dez-remote-server {os} {arch} version {}",
                 release.version
             );
             set_status("Downloading remote server", cx);
@@ -582,7 +582,7 @@ impl AutoUpdater {
         })?;
 
         let release =
-            Self::get_release_asset(&this, channel, version, "flint-remote-server", os, arch, cx)
+            Self::get_release_asset(&this, channel, version, "dez-remote-server", os, arch, cx)
                 .await?;
 
         Ok(Some(release.url))
@@ -606,17 +606,17 @@ impl AutoUpdater {
         } else {
             "latest".to_string()
         };
-        // Flint has no release backend of its own, so every release asset is
+        // dez has no release backend of its own, so every release asset is
         // fetched from this repo's own GitHub releases instead.
         let asset_name = match asset {
-            "flint-remote-server" => {
+            "dez-remote-server" => {
                 let extension = if os == "windows" { "zip" } else { "gz" };
-                format!("flint-remote-server-{os}-{arch}.{extension}")
+                format!("dez-remote-server-{os}-{arch}.{extension}")
             }
-            "flint" => match os {
-                "macos" => format!("Flint-{arch}.dmg"),
-                "linux" => format!("flint-linux-{arch}.tar.gz"),
-                "windows" => format!("Flint-{arch}.exe"),
+            "dez" => match os {
+                "macos" => format!("dez-{arch}.dmg"),
+                "linux" => format!("dez-linux-{arch}.tar.gz"),
+                "windows" => format!("dez-{arch}.exe"),
                 unsupported_os => anyhow::bail!("not supported: {unsupported_os}"),
             },
             other => anyhow::bail!("unknown release asset: {other}"),
@@ -645,7 +645,7 @@ impl AutoUpdater {
         });
 
         let fetched_release_data =
-            Self::get_release_asset(&this, release_channel, None, "flint", OS, ARCH, cx).await?;
+            Self::get_release_asset(&this, release_channel, None, "dez", OS, ARCH, cx).await?;
         let fetched_version = fetched_release_data.clone().version;
         let app_commit_sha = Ok(cx.update(|cx| AppCommitSha::try_global(cx).map(|sha| sha.full())));
         let newer_version = Self::check_if_fetched_version_is_newer(
@@ -769,9 +769,9 @@ impl AutoUpdater {
 
     async fn target_path(installer_dir: &InstallerDir) -> Result<PathBuf> {
         let filename = match OS {
-            "macos" => anyhow::Ok("Flint.dmg"),
-            "linux" => Ok("flint.tar.gz"),
-            "windows" => Ok("Flint.exe"),
+            "macos" => anyhow::Ok("dez.dmg"),
+            "linux" => Ok("dez.tar.gz"),
+            "windows" => Ok("dez.exe"),
             unsupported_os => anyhow::bail!("not supported: {unsupported_os}"),
         }?;
 
@@ -844,7 +844,7 @@ async fn get_release_from_github(
     asset_name: &str,
     http_client: Arc<dyn HttpClient>,
 ) -> Result<ReleaseAsset> {
-    const REPO: &str = "shenghsi/flint";
+    const REPO: &str = "shenghsi/dez";
 
     let release = match release_channel {
         ReleaseChannel::Nightly => {
@@ -1010,7 +1010,7 @@ async fn install_release_linux(
     let home_dir = PathBuf::from(env::var("HOME").context("no HOME env var set")?);
     let running_app_path = cx.update(|cx| cx.app_path())?;
 
-    let extracted = temp_dir.path().join("flint");
+    let extracted = temp_dir.path().join("dez");
     fs::create_dir_all(&extracted)
         .await
         .context("failed to create directory into which to extract update")?;
@@ -1038,12 +1038,12 @@ async fn install_release_linux(
     } else {
         String::default()
     };
-    let app_folder_name = format!("flint{}.app", suffix);
+    let app_folder_name = format!("dez{}.app", suffix);
 
     let from = extracted.join(&app_folder_name);
     let mut to = home_dir.join(".local");
 
-    let expected_suffix = format!("{}/libexec/flint-editor", app_folder_name);
+    let expected_suffix = format!("{}/libexec/dez-editor", app_folder_name);
 
     if let Some(prefix) = running_app_path
         .to_str()
@@ -1061,7 +1061,7 @@ async fn install_release_linux(
 
     anyhow::ensure!(
         output.status.success(),
-        "failed to copy Flint update from {:?} to {:?}: {:?}",
+        "failed to copy dez update from {:?} to {:?}: {:?}",
         from,
         to,
         String::from_utf8_lossy(&output.stderr)
@@ -1080,7 +1080,7 @@ async fn install_release_macos(
         .file_name()
         .with_context(|| format!("invalid running app path {running_app_path:?}"))?;
 
-    let mount_path = temp_dir.path().join("Flint");
+    let mount_path = temp_dir.path().join("dez");
     let mut mounted_app_path: OsString = mount_path.join(running_app_filename).into();
 
     mounted_app_path.push("/");
@@ -1127,7 +1127,7 @@ async fn install_release_macos(
 async fn cleanup_windows() -> Result<()> {
     let parent = std::env::current_exe()?
         .parent()
-        .context("No parent dir for Flint.exe")?
+        .context("No parent dir for dez.exe")?
         .to_owned();
 
     // keep in sync with crates/auto_update_helper/src/updater.rs
@@ -1154,7 +1154,7 @@ async fn install_release_windows(downloaded_installer: &Path) -> Result<Option<P
     // deleting the old one, and launching the new binary.
     let helper_path = std::env::current_exe()?
         .parent()
-        .context("No parent dir for Flint.exe")?
+        .context("No parent dir for dez.exe")?
         .join("tools")
         .join("auto_update_helper.exe");
     Ok(Some(helper_path))
@@ -1256,9 +1256,9 @@ mod tests {
             let release_available = Arc::clone(&release_available);
             let dmg_rx = Arc::new(parking_lot::Mutex::new(Some(dmg_rx)));
             let asset_name = match OS {
-                "macos" => format!("Flint-{ARCH}.dmg"),
-                "linux" => format!("flint-linux-{ARCH}.tar.gz"),
-                "windows" => format!("Flint-{ARCH}.exe"),
+                "macos" => format!("dez-{ARCH}.dmg"),
+                "linux" => format!("dez-linux-{ARCH}.tar.gz"),
+                "windows" => format!("dez-{ARCH}.exe"),
                 other => panic!("unsupported os in test: {other}"),
             };
             let fake_client_http = FakeHttpClient::create(move |req| {
@@ -1266,7 +1266,7 @@ mod tests {
                 let dmg_rx = dmg_rx.clone();
                 let asset_name = asset_name.clone();
                 async move {
-                    if req.uri().path() == "/repos/shenghsi/flint/releases" {
+                    if req.uri().path() == "/repos/shenghsi/dez/releases" {
                         let (tag_name, download_url) = if release_available {
                             ("v0.100.1", "https://test.example/new-download")
                         } else {
@@ -1334,7 +1334,7 @@ mod tests {
             }
         );
 
-        dmg_tx.send("<fake-flint-update>".to_owned()).unwrap();
+        dmg_tx.send("<fake-dez-update>".to_owned()).unwrap();
 
         let tmp_dir = Arc::new(tempdir().unwrap());
 
@@ -1342,7 +1342,7 @@ mod tests {
             let tmp_dir = tmp_dir.clone();
             cx.set_global(InstallOverride(Rc::new(move |target_path, _cx| {
                 let tmp_dir = tmp_dir.clone();
-                let dest_path = tmp_dir.path().join("flint");
+                let dest_path = tmp_dir.path().join("dez");
                 std::fs::copy(&target_path, &dest_path)?;
                 Ok(Some(dest_path))
             })));
@@ -1366,19 +1366,19 @@ mod tests {
         let will_restart = cx.expect_restart();
         cx.update(|cx| cx.restart());
         let path = will_restart.await.unwrap().unwrap();
-        assert_eq!(path, tmp_dir.path().join("flint"));
+        assert_eq!(path, tmp_dir.path().join("dez"));
         assert_eq!(
             std::fs::read_to_string(path).unwrap(),
-            "<fake-flint-update>"
+            "<fake-dez-update>"
         );
     }
 
     #[gpui::test]
     async fn test_nightly_release_uses_latest_sha(_cx: &mut TestAppContext) {
         let asset_name = match OS {
-            "macos" => format!("Flint-{ARCH}.dmg"),
-            "linux" => format!("flint-linux-{ARCH}.tar.gz"),
-            "windows" => format!("Flint-{ARCH}.exe"),
+            "macos" => format!("dez-{ARCH}.dmg"),
+            "linux" => format!("dez-linux-{ARCH}.tar.gz"),
+            "windows" => format!("dez-{ARCH}.exe"),
             other => panic!("unsupported os in test: {other}"),
         };
         let expected_asset_name = asset_name.clone();
@@ -1386,7 +1386,7 @@ mod tests {
             let asset_name = expected_asset_name.clone();
             async move {
                 match request.uri().path() {
-                    "/repos/shenghsi/flint/releases/tags/nightly" => Ok(Response::builder()
+                    "/repos/shenghsi/dez/releases/tags/nightly" => Ok(Response::builder()
                         .status(200)
                         .body(
                             serde_json::json!({
@@ -1433,24 +1433,24 @@ mod tests {
     }
 
     #[test]
-    fn release_notes_urls_point_to_flint_github() {
+    fn release_notes_urls_point_to_dez_github() {
         let version = Version::parse("1.2.3-pre.1+build").expect("valid test version");
 
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Stable, &version),
-            "https://github.com/shenghsi/flint/releases/tag/v1.2.3"
+            "https://github.com/shenghsi/dez/releases/tag/v1.2.3"
         );
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Preview, &version),
-            "https://github.com/shenghsi/flint/releases/tag/v1.2.3"
+            "https://github.com/shenghsi/dez/releases/tag/v1.2.3"
         );
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Nightly, &version),
-            "https://github.com/shenghsi/flint/releases/tag/nightly"
+            "https://github.com/shenghsi/dez/releases/tag/nightly"
         );
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Dev, &version),
-            "https://github.com/shenghsi/flint/commits/main"
+            "https://github.com/shenghsi/dez/commits/main"
         );
     }
 

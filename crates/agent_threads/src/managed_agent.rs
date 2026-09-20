@@ -170,7 +170,7 @@ impl RemoteAgentHost for RemoteClientAgentHost {
 
     async fn write_file(&self, destination: &Path, content: &[u8]) -> Result<()> {
         let temporary_path =
-            std::env::temp_dir().join(format!("flint-agent-receipt-{}.json", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("dez-agent-receipt-{}.json", uuid::Uuid::new_v4()));
         smol::fs::write(&temporary_path, content)
             .await
             .context("failed to stage local agent receipt")?;
@@ -972,7 +972,7 @@ mod tests {
     #[async_trait(?Send)]
     impl RemoteAgentHost for FakeRemoteHost {
         async fn app_data_directory(&self) -> Result<PathBuf> {
-            Ok(PathBuf::from("/remote/flint"))
+            Ok(PathBuf::from("/remote/dez"))
         }
 
         async fn create_private_directory(&self, path: &Path) -> Result<()> {
@@ -1079,7 +1079,7 @@ mod tests {
             let events = Rc::new(RefCell::new(Vec::new()));
             let phases = Rc::new(RefCell::new(Vec::new()));
             let target = target_name(release.target).unwrap();
-            let destination = PathBuf::from("/remote/flint/agents/codex/1.2.3").join(&target);
+            let destination = PathBuf::from("/remote/dez/agents/codex/1.2.3").join(&target);
             let executable = destination.join(release.executable_name);
             let receipt = serde_json::to_string(&managed_receipt(
                 "codex",
@@ -1135,7 +1135,7 @@ mod tests {
             let release = release();
             let events = Rc::new(RefCell::new(Vec::new()));
             let target = target_name(release.target).unwrap();
-            let destination = PathBuf::from("/remote/flint/agents/pi/1.2.3").join(&target);
+            let destination = PathBuf::from("/remote/dez/agents/pi/1.2.3").join(&target);
             let executable = destination.join(release.executable_name);
             let receipt = serde_json::json!({
                 "agent_id": "pi",
@@ -1197,7 +1197,7 @@ mod tests {
             assert_eq!(installation.version, "1.2.3");
             assert_eq!(
                 installation.executable_path,
-                PathBuf::from("/remote/flint/agents/codex/1.2.3/linux-x86_64-musl/agent")
+                PathBuf::from("/remote/dez/agents/codex/1.2.3/linux-x86_64-musl/agent")
             );
             let events = events.borrow();
             let acquire = events.iter().position(|event| event == "acquire").unwrap();
@@ -1338,7 +1338,7 @@ mod tests {
     fn failed_commit_restores_the_prior_installation() {
         smol::block_on(async {
             let events = Rc::new(RefCell::new(Vec::new()));
-            let destination = PathBuf::from("/remote/flint/agents/codex/1.2.3/linux-x86_64-musl");
+            let destination = PathBuf::from("/remote/dez/agents/codex/1.2.3/linux-x86_64-musl");
             let paths = Rc::new(RefCell::new(HashSet::from([destination.clone()])));
             let provisioner = ManagedAgentProvisioner::new(
                 FakeArtifacts {

@@ -202,10 +202,10 @@ async fn test_extension_store(cx: &mut TestAppContext) {
         "/the-extension-dir",
         json!({
             "installed": {
-                "flint-monokai": {
+                "dez-monokai": {
                     "extension.json": r#"{
-                        "id": "flint-monokai",
-                        "name": "Flint Monokai",
+                        "id": "dez-monokai",
+                        "name": "dez Monokai",
                         "version": "2.0.0",
                         "themes": {
                             "Monokai Dark": "themes/monokai.json",
@@ -249,10 +249,10 @@ async fn test_extension_store(cx: &mut TestAppContext) {
                         }"#,
                     }
                 },
-                "flint-ruby": {
+                "dez-ruby": {
                     "extension.json": r#"{
-                        "id": "flint-ruby",
-                        "name": "Flint Ruby",
+                        "id": "dez-ruby",
+                        "name": "dez Ruby",
                         "version": "1.0.0",
                         "grammars": {
                             "ruby": "grammars/ruby.wasm",
@@ -294,11 +294,11 @@ async fn test_extension_store(cx: &mut TestAppContext) {
     let mut expected_index = ExtensionIndex {
         extensions: [
             (
-                "flint-ruby".into(),
+                "dez-ruby".into(),
                 ExtensionIndexEntry {
                     manifest: Arc::new(ExtensionManifest {
-                        id: "flint-ruby".into(),
-                        name: "Flint Ruby".into(),
+                        id: "dez-ruby".into(),
+                        name: "dez Ruby".into(),
                         version: "1.0.0".into(),
                         schema_version: SchemaVersion::ZERO,
                         description: None,
@@ -330,11 +330,11 @@ async fn test_extension_store(cx: &mut TestAppContext) {
                 },
             ),
             (
-                "flint-monokai".into(),
+                "dez-monokai".into(),
                 ExtensionIndexEntry {
                     manifest: Arc::new(ExtensionManifest {
-                        id: "flint-monokai".into(),
-                        name: "Flint Monokai".into(),
+                        id: "dez-monokai".into(),
+                        name: "dez Monokai".into(),
                         version: "2.0.0".into(),
                         schema_version: SchemaVersion::ZERO,
                         description: None,
@@ -367,7 +367,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
             (
                 "ERB".into(),
                 ExtensionIndexLanguageEntry {
-                    extension: "flint-ruby".into(),
+                    extension: "dez-ruby".into(),
                     path: "languages/erb".into(),
                     grammar: Some("embedded_template".into()),
                     hidden: false,
@@ -381,7 +381,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
             (
                 "Ruby".into(),
                 ExtensionIndexLanguageEntry {
-                    extension: "flint-ruby".into(),
+                    extension: "dez-ruby".into(),
                     path: "languages/ruby".into(),
                     grammar: Some("ruby".into()),
                     hidden: false,
@@ -399,28 +399,28 @@ async fn test_extension_store(cx: &mut TestAppContext) {
             (
                 "Monokai Dark".into(),
                 ExtensionIndexThemeEntry {
-                    extension: "flint-monokai".into(),
+                    extension: "dez-monokai".into(),
                     path: "themes/monokai.json".into(),
                 },
             ),
             (
                 "Monokai Light".into(),
                 ExtensionIndexThemeEntry {
-                    extension: "flint-monokai".into(),
+                    extension: "dez-monokai".into(),
                     path: "themes/monokai.json".into(),
                 },
             ),
             (
                 "Monokai Pro Dark".into(),
                 ExtensionIndexThemeEntry {
-                    extension: "flint-monokai".into(),
+                    extension: "dez-monokai".into(),
                     path: "themes/monokai-pro.json".into(),
                 },
             ),
             (
                 "Monokai Pro Light".into(),
                 ExtensionIndexThemeEntry {
-                    extension: "flint-monokai".into(),
+                    extension: "dez-monokai".into(),
                     path: "themes/monokai-pro.json".into(),
                 },
             ),
@@ -486,11 +486,11 @@ async fn test_extension_store(cx: &mut TestAppContext) {
     });
 
     fs.insert_tree(
-        "/the-extension-dir/installed/flint-gruvbox",
+        "/the-extension-dir/installed/dez-gruvbox",
         json!({
             "extension.json": r#"{
-                "id": "flint-gruvbox",
-                "name": "Flint Gruvbox",
+                "id": "dez-gruvbox",
+                "name": "dez Gruvbox",
                 "version": "1.0.0",
                 "themes": {
                     "Gruvbox": "themes/gruvbox.json"
@@ -514,11 +514,11 @@ async fn test_extension_store(cx: &mut TestAppContext) {
     .await;
 
     expected_index.extensions.insert(
-        "flint-gruvbox".into(),
+        "dez-gruvbox".into(),
         ExtensionIndexEntry {
             manifest: Arc::new(ExtensionManifest {
-                id: "flint-gruvbox".into(),
-                name: "Flint Gruvbox".into(),
+                id: "dez-gruvbox".into(),
+                name: "dez Gruvbox".into(),
                 version: "1.0.0".into(),
                 schema_version: SchemaVersion::ZERO,
                 description: None,
@@ -544,7 +544,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
     expected_index.themes.insert(
         "Gruvbox".into(),
         ExtensionIndexThemeEntry {
-            extension: "flint-gruvbox".into(),
+            extension: "dez-gruvbox".into(),
             path: "themes/gruvbox.json".into(),
         },
     );
@@ -584,7 +584,7 @@ async fn test_extension_store(cx: &mut TestAppContext) {
     let prev_fs_metadata_call_count = fs.metadata_call_count();
     let prev_fs_read_dir_call_count = fs.read_dir_call_count();
 
-    // Create new extension store, as if Flint were restarting.
+    // Create new extension store, as if dez were restarting.
     drop(store);
     let store = cx.new(|cx| {
         ExtensionStore::new(
@@ -652,12 +652,12 @@ async fn test_extension_store(cx: &mut TestAppContext) {
 
     store.update(cx, |store, cx| {
         store
-            .uninstall_extension("flint-ruby".into(), cx)
+            .uninstall_extension("dez-ruby".into(), cx)
             .detach_and_log_err(cx);
     });
 
     cx.executor().advance_clock(RELOAD_DEBOUNCE_DURATION);
-    expected_index.extensions.remove("flint-ruby");
+    expected_index.extensions.remove("dez-ruby");
     expected_index.languages.remove("Ruby");
     expected_index.languages.remove("ERB");
 
@@ -833,7 +833,7 @@ async fn test_extension_store_with_test_extension(cx: &mut TestAppContext) {
     });
     let user_agent = cx.update(|cx| {
         format!(
-            "Flint/{} ({}; {})",
+            "dez/{} ({}; {})",
             AppVersion::global(cx),
             std::env::consts::OS,
             std::env::consts::ARCH

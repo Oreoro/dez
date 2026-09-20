@@ -203,7 +203,7 @@ fn possibly_open_target(
 }
 
 /// Resolves a path-like target detected in the terminal and opens it either as a
-/// project item inside Flint, or by handing it to the OS's default application,
+/// project item inside Dez, or by handing it to the OS's default application,
 /// per the user's explicit choice from the terminal's right-click context menu.
 /// Unlike `open_path_like_target`, this doesn't require a pre-existing hover
 /// state, since it's driven by a menu selection rather than a click-to-open.

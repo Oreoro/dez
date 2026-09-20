@@ -36,7 +36,7 @@ pub(crate) const SCREEN_TAIL_LINE_COUNT: usize = 60;
 pub(crate) enum AttentionState {
     /// Agent is actively working; PTY liveness alone can't tell this apart
     /// from "idle at a prompt with no more output coming," which is why
-    /// this is a real classifiable state here (unlike Flint's original,
+    /// this is a real classifiable state here (unlike dez's original,
     /// bell-only design, where "working" only ever meant "the bell hasn't
     /// rung yet").
     Working,
@@ -372,7 +372,7 @@ fn resolve_region<'a>(region: &str, screen_tail: &'a str, osc_title: &'a str) ->
             if let Some(count) = region_count(region, "bottom_non_empty_lines") {
                 bottom_non_empty_lines(screen_tail, count).to_string()
             } else {
-                // Unrecognized region (e.g. `osc_progress`, which Flint's
+                // Unrecognized region (e.g. `osc_progress`, which dez's
                 // terminal doesn't parse, or `top_non_empty_lines`, which
                 // needs scrollback this classifier doesn't have -- see the
                 // manifest files' doc comments) resolves to nothing, so any
@@ -507,8 +507,8 @@ mod tests {
     fn classify_any_ignores_a_regular_shell_title() {
         assert_eq!(
             classify_any(DetectionInput {
-                screen_tail: "flint %",
-                osc_title: "flint — zsh",
+                screen_tail: "dez %",
+                osc_title: "dez — zsh",
             }),
             AttentionState::Unknown
         );
@@ -519,7 +519,7 @@ mod tests {
         assert_eq!(
             classify_any(DetectionInput {
                 screen_tail: "›",
-                osc_title: "flint",
+                osc_title: "dez",
             }),
             AttentionState::Idle
         );

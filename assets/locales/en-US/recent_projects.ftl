@@ -28,7 +28,7 @@ recent-wsl-placeholder = Enter WSL distribution name
 recent-invalid-path = Invalid path
 recent-invalid-wsl-detail = Invalid path specified when trying to open a folder in WSL.
 
-    Flint does not currently support opening network share folders in WSL.
+    dez does not currently support opening network share folders in WSL.
 recent-dev-container-remote = Cannot open a Dev Container from a remote project
 recent-retry = Retry
 recent-connect-ssh-failed = Failed to connect over SSH
@@ -72,7 +72,7 @@ remote-change-route = Change route
 remote-delete-project = Delete Remote Project
 remote-container-start-failed = Failed to start Dev Container. See logs for details.
 remote-container-error = Error Creating Dev Container:
-remote-open-flint-log = Open Flint Log
+remote-open-dez-log = Open dez Log
 remote-exit = Exit
 remote-containers = Dev Containers
 remote-container-creating = Creating Dev Container

@@ -28,7 +28,7 @@ recent-wsl-placeholder = 输入 WSL 发行版名称
 recent-invalid-path = 路径无效
 recent-invalid-wsl-detail = 尝试在 WSL 中打开文件夹时指定了无效路径。
 
-    Flint 当前不支持在 WSL 中打开网络共享文件夹。
+    dez 当前不支持在 WSL 中打开网络共享文件夹。
 recent-dev-container-remote = 无法从远程项目打开开发容器
 recent-retry = 重试
 recent-connect-ssh-failed = 无法通过 SSH 连接
@@ -68,7 +68,7 @@ remote-change-route = 更改路由
 remote-delete-project = 删除远程项目
 remote-container-start-failed = 无法启动开发容器。有关详细信息，请查看日志。
 remote-container-error = 创建开发容器时出错：
-remote-open-flint-log = 打开 Flint 日志
+remote-open-dez-log = 打开 dez 日志
 remote-exit = 退出
 remote-containers = 开发容器
 remote-container-creating = 正在创建开发容器

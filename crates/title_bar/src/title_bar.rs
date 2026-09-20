@@ -39,7 +39,7 @@ use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{MultiWorkspace, ToggleWorktreeSecurity, Workspace};
 
-use flint_actions::OpenRemote;
+use dez_actions::OpenRemote;
 
 pub use onboarding_banner::restore_banner;
 
@@ -711,7 +711,7 @@ impl TitleBar {
                 move |_window, cx| {
                     Tooltip::for_action(
                         localization::text(cx, "title-bar-recent-projects"),
-                        &flint_actions::OpenRecent {
+                        &dez_actions::OpenRecent {
                             create_new_window: false,
                         },
                         cx,
@@ -768,7 +768,7 @@ impl TitleBar {
                 move |_window, cx| {
                     Tooltip::for_action(
                         localization::text(cx, "title-bar-recent-projects"),
-                        &flint_actions::OpenRecent {
+                        &dez_actions::OpenRecent {
                             create_new_window: false,
                         },
                         cx,
@@ -874,7 +874,7 @@ impl TitleBar {
                     move |_window, cx| {
                         Tooltip::with_meta(
                             localization::text(cx, "title-bar-worktree"),
-                            Some(&flint_actions::git::Worktree),
+                            Some(&dez_actions::git::Worktree),
                             localization::tr!(
                                 cx,
                                 "title-bar-currently-in-use",
@@ -947,7 +947,7 @@ impl TitleBar {
                         };
                         Tooltip::with_meta(
                             localization::text(cx, "title-bar-branch-and-stash"),
-                            Some(&flint_actions::git::Branch),
+                            Some(&dez_actions::git::Branch),
                             meta,
                             cx,
                         )

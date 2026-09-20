@@ -44,7 +44,7 @@ use workspace::{
     Item, Pane, Workspace,
     dock::{DockPosition, Panel, PanelEvent},
 };
-use flint_actions::debug_panel::ToggleFocus;
+use dez_actions::debug_panel::ToggleFocus;
 
 pub struct DebuggerHistoryFeatureFlag;
 
@@ -642,7 +642,7 @@ impl DebugPanel {
             IconButton::new("debug-edit-debug-json", IconName::Code)
                 .icon_size(IconSize::Small)
                 .on_click(|_, window, cx| {
-                    window.dispatch_action(flint_actions::OpenProjectDebugTasks.boxed_clone(), cx);
+                    window.dispatch_action(dez_actions::OpenProjectDebugTasks.boxed_clone(), cx);
                 })
                 .tooltip(Tooltip::text(localization::text(cx, "debugger-edit-json")))
         };
@@ -650,7 +650,7 @@ impl DebugPanel {
         let documentation_button = || {
             IconButton::new("debug-open-documentation", IconName::CircleHelp)
                 .icon_size(IconSize::Small)
-                .on_click(move |_, _, cx| cx.open_url("https://github.com/shenghsi/flint/blob/main/docs/src/debugger.md"))
+                .on_click(move |_, _, cx| cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/debugger.md"))
                 .tooltip(Tooltip::text(localization::text(cx, "debugger-open-docs")))
         };
 
@@ -1187,7 +1187,7 @@ impl DebugPanel {
                             .read(cx)
                             .project_path_for_absolute_path(path, cx)
                             .context(
-                                "Couldn't get project path for .flint/debug.json in active worktree",
+                                "Couldn't get project path for .dez/debug.json in active worktree",
                             )
                     })??;
 
@@ -1842,7 +1842,7 @@ impl Render for DebugPanel {
                                 )
                                 .on_click(|_, window, cx| {
                                     window.dispatch_action(
-                                        flint_actions::OpenProjectDebugTasks.boxed_clone(),
+                                        dez_actions::OpenProjectDebugTasks.boxed_clone(),
                                         cx,
                                     );
                                 }),
@@ -1854,7 +1854,7 @@ impl Render for DebugPanel {
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                 )
-                                .on_click(|_, _, cx| cx.open_url("https://github.com/shenghsi/flint/blob/main/docs/src/debugger.md")),
+                                .on_click(|_, _, cx| cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/debugger.md")),
                         )
                         .child(
                             Button::new(
@@ -1868,9 +1868,9 @@ impl Render for DebugPanel {
                             )
                             .on_click(|_, window, cx| {
                                 window.dispatch_action(
-                                    flint_actions::Extensions {
+                                    dez_actions::Extensions {
                                         category_filter: Some(
-                                            flint_actions::ExtensionCategoryFilter::DebugAdapters,
+                                            dez_actions::ExtensionCategoryFilter::DebugAdapters,
                                         ),
                                         id: None,
                                     }

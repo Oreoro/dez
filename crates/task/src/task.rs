@@ -1,4 +1,4 @@
-//! Baseline interface of Tasks in Flint: all tasks in Flint are intended to use those for implementing their own logic.
+//! Baseline interface of Tasks in dez: all tasks in dez are intended to use those for implementing their own logic.
 
 mod adapter_schema;
 mod debug_format;
@@ -20,9 +20,9 @@ use std::sync::Arc;
 pub use adapter_schema::{AdapterSchema, AdapterSchemas};
 pub use debug_format::{
     AttachRequest, BuildTaskDefinition, DebugRequest, DebugScenario, DebugTaskFile,
-    FlintDebugConfig, LaunchRequest, Request, TcpArgumentsTemplate,
+    dezDebugConfig, LaunchRequest, Request, TcpArgumentsTemplate,
 };
-pub use flint_actions::RevealTarget;
+pub use dez_actions::RevealTarget;
 pub use task_template::{
     DebugArgsRequest, HideStrategy, RevealStrategy, SaveStrategy, TaskHook, TaskTemplate,
     TaskTemplates, substitute_variables_in_map, substitute_variables_in_str,
@@ -37,7 +37,7 @@ pub use vscode_format::VsCodeTaskFile;
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Deserialize)]
 pub struct TaskId(pub String);
 
-/// Contains all information needed by Flint to spawn a new terminal tab for the given task.
+/// Contains all information needed by dez to spawn a new terminal tab for the given task.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct SpawnInTerminal {
     /// Id of the task to use when determining task tab affinity.
@@ -146,7 +146,7 @@ impl ResolvedTask {
     }
 }
 
-/// Variables, available for use in [`TaskContext`] when a Flint's [`TaskTemplate`] gets resolved into a [`ResolvedTask`].
+/// Variables, available for use in [`TaskContext`] when a dez's [`TaskTemplate`] gets resolved into a [`ResolvedTask`].
 /// Name of the variable must be a valid shell variable identifier, which generally means that it is
 /// a word  consisting only  of alphanumeric characters and underscores,
 /// and beginning with an alphabetic character or an  underscore.
@@ -281,7 +281,7 @@ impl std::fmt::Display for VariableName {
     }
 }
 
-/// Container for predefined environment variables that describe state of Flint at the time the task was spawned.
+/// Container for predefined environment variables that describe state of dez at the time the task was spawned.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct TaskVariables(HashMap<VariableName, String>);
 
@@ -332,14 +332,14 @@ impl IntoIterator for TaskVariables {
 }
 
 /// Keeps track of the file associated with a task and context of tasks execution (i.e. current file or current function).
-/// Keeps all Flint-related state inside, used to produce a resolved task out of its template.
+/// Keeps all dez-related state inside, used to produce a resolved task out of its template.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TaskContext {
     /// A path to a directory in which the task should be executed.
     pub cwd: Option<PathBuf>,
     /// Additional environment variables associated with a given task.
     pub task_variables: TaskVariables,
-    /// Environment variables obtained when loading the project into Flint.
+    /// Environment variables obtained when loading the project into dez.
     /// This is the environment one would get when `cd`ing in a terminal
     /// into the project's root directory.
     pub project_env: HashMap<String, String>,
@@ -398,15 +398,15 @@ pub fn shell_to_proto(shell: Shell) -> proto::Shell {
 
 type VsCodeEnvVariable = String;
 type VsCodeCommand = String;
-type FlintEnvVariable = String;
+type dezEnvVariable = String;
 
 struct EnvVariableReplacer {
-    variables: HashMap<VsCodeEnvVariable, FlintEnvVariable>,
-    commands: HashMap<VsCodeCommand, FlintEnvVariable>,
+    variables: HashMap<VsCodeEnvVariable, dezEnvVariable>,
+    commands: HashMap<VsCodeCommand, dezEnvVariable>,
 }
 
 impl EnvVariableReplacer {
-    fn new(variables: HashMap<VsCodeEnvVariable, FlintEnvVariable>) -> Self {
+    fn new(variables: HashMap<VsCodeEnvVariable, dezEnvVariable>) -> Self {
         Self {
             variables,
             commands: HashMap::default(),
@@ -415,7 +415,7 @@ impl EnvVariableReplacer {
 
     fn with_commands(
         mut self,
-        commands: impl IntoIterator<Item = (VsCodeCommand, FlintEnvVariable)>,
+        commands: impl IntoIterator<Item = (VsCodeCommand, dezEnvVariable)>,
     ) -> Self {
         self.commands = commands.into_iter().collect();
         self
@@ -435,7 +435,7 @@ impl EnvVariableReplacer {
             _ => input,
         }
     }
-    // Replaces occurrences of VsCode-specific environment variables with Flint equivalents.
+    // Replaces occurrences of VsCode-specific environment variables with dez equivalents.
     fn replace(&self, input: &str) -> String {
         shellexpand::env_with_context_no_errors(&input, |var: &str| {
             // Colons denote a default value in case the variable is not set. We want to preserve that default, as otherwise shellexpand will substitute it for us.
@@ -458,7 +458,7 @@ impl EnvVariableReplacer {
                 }
             };
             if let Some(substitution) = self.variables.get(variable_name) {
-                // Got a VSCode->Flint hit, perform a substitution
+                // Got a VSCode->dez hit, perform a substitution
                 let mut name = format!("${{{substitution}");
                 append_previous_default(&mut name);
                 name.push('}');

@@ -9,12 +9,12 @@
 ## Objective
 
 Integrate the approved P0-P2 Zed backlog as ordered, independently reviewable
-domain waves without merging or rebasing Flint onto Zed.
+domain waves without merging or rebasing dez onto Zed.
 
 This is a program plan, not one change. Each numbered implementation task below
 normally produces its own feature branch and pull request. A task may be closed
 without code only when its investigation proves the behavior already exists,
-is inapplicable to Flint, or has been superseded; the ledger must record that
+is inapplicable to dez, or has been superseded; the ledger must record that
 result and its evidence.
 
 ## Program Rules
@@ -23,11 +23,11 @@ result and its evidence.
    branch or the previous task branch.
 2. Prove that the upstream commit is absent from the fork-point ancestry.
 3. Inspect the complete upstream PR and later corrections before writing code.
-4. Reproduce the missing behavior in current Flint.
+4. Reproduce the missing behavior in current dez.
 5. Write the failing regression or acceptance test.
-6. Port the behavior using Flint's current architecture.
+6. Port the behavior using dez's current architecture.
 7. Run focused tests, `cargo fmt --all -- --check`, and `./script/clippy`.
-8. Build `/tmp/Flint-Local.app` for user-visible or macOS-sensitive changes.
+8. Build `/tmp/dez-Local.app` for user-visible or macOS-sensitive changes.
 9. Open a focused pull request with an imperative title and final
    `Release Notes:` section.
 10. Update the upstream ledger in the same PR with the verified result.
@@ -35,7 +35,7 @@ result and its evidence.
 
 Do not use the presence of a change in release notes as evidence that it is
 missing. The initial ancestry audit already proved that Zed PRs #58339, #58240,
-#58533, #57886, #56152, #58163, #58681, and #58259 are present at Flint's fork
+#58533, #57886, #56152, #58163, #58681, and #58259 are present at dez's fork
 point.
 
 ## Standard Investigation Checklist
@@ -57,7 +57,7 @@ git show <upstream-commit> -- <relevant-paths>
 git log --oneline <upstream-commit>..origin/main -- <relevant-paths>
 ```
 
-Compare affected paths with Flint:
+Compare affected paths with dez:
 
 ```sh
 git diff --name-only \
@@ -65,7 +65,7 @@ git diff --name-only \
   -- <relevant-paths>
 ```
 
-The upstream clone and refs must remain outside the Flint worktree. Do not add
+The upstream clone and refs must remain outside the dez worktree. Do not add
 an upstream remote to a task branch as part of implementation.
 
 ## Wave 0: Establish the Ledger
@@ -86,8 +86,8 @@ an upstream remote to a task branch as part of implementation.
 
 1. Create a ledger table with these fields:
    wave, priority, upstream PR, final commit, release provenance, ancestry
-   result, affected Flint paths, integration classification, prerequisites,
-   tests, status, Flint PR, and notes.
+   result, affected dez paths, integration classification, prerequisites,
+   tests, status, dez PR, and notes.
 2. Seed every PR named in this plan.
 3. Mark the eight ancestry-confirmed changes `baseline-present`.
 4. Mark Zed cloud, collaboration, accounts, billing, telemetry, hosted edit
@@ -131,7 +131,7 @@ an upstream remote to a task branch as part of implementation.
 3. Assert that staging changes only the selected hunk.
 4. Assert that unstaging restores only that hunk.
 5. Assert that the resulting index and working-tree diff remain parseable.
-6. Port the canonicalization behavior without replacing Flint's surrounding
+6. Port the canonicalization behavior without replacing dez's surrounding
    diff abstractions.
 7. Run:
 
@@ -164,12 +164,12 @@ an upstream remote to a task branch as part of implementation.
 
 **Steps:**
 
-1. Identify where Flint adds `--no-verify`, configures askpass, and applies
+1. Identify where dez adds `--no-verify`, configures askpass, and applies
    transport timeouts.
 2. Add a repository test with a rejecting `commit-msg` hook.
 3. Assert that a normal commit runs the hook, does not create a commit, and
    returns the hook's stderr.
-4. Preserve an explicit no-verify path only if Flint already exposes one; do
+4. Preserve an explicit no-verify path only if dez already exposes one; do
    not add new UI in this task.
 5. Add a controlled slow Git operation test that exceeds the old timeout while
    remaining responsive to task cancellation.
@@ -204,15 +204,15 @@ an upstream remote to a task branch as part of implementation.
 
 **Steps:**
 
-1. Determine whether any reachable Flint thread archival path deletes
+1. Determine whether any reachable dez thread archival path deletes
    worktrees.
 2. Identify the durable ownership signal that distinguishes a
-   Flint-created disposable worktree from a manual worktree. Do not infer
+   dez-created disposable worktree from a manual worktree. Do not infer
    ownership from naming alone.
 3. If no reachable path deletes worktrees, add the evidence to the ledger and
    close this task as excluded.
 4. Otherwise, add tests for:
-   - archiving a thread with a Flint-owned disposable worktree;
+   - archiving a thread with a dez-owned disposable worktree;
    - archiving a thread associated with a manual worktree; and
    - a restored thread whose ownership metadata is unavailable.
 5. Permit deletion only for explicitly owned disposable worktrees.
@@ -259,7 +259,7 @@ an upstream remote to a task branch as part of implementation.
 
 **Steps:**
 
-1. Compare Flint's current `notify` revision with all four upstream PRs.
+1. Compare dez's current `notify` revision with all four upstream PRs.
 2. Inspect later upstream watcher fixes before selecting a dependency revision.
 3. Add GPUI-executor-controlled tests for:
    - watch registration and removal completing without hanging;
@@ -332,12 +332,12 @@ an upstream remote to a task branch as part of implementation.
 
 **Steps:**
 
-1. Confirm that Flint's removed native `agent` and `agent_ui` crates owned the
+1. Confirm that dez's removed native `agent` and `agent_ui` crates owned the
    upstream diagnostics call.
 2. Search Agent Threads for any path that waits for workspace diagnostics.
 3. If none exists, mark #61176 `excluded-by-product-boundary` with source
    evidence.
-4. If a reachable Flint consumer exists, create a separate design before
+4. If a reachable dez consumer exists, create a separate design before
    adapting the timeout; do not restore the removed native-agent crates.
 
 ### Task 2.4: Fix Linux PTY descriptor leaks
@@ -393,7 +393,7 @@ an upstream remote to a task branch as part of implementation.
 
 **Steps:**
 
-1. Inspect whether Flint still uses the code path fixed by the temporary
+1. Inspect whether dez still uses the code path fixed by the temporary
    async-process patch or already contains its replacement.
 2. Add macOS-only tests for failed spawn cleanup and repeated child exit.
 3. Assert descriptor count and unreaped-child count return to baseline.
@@ -409,7 +409,7 @@ an upstream remote to a task branch as part of implementation.
    ./script/bundle-tmp-app
    ```
 
-6. Verify `/tmp/Flint-Local.app` is fresh even if the bundling script exits
+6. Verify `/tmp/dez-Local.app` is fresh even if the bundling script exits
    during its known debug remote-server step.
 7. Open a PR titled `gpui: Fix macOS child-process cleanup`.
 
@@ -686,21 +686,21 @@ Tunneled routes explicitly.
 ### Wave 3 completion
 
 Run the remote route matrix for all Wave 3 behaviors. Confirm that Direct never
-uses Flint-managed agent provisioning and Tunneled never uses the ambient
+uses dez-managed agent provisioning and Tunneled never uses the ambient
 remote executable.
 
 ## Wave 4: Agent Threads
 
 Before each task, determine whether the upstream behavior belongs to Zed's
 native agent panel, terminal infrastructure, or external terminal agents. Port
-only behavior that has a reachable Flint consumer.
+only behavior that has a reachable dez consumer.
 
 ### Task 4.1: Search terminal agent threads
 
 **Upstream:** Zed PR #60292, commit
 `4aa8ad9742b1ee948d64429a5814d9b9a861350a`
 
-**Classification:** Reimplementation against Flint Agent Threads.
+**Classification:** Reimplementation against dez Agent Threads.
 
 **Branch:** `feature/agent-thread-search`
 
@@ -777,7 +777,7 @@ only behavior that has a reachable Flint consumer.
 **Upstream:** Zed PR #58779, commit
 `905e955a702707cd81a2e5bae9b381a7a9c7f614`
 
-**Classification:** Adapt GPUI capability; integrate with Flint notifications.
+**Classification:** Adapt GPUI capability; integrate with dez notifications.
 
 **Branch:** `feature/agent-window-attention`
 
@@ -791,9 +791,9 @@ only behavior that has a reachable Flint consumer.
 
 **Steps:**
 
-1. Audit Flint's existing Agent Threads desktop notification behavior.
+1. Audit dez's existing Agent Threads desktop notification behavior.
 2. Add a platform abstraction and test implementation for attention requests.
-3. Request attention only when the relevant Flint window is not active.
+3. Request attention only when the relevant dez window is not active.
 4. Avoid duplicate desktop notification and attention events for one
    completion.
 5. Test completion, failure, cancellation, restored sessions, and multiple
@@ -820,14 +820,14 @@ only behavior that has a reachable Flint consumer.
 
 **Steps:**
 
-1. Distinguish Zed native-agent database flushing from Flint external-agent
+1. Distinguish Zed native-agent database flushing from dez external-agent
    terminal persistence.
 2. Reproduce quitting while an external agent emits output.
 3. Assert the next launch restores the thread without a duplicate or ghost
    terminal.
 4. If current Agent Threads already satisfy the behavior, record it as
-   superseded by Flint's history index and session restoration work.
-5. Otherwise, persist only Flint-owned metadata; do not copy native-agent
+   superseded by dez's history index and session restoration work.
+5. Otherwise, persist only dez-owned metadata; do not copy native-agent
    database behavior into external agent histories.
 6. Open a code PR only if the regression fails.
 
@@ -1020,7 +1020,7 @@ Wave 5 starts only after Wave 1 is complete.
 1. Audit the baseline-present compare-with-branch, dedicated diff, and split
    history controls so they are not reimplemented.
 2. Add list/tree, sort-by-path/name, group-by-none/status/staging controls.
-3. Migrate `git_panel.sort_by_path` deterministically if Flint still accepts
+3. Migrate `git_panel.sort_by_path` deterministically if dez still accepts
    it.
 4. Add serialization, Settings Editor, panel rendering, and keyboard tests.
 5. Open a PR titled `git_ui: Add Git panel view options`.
@@ -1098,7 +1098,7 @@ Wave 6 completion gate against their integrated state.
 
 **Integrated branch:** `feature/search-picker-modernization`
 
-**Status:** Complete in [Flint PR #120](https://github.com/shenghsi/flint/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
 
 **Starting files:**
 
@@ -1124,7 +1124,7 @@ Wave 6 completion gate against their integrated state.
 
 **Integrated branch:** `feature/search-picker-modernization`
 
-**Status:** Complete in [Flint PR #120](https://github.com/shenghsi/flint/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
 
 **Starting files:**
 
@@ -1149,7 +1149,7 @@ Wave 6 completion gate against their integrated state.
 
 **Integrated branch:** `feature/search-picker-modernization`
 
-**Status:** Complete in [Flint PR #120](https://github.com/shenghsi/flint/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
 
 **Starting files:**
 
@@ -1175,7 +1175,7 @@ Wave 6 completion gate against their integrated state.
 **Classification:** Reimplementation of two upstream PRs in the integrated
 Wave 6 PR.
 
-**Status:** Complete in [Flint PR #120](https://github.com/shenghsi/flint/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
 
 #### Task 6.6a: Add the picker selection model
 
@@ -1196,7 +1196,7 @@ independently on the integrated branch.
 
 ### Wave 6 completion
 
-Complete in [Flint PR #120](https://github.com/shenghsi/flint/pull/120),
+Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120),
 merged as `0373e988f5fde14865e30b802f61261a98e9d430`. Picker, File Finder,
 search, project-symbol, outline, LSP-location, editor, project, workspace,
 settings content, and Settings Editor suites passed locally. CI passed
@@ -1249,11 +1249,11 @@ accessed over SSH and exposed no attachable CGWindow.
 
 **Steps:**
 
-1. Inventory Flint's current global and per-language defaults.
+1. Inventory dez's current global and per-language defaults.
 2. Measure how many official-formatter language defaults would retain
    formatting.
 3. Document compatibility options:
-   preserve Flint behavior, adopt Zed behavior, or migrate only new users.
+   preserve dez behavior, adopt Zed behavior, or migrate only new users.
 4. Obtain explicit approval before changing the default.
 5. If approved, add default and migration tests before editing settings.
 6. Deliver the decision and implementation as separate PRs when behavior
@@ -1265,7 +1265,7 @@ accessed over SSH and exposed no attachable CGWindow.
 `40d20036af34343a09f0ce6a2eb38c9e5a60e9ae`
 
 **Classification:** Native provider and MCP portions are excluded; external
-agent controls require a Flint-specific audit.
+agent controls require a dez-specific audit.
 
 **Branch:** `test/agent-thread-settings-coverage`
 
@@ -1284,10 +1284,10 @@ agent controls require a Flint-specific audit.
    route control, and plan-usage control.
 3. Define explicit capabilities for each control.
 4. Add Settings Editor tests for every applicable exact JSON path.
-5. Keep Direct remote agents free of Flint-managed launch and credential
+5. Keep Direct remote agents free of dez-managed launch and credential
    controls.
 6. Gate credentials and plan usage by capability, not registry membership.
-7. Add only missing Flint controls or coverage; do not restore Zed provider or
+7. Add only missing dez controls or coverage; do not restore Zed provider or
    MCP pages.
 8. Open a PR titled `settings_ui: Complete Agent Threads settings coverage`
    only if the audit finds a gap.
@@ -1340,7 +1340,7 @@ agent controls require a Flint-specific audit.
 
 **Steps:**
 
-1. Test TypeScript 6 and 7 projects with Flint's current vtsls and
+1. Test TypeScript 6 and 7 projects with dez's current vtsls and
    typescript-language-server setup.
 2. Determine whether pinning, tsgo recommendation, or both matches the final
    upstream behavior.
@@ -1412,7 +1412,7 @@ Run or add automated coverage for:
 - settings migration; and
 - extension loading and remote synchronization.
 
-Build `/tmp/Flint-Local.app` and perform the user-visible smoke suite. Open
+Build `/tmp/dez-Local.app` and perform the user-visible smoke suite. Open
 focused test PRs for missing automation rather than one large mixed PR.
 
 ### Task 8.3: Establish recurring upstream review
@@ -1457,7 +1457,7 @@ The P0-P2 program is complete when:
 Completed on 2026-07-29. The stable-only reconciliation classifies all 568
 unique PRs cited by Zed's non-preview v1.6-v1.12 release notes exactly once.
 Wave 8 landed four safety fixes in
-[Flint PR #134](https://github.com/shenghsi/flint/pull/134), merged as
+[dez PR #134](https://github.com/shenghsi/dez/pull/134), merged as
 `71afcb5e64645f75e11bc27bd6304bb269ba46b6`.
 
 The exact-head CI run passed formatting, Linux build and clippy, and all 4,695

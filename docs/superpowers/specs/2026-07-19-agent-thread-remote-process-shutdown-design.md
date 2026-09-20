@@ -9,12 +9,12 @@ Closing an Agent Thread currently removes its terminal item and store entry but
 does not explicitly stop the agent. Dropping the terminal eventually kills the
 local SSH client, but that is not a remote-process lifecycle guarantee. On the
 reported cluster, a root-owned `log-user-session` wrapper retains the remote
-PTY after SSH closes, leaving Codex running without a corresponding Flint
+PTY after SSH closes, leaving Codex running without a corresponding dez
 thread.
 
 Dropping the Agent Thread store entry also drops its `AgentEgressLease`. A
-leaked Through-Flint process therefore loses its proxy capability and fails
-closed, but still consumes remote resources and cannot be managed from Flint.
+leaked Through-dez process therefore loses its proxy capability and fails
+closed, but still consumes remote resources and cannot be managed from dez.
 
 ## Goals
 
@@ -22,16 +22,16 @@ closed, but still consumes remote resources and cannot be managed from Flint.
   process.
 - Give the agent a short opportunity to exit cleanly before forcing it.
 - Target only the process created for the closed Agent Thread and its children.
-- Keep Through-Flint egress alive while graceful shutdown is in progress.
+- Keep Through-dez egress alive while graceful shutdown is in progress.
 - Use the same shutdown path for a direct tab close and route-change cleanup.
 - Leave ordinary terminal-tab behavior unchanged.
 - Surface shutdown failures instead of silently leaking a remote process.
 
 ## Non-goals
 
-- Keeping an Agent Thread alive after its Flint terminal is closed.
+- Keeping an Agent Thread alive after its dez terminal is closed.
 - Managing processes that were not launched as Agent Threads.
-- Guaranteeing remote termination while the SSH host is unreachable. Flint
+- Guaranteeing remote termination while the SSH host is unreachable. dez
   revokes local egress and reports the failure in that case.
 - Changing the existing SSH-disconnect or tunnel-restoration design.
 - Adding a Windows remote process supervisor. Windows keeps the graceful PTY
@@ -42,7 +42,7 @@ closed, but still consumes remote resources and cannot be managed from Flint.
 
 ### Graceful interruption followed by targeted force termination
 
-This is the selected approach. Flint sends an interrupt through the existing
+This is the selected approach. dez sends an interrupt through the existing
 PTY, waits for the task to complete, and uses a separately authenticated remote
 cleanup command only if the grace period expires.
 
@@ -61,9 +61,9 @@ keeps the remote PTY and Codex process alive after the local SSH process exits.
 
 ## Process Identity
 
-Every remote Agent Thread receives a random lifecycle UUID. Flint adds it to
-the agent environment as `FLINT_AGENT_THREAD_ID` and launches the agent through
-a fixed Flint-generated POSIX supervisor. Before starting the agent as its
+Every remote Agent Thread receives a random lifecycle UUID. dez adds it to
+the agent environment as `DEZ_AGENT_THREAD_ID` and launches the agent through
+a fixed dez-generated POSIX supervisor. Before starting the agent as its
 foreground child, the supervisor creates a user-private lifecycle directory
 and atomically records:
 
@@ -79,7 +79,7 @@ agent and removes the lifecycle record on normal exit. Forced cleanup targets
 the validated process group rather than relying on the supervisor to run its
 exit handler.
 
-The record is stored below a mode-`0700` Flint runtime directory and written
+The record is stored below a mode-`0700` dez runtime directory and written
 with mode `0600`. User-provided labels, paths, commands, and arguments are not
 interpolated into the wrapper or cleanup program. The lifecycle UUID is parsed
 and validated before it is used in a path.
@@ -142,16 +142,16 @@ cannot provide a remote cleanup guarantee.
 ## Failure Handling
 
 If graceful completion succeeds, remote force cleanup is skipped. A missing
-lifecycle record is successful only when Flint can also confirm that the
+lifecycle record is successful only when dez can also confirm that the
 recorded process no longer exists.
 
-If process identity validation fails, Flint refuses to signal the PID and
+If process identity validation fails, dez refuses to signal the PID and
 reports that the remote Agent Thread could not be safely terminated. If SSH is
-unavailable, Flint reports that explicit remote cleanup could not run. In both
+unavailable, dez reports that explicit remote cleanup could not run. In both
 cases the egress lease is released so the leaked process loses its capability
 immediately.
 
-Direct tab close reports asynchronous cleanup failures through Flint's normal
+Direct tab close reports asynchronous cleanup failures through dez's normal
 error notification path. Route changes return the error to their existing UI
 flow and do not silently claim successful cleanup.
 
@@ -171,7 +171,7 @@ Tests follow red-green-refactor and cover:
   connection.
 
 The focused Agent Threads tests run first. The full `agent_threads`, `terminal`,
-`project`, and `remote` test suites and Flint clippy checks run before delivery.
+`project`, and `remote` test suites and dez clippy checks run before delivery.
 
 ## Acceptance Criteria
 
@@ -181,7 +181,7 @@ The focused Agent Threads tests run first. The full `agent_threads`, `terminal`,
 - A graceful Codex exit completes without the force cleanup path.
 - A non-responsive test agent is force-terminated without affecting another
   concurrent Agent Thread.
-- A Through-Flint process retains working egress during the grace period and
+- A Through-dez process retains working egress during the grace period and
   loses its capability when cleanup completes or fails.
 - Changing the connection route cannot finish while an affected Agent Thread
   shutdown is still pending.

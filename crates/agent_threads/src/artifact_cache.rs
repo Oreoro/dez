@@ -1304,7 +1304,7 @@ mod tests {
     }
 
     #[test]
-    fn production_cache_uses_the_flint_agent_artifact_root() {
+    fn production_cache_uses_the_dez_agent_artifact_root() {
         let http_client = FakeHttpClient::with_200_response();
 
         let cache = AgentArtifactCache::for_app(http_client);

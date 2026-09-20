@@ -42,7 +42,7 @@ pub(crate) const SCROLL_LINES: f32 = 3.0;
 pub(crate) const DOUBLE_CLICK_INTERVAL: Duration = Duration::from_millis(400);
 #[cfg(any(feature = "wayland", feature = "x11"))]
 pub(crate) const DOUBLE_CLICK_DISTANCE: Pixels = px(5.0);
-pub(crate) const KEYRING_LABEL: &str = "flint-github-account";
+pub(crate) const KEYRING_LABEL: &str = "dez-github-account";
 
 #[cfg(any(feature = "wayland", feature = "x11"))]
 const FILE_PICKER_PORTAL_MISSING: &str =
@@ -169,7 +169,7 @@ impl LinuxCommon {
 
 /// Bounds how often a fatal display disconnect can trigger an auto-relaunch,
 /// so a deterministic failure (e.g. a broken compositor session) can't spin
-/// Flint in a restart loop. Uses a marker file rather than an inherited
+/// dez in a restart loop. Uses a marker file rather than an inherited
 /// environment variable so it works across the exec boundary without
 /// mutating process environment during shutdown, when other threads may
 /// still be running.
@@ -178,7 +178,7 @@ impl LinuxCommon {
 /// cooldown window (meaning the caller should NOT relaunch again yet).
 /// Otherwise refreshes the marker to now and returns `None`.
 fn seconds_since_last_fatal_relaunch_marker() -> Option<u64> {
-    let marker = env::temp_dir().join("flint-wayland-fatal-relaunch-marker");
+    let marker = env::temp_dir().join("dez-wayland-fatal-relaunch-marker");
     check_and_refresh_relaunch_marker(&marker, FATAL_RELAUNCH_COOLDOWN_SECS)
 }
 
@@ -1220,7 +1220,7 @@ mod tests {
     #[test]
     fn relaunch_marker_blocks_within_cooldown_and_allows_after() {
         let marker = env::temp_dir().join(format!(
-            "flint-test-relaunch-marker-{}-{:?}",
+            "dez-test-relaunch-marker-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));

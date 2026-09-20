@@ -1399,7 +1399,7 @@ impl Render for LspButton {
                 .anchor(Anchor::BottomLeft)
                 .with_handle(self.popover_menu_handle.clone())
                 .trigger_with_tooltip(
-                    IconButton::new("flint-lsp-tool-button", IconName::BoltOutlined)
+                    IconButton::new("dez-lsp-tool-button", IconName::BoltOutlined)
                         .when_some(indicator, IconButton::indicator)
                         .icon_size(IconSize::Small)
                         .when(is_restricted, |s| s.icon_color(Color::Warning))

@@ -1311,13 +1311,13 @@ impl Render for CommitViewToolbar {
                     .tooltip(move |_, cx| {
                         Tooltip::for_action(
                             localization::text(cx, "git-buffer-search"),
-                            &flint_actions::buffer_search::Deploy::find(),
+                            &dez_actions::buffer_search::Deploy::find(),
                             cx,
                         )
                     })
                     .on_click(|_, window, cx| {
                         window.dispatch_action(
-                            Box::new(flint_actions::buffer_search::Deploy::find()),
+                            Box::new(dez_actions::buffer_search::Deploy::find()),
                             cx,
                         );
                     }),

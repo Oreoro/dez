@@ -25,7 +25,7 @@ pub struct VsCodeTokenColorSettings {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, EnumIter)]
-pub enum FlintSyntaxToken {
+pub enum dezSyntaxToken {
     Attribute,
     Boolean,
     Comment,
@@ -67,57 +67,57 @@ pub enum FlintSyntaxToken {
     Variant,
 }
 
-impl std::fmt::Display for FlintSyntaxToken {
+impl std::fmt::Display for dezSyntaxToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                FlintSyntaxToken::Attribute => "attribute",
-                FlintSyntaxToken::Boolean => "boolean",
-                FlintSyntaxToken::Comment => "comment",
-                FlintSyntaxToken::CommentDoc => "comment.doc",
-                FlintSyntaxToken::Constant => "constant",
-                FlintSyntaxToken::Constructor => "constructor",
-                FlintSyntaxToken::Embedded => "embedded",
-                FlintSyntaxToken::Emphasis => "emphasis",
-                FlintSyntaxToken::EmphasisStrong => "emphasis.strong",
-                FlintSyntaxToken::Enum => "enum",
-                FlintSyntaxToken::Function => "function",
-                FlintSyntaxToken::Hint => "hint",
-                FlintSyntaxToken::Keyword => "keyword",
-                FlintSyntaxToken::Label => "label",
-                FlintSyntaxToken::LinkText => "link_text",
-                FlintSyntaxToken::LinkUri => "link_uri",
-                FlintSyntaxToken::Number => "number",
-                FlintSyntaxToken::Operator => "operator",
-                FlintSyntaxToken::Predictive => "predictive",
-                FlintSyntaxToken::Preproc => "preproc",
-                FlintSyntaxToken::Primary => "primary",
-                FlintSyntaxToken::Property => "property",
-                FlintSyntaxToken::Punctuation => "punctuation",
-                FlintSyntaxToken::PunctuationBracket => "punctuation.bracket",
-                FlintSyntaxToken::PunctuationDelimiter => "punctuation.delimiter",
-                FlintSyntaxToken::PunctuationListMarker => "punctuation.list_marker",
-                FlintSyntaxToken::PunctuationSpecial => "punctuation.special",
-                FlintSyntaxToken::String => "string",
-                FlintSyntaxToken::StringEscape => "string.escape",
-                FlintSyntaxToken::StringRegex => "string.regex",
-                FlintSyntaxToken::StringSpecial => "string.special",
-                FlintSyntaxToken::StringSpecialSymbol => "string.special.symbol",
-                FlintSyntaxToken::Tag => "tag",
-                FlintSyntaxToken::TextLiteral => "text.literal",
-                FlintSyntaxToken::Title => "title",
-                FlintSyntaxToken::Type => "type",
-                FlintSyntaxToken::Variable => "variable",
-                FlintSyntaxToken::VariableSpecial => "variable.special",
-                FlintSyntaxToken::Variant => "variant",
+                dezSyntaxToken::Attribute => "attribute",
+                dezSyntaxToken::Boolean => "boolean",
+                dezSyntaxToken::Comment => "comment",
+                dezSyntaxToken::CommentDoc => "comment.doc",
+                dezSyntaxToken::Constant => "constant",
+                dezSyntaxToken::Constructor => "constructor",
+                dezSyntaxToken::Embedded => "embedded",
+                dezSyntaxToken::Emphasis => "emphasis",
+                dezSyntaxToken::EmphasisStrong => "emphasis.strong",
+                dezSyntaxToken::Enum => "enum",
+                dezSyntaxToken::Function => "function",
+                dezSyntaxToken::Hint => "hint",
+                dezSyntaxToken::Keyword => "keyword",
+                dezSyntaxToken::Label => "label",
+                dezSyntaxToken::LinkText => "link_text",
+                dezSyntaxToken::LinkUri => "link_uri",
+                dezSyntaxToken::Number => "number",
+                dezSyntaxToken::Operator => "operator",
+                dezSyntaxToken::Predictive => "predictive",
+                dezSyntaxToken::Preproc => "preproc",
+                dezSyntaxToken::Primary => "primary",
+                dezSyntaxToken::Property => "property",
+                dezSyntaxToken::Punctuation => "punctuation",
+                dezSyntaxToken::PunctuationBracket => "punctuation.bracket",
+                dezSyntaxToken::PunctuationDelimiter => "punctuation.delimiter",
+                dezSyntaxToken::PunctuationListMarker => "punctuation.list_marker",
+                dezSyntaxToken::PunctuationSpecial => "punctuation.special",
+                dezSyntaxToken::String => "string",
+                dezSyntaxToken::StringEscape => "string.escape",
+                dezSyntaxToken::StringRegex => "string.regex",
+                dezSyntaxToken::StringSpecial => "string.special",
+                dezSyntaxToken::StringSpecialSymbol => "string.special.symbol",
+                dezSyntaxToken::Tag => "tag",
+                dezSyntaxToken::TextLiteral => "text.literal",
+                dezSyntaxToken::Title => "title",
+                dezSyntaxToken::Type => "type",
+                dezSyntaxToken::Variable => "variable",
+                dezSyntaxToken::VariableSpecial => "variable.special",
+                dezSyntaxToken::Variant => "variant",
             }
         )
     }
 }
 
-impl FlintSyntaxToken {
+impl dezSyntaxToken {
     pub fn find_best_token_color_match<'a>(
         &self,
         token_colors: &'a [VsCodeTokenColor],
@@ -175,51 +175,51 @@ impl FlintSyntaxToken {
 
     pub fn fallbacks(&self) -> &[Self] {
         match self {
-            FlintSyntaxToken::CommentDoc => &[FlintSyntaxToken::Comment],
-            FlintSyntaxToken::Number => &[FlintSyntaxToken::Constant],
-            FlintSyntaxToken::VariableSpecial => &[FlintSyntaxToken::Variable],
-            FlintSyntaxToken::PunctuationBracket
-            | FlintSyntaxToken::PunctuationDelimiter
-            | FlintSyntaxToken::PunctuationListMarker
-            | FlintSyntaxToken::PunctuationSpecial => &[FlintSyntaxToken::Punctuation],
-            FlintSyntaxToken::StringEscape
-            | FlintSyntaxToken::StringRegex
-            | FlintSyntaxToken::StringSpecial
-            | FlintSyntaxToken::StringSpecialSymbol => &[FlintSyntaxToken::String],
+            dezSyntaxToken::CommentDoc => &[dezSyntaxToken::Comment],
+            dezSyntaxToken::Number => &[dezSyntaxToken::Constant],
+            dezSyntaxToken::VariableSpecial => &[dezSyntaxToken::Variable],
+            dezSyntaxToken::PunctuationBracket
+            | dezSyntaxToken::PunctuationDelimiter
+            | dezSyntaxToken::PunctuationListMarker
+            | dezSyntaxToken::PunctuationSpecial => &[dezSyntaxToken::Punctuation],
+            dezSyntaxToken::StringEscape
+            | dezSyntaxToken::StringRegex
+            | dezSyntaxToken::StringSpecial
+            | dezSyntaxToken::StringSpecialSymbol => &[dezSyntaxToken::String],
             _ => &[],
         }
     }
 
     fn to_vscode(self) -> Vec<&'static str> {
         match self {
-            FlintSyntaxToken::Attribute => vec!["entity.other.attribute-name"],
-            FlintSyntaxToken::Boolean => vec!["constant.language"],
-            FlintSyntaxToken::Comment => vec!["comment"],
-            FlintSyntaxToken::CommentDoc => vec!["comment.block.documentation"],
-            FlintSyntaxToken::Constant => {
+            dezSyntaxToken::Attribute => vec!["entity.other.attribute-name"],
+            dezSyntaxToken::Boolean => vec!["constant.language"],
+            dezSyntaxToken::Comment => vec!["comment"],
+            dezSyntaxToken::CommentDoc => vec!["comment.block.documentation"],
+            dezSyntaxToken::Constant => {
                 vec!["constant", "constant.language", "constant.character"]
             }
-            FlintSyntaxToken::Constructor => {
+            dezSyntaxToken::Constructor => {
                 vec![
                     "entity.name.tag",
                     "entity.name.function.definition.special.constructor",
                 ]
             }
-            FlintSyntaxToken::Embedded => vec!["meta.embedded"],
-            FlintSyntaxToken::Emphasis => vec!["markup.italic"],
-            FlintSyntaxToken::EmphasisStrong => vec![
+            dezSyntaxToken::Embedded => vec!["meta.embedded"],
+            dezSyntaxToken::Emphasis => vec!["markup.italic"],
+            dezSyntaxToken::EmphasisStrong => vec![
                 "markup.bold",
                 "markup.italic markup.bold",
                 "markup.bold markup.italic",
             ],
-            FlintSyntaxToken::Enum => vec!["support.type.enum"],
-            FlintSyntaxToken::Function => vec![
+            dezSyntaxToken::Enum => vec!["support.type.enum"],
+            dezSyntaxToken::Function => vec![
                 "entity.function",
                 "entity.name.function",
                 "variable.function",
             ],
-            FlintSyntaxToken::Hint => vec![],
-            FlintSyntaxToken::Keyword => vec![
+            dezSyntaxToken::Hint => vec![],
+            dezSyntaxToken::Keyword => vec![
                 "keyword",
                 "keyword.other.fn.rust",
                 "keyword.control",
@@ -228,63 +228,63 @@ impl FlintSyntaxToken {
                 "punctuation.accessor",
                 "entity.name.tag",
             ],
-            FlintSyntaxToken::Label => vec![
+            dezSyntaxToken::Label => vec![
                 "label",
                 "entity.name",
                 "entity.name.import",
                 "entity.name.package",
             ],
-            FlintSyntaxToken::LinkText => vec!["markup.underline.link", "string.other.link"],
-            FlintSyntaxToken::LinkUri => vec!["markup.underline.link", "string.other.link"],
-            FlintSyntaxToken::Number => vec!["constant.numeric", "number"],
-            FlintSyntaxToken::Operator => vec!["operator", "keyword.operator"],
-            FlintSyntaxToken::Predictive => vec![],
-            FlintSyntaxToken::Preproc => vec![
+            dezSyntaxToken::LinkText => vec!["markup.underline.link", "string.other.link"],
+            dezSyntaxToken::LinkUri => vec!["markup.underline.link", "string.other.link"],
+            dezSyntaxToken::Number => vec!["constant.numeric", "number"],
+            dezSyntaxToken::Operator => vec!["operator", "keyword.operator"],
+            dezSyntaxToken::Predictive => vec![],
+            dezSyntaxToken::Preproc => vec![
                 "preproc",
                 "meta.preprocessor",
                 "punctuation.definition.preprocessor",
             ],
-            FlintSyntaxToken::Primary => vec![],
-            FlintSyntaxToken::Property => vec![
+            dezSyntaxToken::Primary => vec![],
+            dezSyntaxToken::Property => vec![
                 "variable.member",
                 "support.type.property-name",
                 "variable.object.property",
                 "variable.other.field",
             ],
-            FlintSyntaxToken::Punctuation => vec![
+            dezSyntaxToken::Punctuation => vec![
                 "punctuation",
                 "punctuation.section",
                 "punctuation.accessor",
                 "punctuation.separator",
                 "punctuation.definition.tag",
             ],
-            FlintSyntaxToken::PunctuationBracket => vec![
+            dezSyntaxToken::PunctuationBracket => vec![
                 "punctuation.bracket",
                 "punctuation.definition.tag.begin",
                 "punctuation.definition.tag.end",
             ],
-            FlintSyntaxToken::PunctuationDelimiter => vec![
+            dezSyntaxToken::PunctuationDelimiter => vec![
                 "punctuation.delimiter",
                 "punctuation.separator",
                 "punctuation.terminator",
             ],
-            FlintSyntaxToken::PunctuationListMarker => {
+            dezSyntaxToken::PunctuationListMarker => {
                 vec!["markup.list punctuation.definition.list.begin"]
             }
-            FlintSyntaxToken::PunctuationSpecial => vec!["punctuation.special"],
-            FlintSyntaxToken::String => vec!["string"],
-            FlintSyntaxToken::StringEscape => {
+            dezSyntaxToken::PunctuationSpecial => vec!["punctuation.special"],
+            dezSyntaxToken::String => vec!["string"],
+            dezSyntaxToken::StringEscape => {
                 vec!["string.escape", "constant.character", "constant.other"]
             }
-            FlintSyntaxToken::StringRegex => vec!["string.regex"],
-            FlintSyntaxToken::StringSpecial => vec!["string.special", "constant.other.symbol"],
-            FlintSyntaxToken::StringSpecialSymbol => {
+            dezSyntaxToken::StringRegex => vec!["string.regex"],
+            dezSyntaxToken::StringSpecial => vec!["string.special", "constant.other.symbol"],
+            dezSyntaxToken::StringSpecialSymbol => {
                 vec!["string.special.symbol", "constant.other.symbol"]
             }
-            FlintSyntaxToken::Tag => vec!["tag", "entity.name.tag", "meta.tag.sgml"],
-            FlintSyntaxToken::TextLiteral => vec!["text.literal", "string"],
-            FlintSyntaxToken::Title => vec!["title", "entity.name"],
-            FlintSyntaxToken::Type => vec![
+            dezSyntaxToken::Tag => vec!["tag", "entity.name.tag", "meta.tag.sgml"],
+            dezSyntaxToken::TextLiteral => vec!["text.literal", "string"],
+            dezSyntaxToken::Title => vec!["title", "entity.name"],
+            dezSyntaxToken::Type => vec![
                 "entity.name.type",
                 "entity.name.type.primitive",
                 "entity.name.type.numeric",
@@ -293,20 +293,20 @@ impl FlintSyntaxToken {
                 "support.type.primitive",
                 "support.class",
             ],
-            FlintSyntaxToken::Variable => vec![
+            dezSyntaxToken::Variable => vec![
                 "variable",
                 "variable.language",
                 "variable.member",
                 "variable.parameter",
                 "variable.parameter.function-call",
             ],
-            FlintSyntaxToken::VariableSpecial => vec![
+            dezSyntaxToken::VariableSpecial => vec![
                 "variable.special",
                 "variable.member",
                 "variable.annotation",
                 "variable.language",
             ],
-            FlintSyntaxToken::Variant => vec!["variant"],
+            dezSyntaxToken::Variant => vec!["variant"],
         }
     }
 }

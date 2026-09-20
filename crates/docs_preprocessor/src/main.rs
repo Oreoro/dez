@@ -664,16 +664,16 @@ fn handle_postprocessing() -> Result<()> {
         .expect("has output")
         .as_table_mut()
         .expect("output is table");
-    let flint_html = output
-        .remove("flint-html")
-        .expect("flint-html output defined");
-    let default_description = flint_html
+    let dez_html = output
+        .remove("dez-html")
+        .expect("dez-html output defined");
+    let default_description = dez_html
         .get("default-description")
         .expect("Default description not found")
         .as_str()
         .expect("Default description not a string")
         .to_string();
-    let default_title = flint_html
+    let default_title = dez_html
         .get("default-title")
         .expect("Default title not found")
         .as_str()
@@ -688,7 +688,7 @@ fn handle_postprocessing() -> Result<()> {
         ""
     };
 
-    output.insert("html".to_string(), flint_html);
+    output.insert("html".to_string(), dez_html);
     mdbook::Renderer::render(&mdbook::renderer::HtmlHandlebars::new(), &ctx)?;
     let ignore_list = ["toc.html"];
 
@@ -782,7 +782,7 @@ fn handle_postprocessing() -> Result<()> {
 
         title_tag_contents
             .trim()
-            .strip_suffix("- Flint")
+            .strip_suffix("- dez")
             .unwrap_or(title_tag_contents)
             .trim()
             .to_string()

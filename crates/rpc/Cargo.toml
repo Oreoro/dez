@@ -1,5 +1,5 @@
 [package]
-description = "Shared RPC logic for Flint"
+description = "Shared RPC logic for dez"
 edition.workspace = true
 name = "rpc"
 version = "0.1.0"

@@ -149,7 +149,7 @@ pub fn install_remote_control_command() -> anyhow::Result<()> {
 pub static VERSION: LazyLock<String> = LazyLock::new(|| match *RELEASE_CHANNEL {
     ReleaseChannel::Stable | ReleaseChannel::Preview => env!("ZED_PKG_VERSION").to_owned(),
     ReleaseChannel::Nightly | ReleaseChannel::Dev => {
-        let commit_sha = option_env!("ZED_COMMIT_SHA").unwrap_or("missing-flint-commit-sha");
+        let commit_sha = option_env!("ZED_COMMIT_SHA").unwrap_or("missing-dez-commit-sha");
         let build_identifier = option_env!("ZED_BUILD_ID");
         if let Some(build_id) = build_identifier {
             format!("{build_id}+{commit_sha}")
@@ -530,8 +530,8 @@ pub fn execute_run(
         Some(app.background_executor().spawn(crashes::init(
             crashes::InitCrashHandler {
                 session_id: id,
-                flint_version: VERSION.to_owned(),
-                binary: "flint-remote-server".to_string(),
+                dez_version: VERSION.to_owned(),
+                binary: "dez-remote-server".to_string(),
                 release_channel: release_channel::RELEASE_CHANNEL_NAME.clone(),
                 commit_sha: option_env!("ZED_COMMIT_SHA").unwrap_or("no_sha").to_owned(),
             },
@@ -541,7 +541,7 @@ pub fn execute_run(
                     background_executor.spawn(task).detach();
                 }
             },
-            |pid| paths::temp_dir().join(format!("flint-remote-server-crash-handler-{pid}")),
+            |pid| paths::temp_dir().join(format!("dez-remote-server-crash-handler-{pid}")),
             // we are running outside gpui
             #[allow(clippy::disallowed_methods)]
             |duration| FutureExt::map(Timer::after(duration), |_| ()),
@@ -618,7 +618,7 @@ pub fn execute_run(
         log::info!("gpui app started, initializing server");
         let session = start_server(listeners, log_rx, cx, is_wsl_interop);
         if let Err(error) = remote_control::start(session.clone(), cx) {
-            log::error!("failed to start remote flintctl endpoint: {error:#}");
+            log::error!("failed to start remote dezctl endpoint: {error:#}");
         }
         trusted_worktrees::init(HashMap::default(), cx);
 
@@ -641,7 +641,7 @@ pub fn execute_run(
                     ReqwestClient::proxy_and_user_agent(
                         proxy_url,
                         &format!(
-                            "Flint-Server/{} ({}; {})",
+                            "dez-Server/{} ({}; {})",
                             env!("CARGO_PKG_VERSION"),
                             std::env::consts::OS,
                             std::env::consts::ARCH
@@ -808,15 +808,15 @@ pub(crate) fn execute_proxy(
         smol::spawn(crashes::init(
             crashes::InitCrashHandler {
                 session_id: id,
-                flint_version: VERSION.to_owned(),
-                binary: "flint-remote-proxy".to_string(),
+                dez_version: VERSION.to_owned(),
+                binary: "dez-remote-proxy".to_string(),
                 release_channel: release_channel::RELEASE_CHANNEL_NAME.clone(),
                 commit_sha: option_env!("ZED_COMMIT_SHA").unwrap_or("no_sha").to_owned(),
             },
             |task| {
                 smol::spawn(task).detach();
             },
-            |pid| paths::temp_dir().join(format!("flint-remote-server-proxy-crash-handler-{pid}")),
+            |pid| paths::temp_dir().join(format!("dez-remote-server-proxy-crash-handler-{pid}")),
             // we are running outside gpui
             #[allow(clippy::disallowed_methods)]
             |duration| FutureExt::map(Timer::after(duration), |_| ()),
@@ -1260,7 +1260,7 @@ fn read_proxy_settings(cx: &mut Context<HeadlessProject>) -> Option<Url> {
 fn cleanup_old_binaries() -> Result<()> {
     let server_dir = paths::remote_server_dir_relative();
     let release_channel = release_channel::RELEASE_CHANNEL.dev_name();
-    let prefix = format!("flint-remote-server-{}-", release_channel);
+    let prefix = format!("dez-remote-server-{}-", release_channel);
 
     for entry in std::fs::read_dir(server_dir.as_std_path())? {
         let path = entry?.path();

@@ -6,12 +6,12 @@ use uuid::Uuid;
 
 use crate::AgentLaunchCommand;
 
-const LIFECYCLE_ENVIRONMENT_KEY: &str = "FLINT_AGENT_THREAD_ID";
+const LIFECYCLE_ENVIRONMENT_KEY: &str = "DEZ_AGENT_THREAD_ID";
 const MAX_CLEANUP_STDERR_BYTES: usize = 64 * 1024;
 
 const LAUNCH_SCRIPT: &str = r#"set -eu
 lifecycle_id=$0
-state_directory=$HOME/.local/state/flint/agent-threads
+state_directory=$HOME/.local/state/dez/agent-threads
 record=$state_directory/$lifecycle_id
 temporary=$record.$$
 umask 077
@@ -37,7 +37,7 @@ exit "$exit_status"
 
 const CLEANUP_SCRIPT: &str = r#"set -eu
 lifecycle_id=$0
-state_directory=$HOME/.local/state/flint/agent-threads
+state_directory=$HOME/.local/state/dez/agent-threads
 record=$state_directory/$lifecycle_id
 test -f "$record" || exit 65
 {
@@ -62,7 +62,7 @@ case $recorded_start in
         live_start=linux:$(awk '{print $22}' "/proc/$process_id/stat")
         test "$live_start" = "$recorded_start" || exit 67
         tr '\000' '\n' <"/proc/$process_id/environ" |
-            grep -Fqx "FLINT_AGENT_THREAD_ID=$lifecycle_id" || exit 67
+            grep -Fqx "DEZ_AGENT_THREAD_ID=$lifecycle_id" || exit 67
         ;;
     posix:*)
         live_start=posix:$(ps -o lstart= -p "$process_id")
@@ -244,7 +244,7 @@ mod tests {
         assert_eq!(command.args[4], "resume");
         assert_eq!(command.args[5], "session with spaces");
         assert_eq!(
-            command.env.get("FLINT_AGENT_THREAD_ID").map(String::as_str),
+            command.env.get("DEZ_AGENT_THREAD_ID").map(String::as_str),
             Some(LIFECYCLE_ID)
         );
         assert!(!command.args[1].contains("/opt/codex path/codex"));
@@ -289,7 +289,7 @@ mod tests {
         let home = tempfile::tempdir().expect("temporary home should be created");
         let record = home
             .path()
-            .join(".local/state/flint/agent-threads")
+            .join(".local/state/dez/agent-threads")
             .join(LIFECYCLE_ID);
         let mut supervisor = util::command::new_std_command("/bin/sh")
             .args([

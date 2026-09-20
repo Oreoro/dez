@@ -30,7 +30,7 @@ use project::{
     search_history::{SearchHistory, SearchHistoryCursor},
 };
 
-use flint_actions::{
+use dez_actions::{
     OpenSettingsAt, outline::ToggleOutline, workspace::CopyPath, workspace::CopyRelativePath,
 };
 use fs::Fs;
@@ -56,7 +56,7 @@ use registrar::{ForDeployed, ForDismissed, SearchActionsRegistrar};
 
 const MAX_BUFFER_SEARCH_HISTORY_SIZE: usize = 50;
 
-pub use flint_actions::buffer_search::{
+pub use dez_actions::buffer_search::{
     Deploy, DeployReplace, Dismiss, FocusEditor, UseSelectionForFind,
 };
 

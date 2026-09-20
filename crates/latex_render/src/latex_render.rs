@@ -214,7 +214,7 @@ impl LatexRendererState {
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
         std::hash::Hash::hash(RENDER_SCRIPT, &mut hasher);
         let hash = std::hash::Hasher::finish(&hasher);
-        let path = std::env::temp_dir().join(format!("flint-mathjax-svg-{hash:x}.mjs"));
+        let path = std::env::temp_dir().join(format!("dez-mathjax-svg-{hash:x}.mjs"));
 
         if smol::fs::metadata(&path).await.is_err() {
             smol::fs::write(&path, RENDER_SCRIPT)

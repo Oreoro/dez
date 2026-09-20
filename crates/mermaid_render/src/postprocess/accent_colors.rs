@@ -80,27 +80,27 @@ pub(crate) fn parse_path_half_height(e: &BytesStart<'_>) -> Option<f64> {
     Some(y.abs())
 }
 
-// These arrays are basically just optimized versions of `format!("flint-accent-{i}")`
+// These arrays are basically just optimized versions of `format!("dez-accent-{i}")`
 const ACCENT_CLASSES: [&str; 8] = [
-    "flint-accent-0",
-    "flint-accent-1",
-    "flint-accent-2",
-    "flint-accent-3",
-    "flint-accent-4",
-    "flint-accent-5",
-    "flint-accent-6",
-    "flint-accent-7",
+    "dez-accent-0",
+    "dez-accent-1",
+    "dez-accent-2",
+    "dez-accent-3",
+    "dez-accent-4",
+    "dez-accent-5",
+    "dez-accent-6",
+    "dez-accent-7",
 ];
 
 const CHART_COLOR_CLASSES: [&str; 8] = [
-    "flint-chart-0",
-    "flint-chart-1",
-    "flint-chart-2",
-    "flint-chart-3",
-    "flint-chart-4",
-    "flint-chart-5",
-    "flint-chart-6",
-    "flint-chart-7",
+    "dez-chart-0",
+    "dez-chart-1",
+    "dez-chart-2",
+    "dez-chart-3",
+    "dez-chart-4",
+    "dez-chart-5",
+    "dez-chart-6",
+    "dez-chart-7",
 ];
 
 pub(crate) fn accent_class_name(index: usize) -> &'static str {

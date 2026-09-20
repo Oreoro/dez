@@ -109,8 +109,8 @@ pub(crate) fn bundle_linux(
         Arch::AARCH64 => assets::REMOTE_SERVER_LINUX_AARCH64,
     };
     let (deb_artifact_name, rpm_artifact_name) = match arch {
-        Arch::X86_64 => ("flint-linux-x86_64.deb", "flint-linux-x86_64.rpm"),
-        Arch::AARCH64 => ("flint-linux-aarch64.deb", "flint-linux-aarch64.rpm"),
+        Arch::X86_64 => ("dez-linux-x86_64.deb", "dez-linux-x86_64.rpm"),
+        Arch::AARCH64 => ("dez-linux-aarch64.deb", "dez-linux-aarch64.rpm"),
     };
     NamedJob {
         name: format!("bundle_linux_{arch}"),

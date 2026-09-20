@@ -27,24 +27,24 @@ pub use crate::repl_store::ReplStore;
 pub use crate::session::Session;
 
 pub const KERNEL_DOCS_URL: &str =
-    "https://github.com/shenghsi/flint/blob/main/docs/src/repl.md#changing-kernels";
+    "https://github.com/shenghsi/dez/blob/main/docs/src/repl.md#changing-kernels";
 
 pub fn init(fs: Arc<dyn Fs>, cx: &mut App) {
-    set_dispatcher(flint_dispatcher(cx));
+    set_dispatcher(dez_dispatcher(cx));
     repl_sessions_ui::init(cx);
     ReplStore::init(fs, cx);
 }
 
-fn flint_dispatcher(cx: &mut App) -> impl Dispatcher {
-    struct FlintDispatcher {
+fn dez_dispatcher(cx: &mut App) -> impl Dispatcher {
+    struct dezDispatcher {
         dispatcher: Arc<dyn PlatformDispatcher>,
     }
 
     // PlatformDispatcher is _super_ close to the same interface we put in
     // async-dispatcher, except for the task label in dispatch. Later we should
     // just make that consistent so we have this dispatcher ready to go for
-    // other crates in Flint.
-    impl Dispatcher for FlintDispatcher {
+    // other crates in dez.
+    impl Dispatcher for dezDispatcher {
         #[track_caller]
         fn dispatch(&self, runnable: Runnable) {
             let (wrapper, task) = async_task::Builder::new()
@@ -70,7 +70,7 @@ fn flint_dispatcher(cx: &mut App) -> impl Dispatcher {
         }
     }
 
-    FlintDispatcher {
+    dezDispatcher {
         dispatcher: cx.background_executor().dispatcher().clone(),
     }
 }

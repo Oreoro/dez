@@ -1,4 +1,4 @@
-use flint_actions::{ExtensionCategoryFilter, Extensions};
+use dez_actions::{ExtensionCategoryFilter, Extensions};
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
@@ -422,7 +422,7 @@ mod tests {
         workspace: &Entity<workspace::Workspace>,
         cx: &mut VisualTestContext,
     ) -> Entity<Picker<IconThemeSelectorDelegate>> {
-        cx.dispatch_action(flint_actions::icon_theme_selector::Toggle {
+        cx.dispatch_action(dez_actions::icon_theme_selector::Toggle {
             themes_filter: None,
         });
         cx.run_until_parked();

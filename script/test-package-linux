@@ -29,22 +29,22 @@ create_fixture() {
     local channel="$1"
     local fixture_directory="$2"
     local application_suffix=""
-    local application_id="dev.flint.Flint"
+    local application_id="dev.dez.dez"
 
     case "$channel" in
         stable)
             ;;
         preview)
             application_suffix="-preview"
-            application_id="dev.flint.Flint-Preview"
+            application_id="dev.dez.dez-Preview"
             ;;
         nightly)
             application_suffix="-nightly"
-            application_id="dev.flint.Flint-Nightly"
+            application_id="dev.dez.dez-Nightly"
             ;;
         dev)
             application_suffix="-dev"
-            application_id="dev.flint.Flint-Dev"
+            application_id="dev.dez.dez-Dev"
             ;;
         *)
             echo "Unsupported fixture channel: $channel" >&2
@@ -52,7 +52,7 @@ create_fixture() {
             ;;
     esac
 
-    local application_directory="$fixture_directory/flint${application_suffix}.app"
+    local application_directory="$fixture_directory/dez${application_suffix}.app"
     mkdir -p \
         "$application_directory/bin" \
         "$application_directory/lib" \
@@ -61,28 +61,28 @@ create_fixture() {
         "$application_directory/share/icons/hicolor/512x512/apps" \
         "$application_directory/share/icons/hicolor/1024x1024/apps"
 
-    printf '#!/usr/bin/env bash\nexit 0\n' >"$application_directory/bin/flint"
-    printf '#!/usr/bin/env bash\nexit 0\n' >"$application_directory/libexec/flint-editor"
-    chmod +x "$application_directory/bin/flint" "$application_directory/libexec/flint-editor"
+    printf '#!/usr/bin/env bash\nexit 0\n' >"$application_directory/bin/dez"
+    printf '#!/usr/bin/env bash\nexit 0\n' >"$application_directory/libexec/dez-editor"
+    chmod +x "$application_directory/bin/dez" "$application_directory/libexec/dez-editor"
     printf 'fixture library\n' >"$application_directory/lib/libfixture.so"
     printf 'fixture license\n' >"$application_directory/licenses.md"
-    cp crates/flint/resources/app-icon.png \
-        "$application_directory/share/icons/hicolor/512x512/apps/flint.png"
-    cp crates/flint/resources/app-icon@2x.png \
-        "$application_directory/share/icons/hicolor/1024x1024/apps/flint.png"
+    cp crates/dez/resources/app-icon.png \
+        "$application_directory/share/icons/hicolor/512x512/apps/dez.png"
+    cp crates/dez/resources/app-icon@2x.png \
+        "$application_directory/share/icons/hicolor/1024x1024/apps/dez.png"
 
     sed \
-        -e 's|$APP_NAME|Flint Fixture|g' \
-        -e 's|$APP_CLI|flint|g' \
+        -e 's|$APP_NAME|dez Fixture|g' \
+        -e 's|$APP_CLI|dez|g' \
         -e 's|$APP_ARGS|%U|g' \
-        -e 's|$APP_ICON|flint|g' \
+        -e 's|$APP_ICON|dez|g' \
         -e 's|$DO_STARTUP_NOTIFY|true|g' \
-        crates/flint/resources/flint.desktop.in \
+        crates/dez/resources/dez.desktop.in \
         >"$application_directory/share/applications/$application_id.desktop"
 
-    tar -czf "$fixture_directory/flint-linux-x86_64.tar.gz" \
+    tar -czf "$fixture_directory/dez-linux-x86_64.tar.gz" \
         -C "$fixture_directory" \
-        "flint${application_suffix}.app"
+        "dez${application_suffix}.app"
 }
 
 assert_file_contains() {
@@ -156,13 +156,13 @@ test_channel() {
     create_fixture "$channel" "$case_directory"
 
     "$package_script" \
-        --archive "$case_directory/flint-linux-x86_64.tar.gz" \
+        --archive "$case_directory/dez-linux-x86_64.tar.gz" \
         --output-dir "$output_directory" \
         --architecture x86_64 \
         --channel "$channel"
 
-    local deb_package="$output_directory/flint-linux-x86_64.deb"
-    local rpm_package="$output_directory/flint-linux-x86_64.rpm"
+    local deb_package="$output_directory/dez-linux-x86_64.deb"
+    local rpm_package="$output_directory/dez-linux-x86_64.rpm"
     [[ -f "$deb_package" ]]
     [[ -f "$rpm_package" ]]
 
@@ -171,11 +171,11 @@ test_channel() {
     [[ "$(rpm -qp --queryformat '%{NAME}' "$rpm_package")" == "$package_name" ]]
     [[ "$(rpm -qp --queryformat '%{ARCH}' "$rpm_package")" == "x86_64" ]]
     if [[ "$channel" == "stable" ]]; then
-        [[ "$(dpkg-deb -f "$deb_package" Conflicts)" == *"flint-preview"* ]]
-        [[ "$(rpm -qp --conflicts "$rpm_package")" == *"flint-preview"* ]]
+        [[ "$(dpkg-deb -f "$deb_package" Conflicts)" == *"dez-preview"* ]]
+        [[ "$(rpm -qp --conflicts "$rpm_package")" == *"dez-preview"* ]]
     else
-        [[ "$(dpkg-deb -f "$deb_package" Conflicts)" == *"flint"* ]]
-        [[ "$(rpm -qp --conflicts "$rpm_package")" == *"flint"* ]]
+        [[ "$(dpkg-deb -f "$deb_package" Conflicts)" == *"dez"* ]]
+        [[ "$(rpm -qp --conflicts "$rpm_package")" == *"dez"* ]]
     fi
 
     local deb_contents="$case_directory/deb-contents.txt"
@@ -184,14 +184,14 @@ test_channel() {
     rpm -qlp "$rpm_package" >"$rpm_contents"
 
     for expected_path in \
-        "/usr/bin/flint" \
-        "/usr/lib/flint/$application_directory/bin/flint" \
-        "/usr/lib/flint/$application_directory/lib/libfixture.so" \
-        "/usr/lib/flint/$application_directory/libexec/flint-editor" \
-        "/usr/lib/flint/$application_directory/licenses.md" \
+        "/usr/bin/dez" \
+        "/usr/lib/dez/$application_directory/bin/dez" \
+        "/usr/lib/dez/$application_directory/lib/libfixture.so" \
+        "/usr/lib/dez/$application_directory/libexec/dez-editor" \
+        "/usr/lib/dez/$application_directory/licenses.md" \
         "/usr/share/applications/$application_id.desktop" \
-        "/usr/share/icons/hicolor/512x512/apps/flint.png" \
-        "/usr/share/icons/hicolor/1024x1024/apps/flint.png"
+        "/usr/share/icons/hicolor/512x512/apps/dez.png" \
+        "/usr/share/icons/hicolor/1024x1024/apps/dez.png"
     do
         assert_file_contains "$deb_contents" ".$expected_path"
         assert_file_contains "$rpm_contents" "$expected_path"
@@ -203,38 +203,38 @@ test_channel() {
     dpkg-deb -x "$deb_package" "$deb_root"
     extract_rpm_package "$rpm_package" "$rpm_root"
 
-    local launched_binary="/usr/lib/flint/$application_directory/bin/flint"
+    local launched_binary="/usr/lib/dez/$application_directory/bin/dez"
     local package_root
     for package_root in "$deb_root" "$rpm_root"; do
-        [[ -f "$package_root/usr/bin/flint" && -x "$package_root/usr/bin/flint" ]]
-        assert_file_contains "$package_root/usr/bin/flint" "ZED_UPDATE_EXPLANATION"
-        assert_file_contains "$package_root/usr/bin/flint" "exec \"$launched_binary\""
+        [[ -f "$package_root/usr/bin/dez" && -x "$package_root/usr/bin/dez" ]]
+        assert_file_contains "$package_root/usr/bin/dez" "ZED_UPDATE_EXPLANATION"
+        assert_file_contains "$package_root/usr/bin/dez" "exec \"$launched_binary\""
     done
 
     local desktop_file="$deb_root/usr/share/applications/$application_id.desktop"
-    assert_file_contains "$desktop_file" "TryExec=/usr/bin/flint"
-    assert_file_contains "$desktop_file" "Exec=/usr/bin/flint %U"
-    assert_file_contains "$desktop_file" "Exec=/usr/bin/flint --new %U"
-    assert_file_contains "$desktop_file" "Icon=flint"
+    assert_file_contains "$desktop_file" "TryExec=/usr/bin/dez"
+    assert_file_contains "$desktop_file" "Exec=/usr/bin/dez %U"
+    assert_file_contains "$desktop_file" "Exec=/usr/bin/dez --new %U"
+    assert_file_contains "$desktop_file" "Icon=dez"
 }
 
-test_channel stable flint flint.app dev.flint.Flint
-test_channel preview flint-preview flint-preview.app dev.flint.Flint-Preview
-test_channel nightly flint-nightly flint-nightly.app dev.flint.Flint-Nightly
-test_channel dev flint-dev flint-dev.app dev.flint.Flint-Dev
+test_channel stable dez dez.app dev.dez.dez
+test_channel preview dez-preview dez-preview.app dev.dez.dez-Preview
+test_channel nightly dez-nightly dez-nightly.app dev.dez.dez-Nightly
+test_channel dev dez-dev dez-dev.app dev.dez.dez-Dev
 
 negative_directory="$temporary_directory/negative"
 mkdir -p "$negative_directory"
 create_fixture stable "$negative_directory"
 
 assert_command_fails "$package_script" \
-    --archive "$negative_directory/flint-linux-x86_64.tar.gz" \
+    --archive "$negative_directory/dez-linux-x86_64.tar.gz" \
     --output-dir "$negative_directory/output" \
     --architecture mips64 \
     --channel stable
 
 assert_command_fails "$package_script" \
-    --archive "$negative_directory/flint-linux-x86_64.tar.gz" \
+    --archive "$negative_directory/dez-linux-x86_64.tar.gz" \
     --output-dir "$negative_directory/output" \
     --architecture x86_64 \
     --channel unknown
@@ -242,9 +242,9 @@ assert_command_fails "$package_script" \
 missing_editor_directory="$temporary_directory/missing-editor"
 mkdir -p "$missing_editor_directory"
 create_fixture stable "$missing_editor_directory"
-tar -xzf "$missing_editor_directory/flint-linux-x86_64.tar.gz" -C "$missing_editor_directory"
-rm "$missing_editor_directory/flint.app/libexec/flint-editor"
-tar -czf "$missing_editor_directory/broken.tar.gz" -C "$missing_editor_directory" flint.app
+tar -xzf "$missing_editor_directory/dez-linux-x86_64.tar.gz" -C "$missing_editor_directory"
+rm "$missing_editor_directory/dez.app/libexec/dez-editor"
+tar -czf "$missing_editor_directory/broken.tar.gz" -C "$missing_editor_directory" dez.app
 assert_command_fails "$package_script" \
     --archive "$missing_editor_directory/broken.tar.gz" \
     --output-dir "$missing_editor_directory/output" \
@@ -254,9 +254,9 @@ assert_command_fails "$package_script" \
 missing_desktop_directory="$temporary_directory/missing-desktop"
 mkdir -p "$missing_desktop_directory"
 create_fixture stable "$missing_desktop_directory"
-tar -xzf "$missing_desktop_directory/flint-linux-x86_64.tar.gz" -C "$missing_desktop_directory"
-rm "$missing_desktop_directory/flint.app/share/applications/dev.flint.Flint.desktop"
-tar -czf "$missing_desktop_directory/broken.tar.gz" -C "$missing_desktop_directory" flint.app
+tar -xzf "$missing_desktop_directory/dez-linux-x86_64.tar.gz" -C "$missing_desktop_directory"
+rm "$missing_desktop_directory/dez.app/share/applications/dev.dez.dez.desktop"
+tar -czf "$missing_desktop_directory/broken.tar.gz" -C "$missing_desktop_directory" dez.app
 assert_command_fails "$package_script" \
     --archive "$missing_desktop_directory/broken.tar.gz" \
     --output-dir "$missing_desktop_directory/output" \
@@ -266,9 +266,9 @@ assert_command_fails "$package_script" \
 missing_icon_directory="$temporary_directory/missing-icon"
 mkdir -p "$missing_icon_directory"
 create_fixture stable "$missing_icon_directory"
-tar -xzf "$missing_icon_directory/flint-linux-x86_64.tar.gz" -C "$missing_icon_directory"
-rm "$missing_icon_directory/flint.app/share/icons/hicolor/512x512/apps/flint.png"
-tar -czf "$missing_icon_directory/broken.tar.gz" -C "$missing_icon_directory" flint.app
+tar -xzf "$missing_icon_directory/dez-linux-x86_64.tar.gz" -C "$missing_icon_directory"
+rm "$missing_icon_directory/dez.app/share/icons/hicolor/512x512/apps/dez.png"
+tar -czf "$missing_icon_directory/broken.tar.gz" -C "$missing_icon_directory" dez.app
 assert_command_fails "$package_script" \
     --archive "$missing_icon_directory/broken.tar.gz" \
     --output-dir "$missing_icon_directory/output" \

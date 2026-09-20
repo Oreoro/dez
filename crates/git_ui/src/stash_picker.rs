@@ -31,7 +31,7 @@ actions!(
 
 pub fn open(
     workspace: &mut Workspace,
-    _: &flint_actions::git::ViewStash,
+    _: &dez_actions::git::ViewStash,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {

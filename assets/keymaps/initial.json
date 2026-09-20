@@ -1,9 +1,9 @@
-// Flint keymap
+// dez keymap
 //
-// For information on binding keys, see the Flint
-// documentation: https://flint.dev/docs/key-bindings
+// For information on binding keys, see the dez
+// documentation: https://dez.dev/docs/key-bindings
 //
-// To see the default key bindings run `flint: open default keymap`
+// To see the default key bindings run `dez: open default keymap`
 // from the command palette.
 [
   {

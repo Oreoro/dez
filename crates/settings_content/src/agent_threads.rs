@@ -45,7 +45,7 @@ pub struct AgentThreadSettingsContent {
     ///
     /// Default: true
     pub starts_open: Option<bool>,
-    /// Whether a local agent thread's own CLI process can ask Flint to
+    /// Whether a local agent thread's own CLI process can ask dez to
     /// re-tie itself to a different worktree or spawn a sibling thread.
     /// Local-only; has no effect on remote projects.
     ///

@@ -168,7 +168,7 @@ pub trait Platform: 'static {
     fn register_url_scheme(&self, url: &str) -> Task<Result<()>>;
 
     /// Shows a notification via the OS's native notification center, separate
-    /// from any Flint window (e.g. it is visible even while Flint isn't the
+    /// from any dez window (e.g. it is visible even while dez isn't the
     /// foreground application). No-ops on backends where this isn't wired up.
     fn show_desktop_notification(&self, _title: &str, _body: Option<&str>) {}
 
@@ -475,7 +475,7 @@ pub struct WindowButtonLayout {
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 impl WindowButtonLayout {
-    /// Returns Flint's built-in fallback button layout for Linux titlebars.
+    /// Returns dez's built-in fallback button layout for Linux titlebars.
     pub fn linux_default() -> Self {
         Self {
             left: [None; MAX_BUTTONS_PER_SIDE],
@@ -1348,7 +1348,7 @@ pub struct UTF16Selection {
     pub reversed: bool,
 }
 
-/// Flint's interface for handling text input from the platform's IME system
+/// dez's interface for handling text input from the platform's IME system
 /// This is currently a 1:1 exposure of the NSTextInputClient API:
 ///
 /// <https://developer.apple.com/documentation/appkit/nstextinputclient>

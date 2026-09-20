@@ -6,8 +6,8 @@ Approved on 2026-07-15.
 
 ## Summary
 
-Remove the remaining collaboration, Flint/Zed account, user-management, and
-telemetry-upload code from Flint while preserving local editing, SSH remote
+Remove the remaining collaboration, dez/Zed account, user-management, and
+telemetry-upload code from dez while preserving local editing, SSH remote
 editing, updates, extensions, and Agent Threads plan usage.
 
 The cleanup will be implemented as independently buildable slices. Surviving
@@ -15,17 +15,17 @@ features will depend directly on HTTP, local telemetry-free reliability
 services, or SSH's `RemoteClient`/`ProtoClient` path instead of the inherited
 cloud `Client` and `UserStore`.
 
-Flint has no collaboration backend, account service, analytics backend, or
+dez has no collaboration backend, account service, analytics backend, or
 crash-reporting endpoint. The final application must not initialize or retain
 code that assumes those services exist.
 
 ## Context
 
-Flint already removed the collaboration, call, channel, and collaboration UI
+dez already removed the collaboration, call, channel, and collaboration UI
 crates, followed by the visible account sign-in feature. Significant inherited
 infrastructure remains in the active build graph:
 
-- `client::Client` owns an HTTP client, telemetry, Flint/Zed credentials, a
+- `client::Client` owns an HTTP client, telemetry, dez/Zed credentials, a
   cloud WebSocket connection, RPC handlers, and reconnection state.
 - `client::UserStore` owns users, contacts, organizations, plans, participant
   indices, account state, and cloud notification integration.
@@ -45,13 +45,13 @@ active path is:
 SSH transport -> RemoteClient -> rpc::ProtoClient -> remote project stores
 ```
 
-Agent Threads plan usage also does not require Flint user management. It reads
+Agent Threads plan usage also does not require dez user management. It reads
 credentials created by the local Codex and Claude CLIs and queries their
 provider usage endpoints.
 
 ## Goals
 
-- Remove all Flint/Zed account, contact, organization, plan, billing, and cloud
+- Remove all dez/Zed account, contact, organization, plan, billing, and cloud
   notification behavior.
 - Remove shared-project collaboration, collaborator presence, and remote-user
   following behavior.
@@ -61,7 +61,7 @@ provider usage endpoints.
 - Keep crash and hang information available locally for self-diagnosis.
 - Preserve SSH remote editing, including password, key, agent, and askpass
   authentication.
-- Preserve application updates and remote-server downloads from Flint's GitHub
+- Preserve application updates and remote-server downloads from dez's GitHub
   releases.
 - Preserve extension discovery, installation, updates, and extension-host
   operation against the intentional upstream Zed extension service.
@@ -75,8 +75,8 @@ provider usage endpoints.
 - Do not remove SSH remote editing or the generic RPC infrastructure it uses.
 - Do not remove intentional upstream extension service URLs or rename the
   external Zed extension API and WIT namespaces.
-- Do not remove Agent Threads or make Flint manage Codex or Claude accounts.
-- Do not add a Flint account, collaboration, analytics, or crash-reporting
+- Do not remove Agent Threads or make dez manage Codex or Claude accounts.
+- Do not add a dez account, collaboration, analytics, or crash-reporting
   replacement service.
 - Do not add placeholder abstractions for hypothetical future collaboration.
 - Do not redesign unrelated local project, editor, language server, terminal,
@@ -100,10 +100,10 @@ in a single difficult-to-review change.
 
 ### Application networking
 
-Startup creates the proxy-aware, Flint-user-agent HTTP client and registers it
+Startup creates the proxy-aware, dez-user-agent HTTP client and registers it
 with GPUI. Consumers accept the narrow HTTP type they require:
 
-- auto-update accepts `Arc<dyn HttpClient>` and uses Flint's GitHub releases;
+- auto-update accepts `Arc<dyn HttpClient>` and uses dez's GitHub releases;
 - extension hosting derives its upstream `HttpClientWithUrl` from the generic
   HTTP client and `UPSTREAM_ZED_EXTENSION_SERVER_URL`;
 - node runtime and other download consumers accept the generic HTTP client;
@@ -120,7 +120,7 @@ GitHub. Remove `server_url`, `credentials_url`, and their settings UI after all
 cloud-client consumers are deleted.
 
 Release-note links must no longer rely on the cloud client's base URL. They
-resolve to the corresponding Flint GitHub release or tag.
+resolve to the corresponding dez GitHub release or tag.
 
 ### SSH remote editing
 
@@ -153,7 +153,7 @@ Agent Threads
   -> plan-usage display
 ```
 
-Flint does not create, refresh, revoke, or otherwise manage these accounts.
+dez does not create, refresh, revoke, or otherwise manage these accounts.
 This path must not depend on the removed application `Client`, user store, or
 telemetry code.
 
@@ -162,8 +162,8 @@ telemetry code.
 Keep detection and local artifacts, with no network upload:
 
 ```text
-Crash -> compressed <session>.dmp + <session>.json in Flint's logs directory
-Hang  -> Flint.log entries + hang-*.miniprof.json in the hang-traces directory
+Crash -> compressed <session>.dmp + <session>.json in dez's logs directory
+Hang  -> dez.log entries + hang-*.miniprof.json in the hang-traces directory
 ```
 
 Remove:
@@ -200,7 +200,7 @@ credentials, browser authentication, sign-out, cloud connection state,
 reconnection actions, WebSocket establishment, collaboration message handlers,
 collaboration deep-link parsing, and account-oriented tests. Command palette,
 editor navigation, startup argument parsing, and the open listener will stop
-treating `flint://channel` links as supported internal navigation.
+treating `dez://channel` links as supported internal navigation.
 
 First move surviving dependencies out of the concrete `Client`:
 
@@ -320,7 +320,7 @@ After code consumers are gone, remove:
 - collaboration and account claims, navigation entries, redirects, and
   cross-links;
 - migration and feature documentation that advertises removed collaboration,
-  Flint accounts, hosted billing, Copilot/MCP/ChatGPT in-app authentication, or
+  dez accounts, hosted billing, Copilot/MCP/ChatGPT in-app authentication, or
   telemetry services;
 - the orphaned OAuth callback crate, which is outside the active build graph
   and has no consumer.
@@ -334,14 +334,14 @@ normal mdBook navigation.
 
 Update self-debugging documentation to cover:
 
-- `flint::OpenLog` and `flint::RevealLogInFileManager`;
-- the correct Flint log locations on macOS, Linux, and Windows;
+- `dez::OpenLog` and `dez::RevealLogInFileManager`;
+- the correct dez log locations on macOS, Linux, and Windows;
 - the hang-trace directory and `hang-*.miniprof.json` files;
 - local minidump and adjacent JSON metadata files;
 - minidump decompression and local inspection requirements;
 - the need for matching symbols for fully symbolized native backtraces;
 - SSH remote-server log and crash-artifact locations;
-- the fact that Flint does not upload these files.
+- the fact that dez does not upload these files.
 
 ## Error Handling
 
@@ -377,7 +377,7 @@ production changes.
 
 Pass HTTP directly to auto-update, extensions, node runtime, project consumers,
 and other surviving callers. Replace release-note base-URL construction with a
-Flint GitHub release URL.
+dez GitHub release URL.
 
 Remove usage analytics, telemetry upload, account telemetry identity, minidump
 upload, remote crash collection, and associated endpoint configuration. Keep
@@ -415,7 +415,7 @@ remove unused crates, dependencies, settings, actions, UI components,
 
 Update the user documentation and mdBook navigation to match the final product.
 Replace obsolete feature descriptions with concise compatibility pages rather
-than deleting existing documentation files or preserving instructions Flint
+than deleting existing documentation files or preserving instructions dez
 cannot perform.
 
 ## Verification
@@ -452,20 +452,20 @@ Static verification must also confirm:
 
 ## Acceptance Criteria
 
-- Flint starts without constructing a cloud client, user store, cloud
+- dez starts without constructing a cloud client, user store, cloud
   notification store, or telemetry uploader.
 - Local projects open and operate normally.
 - SSH projects connect, authenticate, download the matching remote server, and
   perform representative editing operations.
-- Updates are discovered and downloaded from Flint's GitHub releases.
+- Updates are discovered and downloaded from dez's GitHub releases.
 - Extensions can be discovered, installed, updated, loaded, and removed using
   the intentional upstream extension service.
 - Agent Threads continues to display Codex and Claude plan usage from existing
   CLI credentials.
 - Crashes create local dump and metadata files; hangs create local log entries
   and traces.
-- Flint sends no analytics, crash, hang, or diagnostic data to any endpoint.
-- No Flint/Zed account, contact, organization, billing, collaboration, or cloud
+- dez sends no analytics, crash, hang, or diagnostic data to any endpoint.
+- No dez/Zed account, contact, organization, billing, collaboration, or cloud
   notification surface remains.
 - Documentation describes the preserved features and local debugging workflow
   without advertising removed services.

@@ -8,7 +8,7 @@
 Adding Pi covered the agent registry, command defaults, panel filtering, history,
 managed releases, and remote execution, but missed the corresponding
 **Hide Pi** Settings Editor control. It also exposed an obsolete explicit
-Flint-managed launch row in Direct mode, making a pre-existing routing-policy
+dez-managed launch row in Direct mode, making a pre-existing routing-policy
 mistake affect another agent.
 
 Future Agent Threads integrations need a short cross-crate rule that catches
@@ -33,9 +33,9 @@ Add an **Adding Agent Threads coding agents** section with these requirements:
   user-visible. Add and test every applicable per-agent Settings Editor
   control and its exact JSON path, especially `hidden`.
 - Preserve the remote route boundary. Direct uses only the configured ambient
-  executable on the remote and exposes no Flint-managed launch or credential
-  controls. Tunneled uses only the pinned Flint-managed executable on the
-  remote and routes its traffic through local Flint. Test both routes for every
+  executable on the remote and exposes no dez-managed launch or credential
+  controls. Tunneled uses only the pinned dez-managed executable on the
+  remote and routes its traffic through local dez. Test both routes for every
   new agent.
 - Gate provider-specific UI, including credentials and plan usage, on explicit
   capabilities rather than registry membership.

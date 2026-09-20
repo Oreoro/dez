@@ -6,9 +6,9 @@ The original egress design was reviewed and approved by Claude on 2026-07-18.
 Claude's review, Codex's response, and Claude's re-review are recorded at the
 end.
 
-On 2026-07-18, the product owner expanded the accepted scope: Flint must support
+On 2026-07-18, the product owner expanded the accepted scope: dez must support
 remote hosts with or without direct internet, install pinned official agent
-releases through a Flint-managed upload when needed, and present exactly two
+releases through a dez-managed upload when needed, and present exactly two
 agent-routing choices: `Tunneled` and `Direct`. The routing
 choice is independent of the remote host's actual connectivity. Codex
 incorporated that revision into the active design. Claude approved the two-route
@@ -26,7 +26,7 @@ Routing-choice revision owner: Codex.
 
 This document supersedes the Remote Agent Workspace and ACP recommendation in
 the [archived remote-control discussion](../archive/2026-07-18-remote-control-discussion.md)
-only for hosts where an official agent executable can run after Flint uploads
+only for hosts where an official agent executable can run after dez uploads
 it. For hosts where policy or platform constraints prevent any agent executable
 from running, ACP and the Remote Agent Workspace remain the recorded future
 direction. The archived discussion remains the decision history for both
@@ -35,25 +35,25 @@ scopes.
 ## Summary
 
 Run Codex and Claude Code on an SSH host, in the real remote project. When the
-agent executable is missing, Flint can download and verify a pinned official
+agent executable is missing, dez can download and verify a pinned official
 artifact locally, upload it through SSH, and install it into a per-user
-Flint-managed directory.
+dez-managed directory.
 
 The project opener shows how agent traffic should leave the remote host. A new
 SSH connection identity defaults to `Direct`, so opening a project
 never requires answering an agent-routing question. That route preserves
-today's behavior: the remote agent uses whatever network the host has, and Flint
+today's behavior: the remote agent uses whatever network the host has, and dez
 supplies no proxy. `Tunneled` supplies the agent's outbound model-service
 connectivity through an SSH reverse forward and a restricted local HTTP CONNECT
-proxy. Flint never infers or changes this choice from a connectivity probe or
+proxy. dez never infers or changes this choice from a connectivity probe or
 request failure.
 
 The remote host is trusted to execute the selected agent and store a dedicated
 provider credential for each agent. The user can invalidate that credential at
-the provider and remove the local copy from the remote host. Flint never copies
+the provider and remove the local copy from the remote host. dez never copies
 a local credential store or reads the provider secret.
 
-Provisioning and routing remain orthogonal without changing Flint's
+Provisioning and routing remain orthogonal without changing dez's
 terminal-first Agent Threads model:
 
 ```text
@@ -65,39 +65,39 @@ agent executable
 agent traffic
   -> Direct -> remote host's own network
   OR
-  -> Through Flint -> remote loopback proxy -> SSH reverse forward
+  -> Through dez -> remote loopback proxy -> SSH reverse forward
                    -> authenticated local CONNECT proxy
                    -> allowlisted agent-service endpoint
 ```
 
 File access, edits, searches, and commands remain native remote agent
-operations. Flint does not introduce ACP, MCP file tools, a mirrored checkout,
+operations. dez does not introduce ACP, MCP file tools, a mirrored checkout,
 or a virtual filesystem.
 
 ## Accepted Constraints
 
 - The remote host may or may not have direct outbound network access.
-- When Flint provisions an agent or supplies its route, the local Flint
+- When dez provisions an agent or supplies its route, the local dez
   installation can reach the required official artifact and model-service
   endpoints.
 - The remote operating system, architecture, libc where relevant, and execution
   policy support an official Codex or Claude Code artifact.
 - The remote user has a writable per-user application-data directory and can
   execute files from it without `sudo`.
-- Flint-managed installation accepts only exact official agent releases pinned
-  and tested by the current Flint release. It accepts no user-supplied artifact
+- dez-managed installation accepts only exact official agent releases pinned
+  and tested by the current dez release. It accepts no user-supplied artifact
   or arbitrary download URL; existing remote commands remain outside this
   provenance guarantee.
 - The remote host is trusted to hold an agent credential.
 - A dedicated credential per remote host and agent is acceptable.
 - Provider-side invalidation is the authoritative credential kill switch.
 - Native Codex and Claude Code terminal interfaces must remain available.
-- Flint may use the existing authenticated SSH connection to provide narrowly
+- dez may use the existing authenticated SSH connection to provide narrowly
   scoped agent-service egress.
 - The user explicitly chooses `Tunneled` or `Direct` for agent
   traffic when they want to depart from the default. A new SSH connection
   identity defaults to `Direct`; opening a project is never blocked
-  on this choice. Flint does not probe connectivity to choose, suggest,
+  on this choice. dez does not probe connectivity to choose, suggest,
   override, or fail over between routes.
 
 ## Goals
@@ -107,7 +107,7 @@ or a virtual filesystem.
 - Download, verify, upload, install, update, and remove pinned official agent
   releases without requiring remote network access or administrator privileges.
 - When selected, give that remote process access to the model, authentication,
-  and required agent control-plane endpoints through Flint.
+  and required agent control-plane endpoints through dez.
 - Preserve native agent tools, configuration, permissions, history, resume,
   plugins, and terminal behavior.
 - Restrict the tunnel to the minimum destinations required by the selected
@@ -132,7 +132,7 @@ or a virtual filesystem.
 - Restoring ACP or building a Remote Agent Workspace, MCP file bridge, remote
   filesystem mount, or local project mirror.
 - Keeping provider credentials on the local machine.
-- Terminating model-service TLS or injecting provider credentials in Flint.
+- Terminating model-service TLS or injecting provider credentials in dez.
 - Giving arbitrary remote commands general internet access.
 - Providing network access to package managers, user processes, or arbitrary
   MCP servers.
@@ -147,18 +147,18 @@ or a virtual filesystem.
 - Automating provider-side credential creation or revocation when the provider
   exposes no supported management API.
 - Keeping a remote agent process alive across failures that already terminate
-  its Flint remote terminal.
+  its dez remote terminal.
 
 ## Alternatives Considered
 
 ### Local credential-injecting gateway
 
-Flint could retain the provider credential locally, expose a provider-aware
+dez could retain the provider credential locally, expose a provider-aware
 gateway through SSH, and inject authentication into upstream requests. Both
 agents have configurable provider base URLs, so API-key-backed operation is
 possible.
 
-This was rejected for the accepted scope. It would make Flint responsible for
+This was rejected for the accepted scope. It would make dez responsible for
 provider protocols, streaming compatibility, OAuth refresh, billing mode, and
 credential security. Consumer subscription authentication is not a stable,
 generic gateway interface. Trusting a dedicated remote credential produces a
@@ -175,7 +175,7 @@ solve an execution-placement problem that is not present.
 
 ### Unrestricted SOCKS or HTTP proxy
 
-Flint could expose unrestricted internet access over SSH and rely on the remote
+dez could expose unrestricted internet access over SSH and rely on the remote
 host's normal process isolation.
 
 This was rejected because it turns an editor feature into general egress for
@@ -184,43 +184,43 @@ per-lease authentication, and enforces a destination policy.
 
 ### Run the vendor installer through tunneled egress
 
-Flint could expose download hosts through the reverse proxy and execute each
+dez could expose download hosts through the reverse proxy and execute each
 vendor's installer on the remote host.
 
 This was rejected because it grants installer and update processes network
 access, depends on remote shell tools and package-manager behavior, and makes
-the installed bytes harder for Flint to pin and verify. Agent artifact traffic
+the installed bytes harder for dez to pin and verify. Agent artifact traffic
 belongs on the trusted local side of the SSH boundary.
 
-### Bundle agent binaries inside Flint
+### Bundle agent binaries inside dez
 
-Flint could ship every supported Codex and Claude Code platform binary inside
+dez could ship every supported Codex and Claude Code platform binary inside
 each app release.
 
 This was rejected because it substantially increases the application download,
 duplicates artifacts irrelevant to the local and remote platforms, and turns
-Flint releases into a redistribution channel. Downloading the exact official
+dez releases into a redistribution channel. Downloading the exact official
 artifact locally when first needed preserves provenance without imposing that
 cost.
 
 ### Upload an existing local executable
 
-Flint could copy whichever `codex` or `claude` executable is found on the local
+dez could copy whichever `codex` or `claude` executable is found on the local
 machine.
 
-This was rejected because the local and remote platforms can differ and Flint
+This was rejected because the local and remote platforms can differ and dez
 cannot establish that an arbitrary executable is an official, unmodified,
 supported release. Managed provisioning accepts only catalogued official
-artifacts whose digests are pinned by the current Flint release.
+artifacts whose digests are pinned by the current dez release.
 
 ### Connectivity-derived or three-valued modes
 
-Flint could probe the remote host and choose `offline`, `direct`, or `managed`
+dez could probe the remote host and choose `offline`, `direct`, or `managed`
 behavior, or expose separate `isolated`, `direct`, and `managed` modes.
 
 This was rejected because connectivity, executable provenance, and agent
 routing are independent facts. A connected host may deliberately route agents
-through Flint, while a disconnected host may deliberately choose not to. The
+through dez, while a disconnected host may deliberately choose not to. The
 opener therefore exposes only the routing decision and never changes it after a
 probe or request failure. Provisioning remains an on-demand capability rather
 than another connection mode.
@@ -262,7 +262,7 @@ upload commands.
 
 ### Pinned official-agent catalogue
 
-The signed Flint release contains an `AgentRelease` entry for each supported
+The signed dez release contains an `AgentRelease` entry for each supported
 agent and remote target. Each entry contains:
 
 - the agent kind and exact version;
@@ -274,15 +274,15 @@ agent and remote target. Each entry contains:
 - the executable name and tolerant `--version` output matcher;
 - agent-specific environment needed to disable self-update behavior.
 
-Updating an entry requires a Flint change that validates the official release,
+Updating an entry requires a dez change that validates the official release,
 endpoint policy, login behavior, history compatibility, and platform support.
 Runtime settings cannot replace the URL, digest, or version. Artifact URLs must
-match the official source rules compiled for that agent kind. Flint does not
+match the official source rules compiled for that agent kind. dez does not
 offer a file picker or arbitrary URL override.
 
 Catalogue validation uses the same remote OS, architecture, and libc target
 that `RemoteClient` already detects for `remote_server`; it does not introduce a
-parallel target probe. Before a release is accepted, Flint's release process
+parallel target probe. Before a release is accepted, dez's release process
 also proves that the artifact runs from an arbitrary user-owned directory with
 self-update suppressed on every supported target. The version entry contains a
 tolerant, fixture-tested matcher for the pinned version rather than requiring
@@ -292,7 +292,7 @@ the CLI's complete `--version` output to remain byte-for-byte stable.
 digests](https://code.claude.com/docs/en/installation).
 [Codex publishes standalone installers and supports a caller-selected install
 directory](https://learn.chatgpt.com/docs/config-file/environment-variables.md).
-Flint's release process resolves those official distributions into the same
+dez's release process resolves those official distributions into the same
 pinned `AgentRelease` contract; the runtime provisioner does not execute either
 vendor installer on the remote host.
 
@@ -302,15 +302,15 @@ One `ManagedAgentProvisioner` coordinates local acquisition and remote
 installation without owning SSH implementation details. For an agent launch it:
 
 1. Reuses the remote target already detected by `RemoteClient`.
-2. Selects the exact `AgentRelease` pinned by the current Flint release.
+2. Selects the exact `AgentRelease` pinned by the current dez release.
 3. Returns an existing managed path when its receipt, remote digest, and version
    still match the selected release.
-4. Otherwise downloads the artifact with Flint's local HTTP client into a
+4. Otherwise downloads the artifact with dez's local HTTP client into a
    content-addressed local cache.
 5. Verifies the provider signature or signed manifest when available and always
    verifies the pinned SHA-256 digest before upload.
 6. Uploads the artifact through the generic remote transport to a unique
-   temporary file in the remote user's Flint application-data directory.
+   temporary file in the remote user's dez application-data directory.
 7. Uses `remote_server`, not a remote shell utility such as `sha256sum`, to
    compute the uploaded digest and rejects any mismatch.
 8. Sets user-only executable permissions where required and atomically moves the
@@ -321,7 +321,7 @@ installation without owning SSH implementation details. For an agent launch it:
     and absolute executable path.
 
 The managed root is the remote user's standard per-user application-data
-directory, under `flint/agents/<agent>/<version>/<target>/`. Installation never
+directory, under `dez/agents/<agent>/<version>/<target>/`. Installation never
 uses `sudo`, a system package manager, a shell profile, or a general `PATH`
 change. When Agent Threads selects a managed installation, it launches the
 absolute managed executable path.
@@ -333,12 +333,12 @@ found, the first launch or login offers to provision the selected agent; an
 explicit install action can also select the managed installation. Concurrent
 requests for the same agent, version, and target share one installation task.
 Both `Tunneled` and `Direct` can launch either an existing agent
-command or the absolute managed path. Flint's pinned-artifact guarantees apply
-only to installations it manages; Flint never copies or claims provenance for
+command or the absolute managed path. dez's pinned-artifact guarantees apply
+only to installations it manages; dez never copies or claims provenance for
 an ambient executable.
 
-An update is available only when a newer pinned version arrives in a Flint
-release. The user starts the update explicitly. Flint installs the new version
+An update is available only when a newer pinned version arrives in a dez
+release. The user starts the update explicitly. dez installs the new version
 beside the old one, switches new launches only after verification, and retains
 the prior version until no live thread uses it. A hash or version mismatch in a
 managed installation marks it invalid and triggers a verified reinstall from
@@ -346,10 +346,10 @@ the local cache rather than trusting an agent self-update.
 
 **Remove managed agent** first prevents new launches from selecting its managed
 path on the connection. After confirmation it closes threads using a managed
-version, releases any of their egress leases, and deletes Flint-managed versions
+version, releases any of their egress leases, and deletes dez-managed versions
 and receipts. It does not delete the agent's credential, ambient installation,
 or history; those remain separate. Local content-addressed artifacts follow
-Flint's normal cache eviction policy and never contain provider credentials.
+dez's normal cache eviction policy and never contain provider credentials.
 
 ### `AgentEgressSession`
 
@@ -384,7 +384,7 @@ dropping it cancels the forward and observes cleanup errors.
 The SSH implementation owns one dedicated, long-lived `ssh -N -R` forwarding
 process per `AgentEgressSession` on every local platform. On non-Windows
 clients, it explicitly disables connection sharing with `ControlMaster=no` and
-`ControlPath=none` instead of adding state to Flint's or the user's existing
+`ControlPath=none` instead of adding state to dez's or the user's existing
 ControlMaster. Windows already uses a separate connection because its OpenSSH
 client lacks ControlMaster support. This costs at most one additional SSH
 authentication per live egress session, not per Agent Thread, in exchange for a
@@ -432,7 +432,7 @@ The callback forward is scoped to one credential-management attempt. Success,
 cancellation, timeout, disconnect, or dropping the handle terminates and awaits
 its SSH forwarding process. If the callback port cannot be determined, the
 required local port is occupied, or the SSH server rejects local forwarding,
-Flint closes the partial handle and offers the agent's device, code-copy, or
+dez closes the partial handle and offers the agent's device, code-copy, or
 headless login flow instead. It does not change the selected route.
 
 ### Restricted CONNECT proxy
@@ -483,7 +483,7 @@ Agent binary download and update hosts are never part of remote egress because
 managed provisioning fetches those artifacts locally.
 
 Blocked requests identify the hostname and policy category in the Agent Thread
-error surface without logging secrets. Policy additions require a Flint update
+error surface without logging secrets. Policy additions require a dez update
 or an explicit per-host user override. Overrides are visible in settings and do
 not accept wildcard top-level domains.
 
@@ -498,7 +498,7 @@ decision rather than a generic network failure.
 
 This policy does not make `curl`, package managers, shell commands, WebFetch,
 or arbitrary remote MCP servers generally online. Features requiring other
-destinations remain unavailable through Flint. Under `Direct`, Flint
+destinations remain unavailable through dez. Under `Direct`, dez
 does not intercept or restrict the remote host's own network path.
 
 ## Launch and Runtime Flow
@@ -509,15 +509,15 @@ The remote project opener shows a route control with exactly two values for the
 SSH connection identity:
 
 - `Direct` (`direct` internally): preserve today's Agent
-  Threads behavior. Flint injects no proxy environment, acquires no egress
+  Threads behavior. dez injects no proxy environment, acquires no egress
   lease, and the agent uses whatever connectivity the remote host provides.
 - `Tunneled` (`tunneled` internally): inject the restricted proxy
-  environment and acquire Flint-managed egress when an agent or credential
+  environment and acquire dez-managed egress when an agent or credential
   action needs it.
 
 Neither choice claims whether the remote host is online. On a disconnected host,
 `Direct` requests fail normally; on a connected host, `Tunneled`
-remains a valid explicit policy choice. Flint never probes connectivity to
+remains a valid explicit policy choice. dez never probes connectivity to
 choose, suggest, override, or fail over between routes.
 
 An identity with no stored route defaults to `Direct`, matching
@@ -533,9 +533,9 @@ and closes the reverse forward when the last lease ends. Managed binaries remain
 installed and can be removed separately.
 
 Provisioning is not a third opener mode. In either route, ordinary terminals
-remain fully usable, Flint does not police commands the user starts manually,
+remain fully usable, dez does not police commands the user starts manually,
 and Agent Threads use an existing configured or ambient agent when available.
-If no usable agent is installed, Flint can offer the same pinned managed upload.
+If no usable agent is installed, dez can offer the same pinned managed upload.
 
 The route cannot honestly provide a project-level security boundary when two
 projects share the same remote operating-system account. A process running as
@@ -556,7 +556,7 @@ provisioning and optional egress preparation:
 3. Under `Direct`, call the existing
    `project.create_terminal_task` path with the resolved command and real remote
    project directory. Inject no proxy or `NO_PROXY` environment and acquire no
-   egress lease. If the command is Flint-managed, still apply its self-update
+   egress lease. If the command is dez-managed, still apply its self-update
    suppression environment.
 4. Under `Tunneled`, acquire an `AgentEgressLease` for that connection and
    agent kind.
@@ -567,7 +567,7 @@ provisioning and optional egress preparation:
    cmdlets, or shell-specific `/dev/tcp` behavior.
 7. Add the proxy URL, controlled `NO_PROXY` values, and vendor-supported
    self-update suppression environment to the remote agent launch environment,
-   whether the executable is ambient or Flint-managed.
+   whether the executable is ambient or dez-managed.
 8. Call the existing `project.create_terminal_task` path with the resolved
    command and the real remote project directory.
 9. Store the lease with the live Agent Thread so terminal closure releases it.
@@ -585,7 +585,7 @@ Under `Tunneled`, agent adapters set the proxy variables the selected CLI
 supports, including `HTTPS_PROXY` and the corresponding lowercase form when
 required. `HTTP_PROXY` is set only if the proxy supports every request type the
 agent sends through that variable. They also set both `NO_PROXY` and `no_proxy`
-to the controlled loopback bypass list `localhost,127.0.0.1,::1`. Flint does not
+to the controlled loopback bypass list `localhost,127.0.0.1,::1`. dez does not
 inherit arbitrary remote bypass entries because an external hostname in
 `NO_PROXY` would evade the destination policy.
 
@@ -596,9 +596,9 @@ installation or its persistent configuration. It prevents expected update
 checks from repeatedly hitting the policy-blocked update category.
 
 Under `Direct`, ambient commands receive neither proxy variables nor
-self-update suppression, preserving today's behavior. A Flint-managed command
+self-update suppression, preserving today's behavior. A dez-managed command
 still receives self-update suppression because its updates remain owned by the
-managed provisioning lifecycle. Flint trusts only the managed receipt, digest,
+managed provisioning lifecycle. dez trusts only the managed receipt, digest,
 and version check when choosing a managed executable for a new launch.
 
 The current SSH command builder for Windows remote hosts ignores its input
@@ -628,13 +628,13 @@ not add a second process-persistence mechanism.
 
 ### Credential provisioning
 
-Flint does not copy `auth.json`, `.credentials.json`, keychain entries, or
+dez does not copy `auth.json`, `.credentials.json`, keychain entries, or
 credential directories from the local machine. A credential-management
 terminal follows the selected route. With `Tunneled`, it acquires its own
 egress lease. With `Direct`, it uses the remote host's network
-without a Flint proxy. The user authenticates through an agent-supported remote
+without a dez proxy. The user authenticates through an agent-supported remote
 or headless flow, or provisions a dedicated provider token using the provider's
-supported method. Flint can show a URL or device code, but it does not assume a
+supported method. dez can show a URL or device code, but it does not assume a
 browser callback on the local machine reaches a listener on the remote host.
 
 When an agent login flow exposes a fixed or discoverable loopback callback port,
@@ -642,7 +642,7 @@ the credential-management action may create the independent temporary SSH local
 forward described above, under either route. This lets the user's local browser
 complete the standard OAuth callback while the credential remains on the remote
 host. The callback-forward handle is not owned by an egress lease. If the port
-cannot be determined or reserved safely, Flint uses the agent's device,
+cannot be determined or reserved safely, dez uses the agent's device,
 code-copy, or headless flow instead.
 
 The preferred credential is named for one remote host and one agent and has the
@@ -652,11 +652,11 @@ shortest practical expiration. Supported examples include:
 - a time-limited Codex workspace access token where available;
 - a separately listed Claude Code authorization token.
 
-Flint derives credential status on demand through the agent CLI. It keeps only
+dez derives credential status on demand through the agent CLI. It keeps only
 non-secret runtime state and the configured agent route; it does not persist a
-parallel credential inventory. Flint does not promise that a credential is
+parallel credential inventory. dez does not promise that a credential is
 dedicated when the provider or CLI does not expose enough metadata to verify
-that claim. If a CLI version's status output cannot be parsed, Flint reports the
+that claim. If a CLI version's status output cannot be parsed, dez reports the
 status as unknown. Unknown status alone never blocks launching the CLI or
 attempting logout; the actual command result remains authoritative.
 
@@ -676,7 +676,7 @@ are different operations.
 5. Verify that the CLI reports no active credential.
 
 **Revoke at provider** opens the provider's credential-management surface and
-explains which dedicated credential to revoke. Flint does not perform
+explains which dedicated credential to revoke. dez does not perform
 server-side revocation in this design. It never scrapes a provider web page or
 asks for an additional account credential.
 
@@ -689,7 +689,7 @@ The user-facing flow states that remote logout only erases the stored copy. If
 the credential may have been copied, provider-side revocation is required. A
 revoked or expired credential fails on the next authenticated provider request;
 an in-flight response may finish. Closing the tunnel first provides immediate
-network containment for a host whose only egress is Flint.
+network containment for a host whose only egress is dez.
 
 ## Failure Handling
 
@@ -699,7 +699,7 @@ Failures are represented by stage so the user knows what to fix:
 | -------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
 | Route          | `Direct` host cannot reach provider      | Preserve the chosen route; surface the CLI's network error without failover |
 | Catalogue      | remote target has no pinned official artifact       | Do not download or launch; report the unsupported target                    |
-| Download       | local Flint cannot reach the official artifact      | Preserve any valid installed version; offer retry                           |
+| Download       | local dez cannot reach the official artifact      | Preserve any valid installed version; offer retry                           |
 | Verification   | source, signature, digest, or version is invalid    | Delete the staged artifact and do not upload or launch                      |
 | Upload         | SSH transfer fails or remote storage is full        | Delete the partial remote file when reachable and report the transfer error |
 | Installation   | remote digest, permissions, move, or version fails  | Leave the prior version active and do not launch the staged version         |
@@ -709,7 +709,7 @@ Failures are represented by stage so the user knows what to fix:
 | OAuth callback | local port is busy or server forbids `-L`           | Close the callback forward; offer device or headless login; keep the route  |
 | Readiness      | `remote_server` loopback CONNECT probe fails        | Tear down the partial session and do not launch                             |
 | Authentication | CLI reports missing, expired, or revoked credential | Keep the selected route available; show the supported remote login action   |
-| Runtime        | through-Flint proxy or forward exits                | Mark affected threads offline and attempt connection-scoped recovery        |
+| Runtime        | through-dez proxy or forward exits                | Mark affected threads offline and attempt connection-scoped recovery        |
 | Reconnect      | stable remote port cannot be restored               | Fail the egress session and require thread restart                          |
 | Logout         | CLI cannot remove its local credential              | Keep the host marked authenticated and show the command error               |
 
@@ -721,7 +721,7 @@ discarded with `let _ =`.
 
 Runtime cleanup is best effort only where the remote connection is already
 gone, but every cleanup error is logged without secrets. Provider-side
-revocation remains available even when Flint cannot reconnect to remove the
+revocation remains available even when dez cannot reconnect to remove the
 remote credential file.
 
 ## Security Model
@@ -733,20 +733,20 @@ system account that owns it.
 Security invariants:
 
 - Agent artifacts come only from agent-specific official source rules embedded
-  in the signed Flint release.
-- Flint verifies the pinned digest before upload and verifies the uploaded bytes
+  in the signed dez release.
+- dez verifies the pinned digest before upload and verifies the uploaded bytes
   again on the remote host before an atomic installation.
-- Flint-managed installations are launched by absolute path and never made
+- dez-managed installations are launched by absolute path and never made
   ambient through a general `PATH` change.
 - The remote forward binds only to remote loopback.
 - The local proxy binds only to local loopback.
 - A temporary OAuth callback forward binds only to local loopback, targets only
   the remote CLI's loopback listener, and ends with its login attempt.
-- Every through-Flint thread receives an unguessable, revocable proxy
+- Every through-dez thread receives an unguessable, revocable proxy
   capability.
 - Only active agent destination policies can open upstream connections.
 - Provider TLS remains end to end between the remote CLI and provider.
-- Flint never receives plaintext provider credentials. It forwards only the
+- dez never receives plaintext provider credentials. It forwards only the
   encrypted TLS byte stream and never logs or persists its contents.
 - Proxy capabilities and proxy URLs are redacted from logs and errors.
 - Closing the last lease removes the egress path.
@@ -755,9 +755,9 @@ Security invariants:
   environment.
 - `Tunneled` gives an existing configured or ambient agent the same
   restricted capability as a managed agent. The explicit route choice accepts
-  that Flint has not established the ambient executable's provenance.
+  that dez has not established the ambient executable's provenance.
 
-`Tunneled` configures a supported agent to use Flint's proxy; it is not a
+`Tunneled` configures a supported agent to use dez's proxy; it is not a
 host firewall. If the remote host also has direct internet, a compromised agent
 or another same-user process can bypass the proxy. Enforced denial of the host's
 own network requires an external sandbox or administrator policy and is outside
@@ -853,7 +853,7 @@ Implementation follows test-driven development.
   suppression without receiving a proxy environment.
 - A provider failure under `Direct` never changes the stored route.
 - `Tunneled` injects the proxy environment only into the selected agent,
-  whether its executable is ambient or Flint-managed.
+  whether its executable is ambient or dez-managed.
 - `Tunneled` injects supported self-update suppression into both ambient
   and managed agent processes without changing persistent configuration.
 - `Tunneled` injects the controlled loopback `NO_PROXY`/`no_proxy` values,
@@ -874,7 +874,7 @@ Implementation follows test-driven development.
   logout.
 - Under either route, a supported browser login callback can use a temporary
   local forward without an egress lease or exposing the remote credential to
-  Flint.
+  dez.
 - A callback-forward failure leaves the route unchanged and offers device or
   headless login.
 - Logout failures reach the UI and do not claim successful disconnection.
@@ -894,7 +894,7 @@ Run local SSH test servers for both routes. Prove that:
   egress without a forced reinstall;
 - with `Tunneled` and direct outbound access denied, the remote begins
   without an agent executable or artifact-download access;
-- Flint verifies a signed test release locally, uploads it, installs it without
+- dez verifies a signed test release locally, uploads it, installs it without
   `sudo`, and launches its absolute managed path;
 - the managed remote agent-shaped client completes an authenticated CONNECT and
   exchanges a streaming response;
@@ -942,22 +942,22 @@ working and independently testable.
 - `Direct` preserves today's remote Agent Threads command resolution,
   injects no proxy environment, and creates no proxy, lease, or reverse forward.
 - `Tunneled` works whether or not the remote host also has direct internet.
-- `Tunneled` routes the launched supported agent through Flint but does not
+- `Tunneled` routes the launched supported agent through dez but does not
   claim to firewall a direct network path available to the remote account.
 - An existing configured or ambient agent can use either route; selecting
   `Tunneled` does not force a reinstall.
 - An ambient agent launched `Tunneled` receives supported per-process
   self-update suppression without changing its installation or persistent
   configuration.
-- On an SSH host with no agent executable and no direct internet, Flint can
+- On an SSH host with no agent executable and no direct internet, dez can
   download the target's pinned official Codex or Claude Code release locally,
   verify it, upload it, and install it without `sudo` or remote download tools.
 - Managed provisioning is available under either route and is not a third
   project-opener mode.
-- Flint rejects unpinned, user-supplied, non-official, corrupt, incorrectly
+- dez rejects unpinned, user-supplied, non-official, corrupt, incorrectly
   signed, wrong-target, and wrong-version artifacts.
 - A verified managed agent can authenticate and complete model requests through
-  Flint while the remote host retains no other outbound network route.
+  dez while the remote host retains no other outbound network route.
 - A managed-agent launch uses its absolute versioned path and does not depend on
   the remote `PATH`; an existing agent keeps current command resolution.
 - Updates are explicit and switch new launches only after complete verification;
@@ -969,14 +969,14 @@ working and independently testable.
   agent's policy.
 - Concurrent threads on one connection share a tunnel without sharing proxy
   capabilities.
-- Closing the final through-Flint Agent Thread removes the tunnel.
+- Closing the final through-dez Agent Thread removes the tunnel.
 - SSH forwarding-policy failures and invalid credentials produce distinct,
   actionable errors.
 - Under either route, a supported browser OAuth callback can use a temporary SSH
   local forward whose lifecycle is independent of every egress lease.
 - The user can remove the credential from the remote host and is directed to
   invalidate the dedicated credential at the provider.
-- Flint storage, logs, and proxy code never receive a plaintext provider
+- dez storage, logs, and proxy code never receive a plaintext provider
   credential.
 - Ordinary terminals and remote editing are unchanged in both routes.
 
@@ -1026,12 +1026,12 @@ MCP endpoint must bypass the proxy entirely.
 ### 2. The offline install story is unstated (document it)
 
 The accepted constraints say the CLI "can be installed" on the remote host,
-and non-goals exclude Flint installing it — but on a host with no internet,
+and non-goals exclude dez installing it — but on a host with no internet,
 the standard installers cannot run. The spec should state the supported
 user story explicitly (manually transfer the self-contained binary, e.g.
 `scp`), or the acceptance criteria are unreachable for exactly the hosts
 this feature targets. Keeping installation out of scope is fine; being
-silent about it is not. Note for the future: Flint already owns upload
+silent about it is not. Note for the future: dez already owns upload
 machinery (`upload_directory`, the `remote_server` binary push), so this
 non-goal is cheap to revisit later without design changes.
 
@@ -1047,10 +1047,10 @@ uniformly on every platform:
 - one implementation instead of two (`-O forward` + Windows process);
 - `ExitOnForwardFailure=yes` is a process option and behaves naturally;
 - cleanup is "kill the process", observable and crash-safe;
-- it avoids mutating a ControlMaster that Flint may not own: Flint reuses
+- it avoids mutating a ControlMaster that dez may not own: dez reuses
   _external user-created_ ControlMaster sessions
   (`remote_client.rs:126-136`). A forward added with `-O forward` on the
-  user's own master survives a Flint crash, and the leaked remote listener
+  user's own master survives a dez crash, and the leaked remote listener
   then occupies the stable port, which breaks reconnect recreation until
   the user's master exits.
 
@@ -1088,8 +1088,8 @@ No-copying plus provider-side revocation is right. Additions:
 - During the credential-management lease, offer an optional _local_ forward
   (`-L`) so the standard browser OAuth callback flow can complete: the
   user's local browser reaches the remote CLI's loopback callback listener
-  (e.g. Codex's localhost callback) through Flint's existing SSH machinery.
-  The credential still lands only on the remote host and Flint still never
+  (e.g. Codex's localhost callback) through dez's existing SSH machinery.
+  The credential still lands only on the remote host and dez still never
   sees it. This is a large UX improvement over paste/device flows and stays
   within the accepted scope.
 - "Credential status derived through the agent CLI" is version-fragile; the
@@ -1135,13 +1135,13 @@ finding, with one deliberate refinement to the forwarding mechanism.
 1. **Accepted.** Tunnel mode now sets controlled `NO_PROXY` and `no_proxy`
    loopback values and tests a real loopback bypass. Current
    [Claude Code network documentation](https://code.claude.com/docs/en/corporate-proxy)
-   supports `NO_PROXY`; Flint launches Codex directly and can pass the same
+   supports `NO_PROXY`; dez launches Codex directly and can pass the same
    environment. The adapter still treats support as versioned behavior and
    fails closed for a version that cannot preserve loopback access.
 2. **Accepted with a scope clarification.** An offline user or administrator
    may provision the CLI through a package mirror or manual transfer before
    enabling Agent Threads. The design does not assume that every CLI is a
-   self-contained binary, and Flint still does not select, upload, install, or
+   self-contained binary, and dez still does not select, upload, install, or
    update agent artifacts.
 3. **Resolved in favor of one owned forwarding process, but not a mux client.**
    The process uses a dedicated SSH connection on every platform. On
@@ -1159,7 +1159,7 @@ finding, with one deliberate refinement to the forwarding mechanism.
 6. **Accepted.** Established streams have no fixed idle timeout, and half-close
    behavior is now an explicit relay requirement and test.
 7. **Accepted conditionally.** A temporary local callback forward is offered
-   only when the CLI exposes a port Flint can discover and reserve safely.
+   only when the CLI exposes a port dez can discover and reserve safely.
    Device or headless login remains the fallback. Unparseable credential status
    degrades to unknown and does not block launch or logout.
 8. **Accepted.** Required authentication hosts are part of versioned agent
@@ -1219,19 +1219,19 @@ implementation planning.
 ## Managed-provisioning revision — Codex (2026-07-18)
 
 The product owner subsequently clarified that the remote host has no network
-and selected **Flint-managed upload** for agent installation. Only official
-releases are eligible, and each Flint release pins the exact tested agent
+and selected **dez-managed upload** for agent installation. Only official
+releases are eligible, and each dez release pins the exact tested agent
 versions.
 
 This revision supersedes the earlier provisioning assumption and finding-2
-resolution. Flint now owns local artifact download, provenance and digest
+resolution. dez now owns local artifact download, provenance and digest
 verification, generic SSH upload, remote digest verification, atomic per-user
 installation, absolute-path launch, explicit update, rollback, and removal. It
 does not run vendor installers remotely, accept user binaries, invoke `sudo`, or
 grant download and package-manager traffic through agent egress.
 
 The remote project opener now chooses between a fully `isolated` connection and
-restricted `agent_access` through Flint. The setting is connection scoped
+restricted `agent_access` through dez. The setting is connection scoped
 because multiple projects under the same remote operating-system user cannot be
 honestly isolated from each other's process environment.
 
@@ -1257,11 +1257,11 @@ connection:
 2. **Internet-connected remote** — the agent may or may not be pre-installed;
    the remote agent reaches its provider directly over the host's own
    network.
-3. **Offline remote** — Flint downloads the pinned release locally, uploads
+3. **Offline remote** — dez downloads the pinned release locally, uploads
    and installs it, and the agent reaches providers through the host tunnel.
 
 The revision covers cases 1 and 3 but silently dropped case 2. The previous
-design's `direct` mode ("current behavior; Flint adds no proxy environment")
+design's `direct` mode ("current behavior; dez adds no proxy environment")
 was collapsed away when `direct`/`tunnel`/`disabled` became
 `isolated`/`agent_access`: `agent_access` now unconditionally implies the
 managed binary at its absolute path plus injected proxy environment, and the
@@ -1288,8 +1288,8 @@ Required changes:
   behave exactly as they do today," plus regression tests asserting no proxy
   environment is injected and the ambient command is used.
 - `isolated` should state explicitly that ordinary terminals remain fully
-  usable and that Flint does not police what the user runs manually;
-  isolation means Flint provisions nothing and provides no network path, not
+  usable and that dez does not police what the user runs manually;
+  isolation means dez provisions nothing and provides no network path, not
   that the terminal is restricted.
 
 ### Provisioning catalogue and pipeline: approved, with notes
@@ -1342,7 +1342,7 @@ implementation planning.
 The product owner has further specified that when remote agents are enabled,
 **the user explicitly chooses whether the remote agent's traffic proxies
 through the host (tunnel) or goes direct** — the egress path is a visible
-option, not something Flint infers from connectivity or provisioning state.
+option, not something dez infers from connectivity or provisioning state.
 
 This refines the mode model from one three-valued enum into two user-visible
 choices, both **tied to the remote host identity** (the same scoping the
@@ -1356,27 +1356,27 @@ user processes cannot be isolated per project):
 
 The agent-network choice is deliberately **independent of the host's actual
 internet status**. It is a statement of how agent traffic should flow, not a
-workaround Flint applies when connectivity is missing: a host with internet
+workaround dez applies when connectivity is missing: a host with internet
 may still be set to `Tunneled` (for auditability or policy), and a host
 without internet may be set to `direct` (agent requests then fail at the
-provider exactly as they would in any terminal on that host — Flint reports
-the failure but does not switch modes). Flint never probes connectivity to
+provider exactly as they would in any terminal on that host — dez reports
+the failure but does not switch modes). dez never probes connectivity to
 choose, suggest, or override the setting.
 
-Provisioning (ambient binary vs Flint-managed install) is the third,
+Provisioning (ambient binary vs dez-managed install) is the third,
 orthogonal dimension, available in both network modes. The combination
 matrix:
 
-| Agent network | Ambient binary          | Flint-managed binary     |
+| Agent network | Ambient binary          | dez-managed binary     |
 | ------------- | ----------------------- | ------------------------ |
 | direct        | today's behavior        | supported (online host)  |
-| through Flint | decision needed (below) | supported (offline host) |
+| through dez | decision needed (below) | supported (offline host) |
 
 The one open cell is ambient-binary + tunneled egress. The original approved
 egress design (pre-provisioning revision) supported exactly this — the CLI
 was a provisioning precondition and the tunnel served whatever the user had
 installed. The provisioning revision narrowed tunnel mode to managed
-binaries only, for provenance of what receives Flint-provided egress. Both
+binaries only, for provenance of what receives dez-provided egress. Both
 positions are defensible: managed-only is a cleaner security story;
 ambient-plus-tunnel supports the user who manually installed on an offline
 host and just wants connectivity. Codex should resolve this cell explicitly
@@ -1390,7 +1390,7 @@ UI implications: the setting lives with the remote host (shown in the
 project opener alongside the access choice, and surfaced read-only where
 agents launch so the active network path is never ambiguous), changing it
 for an active connection follows the same confirmation-and-teardown rules as
-switching to `isolated`, and Flint still never flips `direct` to
+switching to `isolated`, and dez still never flips `direct` to
 `Tunneled` automatically after a network failure — the existing
 invariant stands in both directions.
 
@@ -1398,7 +1398,7 @@ invariant stands in both directions.
 
 The product owner accepted the two-route model and clarified that it applies
 regardless of the remote host's internet status. Codex has revised the active
-design around exactly `Tunneled` and `Direct`; Flint neither
+design around exactly `Tunneled` and `Direct`; dez neither
 probes connectivity to choose between them nor changes the route after failure.
 
 This revision rejects both the earlier `isolated`/`agent_access` model and the
@@ -1410,8 +1410,8 @@ the restricted egress path and its launch environment.
 Managed provisioning is orthogonal and available on demand under either route.
 An existing configured or ambient agent can also use either route, resolving
 the open ambient-binary plus tunneled-egress cell in favor of Claude's
-recommendation. Flint's official-source, pinning, digest, and absolute-path
-guarantees apply only to Flint-managed installations.
+recommendation. dez's official-source, pinning, digest, and absolute-path
+guarantees apply only to dez-managed installations.
 
 Codex also incorporated Claude's approved implementation notes: agent releases
 reuse `RemoteClient` target detection, version checks use tolerant versioned
@@ -1433,7 +1433,7 @@ record.
 Specific confirmations:
 
 - **All three product-owner cases are covered.** Case 2 uses Direct
-  (today's behavior, regression-tested); case 3 uses Through Flint with managed
+  (today's behavior, regression-tested); case 3 uses Through dez with managed
   provisioning. Case 1 (no agents, just viewing and terminals)
   is correctly served _without_ a dedicated mode: everything is lazy and
   gated on explicit user action — no artifact is downloaded, no proxy or
@@ -1447,7 +1447,7 @@ Specific confirmations:
   "Connectivity-derived or three-valued modes" alternative records this
   well.
 - The ambient-plus-tunnel cell is resolved per my recommendation, with the
-  honest new invariant that Flint claims no provenance for ambient
+  honest new invariant that dez claims no provenance for ambient
   executables and the explicit "not a host firewall" caveat — both correct.
 - All four earlier implementation notes are incorporated (shared
   `RemoteClient` target detection, tolerant version matcher, standalone

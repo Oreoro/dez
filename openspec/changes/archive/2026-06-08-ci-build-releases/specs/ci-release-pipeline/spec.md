@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Release workflow triggers on version tags
-The system SHALL provide a GitHub Actions workflow (`release.yml`) that triggers on pushes of tags matching `v*`. The workflow SHALL build Flint for all 6 platform targets and publish artifacts to a GitHub Release.
+The system SHALL provide a GitHub Actions workflow (`release.yml`) that triggers on pushes of tags matching `v*`. The workflow SHALL build dez for all 6 platform targets and publish artifacts to a GitHub Release.
 
 #### Scenario: Push a stable version tag
 - **WHEN** a tag matching `v*` (not ending in `-pre`) is pushed
@@ -16,36 +16,36 @@ The system SHALL build macOS binaries for both `aarch64-apple-darwin` and `x86_6
 
 #### Scenario: Build macOS ARM64 release
 - **WHEN** the release workflow runs
-- **THEN** a job on a macOS runner builds `Flint-aarch64.dmg` using `script/bundle-mac aarch64-apple-darwin`
+- **THEN** a job on a macOS runner builds `dez-aarch64.dmg` using `script/bundle-mac aarch64-apple-darwin`
 
 #### Scenario: Build macOS x86_64 release
 - **WHEN** the release workflow runs
-- **THEN** a job on a macOS runner builds `Flint-x86_64.dmg` using `script/bundle-mac x86_64-apple-darwin`
+- **THEN** a job on a macOS runner builds `dez-x86_64.dmg` using `script/bundle-mac x86_64-apple-darwin`
 
 ### Requirement: Release workflow builds Linux targets
 The system SHALL build Linux binaries for both `aarch64-unknown-linux-gnu` and `x86_64-unknown-linux-gnu` targets. The build SHALL produce a `.tar.gz` archive for each architecture.
 
 #### Scenario: Build Linux ARM64 release
 - **WHEN** the release workflow runs
-- **THEN** a job on a Linux runner builds `flint-linux-aarch64.tar.gz` using `script/bundle-linux`
+- **THEN** a job on a Linux runner builds `dez-linux-aarch64.tar.gz` using `script/bundle-linux`
 
 #### Scenario: Build Linux x86_64 release
 - **WHEN** the release workflow runs
-- **THEN** a job on a Linux runner builds `flint-linux-x86_64.tar.gz` using `script/bundle-linux`
+- **THEN** a job on a Linux runner builds `dez-linux-x86_64.tar.gz` using `script/bundle-linux`
 
 ### Requirement: Release workflow builds Windows targets
 The system SHALL build Windows binaries for both `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc` targets. The build SHALL produce an `.exe` installer for each architecture.
 
 #### Scenario: Build Windows x86_64 release
 - **WHEN** the release workflow runs
-- **THEN** a job on a Windows runner builds `Flint-x86_64.exe` using `script/bundle-windows.ps1 -Architecture x86_64`
+- **THEN** a job on a Windows runner builds `dez-x86_64.exe` using `script/bundle-windows.ps1 -Architecture x86_64`
 
 #### Scenario: Build Windows ARM64 release
 - **WHEN** the release workflow runs
-- **THEN** a job on a Windows runner builds `Flint-aarch64.exe` using `script/bundle-windows.ps1 -Architecture aarch64`
+- **THEN** a job on a Windows runner builds `dez-aarch64.exe` using `script/bundle-windows.ps1 -Architecture aarch64`
 
 ### Requirement: Release workflow produces remote server binaries
-The system SHALL produce compressed remote server binaries for all platforms alongside the main application bundles. This includes `flint-remote-server-macos-{arch}.gz`, `flint-remote-server-linux-{arch}.tar.gz`, and `flint-remote-server-windows-{arch}.zip` for each architecture.
+The system SHALL produce compressed remote server binaries for all platforms alongside the main application bundles. This includes `dez-remote-server-macos-{arch}.gz`, `dez-remote-server-linux-{arch}.tar.gz`, and `dez-remote-server-windows-{arch}.zip` for each architecture.
 
 #### Scenario: Remote server artifacts are uploaded
 - **WHEN** the release workflow completes bundle jobs

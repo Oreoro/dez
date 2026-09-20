@@ -10,13 +10,13 @@ features added in the fork, without turning the document into a release log.
 
 ## Changes
 
-- Name Codex, Claude Code, and Pi wherever the README describes Flint's
+- Name Codex, Claude Code, and Pi wherever the README describes dez's
   supported coding agents.
 - Clarify that the Agent Threads panel discovers and resumes sessions from the
   machine where they ran, including remote hosts.
 - Add local cross-agent handoff as an Agent Threads capability, including the
   preview step before a new target thread starts.
-- Mention that restored remote workspaces can be reopened and that Flint marks
+- Mention that restored remote workspaces can be reopened and that dez marks
   SSH projects configured to use the tunneled agent route.
 - Add rich Markdown previews, including inline and display LaTeX equations and
   the fork's expanded Mermaid diagram coverage.
@@ -25,7 +25,7 @@ features added in the fork, without turning the document into a release log.
 - Include useful Agent Threads status and continuity features: Codex and Claude
   plan-usage and reset indicators, desktop notifications, and optional session
   reopening.
-- Mention colored file-type and agent-brand icons alongside Flint's visual
+- Mention colored file-type and agent-brand icons alongside dez's visual
   change-review tools.
 
 ## Exclusions

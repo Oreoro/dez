@@ -169,7 +169,7 @@ impl TerminalPanel {
                                         // context menu will be gone the moment we spawn the modal.
                                         .action(
                                             localization::text(cx, "terminal-spawn-task"),
-                                            flint_actions::Spawn::modal().boxed_clone(),
+                                            dez_actions::Spawn::modal().boxed_clone(),
                                         )
                                 });
 
@@ -1595,11 +1595,11 @@ impl Render for FailedToSpawnTerminal {
                     context_menu
                         .action(
                             localization::text(cx, "terminal-open-settings"),
-                            flint_actions::OpenSettings.boxed_clone(),
+                            dez_actions::OpenSettings.boxed_clone(),
                         )
                         .action(
                             localization::text(cx, "terminal-edit-settings-json"),
-                            flint_actions::OpenSettingsFile.boxed_clone(),
+                            dez_actions::OpenSettingsFile.boxed_clone(),
                         )
                 }))
             })
@@ -1637,7 +1637,7 @@ impl Render for FailedToSpawnTerminal {
                             )
                             .on_click(|_, window, cx| {
                                 window
-                                    .dispatch_action(flint_actions::OpenSettings.boxed_clone(), cx);
+                                    .dispatch_action(dez_actions::OpenSettings.boxed_clone(), cx);
                             }),
                         popover_menu.into_any_element(),
                     )),

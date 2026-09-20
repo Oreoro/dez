@@ -154,17 +154,17 @@ mod tests {
     fn test_duplicate_paths_from_multiple_groups() {
         use std::path::Path;
 
-        // Simulates the sidebar scenario: a path like /Users/rtfeldman/code/flint
-        // appears in two project groups (e.g. "flint" alone and "flint, roc").
+        // Simulates the sidebar scenario: a path like /Users/rtfeldman/code/dez
+        // appears in two project groups (e.g. "dez" alone and "dez, roc").
         // After deduplication, only unique paths should be disambiguated.
         //
         // Paths:
-        //   /Users/rtfeldman/code/worktrees/flint/focal-arrow/flint  (group 1)
-        //   /Users/rtfeldman/code/flint                             (group 2)
-        //   /Users/rtfeldman/code/flint                             (group 3, same path as group 2)
+        //   /Users/rtfeldman/code/worktrees/dez/focal-arrow/dez  (group 1)
+        //   /Users/rtfeldman/code/dez                             (group 2)
+        //   /Users/rtfeldman/code/dez                             (group 3, same path as group 2)
         //   /Users/rtfeldman/code/roc                             (group 3)
         //
-        // A naive flat_map collects duplicates. The duplicate /code/flint entries
+        // A naive flat_map collects duplicates. The duplicate /code/dez entries
         // collide with each other and drive the detail to the full path.
         // The fix is to deduplicate before disambiguating.
 
@@ -183,20 +183,20 @@ mod tests {
         }
 
         let all_paths: Vec<&Path> = vec![
-            Path::new("/Users/rtfeldman/code/worktrees/flint/focal-arrow/flint"),
-            Path::new("/Users/rtfeldman/code/flint"),
+            Path::new("/Users/rtfeldman/code/worktrees/dez/focal-arrow/dez"),
+            Path::new("/Users/rtfeldman/code/dez"),
             Path::new("/Users/rtfeldman/code/roc"),
         ];
 
         let details =
             compute_disambiguation_details(&all_paths, |path, detail| path_suffix(path, detail));
 
-        // focal-arrow/flint and code/flint both end in "flint", so they need detail 1.
+        // focal-arrow/dez and code/dez both end in "dez", so they need detail 1.
         // "roc" is unique at detail 0.
         assert_eq!(details, vec![1, 1, 0]);
 
-        assert_eq!(path_suffix(all_paths[0], details[0]), "focal-arrow/flint");
-        assert_eq!(path_suffix(all_paths[1], details[1]), "code/flint");
+        assert_eq!(path_suffix(all_paths[0], details[0]), "focal-arrow/dez");
+        assert_eq!(path_suffix(all_paths[1], details[1]), "code/dez");
         assert_eq!(path_suffix(all_paths[2], details[2]), "roc");
     }
 }

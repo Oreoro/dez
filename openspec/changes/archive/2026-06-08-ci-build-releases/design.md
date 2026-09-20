@@ -1,15 +1,15 @@
 ## Context
 
-The Flint fork inherited Zed's entire CI/CD pipeline, which is deeply integrated with enterprise infrastructure: Namespace Labs runners, DigitalOcean Spaces for artifact hosting, Cloudflare R2 for sccache, Sentry for debug symbols, Azure Trusted Signing for Windows, Apple notarization for macOS, and Slack/Discord/WinGet for post-release distribution. All workflow YAML files are generated from Rust source in `tooling/xtask/src/tasks/workflows/`.
+The dez fork inherited Zed's entire CI/CD pipeline, which is deeply integrated with enterprise infrastructure: Namespace Labs runners, DigitalOcean Spaces for artifact hosting, Cloudflare R2 for sccache, Sentry for debug symbols, Azure Trusted Signing for Windows, Apple notarization for macOS, and Slack/Discord/WinGet for post-release distribution. All workflow YAML files are generated from Rust source in `tooling/xtask/src/tasks/workflows/`.
 
-None of this infrastructure exists for the Flint fork. The workflows currently gate on `github.repository_owner == 'flint-industries'`, meaning they won't trigger for a fork on a personal account. The bundle scripts hardcode Sentry uploads, the nightly pipeline uploads to DigitalOcean Spaces, and the release pipeline uses Namespace Labs custom runners.
+None of this infrastructure exists for the dez fork. The workflows currently gate on `github.repository_owner == 'dez-industries'`, meaning they won't trigger for a fork on a personal account. The bundle scripts hardcode Sentry uploads, the nightly pipeline uploads to DigitalOcean Spaces, and the release pipeline uses Namespace Labs custom runners.
 
 The goal is a working release pipeline using only standard GitHub-hosted runners and GitHub Releases for artifact distribution — no external services required.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Working GitHub Actions release pipeline that builds Flint for all 6 targets (macOS aarch64/x86_64, Linux aarch64/x86_64, Windows aarch64/x86_64)
+- Working GitHub Actions release pipeline that builds dez for all 6 targets (macOS aarch64/x86_64, Linux aarch64/x86_64, Windows aarch64/x86_64)
 - Publish release artifacts to GitHub Releases
 - Nightly builds published to a rolling GitHub Release
 - Bundle scripts work without Sentry, DigitalOcean, or organization-specific services
@@ -20,7 +20,7 @@ The goal is a working release pipeline using only standard GitHub-hosted runners
 - DigitalOcean Spaces, Cloudflare R2, or Cachix integration
 - Sentry debug symbol uploads or crash reporting
 - Slack/Discord notifications
-- WinGet, flint.dev, or Vercel deployments
+- WinGet, dez.dev, or Vercel deployments
 - Namespace Labs custom runners
 - Nix builds
 - sccache with R2 backend (will use GitHub Actions cache instead)
@@ -80,7 +80,7 @@ Create a `nightly` tag and release that gets updated each night with the latest 
 
 ### 7. Remove repository owner gates
 
-Remove the `github.repository_owner == 'flint-industries'` conditions so the workflows run on the fork.
+Remove the `github.repository_owner == 'dez-industries'` conditions so the workflows run on the fork.
 
 **Rationale:** Workflows must trigger on the actual repository to be useful.
 

@@ -3,7 +3,7 @@ use workspace::Workspace;
 
 pub mod markdown_preview_view;
 
-pub use flint_actions::preview::markdown::{OpenPreview, OpenPreviewToTheSide};
+pub use dez_actions::preview::markdown::{OpenPreview, OpenPreviewToTheSide};
 
 actions!(
     markdown,

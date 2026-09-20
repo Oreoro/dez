@@ -2,18 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reduce remote Codex and Claude credential menus to sign-out only, and guarantee that Through-Flint sign-out uses the corresponding pinned managed CLI.
+**Goal:** Reduce remote Codex and Claude credential menus to sign-out only, and guarantee that Through-dez sign-out uses the corresponding pinned managed CLI.
 
-**Architecture:** `panel.rs` owns a small, testable policy describing which remote credential entries are visible. `store.rs` owns route selection, managed-agent preparation, command construction, and launch; pure command-building helpers provide deterministic regression seams while the existing provisioning and Through-Flint transport remain authoritative.
+**Architecture:** `panel.rs` owns a small, testable policy describing which remote credential entries are visible. `store.rs` owns route selection, managed-agent preparation, command construction, and launch; pure command-building helpers provide deterministic regression seams while the existing provisioning and Through-dez transport remain authoritative.
 
-**Tech Stack:** Rust, GPUI context menus and tasks, Flint remote-agent routing, Flint managed-agent provisioning, Cargo tests.
+**Tech Stack:** Rust, GPUI context menus and tasks, dez remote-agent routing, dez managed-agent provisioning, Cargo tests.
 
 ## Global Constraints
 
 - Remove remote sign-in, sign-in-status, and provider-management entries for Codex and Claude.
 - Keep remote sign-out for both agents.
-- Through-Flint sign-out must use the pinned managed executable and require the Through-Flint route.
-- Not-through-Flint sign-out must keep using the configured command.
+- Through-dez sign-out must use the pinned managed executable and require the Through-dez route.
+- Not-through-dez sign-out must keep using the configured command.
 - Do not change provider-owned authentication storage.
 - Do not perform live Claude validation in this iteration; automated tests must not launch Claude or contact Anthropic.
 
@@ -223,9 +223,9 @@ fn uses_managed_credential_command(route: Option<settings::RemoteAgentRoute>) ->
 
 - [x] **Step 4: Make credential launch route-aware**
 
-Update `launch_credential_command` to read the selected route before launching. For Not-through-Flint or no remote route, build the configured command and pass the captured route as `RequiredAgentRoute` to `spawn_thread_task_for_route`.
+Update `launch_credential_command` to read the selected route before launching. For Not-through-dez or no remote route, build the configured command and pass the captured route as `RequiredAgentRoute` to `spawn_thread_task_for_route`.
 
-For Through Flint, call `prepare_managed_agent`. On `Ready`, set the existing progress notification to `ManagedAgentProgressState::Launching`, construct the command with `build_managed_credential_command`, dismiss the managed-agent notification, and call `spawn_thread_task_for_route` with `Some(RequiredAgentRoute(RemoteAgentRoute::Tunneled))`. Await the returned launch task so transport errors reach `workspace.show_error`. Treat `Cancelled` and `AlreadyInProgress` the same way as `launch_managed_thread`: do not launch another command. Preserve all existing provisioning progress and confirmation behavior.
+For Through dez, call `prepare_managed_agent`. On `Ready`, set the existing progress notification to `ManagedAgentProgressState::Launching`, construct the command with `build_managed_credential_command`, dismiss the managed-agent notification, and call `spawn_thread_task_for_route` with `Some(RequiredAgentRoute(RemoteAgentRoute::Tunneled))`. Await the returned launch task so transport errors reach `workspace.show_error`. Treat `Cancelled` and `AlreadyInProgress` the same way as `launch_managed_thread`: do not launch another command. Preserve all existing provisioning progress and confirmation behavior.
 
 - [x] **Step 5: Run focused and crate tests and verify GREEN**
 
@@ -242,7 +242,7 @@ Expected: all tests pass; no provider CLI is launched.
 
 ```bash
 git add crates/agent_threads/src/store.rs
-git commit -m "Route remote agent sign-out through Flint"
+git commit -m "Route remote agent sign-out through dez"
 ```
 
 ---

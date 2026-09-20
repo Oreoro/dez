@@ -1,5 +1,5 @@
 use crate::{BufferDiagnosticsEditor, ProjectDiagnosticsEditor, ToggleDiagnosticsRefresh};
-use flint_actions::buffer_search;
+use dez_actions::buffer_search;
 use gpui::{Context, EventEmitter, ParentElement, Render, Window};
 use language::DiagnosticEntry;
 use text::{Anchor, BufferId};

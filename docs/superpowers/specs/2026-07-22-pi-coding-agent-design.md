@@ -2,9 +2,9 @@
 
 ## Summary
 
-Add Pi as a third first-class terminal coding agent beside Codex and Claude in Flint's Agent Threads panel. The integration uses Pi's interactive terminal interface, preserves Pi's provider-neutral model, supports Pi's persisted sessions, and provisions pinned standalone Pi release bundles for managed tunneled remote projects.
+Add Pi as a third first-class terminal coding agent beside Codex and Claude in dez's Agent Threads panel. The integration uses Pi's interactive terminal interface, preserves Pi's provider-neutral model, supports Pi's persisted sessions, and provisions pinned standalone Pi release bundles for managed tunneled remote projects.
 
-Pi continues to own provider selection, model selection, and authentication. Flint owns process launch, project-scoped thread discovery, session restoration, remote binary provisioning, and tunneled network policy.
+Pi continues to own provider selection, model selection, and authentication. dez owns process launch, project-scoped thread discovery, session restoration, remote binary provisioning, and tunneled network policy.
 
 References:
 
@@ -17,7 +17,7 @@ References:
 - Show Pi after Codex and Claude in the Agent Threads panel.
 - Launch local and directly routed remote Pi sessions through a configurable command.
 - Discover project-scoped Pi history and resume sessions from the panel.
-- Assign session IDs to new Pi threads so they can be restored across Flint restarts.
+- Assign session IDs to new Pi threads so they can be restored across dez restarts.
 - Preserve existing live-thread deduplication, completion notifications, and close behavior.
 - Provision and verify pinned standalone Pi binaries for tunneled remote projects.
 - Permit tunneled access to Pi's built-in providers while preserving an explicit host allowlist.
@@ -27,7 +27,7 @@ References:
 
 - Embedding Pi through its RPC mode or building a native Pi conversation UI.
 - Reimplementing Pi's provider, model, thinking-level, extension, or skill interfaces.
-- Displaying a Flint quota meter for Pi.
+- Displaying a dez quota meter for Pi.
 - Providing provider-specific sign-in, sign-out, or credential-management actions for Pi.
 - Copying local Pi credentials to a remote host.
 - Supporting arbitrary custom-provider or extension network destinations through a tunneled route.
@@ -86,7 +86,7 @@ Custom command, arguments, environment, working directory, and visibility use th
 
 ## New Thread and Resume Flow
 
-For a new Pi thread, Flint generates a UUID and launches:
+For a new Pi thread, dez generates a UUID and launches:
 
 ```text
 pi [configured arguments] --session-id <uuid>
@@ -94,7 +94,7 @@ pi [configured arguments] --session-id <uuid>
 
 The generated ID is recorded in live thread metadata immediately. This allows session restoration even before Pi writes its first history entry.
 
-For a historical thread, Flint launches:
+For a historical thread, dez launches:
 
 ```text
 pi --session <session-id> [configured resume arguments]
@@ -102,7 +102,7 @@ pi --session <session-id> [configured resume arguments]
 
 with the session's project root as the working directory. Pi has no additional built-in resume option, so no per-thread launch-option state is created.
 
-Pi creates provider credentials on the machine where it runs. A user authenticates by opening a Pi session and using `/login`. Managed remote sessions therefore keep their own remote Pi credentials; Flint neither reads nor uploads the local `auth.json`.
+Pi creates provider credentials on the machine where it runs. A user authenticates by opening a Pi session and using `/login`. Managed remote sessions therefore keep their own remote Pi credentials; dez neither reads nor uploads the local `auth.json`.
 
 ## History Discovery
 
@@ -153,7 +153,7 @@ Map upstream standalone assets to supported remote platforms:
 
 Only Linux libc targets verified to run the published standalone binaries are registered. Unsupported targets fail before download with the existing `no pinned Pi release supports this remote target` error.
 
-Pi's compiled executable requires adjacent release metadata and assets. Flint therefore installs the complete verified release bundle rather than extracting only the executable. Each release entry pins:
+Pi's compiled executable requires adjacent release metadata and assets. dez therefore installs the complete verified release bundle rather than extracting only the executable. Each release entry pins:
 
 - The official GitHub release URL.
 - The archive SHA-256 from the upstream `SHA256SUMS` file.
@@ -165,14 +165,14 @@ Add verified TAR and ZIP bundle variants to the artifact cache. Bundle extractio
 
 The cached artifact exposes a manifest of regular files containing each relative path and SHA-256 digest. Managed provisioning recreates parent directories, uploads every manifest entry into a private staging directory, and verifies every remote digest before making the executable runnable. The receipt records the source archive digest and installed file manifest. Reuse verifies the complete installed manifest and version before launch. Codex and Claude continue to produce one-file manifests, preserving their current installation behavior through the same interface.
 
-Flint-managed Pi commands set:
+dez-managed Pi commands set:
 
 ```text
 PI_SKIP_VERSION_CHECK=1
 PI_TELEMETRY=0
 ```
 
-Flint controls the managed version and does not need Pi's startup update check or install telemetry. `PI_OFFLINE` is not set because Pi still needs its normal model-catalog and provider behavior.
+dez controls the managed version and does not need Pi's startup update check or install telemetry. `PI_OFFLINE` is not set because Pi still needs its normal model-catalog and provider behavior.
 
 ## Tunneled Network Policy
 
@@ -258,5 +258,5 @@ Before pushing Rust changes:
 - A supported tunneled remote project can acquire a verified managed Pi binary and launch it without a preinstalled runtime.
 - Pi can reach every built-in provider covered by the pinned allowlist through the tunnel.
 - Pi authentication and provider selection remain entirely inside Pi.
-- Pi produces no Flint quota requests or provider-specific credential controls.
+- Pi produces no dez quota requests or provider-specific credential controls.
 - Existing Codex and Claude behavior and existing user settings remain unchanged.

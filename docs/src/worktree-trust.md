@@ -1,38 +1,38 @@
 ---
-title: Flint and trusted worktrees
-description: "Configure which folders Flint trusts for running code and extensions."
+title: dez and trusted worktrees
+description: "Configure which folders dez trusts for running code and extensions."
 ---
 
-# Flint and trusted worktrees
+# dez and trusted worktrees
 
-A worktree in Flint is either a directory or a single file that Flint opens as a standalone "project".
-Flint opens a worktree each time you run `flint some/path`, drag a file or directory into Flint, or open your user settings file.
+A worktree in dez is either a directory or a single file that dez opens as a standalone "project".
+dez opens a worktree each time you run `dez some/path`, drag a file or directory into dez, or open your user settings file.
 
-> Note: This is broader than a [Git worktree](./git.md#git-worktrees). A Git worktree is a linked checkout managed by Git; Flint's trust model applies to every opened file or folder root, including Git worktrees.
+> Note: This is broader than a [Git worktree](./git.md#git-worktrees). A Git worktree is a linked checkout managed by Git; dez's trust model applies to every opened file or folder root, including Git worktrees.
 
-Every worktree opened may contain a `.flint/settings.json` file with extra configuration options that may require installing and spawning language servers or MCP servers.
-To let users choose based on their own threat model and risk tolerance, all worktrees start in Restricted Mode. Restricted Mode prevents downloading and running related items from `.flint/settings.json`. Until a worktree is trusted, Flint does not run related untrusted actions and waits for user confirmation. This gives users a chance to review project settings, MCP servers, and language servers.
+Every worktree opened may contain a `.dez/settings.json` file with extra configuration options that may require installing and spawning language servers or MCP servers.
+To let users choose based on their own threat model and risk tolerance, all worktrees start in Restricted Mode. Restricted Mode prevents downloading and running related items from `.dez/settings.json`. Until a worktree is trusted, dez does not run related untrusted actions and waits for user confirmation. This gives users a chance to review project settings, MCP servers, and language servers.
 
-Flint still trusts tools it installs globally. Global MCP servers and global language servers such as Prettier and Copilot are installed and started as usual, independent of worktree trust.
+dez still trusts tools it installs globally. Global MCP servers and global language servers such as Prettier and Copilot are installed and started as usual, independent of worktree trust.
 
-If a worktree is not trusted, Flint will indicate this with an exclamation mark icon in the title bar. Clicking this icon or using `workspace::ToggleWorktreeSecurity` action will bring up the security modal that allows the user to trust the worktree.
+If a worktree is not trusted, dez will indicate this with an exclamation mark icon in the title bar. Clicking this icon or using `workspace::ToggleWorktreeSecurity` action will bring up the security modal that allows the user to trust the worktree.
 
 Trusting a worktree persists that decision between restarts. You can clear all trusted worktrees with the `workspace::ClearTrustedWorktrees` command.
-This command will restart Flint, to ensure no untrusted settings, language servers or MCP servers persist.
+This command will restart dez, to ensure no untrusted settings, language servers or MCP servers persist.
 
-This feature works locally and on SSH and WSL remote hosts. Flint tracks trust information per host in these cases.
+This feature works locally and on SSH and WSL remote hosts. dez tracks trust information per host in these cases.
 
 ## What is restricted
 
 Restricted Mode prevents:
 
-- Project settings (`.flint/settings.json`) from being parsed and applied
+- Project settings (`.dez/settings.json`) from being parsed and applied
 - Language servers from being installed and spawned
 - MCP servers from being installed and spawned
 
 ## Configuring broad worktree trust
 
-By default, Flint does not trust new worktrees. Users must trust each new worktree individually. Though not recommended, users can trust all worktrees with this setting ([how to edit](./configuring-flint.md#settings-files)):
+By default, dez does not trust new worktrees. Users must trust each new worktree individually. Though not recommended, users can trust all worktrees with this setting ([how to edit](./configuring-dez.md#settings-files)):
 
 ```json [settings]
 "session": {
@@ -45,21 +45,21 @@ Auto-trusted worktrees are not persisted between restarts; only manually trusted
 ## Trust hierarchy
 
 These are mostly internal details and may change, but they help explain how multiple trust requests can be approved at once.
-Flint has multiple layers of trust, based on the requests, from the least to most trusted level:
+dez has multiple layers of trust, based on the requests, from the least to most trusted level:
 
 - "single file worktree"
 
-After opening an empty Flint window, you can open a single file. You can also open a file outside the current directory after opening a directory.
-A common example is {#action flint::OpenSettingsFile}, which may start a language server for that file and create a new single-file worktree.
+After opening an empty dez window, you can open a single file. You can also open a file outside the current directory after opening a directory.
+A common example is {#action dez::OpenSettingsFile}, which may start a language server for that file and create a new single-file worktree.
 
-Spawning a language server presents a risk should the language server experience a supply-chain attack; therefore, Flint restricts that by default. Each single file worktree requires a separate trust grant, unless the directory containing it is trusted or all worktrees are trusted.
+Spawning a language server presents a risk should the language server experience a supply-chain attack; therefore, dez restricts that by default. Each single file worktree requires a separate trust grant, unless the directory containing it is trusted or all worktrees are trusted.
 
 - "directory worktree"
 
-If a directory is open in Flint, it is a full worktree. It may spawn multiple language servers and MCP servers defined in project settings. Each directory worktree therefore requires a separate trust grant unless a parent-directory trust grant exists (see below).
+If a directory is open in dez, it is a full worktree. It may spawn multiple language servers and MCP servers defined in project settings. Each directory worktree therefore requires a separate trust grant unless a parent-directory trust grant exists (see below).
 
 When a directory worktree is trusted, language and MCP servers are permitted to be downloaded and started, hence we also enable single file worktree trust for the host in question automatically when this occurs: this helps when opening single files when using language server features in the trusted directory worktree.
 
 - "parent directory worktree"
 
-To permit trust decisions for multiple directory worktrees at once, it's possible to trust all subdirectories of a given parent directory worktree opened in Flint by checking the appropriate checkbox. This will grant trust to all its subdirectories, including all current and potential directory worktrees.
+To permit trust decisions for multiple directory worktrees at once, it's possible to trust all subdirectories of a given parent directory worktree opened in dez by checking the appropriate checkbox. This will grant trust to all its subdirectories, including all current and potential directory worktrees.

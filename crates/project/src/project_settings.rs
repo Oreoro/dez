@@ -98,9 +98,9 @@ pub struct SessionSettings {
 pub struct NodeBinarySettings {
     /// The path to the Node binary.
     pub path: Option<String>,
-    /// The path to the npm binary Flint should use (defaults to `.path/../npm`).
+    /// The path to the npm binary dez should use (defaults to `.path/../npm`).
     pub npm_path: Option<String>,
-    /// If enabled, Flint will download its own copy of Node.
+    /// If enabled, dez will download its own copy of Node.
     pub ignore_system_version: bool,
 }
 
@@ -426,7 +426,7 @@ pub struct DiagnosticsSettings {
     /// Whether or not to include warning diagnostics.
     pub include_warnings: bool,
 
-    /// Settings for using LSP pull diagnostics mechanism in Flint.
+    /// Settings for using LSP pull diagnostics mechanism in dez.
     pub lsp_pull_diagnostics: LspPullDiagnosticsSettings,
 
     /// Settings for showing inline diagnostics.
@@ -621,10 +621,10 @@ pub struct SettingsObserver {
     _global_debug_config_watcher: Task<()>,
 }
 
-/// SettingsObserver observers changes to .flint/{settings, task}.json files in local worktrees
+/// SettingsObserver observers changes to .dez/{settings, task}.json files in local worktrees
 /// (or the equivalent protobuf messages from upstream) and updates local settings
 /// and sends notifications downstream.
-/// In ssh mode it also monitors ~/.config/flint/{settings, task}.json and sends the content
+/// In ssh mode it also monitors ~/.config/dez/{settings, task}.json and sends the content
 /// upstream.
 impl SettingsObserver {
     pub fn init(client: &AnyProtoClient) {
@@ -1055,15 +1055,15 @@ impl SettingsObserver {
                                             .with_context(|| {
                                                 format!("parsing VSCode tasks, file {abs_path:?}")
                                             })?;
-                                    let flint_tasks = TaskTemplates::try_from(vscode_tasks)
+                                    let dez_tasks = TaskTemplates::try_from(vscode_tasks)
                                         .with_context(|| {
                                             format!(
-                                        "converting VSCode tasks into Flint ones, file {abs_path:?}"
+                                        "converting VSCode tasks into dez ones, file {abs_path:?}"
                                     )
                                         })?;
-                                    serde_json::to_string(&flint_tasks).with_context(|| {
+                                    serde_json::to_string(&dez_tasks).with_context(|| {
                                         format!(
-                                            "serializing Flint tasks into JSON, file {abs_path:?}"
+                                            "serializing dez tasks into JSON, file {abs_path:?}"
                                         )
                                     })
                                 } else if abs_path.ends_with(local_vscode_launch_file_relative_path().as_std_path()) {
@@ -1072,15 +1072,15 @@ impl SettingsObserver {
                                             .with_context(|| {
                                                 format!("parsing VSCode debug tasks, file {abs_path:?}")
                                             })?;
-                                    let flint_tasks = DebugTaskFile::try_from(vscode_tasks)
+                                    let dez_tasks = DebugTaskFile::try_from(vscode_tasks)
                                         .with_context(|| {
                                             format!(
-                                        "converting VSCode debug tasks into Flint ones, file {abs_path:?}"
+                                        "converting VSCode debug tasks into dez ones, file {abs_path:?}"
                                     )
                                         })?;
-                                    serde_json::to_string(&flint_tasks).with_context(|| {
+                                    serde_json::to_string(&dez_tasks).with_context(|| {
                                         format!(
-                                            "serializing Flint tasks into JSON, file {abs_path:?}"
+                                            "serializing dez tasks into JSON, file {abs_path:?}"
                                         )
                                     })
                                 } else {

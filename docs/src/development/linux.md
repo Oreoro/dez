@@ -106,7 +106,7 @@ Zed moves quickly, and distribution maintainers often have different constraints
 - There are a couple of other `zed` binaries that may be present on Linux systems ([1](https://openzfs.github.io/openzfs-docs/man/v2.2/8/zed.8.html), [2](https://zed.brimdata.io/docs/commands/zed)). If you want to rename our CLI binary because of these issues, we suggest `zedit`, `zeditor`, or `zed-cli`.
 - Zed automatically installs versions of common developer tools, similar to rustup/rbenv/pyenv. This behavior is discussed [here](https://github.com/zed-industries/zed/issues/12589).
 - Users can install extensions locally and from [zed-industries/extensions](https://github.com/zed-industries/extensions). Extensions may install additional tools such as language servers. Planned safety improvements are tracked [here](https://github.com/zed-industries/zed/issues/12358).
-- Flint does not provide accounts, collaboration, hosted AI, or telemetry. It connects to third parties only for features the user invokes, including GitHub updates, Zed-compatible extensions, configured Git remotes, and provider-owned agent tools.
+- dez does not provide accounts, collaboration, hosted AI, or telemetry. It connects to third parties only for features the user invokes, including GitHub updates, Zed-compatible extensions, configured Git remotes, and provider-owned agent tools.
 - Because of the points above, Zed currently does not work well with sandboxes. See [this discussion](https://github.com/zed-industries/zed/pull/12006#issuecomment-2130421220).
 
 ## Flatpak

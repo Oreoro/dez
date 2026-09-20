@@ -2,7 +2,7 @@ use bitflags::bitflags;
 pub use buffer_search::BufferSearchBar;
 pub use editor::HighlightKey;
 use editor::SearchSettings;
-pub use flint_actions::search::ToggleIncludeIgnored;
+pub use dez_actions::search::ToggleIncludeIgnored;
 use gpui::{Action, App, ClickEvent, FocusHandle, IntoElement, actions};
 use project::search::SearchQuery;
 pub use project_search::ProjectSearchView;
@@ -265,7 +265,7 @@ mod tests {
             SearchOptions::REGEX | SearchOptions::CASE_SENSITIVE | SearchOptions::INCLUDE_IGNORED;
 
         let query = options
-            .build_query("Flint\\s+Finder", include, exclude, true, None)
+            .build_query("dez\\s+Finder", include, exclude, true, None)
             .expect("regex should be valid");
 
         assert!(query.is_regex());

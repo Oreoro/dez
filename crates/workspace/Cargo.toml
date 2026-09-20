@@ -67,7 +67,7 @@ ui.workspace = true
 url.workspace = true
 util.workspace = true
 uuid.workspace = true
-flint_actions.workspace = true
+dez_actions.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows.workspace = true

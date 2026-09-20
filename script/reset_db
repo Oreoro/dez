@@ -1,3 +1,3 @@
-psql postgres -c "DROP DATABASE flint WITH (FORCE);"
-psql postgres -c "DROP DATABASE flint_llm WITH (FORCE);"
+psql postgres -c "DROP DATABASE dez WITH (FORCE);"
+psql postgres -c "DROP DATABASE dez_llm WITH (FORCE);"
 script/bootstrap

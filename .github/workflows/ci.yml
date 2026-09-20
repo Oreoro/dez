@@ -83,7 +83,7 @@ jobs:
         run: ./script/linux
       - name: Download WASI SDK
         run: ./script/download-wasi-sdk
-      - run: cargo build -p flint
+      - run: cargo build -p dez
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

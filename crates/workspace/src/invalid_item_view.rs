@@ -1,6 +1,6 @@
 use std::{path::Path, sync::Arc};
 
-use flint_actions::workspace::OpenWithSystem;
+use dez_actions::workspace::OpenWithSystem;
 use gpui::{EventEmitter, FocusHandle, Focusable};
 use ui::{
     App, Button, ButtonCommon, ButtonStyle, Clickable, Context, FluentBuilder, InteractiveElement,

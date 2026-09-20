@@ -70,7 +70,7 @@ mod tests {
         assert_eq!(command.args[3], "/opt/codex path/codex");
         assert_eq!(command.args[4], "resume");
         assert_eq!(command.args[5], "session with spaces");
-        assert_eq!(command.env.get("FLINT_AGENT_THREAD_ID").map(String::as_str), Some(LIFECYCLE_ID));
+        assert_eq!(command.env.get("DEZ_AGENT_THREAD_ID").map(String::as_str), Some(LIFECYCLE_ID));
         assert!(!command.args[1].contains("/opt/codex path/codex"));
     }
 
@@ -123,10 +123,10 @@ use uuid::Uuid;
 
 use crate::AgentLaunchCommand;
 
-const LIFECYCLE_ENVIRONMENT_KEY: &str = "FLINT_AGENT_THREAD_ID";
+const LIFECYCLE_ENVIRONMENT_KEY: &str = "DEZ_AGENT_THREAD_ID";
 const LAUNCH_SCRIPT: &str = r#"set -eu
 lifecycle_id=$0
-state_directory=$HOME/.local/state/flint/agent-threads
+state_directory=$HOME/.local/state/dez/agent-threads
 record=$state_directory/$lifecycle_id
 temporary=$record.$$
 umask 077
@@ -152,7 +152,7 @@ exit "$exit_status"
 
 const CLEANUP_SCRIPT: &str = r#"set -eu
 lifecycle_id=$0
-state_directory=$HOME/.local/state/flint/agent-threads
+state_directory=$HOME/.local/state/dez/agent-threads
 record=$state_directory/$lifecycle_id
 test -f "$record" || exit 65
 {
@@ -177,13 +177,13 @@ case $recorded_start in
         live_start=linux:$(awk '{print $22}' "/proc/$process_id/stat")
         test "$live_start" = "$recorded_start" || exit 67
         tr '\000' '\n' <"/proc/$process_id/environ" |
-            grep -Fqx "FLINT_AGENT_THREAD_ID=$lifecycle_id" || exit 67
+            grep -Fqx "DEZ_AGENT_THREAD_ID=$lifecycle_id" || exit 67
         ;;
     posix:*)
         live_start=posix:$(ps -o lstart= -p "$process_id")
         test "$live_start" = "$recorded_start" || exit 67
         ps eww -p "$process_id" -o command= |
-            grep -Fq "FLINT_AGENT_THREAD_ID=$lifecycle_id" || exit 67
+            grep -Fq "DEZ_AGENT_THREAD_ID=$lifecycle_id" || exit 67
         ;;
     *) exit 66 ;;
 esac
@@ -544,7 +544,7 @@ Run:
 cargo test -p agent_threads store::tests --lib
 ```
 
-Expected: all store tests pass, including managed resume, Through-Flint environment, and the new launch-preparation cases.
+Expected: all store tests pass, including managed resume, Through-dez environment, and the new launch-preparation cases.
 
 - [x] **Step 5: Commit Task 3**
 
@@ -782,7 +782,7 @@ Expected: all tests pass.
 ./script/bundle-tmp-app
 ```
 
-Expected: `/tmp/Flint-Local.app` contains the fresh build. If the documented debug `sign_binary` step fails after the bundle was built, copy `target/<target-triple>/debug/bundle/osx/Flint.app` to a new temporary path, preserve the old `/tmp/Flint-Local.app` by renaming it, then copy the fresh bundle into place.
+Expected: `/tmp/dez-Local.app` contains the fresh build. If the documented debug `sign_binary` step fails after the bundle was built, copy `target/<target-triple>/debug/bundle/osx/dez.app` to a new temporary path, preserve the old `/tmp/dez-Local.app` by renaming it, then copy the fresh bundle into place.
 
 - [x] **Step 4: Perform the remote acceptance check**
 

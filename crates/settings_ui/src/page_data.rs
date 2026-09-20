@@ -89,7 +89,7 @@ fn developer_page(cx: &App) -> SettingsPage {
     items.push(SettingsPageItem::SectionHeader("Instrumentation"));
     items.push(SettingsPageItem::SettingItem(SettingItem {
         title: "Performance Profiler",
-        description: "Collect timing data for foreground and background executor tasks so they can be inspected via `flint: open performance profiler`. May lead to increased memory usage.",
+        description: "Collect timing data for foreground and background executor tasks so they can be inspected via `dez: open performance profiler`. May lead to increased memory usage.",
         field: Box::new(SettingField {
             json_path: Some("instrumentation.performance_profiler.enabled"),
             pick: |settings_content| {
@@ -221,7 +221,7 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "CLI Default Open Behavior",
-                description: "How `flint <path>` opens directories when no flag is specified.",
+                description: "How `dez <path>` opens directories when no flag is specified.",
                 field: Box::new(SettingField {
                     json_path: Some("cli_default_open_behavior"),
                     pick: |settings_content| {
@@ -248,7 +248,7 @@ fn general_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader("Security"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Trust All Projects By Default",
-                description: "When opening Flint, avoid Restricted Mode by auto-trusting all projects, enabling use of all features without having to give permission to each new project.",
+                description: "When opening dez, avoid Restricted Mode by auto-trusting all projects, enabling use of all features without having to give permission to each new project.",
                 field: Box::new(SettingField {
                     json_path: Some("session.trust_all_worktrees"),
                     pick: |settings_content| {
@@ -296,7 +296,7 @@ fn general_page(cx: &App) -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Restore On Startup",
-                description: "What to restore from the previous session when opening Flint.",
+                description: "What to restore from the previous session when opening dez.",
                 field: Box::new(SettingField {
                     json_path: Some("restore_on_startup"),
                     pick: |settings_content| settings_content.workspace.restore_on_startup.as_ref(),
@@ -316,7 +316,7 @@ fn general_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SettingItem(SettingItem {
                 files: USER,
                 title: "Preview Channel",
-                description: "Which settings should be activated only in Preview build of Flint.",
+                description: "Which settings should be activated only in Preview build of dez.",
                 field: Box::new(
                     SettingField {
                         json_path: Some("preview_channel_settings"),
@@ -559,7 +559,7 @@ fn appearance_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Icon Theme",
-                    description: "The custom set of icons Flint will associate with files and directories.",
+                    description: "The custom set of icons dez will associate with files and directories.",
                     field: Box::new(SettingField {
                         json_path: Some("icon_theme$"),
                         pick: |settings_content| {
@@ -1223,7 +1223,7 @@ fn keymap_page() -> SettingsPage {
                     original_window
                         .update(cx, |_workspace, original_window, cx| {
                             original_window
-                                .dispatch_action(flint_actions::OpenKeymap.boxed_clone(), cx);
+                                .dispatch_action(dez_actions::OpenKeymap.boxed_clone(), cx);
                             original_window.activate_window();
                         })
                         .ok();
@@ -3283,7 +3283,7 @@ fn search_and_files_page() -> SettingsPage {
             SettingsPageItem::SectionHeader("File Scan"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Scan Exclusions",
-                description: "Files or globs of files that will be excluded by Flint entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"",
+                description: "Files or globs of files that will be excluded by dez entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"",
                 field: Box::new(
                     SettingField {
                         json_path: Some("file_scan_exclusions"),
@@ -3305,7 +3305,7 @@ fn search_and_files_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "File Scan Inclusions",
-                description: "Files or globs of files that will be included by Flint, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down Flint's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions",
+                description: "Files or globs of files that will be included by dez, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down dez's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions",
                 field: Box::new(
                     SettingField {
                         json_path: Some("file_scan_inclusions"),
@@ -4281,7 +4281,7 @@ fn window_and_layout_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Window Decorations",
-                description: "(Linux only) whether Flint or your compositor should draw window decorations.",
+                description: "(Linux only) whether dez or your compositor should draw window decorations.",
                 field: Box::new(SettingField {
                     json_path: Some("window_decorations"),
                     pick: |settings_content| settings_content.workspace.window_decorations.as_ref(),
@@ -5161,7 +5161,7 @@ fn panels_page() -> SettingsPage {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Agent Control",
-                description: "Allow a local Agent Thread's own CLI process to ask Flint to re-tie itself to a different worktree or spawn a sibling thread.",
+                description: "Allow a local Agent Thread's own CLI process to ask dez to re-tie itself to a different worktree or spawn a sibling thread.",
                 field: Box::new(SettingField {
                     json_path: Some("agent_threads.agent_control"),
                     pick: |settings_content| {
@@ -5182,9 +5182,9 @@ fn panels_page() -> SettingsPage {
                 files: USER,
             }),
             SettingsPageItem::ActionLink(ActionLink {
-                title: "Flint Control Skill".into(),
+                title: "dez Control Skill".into(),
                 description: Some(
-                    "Preview, install, update, or uninstall the optional Flint control skill for Codex, Pi, OpenCode, or Claude Code. Flint does not add this skill to global instruction files."
+                    "Preview, install, update, or uninstall the optional dez control skill for Codex, Pi, OpenCode, or Claude Code. dez does not add this skill to global instruction files."
                         .into(),
                 ),
                 button_text: "Manage Skill".into(),
@@ -5195,7 +5195,7 @@ fn panels_page() -> SettingsPage {
                     original_window
                         .update(cx, |_workspace, original_window, cx| {
                             original_window.dispatch_action(
-                                flint_actions::ManageAgentControlSkill.boxed_clone(),
+                                dez_actions::ManageAgentControlSkill.boxed_clone(),
                                 cx,
                             );
                             original_window.activate_window();
@@ -6864,7 +6864,7 @@ fn version_control_page() -> SettingsPage {
                 discriminant: SettingItem {
                     files: USER,
                     title: "Disable Git Integration",
-                    description: "Disable all Git integration features in Flint.",
+                    description: "Disable all Git integration features in dez.",
                     field: Box::new(SettingField::<bool> {
                         json_path: Some("git.disable_git"),
                         pick: |settings_content| {
@@ -8086,7 +8086,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             SettingsPageItem::SectionHeader("Autoclose"),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Use Autoclose",
-                description: "Whether to automatically type closing characters for you. For example, when you type '(', Flint will automatically add a closing ')' at the correct position.",
+                description: "Whether to automatically type closing characters for you. For example, when you type '(', dez will automatically add a closing ')' at the correct position.",
                 field: Box::new(SettingField {
                     json_path: Some("languages.$(language).use_autoclose"),
                     pick: |settings_content| {
@@ -8105,7 +8105,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Use Auto Surround",
-                description: "Whether to automatically surround text with characters for you. For example, when you select text and type '(', Flint will automatically surround text with ().",
+                description: "Whether to automatically surround text with characters for you. For example, when you select text and type '(', dez will automatically surround text with ().",
                 field: Box::new(SettingField {
                     json_path: Some("languages.$(language).use_auto_surround"),
                     pick: |settings_content| {
@@ -8629,7 +8629,7 @@ fn language_settings_data() -> Box<[SettingsPageItem]> {
             }),
             SettingsPageItem::SettingItem(SettingItem {
                 title: "Prefer LSP",
-                description: "Use LSP tasks over Flint language extension tasks.",
+                description: "Use LSP tasks over dez language extension tasks.",
                 field: Box::new(SettingField {
                     json_path: Some("languages.$(language).tasks.prefer_lsp"),
                     pick: |settings_content| {
@@ -9354,7 +9354,7 @@ mod tests {
             .expect("language setting should exist");
 
         assert_eq!(language_setting.title, "语言");
-        assert_eq!(language_setting.description, "选择 Flint 界面使用的语言。");
+        assert_eq!(language_setting.description, "选择 dez 界面使用的语言。");
     }
 
     #[gpui::test]
@@ -9437,7 +9437,7 @@ mod tests {
         const MIGRATED_STRINGS: &[&str] = &[
             "Feature Flags",
             "Performance Profiler",
-            "Collect timing data for foreground and background executor tasks so they can be inspected via `flint: open performance profiler`. May lead to increased memory usage.",
+            "Collect timing data for foreground and background executor tasks so they can be inspected via `dez: open performance profiler`. May lead to increased memory usage.",
             "Instrumentation",
             "Base Keymap",
             "Edit Keybindings",
@@ -9494,8 +9494,8 @@ mod tests {
             "Whole Word",
             "Automatically close files that have been deleted.",
             "Determines how much space the file finder can take up in relation to the available window width.",
-            "Files or globs of files that will be excluded by Flint entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"",
-            "Files or globs of files that will be included by Flint, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down Flint's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions",
+            "Files or globs of files that will be excluded by dez entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"",
+            "Files or globs of files that will be included by dez, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down dez's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions",
             "Include ignored files in search results by default.",
             "Restore previous file state when reopening.",
             "Search case-sensitively by default.",
@@ -9538,7 +9538,7 @@ mod tests {
             "Arguments passed to the generator command.",
             "Control whether Git status is shown in the editor's gutter.",
             "Debounce threshold in milliseconds after which changes are reflected in the Git gutter.",
-            "Disable all Git integration features in Flint.",
+            "Disable all Git integration features in dez.",
             "Environment variables added to the generator command.",
             "How Git hunks are displayed visually in the editor.",
             "Maximum diff bytes included in the prompt before compression.",
@@ -9670,7 +9670,7 @@ mod tests {
             "Show wrap guides (vertical rulers).",
             "The OpenType features to enable for rendering in UI elements.",
             "The OpenType features to enable for rendering in text buffers.",
-            "The custom set of icons Flint will associate with files and directories.",
+            "The custom set of icons dez will associate with files and directories.",
             "The font fallbacks to use for rendering in text buffers.",
             "The font fallbacks to use for rendering in the UI.",
             "The icon theme to use when mode is set to dark, or when mode is set to system and it is in dark mode.",
@@ -9740,7 +9740,7 @@ mod tests {
             "Window Decorations",
             "Zoomed Padding",
             "(Linux only) choose how window control buttons are laid out in the titlebar.",
-            "(Linux only) whether Flint or your compositor should draw window decorations.",
+            "(Linux only) whether dez or your compositor should draw window decorations.",
             "(macOS only) whether to allow Windows to tab together.",
             "Amount of time to wait before changing focus.",
             "Control when to show the active encoding in the status bar.",
@@ -10166,7 +10166,7 @@ mod tests {
             "The width of the active indent guide in pixels, between 1 and 10.",
             "The width of the indent guides in pixels, between 1 and 10.",
             "Toggles inlay hints (hides or shows) when the user presses the modifiers specified.",
-            "Use LSP tasks over Flint language extension tasks.",
+            "Use LSP tasks over dez language extension tasks.",
             "Visible character used to render space characters when show_whitespaces is enabled (default: \"•\")",
             "Visible character used to render tab characters when show_whitespaces is enabled (default: \"→\")",
             "When enabled, use folding ranges from the language server instead of indent-based folding.",
@@ -10187,8 +10187,8 @@ mod tests {
             "Whether to align detail text in code completions context menus left or right.",
             "Whether to automatically close JSX tags.",
             "Whether to automatically replace emoji shortcodes with emoji characters.",
-            "Whether to automatically surround text with characters for you. For example, when you select text and type '(', Flint will automatically surround text with ().",
-            "Whether to automatically type closing characters for you. For example, when you type '(', Flint will automatically add a closing ')' at the correct position.",
+            "Whether to automatically surround text with characters for you. For example, when you select text and type '(', dez will automatically surround text with ().",
+            "Whether to automatically type closing characters for you. For example, when you type '(', dez will automatically add a closing ')' at the correct position.",
             "Whether to colorize brackets in the editor.",
             "Whether to display inline and alongside documentation for items in the completions menu.",
             "Whether to enable word diff highlighting in the editor. When enabled, changed words within modified lines are highlighted to show exactly what changed.",
@@ -10483,7 +10483,7 @@ mod tests {
         let page = panels_page();
         let pages = [page];
 
-        let action = action_link_by_title(&pages, "Flint Control Skill");
+        let action = action_link_by_title(&pages, "dez Control Skill");
         assert_eq!(action.button_text.as_ref(), "Manage Skill");
     }
 
@@ -10496,8 +10496,8 @@ mod tests {
                 .expect("test localization must load");
 
             assert_eq!(
-                crate::settings_source_text(cx, "Flint Control Skill"),
-                "Flint 控制技能"
+                crate::settings_source_text(cx, "dez Control Skill"),
+                "dez 控制技能"
             );
             assert_eq!(
                 crate::settings_source_text(cx, "Manage Skill"),
@@ -10506,9 +10506,9 @@ mod tests {
             assert_ne!(
                 crate::settings_source_text(
                     cx,
-                    "Preview, install, update, or uninstall the optional Flint control skill for Codex, Pi, OpenCode, or Claude Code. Flint does not add this skill to global instruction files."
+                    "Preview, install, update, or uninstall the optional dez control skill for Codex, Pi, OpenCode, or Claude Code. dez does not add this skill to global instruction files."
                 ),
-                "Preview, install, update, or uninstall the optional Flint control skill for Codex, Pi, OpenCode, or Claude Code. Flint does not add this skill to global instruction files."
+                "Preview, install, update, or uninstall the optional dez control skill for Codex, Pi, OpenCode, or Claude Code. dez does not add this skill to global instruction files."
             );
         });
     }

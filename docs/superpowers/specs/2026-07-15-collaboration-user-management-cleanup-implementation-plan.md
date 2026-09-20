@@ -2,9 +2,9 @@
 
 ## Summary
 
-Remove Flint's inherited collaboration client, account and organization state,
+Remove dez's inherited collaboration client, account and organization state,
 cloud notifications, analytics, and crash uploads. Keep the code paths that are
-still part of Flint: local editing, SSH remote editing, updates from Flint's
+still part of dez: local editing, SSH remote editing, updates from dez's
 GitHub releases, the upstream Zed extension registry, provider-owned Codex and
 Claude authentication used by Agent Threads, and local crash and hang
 artifacts.
@@ -21,11 +21,11 @@ tests before the next stage begins.
 - Do not remove `remote::RemoteClient`, `rpc`, `proto`, SSH transport,
   askpass, remote-server download, or the store protocols used by SSH remote
   editing.
-- Do not make Flint own Codex or Claude credentials. Agent Threads continues to
+- Do not make dez own Codex or Claude credentials. Agent Threads continues to
   read provider CLI state and query provider usage endpoints.
 - Do not upload analytics, crash dumps, hang reports, debug symbols, or remote
   crash artifacts to `zed.dev`, Sentry, or another endpoint.
-- Keep `Flint.log`, compressed local minidumps, adjacent crash metadata, the
+- Keep `dez.log`, compressed local minidumps, adjacent crash metadata, the
   local input-latency report, and bounded `hang-*.miniprof.json` traces.
 - Keep generic workspace notifications and `notifications::status_toast`.
   Remove only the cloud-backed notification store.
@@ -40,7 +40,7 @@ Files:
 - Modify `crates/settings/src/settings.rs`
 - Modify `crates/http_client/src/http_client.rs`
 - Modify `crates/system_specs/src/system_specs.rs`
-- Modify `crates/install_cli/src/register_flint_scheme.rs`
+- Modify `crates/install_cli/src/register_dez_scheme.rs`
 - Modify `crates/project/src/project.rs`
 - Modify `crates/project/src/git_store.rs`
 - Modify `crates/project/src/trusted_worktrees.rs`
@@ -56,7 +56,7 @@ Write or move tests first:
   explicit URL, blank input, invalid input, and environment fallback.
 - Add a test that the explicit proxy takes precedence over the environment and
   that invalid explicit input is logged before falling back.
-- Add a URL-scheme test that registers `flint` without importing a cloud
+- Add a URL-scheme test that registers `dez` without importing a cloud
   client constant.
 - Add compile-level coverage for the project-owned `ProjectId` in the remote
   git and trusted-worktree paths.
@@ -72,8 +72,8 @@ Implement:
   desktop startup and the remote server.
 - Move the operating-system name and version helpers used by system
   information and feedback into `system_specs`; they are not telemetry.
-- Define a Flint-owned `FLINT_URL_SCHEME` next to URL-scheme registration.
-  Preserve all supported non-collaboration `flint://` routes.
+- Define a dez-owned `DEZ_URL_SCHEME` next to URL-scheme registration.
+  Preserve all supported non-collaboration `dez://` routes.
 - Move `ProjectId` to the `project` boundary and update git-store,
   trusted-worktree, and remote-server imports.
 - Replace every use of `client` as an RPC facade with the canonical `rpc`,
@@ -87,10 +87,10 @@ Validation:
 cargo test -p http_client
 cargo test -p settings
 cargo check -p install_cli -p project -p remote_server
-cargo metadata --no-deps --format-version 1 > /tmp/flint-metadata.json
+cargo metadata --no-deps --format-version 1 > /tmp/dez-metadata.json
 ```
 
-Expected result: proxy behavior is unchanged, the Flint URL scheme still
+Expected result: proxy behavior is unchanged, the dez URL scheme still
 registers, SSH-owned types no longer come from `client`, and the remaining
 `client` dependencies represent real cloud-client consumers.
 
@@ -103,20 +103,20 @@ Files:
 - Modify `crates/auto_update_ui/src/auto_update_ui.rs`
 - Modify `crates/auto_update_ui/Cargo.toml`
 - Modify `crates/http_client/src/github.rs`
-- Modify `crates/flint/src/main.rs`
+- Modify `crates/dez/src/main.rs`
 
 Write tests first:
 
 - Update the existing fake-HTTP auto-update test so initialization accepts
   `Arc<dyn HttpClient>` and no `Client`.
 - Assert stable and preview release discovery requests
-  `repos/shenghsi/flint/releases` and selects the expected prerelease flag.
+  `repos/shenghsi/dez/releases` and selects the expected prerelease flag.
 - Assert nightly uses the `nightly` tag and stable version lookups use a `v`
   tag.
 - Assert app and remote-server asset names remain channel, OS, and architecture
   specific.
 - Add release-note URL tests for stable, preview, nightly, and dev. No expected
-  URL may use the former cloud base URL or `zed-industries/flint`.
+  URL may use the former cloud base URL or `zed-industries/dez`.
 - Add a fake GitHub response test for local release-note rendering. Extend the
   GitHub release model with the fields required for the title and Markdown
   body rather than calling `/api/release_notes/v2`.
@@ -136,11 +136,11 @@ Implement:
 - Store only the HTTP interface in `AutoUpdater`.
 - Build download requests directly through `HttpClient`, preserving redirect
   handling, response status checks, progress, and user-visible errors.
-- Keep release discovery and binary downloads on `shenghsi/flint` GitHub
+- Keep release discovery and binary downloads on `shenghsi/dez` GitHub
   releases.
 - Fetch local release-note Markdown from the GitHub release response. Keep the
   browser fallback for errors.
-- Point browser release-note URLs at the matching Flint GitHub release, tag,
+- Point browser release-note URLs at the matching dez GitHub release, tag,
   or commit history.
 - Pass GPUI's registered HTTP client into auto-update initialization.
 - Remove `client` and telemetry dependencies from both update crates.
@@ -167,7 +167,7 @@ Files:
 - Modify `crates/extension_host/Cargo.toml`
 - Modify `crates/extensions_ui/src/extensions_ui.rs`
 - Modify `crates/extensions_ui/Cargo.toml`
-- Modify `crates/flint/src/main.rs`
+- Modify `crates/dez/src/main.rs`
 
 Write tests first:
 
@@ -216,13 +216,13 @@ Files:
 
 - Modify `crates/crashes/src/crashes.rs`
 - Modify `crates/crashes/Cargo.toml`
-- Modify `crates/flint/src/reliability.rs`
-- Modify `crates/flint/src/reliability/hang_detection.rs`
-- Delete `crates/flint/src/reliability/hang_detection/telemetry.rs`
-- Modify `crates/flint/src/reliability/hang_detection/task_traces.rs`
+- Modify `crates/dez/src/reliability.rs`
+- Modify `crates/dez/src/reliability/hang_detection.rs`
+- Delete `crates/dez/src/reliability/hang_detection/telemetry.rs`
+- Modify `crates/dez/src/reliability/hang_detection/task_traces.rs`
 - Modify `crates/input_latency_ui/src/input_latency_ui.rs`
 - Modify `crates/input_latency_ui/Cargo.toml`
-- Delete `crates/flint/src/flint/telemetry_log.rs`
+- Delete `crates/dez/src/dez/telemetry_log.rs`
 - Delete `crates/project/src/telemetry_snapshot.rs`
 - Modify all Rust call sites of `telemetry::event!`
 - Delete `crates/telemetry`
@@ -287,7 +287,7 @@ Validation:
 ```sh
 cargo test -p crashes
 cargo test -p input_latency_ui
-cargo check -p flint
+cargo check -p dez
 rg -n 'telemetry::event!|/telemetry/events|ZED_MINIDUMP_ENDPOINT|ZED_CLIENT_CHECKSUM_SEED' crates script .github tooling
 rg -n 'sentry-cli debug-files upload|SENTRY_AUTH_TOKEN' script/bundle-linux script/bundle-mac script/bundle-windows.ps1 .github/workflows/release.yml .github/workflows/release_nightly.yml .github/workflows/run_bundling.yml
 ```
@@ -375,12 +375,12 @@ Files:
 - Modify `crates/editor/src/editor.rs`
 - Modify `crates/editor/src/navigation.rs`
 - Modify `crates/command_palette/src/command_palette.rs`
-- Modify `crates/flint/src/flint/open_listener.rs`
+- Modify `crates/dez/src/dez/open_listener.rs`
 - Modify default and Vim keymaps under `assets/keymaps/`
 
 Write tests first:
 
-- Add an open-listener test showing `flint://channel/...` is rejected as an
+- Add an open-listener test showing `dez://channel/...` is rejected as an
   unsupported retired collaboration link while file, SSH, extension, agent,
   settings, schema, git clone, and git commit links still route normally.
 - Keep workspace pane, navigation, serialization, and close/save tests green
@@ -389,7 +389,7 @@ Write tests first:
   follow actions are not referenced.
 
 Run the revised tests and confirm the channel-link expectation fails while
-`parse_flint_link` still recognizes it.
+`parse_dez_link` still recognizes it.
 
 Implement:
 
@@ -402,9 +402,9 @@ Implement:
   or location updates through the cloud client.
 - Simplify `WorkspaceStore` so it tracks workspaces without a cloud client or
   collaboration subscriptions.
-- Remove `parse_flint_link` from editor navigation, the command palette,
+- Remove `parse_dez_link` from editor navigation, the command palette,
   startup argument classification, and the open listener. Preserve every
-  non-collaboration Flint URL handled directly by the open listener.
+  non-collaboration dez URL handled directly by the open listener.
 - Remove the collaboration actions and default keybindings.
 - Keep local multi-workspace, SSH window restore, pane layout, navigation,
   serialization, and generic notifications.
@@ -413,7 +413,7 @@ Validation:
 
 ```sh
 cargo test -p workspace
-cargo test -p flint open_listener
+cargo test -p dez open_listener
 cargo check -p editor -p command_palette
 cargo test -p remote_server test_basic_remote_editing
 ```
@@ -441,7 +441,7 @@ Files:
 - Modify `crates/settings_ui/src/settings_ui.rs`
 - Modify `crates/settings_ui/src/page_data.rs`
 - Modify `crates/settings_ui/Cargo.toml`
-- Modify `crates/flint/src/main.rs`
+- Modify `crates/dez/src/main.rs`
 
 Write tests first:
 
@@ -482,14 +482,14 @@ cargo check -p onboarding -p component_preview -p settings_ui
 ```
 
 Expected result: local status toasts and app prompts work, while no UI reads a
-current Flint user, organization, plan, contact, or cloud notification store.
+current dez user, organization, plan, contact, or cloud notification store.
 
 ## 8. Remove the Application Client and Prune the Build Graph
 
 Files:
 
-- Modify `crates/flint/src/main.rs`
-- Modify `crates/flint/src/flint.rs`
+- Modify `crates/dez/src/main.rs`
+- Modify `crates/dez/src/dez.rs`
 - Modify `crates/workspace/src/workspace.rs`
 - Modify `crates/agent_threads/src/panel.rs`
 - Modify `crates/feedback/src/feedback.rs`
@@ -520,7 +520,7 @@ Write tests first:
 
 Implement:
 
-- Construct one proxy-aware `ReqwestClient` with the Flint user agent at
+- Construct one proxy-aware `ReqwestClient` with the dez user agent at
   startup and register it through GPUI. Do not wrap it in an application cloud
   session.
 - Remove cloud client construction, global registration, reconnection actions,
@@ -542,13 +542,13 @@ Validation:
 
 ```sh
 cargo test -p agent_threads plan_usage
-cargo check -p flint -p remote_server -p extension_host -p auto_update
+cargo check -p dez -p remote_server -p extension_host -p auto_update
 cargo metadata --no-deps --format-version 1 | jq -e '[.packages[].name] | index("client") | not'
 cargo metadata --no-deps --format-version 1 | jq -e '[.packages[].name] | index("telemetry") | not'
 cargo metadata --no-deps --format-version 1 | jq -e '[.packages[].name] | index("telemetry_events") | not'
 ```
 
-Expected result: Flint's build graph has no application cloud client,
+Expected result: dez's build graph has no application cloud client,
 analytics crates, user store, OAuth callback server, or LiveKit collaboration
 crates. Agent plan usage still passes with provider-owned login state.
 
@@ -557,14 +557,14 @@ crates. Agent plan usage still passes with provider-owned login state.
 Files:
 
 - Modify `crates/proto/proto/app.proto`
-- Modify `crates/proto/proto/flint.proto`
+- Modify `crates/proto/proto/dez.proto`
 - Modify `crates/proto/src/proto.rs`
 - Modify `crates/remote_server/src/server.rs`
 - Modify `crates/settings_content/src/settings_content.rs`
 - Modify `crates/settings/src/vscode_import.rs`
 - Modify `crates/settings_ui/src/page_data.rs`
 - Modify `assets/settings/default.json`
-- Modify `crates/flint_actions/src/lib.rs`
+- Modify `crates/dez_actions/src/lib.rs`
 - Modify `crates/ui/src/components.rs`
 - Modify `crates/ui/src/components/avatar.rs`
 - Create `crates/ui/src/components/update_button.rs` by moving the existing
@@ -642,33 +642,33 @@ Files:
 
 Implement:
 
-- Remove Collaboration, Account & Billing, Flint Business, and Telemetry from
+- Remove Collaboration, Account & Billing, dez Business, and Telemetry from
   normal `SUMMARY.md` navigation.
 - Do not delete existing documentation files. Turn removed feature pages into
-  concise compatibility pages stating that Flint has no collaboration
+  concise compatibility pages stating that dez has no collaboration
   backend, account, organization, plan, billing, hosted model service, or
   telemetry service.
 - Remove stale cross-links and redirects that advertise those features.
-- Audit AI docs for nonexistent in-app Copilot, ChatGPT, MCP, or Flint account
+- Audit AI docs for nonexistent in-app Copilot, ChatGPT, MCP, or dez account
   authentication. Preserve and clearly describe provider-owned Codex and
   Claude CLI login state used by Agent Threads, API-key providers that really
   exist, local models, and extension-based MCP support that remains functional.
 - Preserve SSH authentication and remote development instructions. Correct
-  stale Zed product names and repository links when the text is about Flint.
-- Rewrite `telemetry.md` as a local diagnostics and privacy page: Flint does
+  stale Zed product names and repository links when the text is about dez.
+- Rewrite `telemetry.md` as a local diagnostics and privacy page: dez does
   not send analytics, crash dumps, hang reports, or diagnostics.
-- Document `flint::OpenLog` and `flint::RevealLogInFileManager` and these
+- Document `dez::OpenLog` and `dez::RevealLogInFileManager` and these
   default paths:
-  - macOS logs: `~/Library/Logs/Flint/`
-  - Linux logs: `$XDG_DATA_HOME/flint/logs/` or
-    `~/.local/share/flint/logs/`
-  - Windows logs: `%LOCALAPPDATA%\\Flint\\logs\\`
-  - hang traces: the `hang_traces` directory under Flint's data directory
+  - macOS logs: `~/Library/Logs/dez/`
+  - Linux logs: `$XDG_DATA_HOME/dez/logs/` or
+    `~/.local/share/dez/logs/`
+  - Windows logs: `%LOCALAPPDATA%\\dez\\logs\\`
+  - hang traces: the `hang_traces` directory under dez's data directory
 - Document compressed `<session>.dmp`, adjacent `<session>.json`, `zstd`
   decompression, `minidump-stackwalk`, and the need for matching build symbols
   for full native symbolization.
 - Document that SSH remote-server logs, minidumps, and JSON metadata remain in
-  the remote host's Flint data/log directory and are never collected by the
+  the remote host's dez data/log directory and are never collected by the
   desktop app.
 
 Validation:
@@ -680,7 +680,7 @@ mdbook build ./docs --dest-dir=../target/deploy/docs/
 ```
 
 Expected result: documentation accurately distinguishes supported third-party
-authentication and SSH from removed Flint accounts, and gives users enough
+authentication and SSH from removed dez accounts, and gives users enough
 information to inspect local failures themselves.
 
 ## 11. Final Verification and Static Audit
@@ -703,7 +703,7 @@ cargo test -p remote_server test_remote_lsp
 Run static audits:
 
 ```sh
-rg -n 'UserStore|ParticipantIndex|AnyActiveCall|FollowNextCollaborator|StopFollowing|flint://channel' crates assets
+rg -n 'UserStore|ParticipantIndex|AnyActiveCall|FollowNextCollaborator|StopFollowing|dez://channel' crates assets
 rg -n 'telemetry::event!|/telemetry/events|ZED_MINIDUMP_ENDPOINT|ZED_CLIENT_CHECKSUM_SEED' crates script .github tooling
 rg -n 'sentry-cli debug-files upload|SENTRY_AUTH_TOKEN' script/bundle-linux script/bundle-mac script/bundle-windows.ps1 .github/workflows/release.yml .github/workflows/release_nightly.yml .github/workflows/run_bundling.yml
 rg -n 'client\.workspace' Cargo.toml crates --glob 'Cargo.toml'
@@ -734,10 +734,10 @@ creating a fresh bundle, copy it explicitly as documented in the repository
 instructions:
 
 ```sh
-cp -R target/<target-triple>/debug/bundle/osx/Flint.app /tmp/Flint-Local.app
+cp -R target/<target-triple>/debug/bundle/osx/dez.app /tmp/dez-Local.app
 ```
 
-Smoke-test `/tmp/Flint-Local.app`:
+Smoke-test `/tmp/dez-Local.app`:
 
 1. Open a local folder and edit, save, search, run a task, and use git status.
 2. Open an SSH project, edit and save a remote file, start a remote terminal,
@@ -746,7 +746,7 @@ Smoke-test `/tmp/Flint-Local.app`:
 4. Browse, install, update, load, and remove an extension.
 5. Open Agent Threads plan usage with existing Codex or Claude CLI login state.
 6. Run the local input-latency report action.
-7. Open and reveal `Flint.log`; verify a hang trace is written by the dev hang
+7. Open and reveal `dez.log`; verify a hang trace is written by the dev hang
    action in a debug build.
 8. Confirm no network request targets `/telemetry/events`, a minidump endpoint,
    or Sentry during startup, shutdown, crash-artifact discovery, or hang
@@ -756,18 +756,18 @@ Smoke-test `/tmp/Flint-Local.app`:
 
 - The `client`, `telemetry`, and `telemetry_events` crates are absent from the
   workspace and dependency graph.
-- No active code constructs a Flint user, user store, contact, organization,
+- No active code constructs a dez user, user store, contact, organization,
   plan, billing state, cloud notification store, collaboration room, shared
   project, follower, or shared screen.
 - Local editing and SSH remote editing pass their integration tests and manual
   smoke tests.
-- Auto-update and release notes use `shenghsi/flint` GitHub releases through a
+- Auto-update and release notes use `shenghsi/dez` GitHub releases through a
   generic HTTP client.
 - Extensions still use the intentional upstream Zed registry and compatibility
   identifiers through a generic HTTP client.
 - Agent Threads still reads provider-owned Codex or Claude login state and
-  displays plan usage without Flint account management.
-- Flint writes local logs, compressed minidumps, crash JSON, input-latency
+  displays plan usage without dez account management.
+- dez writes local logs, compressed minidumps, crash JSON, input-latency
   reports, and bounded hang traces, and never uploads them.
 - Application bundling and release workflows contain no minidump endpoint,
   telemetry checksum, Sentry setup, or debug-symbol upload requirement.

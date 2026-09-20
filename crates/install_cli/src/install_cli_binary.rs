@@ -1,4 +1,4 @@
-use super::register_flint_scheme;
+use super::register_dez_scheme;
 use anyhow::{Context as _, Result};
 use gpui::{AppContext as _, AsyncApp, Context, PromptButton, PromptLevel, Window, actions};
 use release_channel::ReleaseChannel;
@@ -11,14 +11,14 @@ use workspace::{Toast, Workspace};
 actions!(
     cli,
     [
-        /// Installs the Flint CLI tool to the system PATH.
+        /// Installs the dez CLI tool to the system PATH.
         InstallCliBinary,
     ]
 );
 
 async fn install_script(cx: &AsyncApp) -> Result<PathBuf> {
     let cli_path = cx.update(|cx| cx.path_for_auxiliary_executable("cli"))?;
-    let link_path = Path::new("/usr/local/bin/flint");
+    let link_path = Path::new("/usr/local/bin/dez");
     let bin_dir_path = link_path
         .parent()
         .context("CLI link path has no parent directory")?;
@@ -88,20 +88,20 @@ pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
             .context("error creating CLI symlink")?;
 
         workspace.update_in(cx, |workspace, _, cx| {
-            struct InstalledFlintCli;
+            struct InstalleddezCli;
 
             let mut args = localization::FluentArgs::new();
             args.set("path", path.to_string_lossy().into_owned());
             args.set("app", ReleaseChannel::global(cx).display_name());
             workspace.show_toast(
                 Toast::new(
-                    NotificationId::unique::<InstalledFlintCli>(),
+                    NotificationId::unique::<InstalleddezCli>(),
                     localization::text_with_args(cx, "install-cli-complete", &args).to_string(),
                 ),
                 cx,
             )
         })?;
-        register_flint_scheme(cx).await.log_err();
+        register_dez_scheme(cx).await.log_err();
         Ok(())
     })
     .detach_and_prompt_err(&install_error, window, cx, |_, _, _| None);

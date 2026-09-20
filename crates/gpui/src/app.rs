@@ -1328,7 +1328,7 @@ impl App {
         self.platform.open_url(url);
     }
 
-    /// Registers the given URL scheme (e.g. `flint` for `flint://` urls) to be
+    /// Registers the given URL scheme (e.g. `dez` for `dez://` urls) to be
     /// opened by the current app.
     ///
     /// On some platforms (e.g. macOS) you may be able to register URL schemes
@@ -1339,7 +1339,7 @@ impl App {
     }
 
     /// Shows a notification via the OS's native notification center, separate
-    /// from any Flint window.
+    /// from any dez window.
     pub fn show_desktop_notification(&self, title: &str, body: Option<&str>) {
         self.platform.show_desktop_notification(title, body);
     }

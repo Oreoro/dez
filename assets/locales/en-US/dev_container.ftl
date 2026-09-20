@@ -15,4 +15,4 @@ dev-container-invalid-project = Not in a valid project
 dev-container-command-failed = External program failed: { $program }
 dev-container-filesystem-error = Could not download resources locally
 dev-container-resource-fetch-failed = Could not fetch resources from the template or feature repository
-dev-container-multiple-containers = Multiple containers match this project’s Dev Container labels ({ $ids }). Flint cannot choose one to connect to. Stop and remove the stale containers with `docker stop <id>` and `docker rm <id>`, then try again.
+dev-container-multiple-containers = Multiple containers match this project’s Dev Container labels ({ $ids }). dez cannot choose one to connect to. Stop and remove the stale containers with `docker stop <id>` and `docker rm <id>`, then try again.

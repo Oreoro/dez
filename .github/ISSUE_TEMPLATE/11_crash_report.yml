@@ -1,25 +1,25 @@
 name: Report a crash
-description: Flint is crashing or freezing or hanging.
+description: dez is crashing or freezing or hanging.
 type: Crash
 labels: "state:needs triage"
 body:
   - type: textarea
     attributes:
       label: Reproduction steps
-      description: A step-by-step description of how to reproduce the crash from a **clean Flint install**. The more context you provide, the easier it is to find and fix the problem fast.
+      description: A step-by-step description of how to reproduce the crash from a **clean dez install**. The more context you provide, the easier it is to find and fix the problem fast.
       placeholder: |
-        1. Start Flint
+        1. Start dez
         2. Perform an action
-        3. Flint crashes
+        3. dez crashes
     validations:
       required: true
   - type: textarea
     attributes:
-      label: Flint version and system specs
+      label: dez version and system specs
       description: |
-        Open the command palette in Flint, then type “flint: copy system specs into clipboard”.
+        Open the command palette in dez, then type “dez: copy system specs into clipboard”.
       placeholder: |
-        Flint: v0.215.0 (Flint Nightly bfe141ea79aa4984028934067ba75c48d99136ae)
+        dez: v0.215.0 (dez Nightly bfe141ea79aa4984028934067ba75c48d99136ae)
         OS: macOS 15.1
         Memory: 36 GiB
         Architecture: aarch64
@@ -27,13 +27,13 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Attach Flint log file
+      label: Attach dez log file
       description: |
-        Open the command palette in Flint, then type `flint: open log` to see the last 1000 lines. Or type `flint: reveal log in file manager` in the command palette to reveal the log file itself.
+        Open the command palette in dez, then type `dez: open log` to see the last 1000 lines. Or type `dez: reveal log in file manager` in the command palette to reveal the log file itself.
 
         ⚠️ **Please review your log file for secrets (API keys, tokens, etc.) and partially or fully redact them before posting.**
       value: |
-        <details><summary>Flint.log</summary>
+        <details><summary>dez.log</summary>
 
         <!-- Paste your log inside the code block. -->
         ```log

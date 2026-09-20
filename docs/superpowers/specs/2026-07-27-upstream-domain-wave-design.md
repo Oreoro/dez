@@ -9,15 +9,15 @@ Design owner: Codex.
 
 ## Problem
 
-Flint is based on Zed commit
+dez is based on Zed commit
 `6e9465a4288c332208643892e23b9d35d7be5c79` from 2026-06-06. Zed v1.12.0
-contains 736 later commits that change 1,305 files. Flint has independently
+contains 736 later commits that change 1,305 files. dez has independently
 changed 688 of those files while removing collaboration, accounts, and
 cloud-owned product behavior and adding Agent Threads and managed remote agent
 routes.
 
 A merge or rebase would therefore mix useful editor improvements with removed
-product areas and overwrite intentional Flint architecture. Replaying selected
+product areas and overwrite intentional dez architecture. Replaying selected
 commits in release or chronological order would reproduce the same problem in
 smaller increments.
 
@@ -26,7 +26,7 @@ Neither is a strict superset of the other, and fixes may be cherry-picked
 between them. Release tags are useful discovery inputs but are not a reliable
 unit of integration.
 
-Flint needs a repeatable way to discover, evaluate, port, test, and track
+dez needs a repeatable way to discover, evaluate, port, test, and track
 upstream work without restoring removed Zed systems or allowing later feature
 work to regress earlier safety guarantees.
 
@@ -36,12 +36,12 @@ work to regress earlier safety guarantees.
   backlog.
 - Prioritize repository safety, user data, hangs, crashes, and resource leaks
   ahead of visible features.
-- Preserve Flint's single-user, account-free, collaboration-free product
+- Preserve dez's single-user, account-free, collaboration-free product
   boundary.
 - Preserve the Direct and Tunneled remote route boundary.
 - Deliver work through small, reviewable pull requests.
 - Require regression or acceptance tests for every ported behavior.
-- Reimplement broad features against Flint's current architecture instead of
+- Reimplement broad features against dez's current architecture instead of
   forcing obsolete upstream structure into the fork.
 - Record every included, deferred, superseded, and intentionally excluded
   upstream change.
@@ -50,13 +50,13 @@ work to regress earlier safety guarantees.
 
 ## Non-goals
 
-- Merging or rebasing Flint onto a later Zed tag.
+- Merging or rebasing dez onto a later Zed tag.
 - Replaying every upstream commit.
 - Restoring Zed collaboration, calls, channels, accounts, billing, telemetry,
   hosted edit prediction, or cloud-owned onboarding.
 - Matching Zed's version number or release cadence.
 - Landing the full P0-P2 program in one pull request.
-- Preserving upstream implementation details when Flint has a different
+- Preserving upstream implementation details when dez has a different
   architectural boundary.
 - Changing the extension API, WIT namespaces, upstream service endpoints, or
   other external Zed compatibility interfaces without a specific compatibility
@@ -86,7 +86,7 @@ explicitly deferred and its completion gates pass.
 Later waves may depend on earlier waves but may not weaken their guarantees.
 Git UI work cannot bypass index-safety tests. Agent Threads work cannot bypass
 remote route capabilities. Settings work cannot silently invalidate existing
-Flint configuration.
+dez configuration.
 
 ## Alternatives Considered
 
@@ -106,7 +106,7 @@ Select useful commits and apply them in upstream commit order.
 
 This preserves more historical dependencies, but it becomes a manual rebase.
 Intermediate upstream implementations may already have later corrections, and
-large architectural commits would carry unwanted Zed dependencies into Flint.
+large architectural commits would carry unwanted Zed dependencies into dez.
 
 ### Maintain only an informal issue list
 
@@ -128,23 +128,23 @@ Each entry records:
 - stable, preview, or main-branch provenance;
 - domain wave;
 - user impact and priority;
-- affected Flint crates and files;
+- affected dez crates and files;
 - prerequisite and superseding upstream PRs;
 - overlap and conflict estimate;
 - integration strategy;
 - required unit, integration, GPUI, remote, and platform tests;
-- feature branch and Flint pull request;
+- feature branch and dez pull request;
 - status: proposed, investigating, implementing, landed, deferred,
   superseded, or excluded;
 - exclusion or deferral reason; and
 - follow-up observations for future upstream reviews.
 
 Release tags seed the ledger. Before implementation, the assigned engineer
-proves that the final upstream commit is not already an ancestor of Flint's
+proves that the final upstream commit is not already an ancestor of dez's
 fork point, then checks the upstream PR, later changes to the same code, and
 whether the fix exists on both current release branches. Release-note timing is
 not evidence that a change is absent: release notes can include commits merged
-before Flint's fork point.
+before dez's fork point.
 
 The initial ancestry audit found these reviewed changes already present at the
 fork point:
@@ -165,7 +165,7 @@ tasks. Their behavior may remain in a later compatibility regression suite.
 
 ### Cherry-pick candidate
 
-Use when a change is isolated, has little or no overlap with Flint, preserves
+Use when a change is isolated, has little or no overlap with dez, preserves
 the same architectural boundary, and includes usable tests.
 
 The commit is still reviewed before application. Classification does not
@@ -173,17 +173,17 @@ authorize an automatic cherry-pick.
 
 ### Adaptation
 
-Use when upstream behavior is applicable but the affected code overlaps Flint
-or relies on nearby structure that Flint changed. Port the behavior and tests
-while preserving Flint naming, product boundaries, error propagation, and
+Use when upstream behavior is applicable but the affected code overlaps dez
+or relies on nearby structure that dez changed. Port the behavior and tests
+while preserving dez naming, product boundaries, error propagation, and
 remote routing.
 
 ### Reimplementation
 
 Use for broad UI or architectural changes, changes with substantial overlap,
-or changes rooted in systems Flint removed. Treat the upstream PR as a
+or changes rooted in systems dez removed. Treat the upstream PR as a
 behavioral specification and implement the smallest complete vertical slice
-against Flint's current architecture.
+against dez's current architecture.
 
 ## Standard Wave Workflow
 
@@ -191,7 +191,7 @@ Every wave uses the same workflow:
 
 1. Refresh release and PR metadata.
 2. Prove the final upstream commit is absent from the fork-point ancestry and
-   current Flint behavior.
+   current dez behavior.
 3. Confirm the final upstream implementation and later corrections.
 4. Resolve prerequisites and group only inseparable fixes.
 5. Measure overlap and choose an integration classification.
@@ -299,9 +299,9 @@ deferred only with a recorded reason and must not block unrelated platforms.
 Every applicable behavior is exercised through both remote routes:
 
 - Direct uses only the configured ambient remote executable and exposes no
-  Flint-managed provisioning or credential controls.
-- Tunneled uses only the pinned Flint-managed remote executable and routes its
-  traffic through local Flint.
+  dez-managed provisioning or credential controls.
+- Tunneled uses only the pinned dez-managed remote executable and routes its
+  traffic through local dez.
 
 Tests cover reconnect, restoration, mixed local and remote projects, POSIX and
 Windows path styles, default-branch worktree creation, remote extension
@@ -331,8 +331,8 @@ migrated with a versioned capability.
 - Zed PRs #60292, #59374, #58779, #58962, #59968, #57747, and #60067.
 
 Zed native-agent context compaction is tracked separately. It is not part of
-this wave unless a Flint-owned Agent Threads requirement demonstrates that
-external terminal agents need Flint to own context compaction.
+this wave unless a dez-owned Agent Threads requirement demonstrates that
+external terminal agents need dez to own context compaction.
 
 ### End-to-end audit
 
@@ -378,7 +378,7 @@ from registry membership.
   identical lines.
 - Partial staging persists across panel and multibuffer refreshes.
 - Remote repositories behave consistently with local repositories.
-- Settings migrations preserve existing Flint user choices.
+- Settings migrations preserve existing dez user choices.
 
 ### Completion gate
 
@@ -433,8 +433,8 @@ Explicitly decide and test:
 
 - migration from `git_panel.sort_by_path` to `git_panel.sort_by` and
   `git_panel.group_by`;
-- whether Flint adopts Zed's changed format-on-save default;
-- placement of Flint external-agent controls in the Settings Editor;
+- whether dez adopts Zed's changed format-on-save default;
+- placement of dez external-agent controls in the Settings Editor;
 - TypeScript 7 language-server behavior; and
 - npm 12 language-server installation compatibility.
 
@@ -467,7 +467,7 @@ For every later Zed stable and preview release:
 1. Ingest release-note PRs into a temporary review queue.
 2. Deduplicate stable and preview entries by upstream PR.
 3. Check later corrections on Zed main.
-4. Classify against Flint domains and product boundaries.
+4. Classify against dez domains and product boundaries.
 5. Immediately schedule new safety or data-integrity regressions.
 6. Add accepted work to the permanent ledger.
 7. Record intentional exclusions with reasons.
@@ -486,7 +486,7 @@ has an owner, cadence, and recorded upstream baseline.
 - Run `cargo fmt --all -- --check`.
 - Run `./script/clippy` before pushing Rust changes.
 - Run platform or remote integration tests required by the ledger entry.
-- Build `/tmp/Flint-Local.app` for user-visible or macOS-sensitive changes and
+- Build `/tmp/dez-Local.app` for user-visible or macOS-sensitive changes and
   verify that the bundle contains the fresh build.
 
 ### Per-wave gates
@@ -511,7 +511,7 @@ The integration must not introduce ignored fallible operations, hidden
 timeouts, or success states after partial failure.
 
 Remote capability mismatches use explicit fallback or unsupported behavior.
-They do not silently switch Direct work to Flint-managed execution or Tunneled
+They do not silently switch Direct work to dez-managed execution or Tunneled
 work to an ambient executable.
 
 Ledger automation failures leave the previous ledger intact and surface the
@@ -540,14 +540,14 @@ required `Release Notes:` section. Documentation-only process changes use
 Later upstream code may assume refactors not mentioned in release notes.
 
 Mitigation: inspect final PR commits, parent changes, and later corrections
-before writing the Flint regression test.
+before writing the dez regression test.
 
 ### Behavioral drift during adaptation
 
-A conflict-free patch can still violate Flint's product or remote boundaries.
+A conflict-free patch can still violate dez's product or remote boundaries.
 
 Mitigation: classify by behavior and capability, not patch applicability, and
-require Flint-specific acceptance tests.
+require dez-specific acceptance tests.
 
 ### Program starvation
 
@@ -569,7 +569,7 @@ program matrix at wave and release boundaries.
 Agent, settings, and workspace changes can carry account, collaboration, or
 hosted-service assumptions.
 
-Mitigation: reimplement broad changes against Flint abstractions and audit the
+Mitigation: reimplement broad changes against dez abstractions and audit the
 build graph and user-visible strings at each wave boundary.
 
 ## Success Criteria
@@ -580,7 +580,7 @@ build graph and user-visible strings at each wave boundary.
 - Remote changes preserve and test Direct and Tunneled boundaries.
 - Agent Threads additions expose explicit capabilities and tested omissions.
 - Broad UI features land as independently usable vertical slices.
-- Existing Flint settings are preserved or deterministically migrated.
+- Existing dez settings are preserved or deterministically migrated.
 - Every repository change is delivered through a focused pull request.
 - Future stable and preview releases can be triaged without repeating the
   initial audit from scratch.

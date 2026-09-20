@@ -142,7 +142,7 @@ fn start(
         Ok(first_instance) => first_instance,
         Err(error) => {
             log::info!(
-                "agent_threads: another Flint instance may own agent control pipe {pipe_name}; disabling this server: {error:#}"
+                "agent_threads: another dez instance may own agent control pipe {pipe_name}; disabling this server: {error:#}"
             );
             return None;
         }
@@ -404,7 +404,7 @@ struct SecurityDescriptor(PSECURITY_DESCRIPTOR);
 impl SecurityDescriptor {
     fn new(logon_sid: &str, allow_create_instance: bool) -> Result<Self> {
         // FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE. FILE_CREATE_PIPE_INSTANCE
-        // is present only while Flint creates the fixed pool before publishing it.
+        // is present only while dez creates the fixed pool before publishing it.
         let access_mask = if allow_create_instance {
             "GA"
         } else {
@@ -762,7 +762,7 @@ mod tests {
 
     fn unique_pipe_name(label: &str) -> String {
         format!(
-            r"\\.\pipe\flint-agent-control-test-{}-{label}",
+            r"\\.\pipe\dez-agent-control-test-{}-{label}",
             uuid::Uuid::new_v4()
         )
     }
@@ -1141,7 +1141,7 @@ mod tests {
         cx.executor().allow_parking();
         init_gpui_test(cx);
         let temp = tempfile::tempdir().expect("create startup test directory");
-        let helper = temp.path().join("flint-agent-control.exe");
+        let helper = temp.path().join("dez-agent-control.exe");
         std::fs::write(&helper, b"test helper").expect("write helper fixture");
         let session_base = uuid::Uuid::new_v4().as_u128() as u32;
         let first_scope = agent_control_protocol::WindowsControlScope::for_session(

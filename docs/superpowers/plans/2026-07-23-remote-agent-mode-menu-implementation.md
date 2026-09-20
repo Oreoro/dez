@@ -20,7 +20,7 @@ Add the missing Pi setting beside the existing agent visibility controls.
 2. Run the focused test and confirm it fails because Direct currently exposes
    sign-out.
 3. Add the smallest route-aware credential-menu predicate.
-4. Remove the explicit Flint-managed menu row and its panel-only helpers.
+4. Remove the explicit dez-managed menu row and its panel-only helpers.
 5. Run the focused panel tests.
 
 ## Task 2: Lock the Direct/Tunneled execution boundary

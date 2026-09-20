@@ -11,8 +11,8 @@ elif [ -z "${GITHUB_REF-}" ]; then
     exit 1
 fi
 
-version=$(script/get-crate-version flint)
-channel=$(cat crates/flint/RELEASE_CHANNEL)
+version=$(script/get-crate-version dez)
+channel=$(cat crates/dez/RELEASE_CHANNEL)
 release_tag=${RELEASE_TAG:-$GITHUB_REF_NAME}
 echo "Publishing version: ${version} on release channel ${channel}"
 echo "RELEASE_CHANNEL=${channel}" >> $GITHUB_ENV

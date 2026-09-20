@@ -5,7 +5,7 @@
 
 ## Problem
 
-Flint's Agent Threads panel runs Claude, Codex, and Pi as raw CLI processes in
+dez's Agent Threads panel runs Claude, Codex, and Pi as raw CLI processes in
 terminals. Each CLI keeps its own private on-disk session history and there is
 no shared conversation state between kinds. When one agent runs out of usage
 quota part-way through a task, the user's only options today are to wait for the
@@ -13,7 +13,7 @@ quota to reset or to switch to a different agent and re-explain the entire task
 by hand.
 
 The switch must work even when the source agent is **dead** — quota-locked,
-hung, or its terminal already closed. Flint therefore cannot ask the source
+hung, or its terminal already closed. dez therefore cannot ask the source
 agent to summarize itself. The handoff document must be assembled purely from
 files already on disk.
 
@@ -24,7 +24,7 @@ provider B. That boundary, not transcript fidelity, is the dominant risk.
 
 ## Scope
 
-This change adds a "hand off to another agent" capability: Flint reconstructs a
+This change adds a "hand off to another agent" capability: dez reconstructs a
 bounded, redacted excerpt of a source thread's transcript from the CLI's history
 files, writes a handoff document, and launches a new thread of a different kind
 seeded to read that document and continue.
@@ -49,7 +49,7 @@ It does **not**:
 
 Transcript extraction and handoff-document writing run on the host that owns the
 session files, exactly like history scanning does today. For a local project
-that is the local machine; for a remote project it is `flint-remote-server`.
+that is the local machine; for a remote project it is `dez-remote-server`.
 The client never reads a remote transcript over a raw filesystem RPC, and the
 handoff document is written on the host where the **target** agent will run, so
 a remote target can read it.
@@ -78,7 +78,7 @@ provider before any target process starts.
 
 Parsing degrades loudly. Unknown records are counted, not silently dropped into
 a plausible-looking summary. If no trustworthy conversation turns survive
-extraction, Flint refuses the automatic handoff and tells the user, rather than
+extraction, dez refuses the automatic handoff and tells the user, rather than
 emitting an empty or misleading document.
 
 ## Architecture
@@ -203,7 +203,7 @@ provider-specific duplication and noise cannot exhaust the budget.
    budget.
 7. Enforce one total serialized-document cap covering the excerpt and all
    metadata, including any git summary.
-8. Keep the absolute path of the raw source transcript in Flint's internal UI
+8. Keep the absolute path of the raw source transcript in dez's internal UI
    metadata only. It is never written into the agent-visible document, so the
    target cannot bypass the bounds and redaction by reading the source file.
 
@@ -215,8 +215,8 @@ matter which CLI produced it.
 
 ### The document
 
-The handoff document is written under `.flint/handoffs/` on the target's host.
-A `.flint/handoffs/.gitignore` containing `*` is created alongside it, because
+The handoff document is written under `.dez/handoffs/` on the target's host.
+A `.dez/handoffs/.gitignore` containing `*` is created alongside it, because
 the repository's root `.gitignore` does not currently ignore this path and a
 secret-bearing document must never appear in `git status` or be committed.
 
@@ -254,18 +254,18 @@ paste when the target does not support it.
 
 ## Session Identity and Fresh Codex Threads
 
-Handoff needs a session id to locate the source transcript. Today Flint models
+Handoff needs a session id to locate the source transcript. Today dez models
 this as a single `session_id_flag`: Claude and Pi are assigned an id at launch,
 Codex is not, so a fresh Codex thread's transcript is unlocatable.
 
 This is replaced by a per-kind session-identity strategy:
 
-- **AssignedByFlag** (Claude, Pi): Flint assigns the id at launch and always
+- **AssignedByFlag** (Claude, Pi): dez assigns the id at launch and always
   knows it.
-- **DiscoverFromHistory** (Codex): Flint learns the id after the CLI writes it.
+- **DiscoverFromHistory** (Codex): dez learns the id after the CLI writes it.
 - **Unavailable**: neither works; handoff is disabled with an explanation.
 
-For Codex discovery, Flint snapshots the set of known rollout identities at
+For Codex discovery, dez snapshots the set of known rollout identities at
 launch. On history refresh or handoff invocation it looks for new rollout files
 whose `session_meta.cwd` matches the thread's project root and whose timestamp
 is after launch, excluding ids already bound to another live terminal. Exactly
@@ -331,7 +331,7 @@ never left the dead process's userspace buffer.
 
 ### Document, launch, and identity
 
-- `.flint/handoffs/.gitignore` is created and a written document does not appear
+- `.dez/handoffs/.gitignore` is created and a written document does not appear
   in `git status`.
 - Default document contains no raw diff and no raw tool-result bodies; opt-in
   includes them.
@@ -346,24 +346,24 @@ never left the dead process's userspace buffer.
 ### Regression suites
 
 Run the Agent Threads and `agent_history` library tests, the remote-server
-library tests, formatting, Flint's clippy wrapper for affected crates, and the
+library tests, formatting, dez's clippy wrapper for affected crates, and the
 Linux musl remote-server build used by the debug application bundle.
 
 ## Live Validation
 
-Build and install a fresh `/tmp/Flint-Local.app`, preserving the prior bundle.
+Build and install a fresh `/tmp/dez-Local.app`, preserving the prior bundle.
 
 1. Start a Claude thread, do a few turns that edit files and run tools, then
    hand off to Codex. Confirm the preview shows a structural summary and a
    changed-file list with no raw diff, and that confirming launches a Codex
-   thread that reads `.flint/handoffs/` and continues coherently.
+   thread that reads `.dez/handoffs/` and continues coherently.
 2. Confirm the handoff document does not appear in `git status`.
 3. Kill the Claude process (simulating quota lockout) and hand off from the now
    dead thread; confirm the handoff still succeeds from disk.
-4. From a fresh Codex thread with no Flint-assigned id, confirm identity
+4. From a fresh Codex thread with no dez-assigned id, confirm identity
    discovery binds the rollout and enables handoff; with two concurrent Codex
    threads in one project, confirm a picker rather than a wrong auto-bind.
-5. On a remote (Through Flint) project, confirm extraction and document writing
+5. On a remote (Through dez) project, confirm extraction and document writing
    happen host-side and a remote target thread reads the document.
 
 ## Alternatives Rejected
@@ -399,7 +399,7 @@ pairing is the correct unit.
 
 This defeats the bounds and the redaction: the target could read unbounded,
 unfiltered, potentially secret-bearing source content directly. The full path
-stays in Flint's internal metadata only.
+stays in dez's internal metadata only.
 
 ### Disable handoff for fresh Codex threads
 

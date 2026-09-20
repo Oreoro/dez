@@ -13,7 +13,7 @@ pub use sqlez;
 pub use sqlez_macros;
 pub use uuid;
 
-use flint_env_vars::ZED_STATELESS;
+use dez_env_vars::ZED_STATELESS;
 pub use release_channel::RELEASE_CHANNEL;
 use release_channel::ReleaseChannel;
 use sqlez::domain::Migrator;

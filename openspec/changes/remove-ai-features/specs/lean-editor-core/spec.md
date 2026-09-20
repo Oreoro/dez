@@ -1,14 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: No AI crates in workspace
-The Flint workspace SHALL contain no crates whose sole purpose is AI functionality (LLM providers, agent, copilot, edit predictions, MCP servers, AI onboarding, prompt storage, web search).
+The dez workspace SHALL contain no crates whose sole purpose is AI functionality (LLM providers, agent, copilot, edit predictions, MCP servers, AI onboarding, prompt storage, web search).
 
 #### Scenario: Workspace compiles without AI dependencies
-- **WHEN** `cargo build` is run on the Flint workspace
+- **WHEN** `cargo build` is run on the dez workspace
 - **THEN** no crate related to language models, copilot, agent, edit predictions, or MCP is compiled
 
 #### Scenario: No AI symbols in binary
-- **WHEN** the Flint binary is inspected
+- **WHEN** the dez binary is inspected
 - **THEN** no symbols from removed AI crates are present
 
 ### Requirement: Editor has no inline edit prediction code

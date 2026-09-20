@@ -155,8 +155,8 @@ pub struct SettingsContent {
     /// Default: true
     pub auto_update: Option<bool>,
 
-    /// This base keymap settings adjusts the default keybindings in Flint to be similar
-    /// to other common code editors. By default, Flint's keymap closely follows VSCode's
+    /// This base keymap settings adjusts the default keybindings in dez to be similar
+    /// to other common code editors. By default, dez's keymap closely follows VSCode's
     /// keymap, with minor adjustments, this corresponds to the "VSCode" setting.
     ///
     /// Default: VSCode
@@ -220,7 +220,7 @@ pub struct SettingsContent {
     /// Configuration for session-related features
     pub session: Option<SessionSettingsContent>,
 
-    /// Configuration of the terminal in Flint.
+    /// Configuration of the terminal in dez.
     pub terminal: Option<TerminalSettingsContent>,
 
     pub title_bar: Option<TitleBarSettingsContent>,
@@ -233,7 +233,7 @@ pub struct SettingsContent {
     /// Settings for the which-key popup.
     pub which_key: Option<WhichKeySettingsContent>,
 
-    /// Settings related to Vim mode in Flint.
+    /// Settings related to Vim mode in dez.
     pub vim: Option<VimSettingsContent>,
 
     /// Number of lines to search for modelines at the beginning and end of files.
@@ -252,12 +252,12 @@ pub struct SettingsContent {
 }
 
 /// Configuration for developer-oriented instrumentation tools that collect
-/// diagnostic data about a running Flint instance.
+/// diagnostic data about a running dez instance.
 #[with_fallible_options]
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct InstrumentationSettingsContent {
     /// Configuration for the performance profiler, accessed via the
-    /// `flint: open performance profiler` action.
+    /// `dez: open performance profiler` action.
     pub performance_profiler: Option<PerformanceProfilerSettingsContent>,
 }
 
@@ -370,7 +370,7 @@ pub enum ProfileBase {
     /// Apply profile settings on top of the user's current settings.
     #[default]
     User,
-    /// Apply profile settings on top of Flint's default settings, ignoring user customizations.
+    /// Apply profile settings on top of dez's default settings, ignoring user customizations.
     Default,
 }
 
@@ -381,7 +381,7 @@ pub struct SettingsProfile {
     /// What base settings to start from before applying this profile's overrides.
     ///
     /// - `user`: Apply on top of user's settings (default)
-    /// - `default`: Apply on top of Flint's default settings, ignoring user customizations
+    /// - `default`: Apply on top of dez's default settings, ignoring user customizations
     #[serde(default)]
     pub base: ProfileBase,
 
@@ -396,7 +396,7 @@ pub struct UserSettingsContent {
     #[serde(flatten)]
     pub content: Box<SettingsContent>,
 
-    /// The language that Flint uses for its user interface. This field is
+    /// The language that dez uses for its user interface. This field is
     /// outside `SettingsContent` so project settings and settings profiles
     /// cannot override it.
     pub ui_language: Option<UiLanguage>,
@@ -676,7 +676,7 @@ pub struct FileFinderSettingsContent {
     /// Default: true
     pub skip_focus_for_active_in_search: Option<bool>,
     /// Whether to use gitignored files when searching.
-    /// Only the file Flint had indexed will be used, not necessary all the gitignored files.
+    /// Only the file dez had indexed will be used, not necessary all the gitignored files.
     ///
     /// Default: Smart
     pub include_ignored: Option<IncludeIgnoredContent>,
@@ -704,7 +704,7 @@ pub struct FileFinderSettingsContent {
 pub enum IncludeIgnoredContent {
     /// Use all gitignored files
     All,
-    /// Use only the files Flint had indexed
+    /// Use only the files dez had indexed
     Indexed,
     /// Be smart and search for ignored when called from a gitignored worktree
     #[default]
@@ -1049,8 +1049,8 @@ pub struct SshConnection {
     pub projects: collections::BTreeSet<RemoteProject>,
     /// Name to use for this server in UI.
     pub nickname: Option<String>,
-    // By default Flint will download the binary to the host directly.
-    // If this is set to true, Flint will download the binary to your local machine,
+    // By default dez will download the binary to the host directly.
+    // If this is set to true, dez will download the binary to your local machine,
     // and then upload it over the SSH connection. Useful if your SSH server has
     // limited outbound internet access.
     pub upload_binary_over_ssh: Option<bool>,

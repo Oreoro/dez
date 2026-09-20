@@ -11,7 +11,7 @@ Design owner: Codex.
 
 Agent Threads history preparation is client-driven. For a remote project, the
 client traverses the agent's history directory and proxies each filesystem
-operation to `flint-remote-server`.
+operation to `dez-remote-server`.
 
 Codex illustrates the cost:
 
@@ -28,7 +28,7 @@ has no cache from another device.
 
 The resulting remote cost is proportional to the number of date directories
 plus the number of selected session files. Each operation carries network
-latency even though the source files and `flint-remote-server` are on the same
+latency even though the source files and `dez-remote-server` are on the same
 host.
 
 Moving the current per-file parse cache to the remote host would not solve the
@@ -41,7 +41,7 @@ problem. The client would still discover and validate files one RPC at a time.
 - Render a valid persisted thread snapshot without waiting for a refresh.
 - Reduce a warm remote history load to one request stream and no per-session
   filesystem RPCs.
-- Share one host cache between local Flint and remote Flint clients running as
+- Share one host cache between local dez and remote dez clients running as
   the same host user.
 - Preserve the existing history, filtering, ordering, title, resume-directory,
   and scan-limit semantics for Codex, Claude, and Pi.
@@ -57,7 +57,7 @@ problem. The client would still discover and validate files one RPC at a time.
 - Keeping indexes continuously warm with filesystem watchers.
 - Adding a cross-project history user interface.
 - Removing the legacy client-side scanner in this change.
-- Changing agent history formats or asking providers to write Flint metadata.
+- Changing agent history formats or asking providers to write dez metadata.
 - Changing session resume commands, session identifiers, or title selection.
 - Changing the Direct or Tunneled launch policy.
 - Indexing beyond the existing per-provider history limits.
@@ -65,8 +65,8 @@ problem. The client would still discover and validate files one RPC at a time.
 
 ## Accepted Approach
 
-Introduce a shared, host-local history index service. The local Flint
-application calls it directly for local projects. `flint-remote-server` exposes
+Introduce a shared, host-local history index service. The local dez
+application calls it directly for local projects. `dez-remote-server` exposes
 the same service through a capability-gated streaming RPC for remote projects.
 
 The service persists normalized session summaries and the file identities
@@ -105,7 +105,7 @@ history.
 
 ### Scan on the host without persistence
 
-A dedicated RPC could run the current scanner on `flint-remote-server` and
+A dedicated RPC could run the current scanner on `dez-remote-server` and
 return the resulting thread list.
 
 This removes network chatter and is simpler than a persisted index, but every
@@ -192,7 +192,7 @@ removed.
 
 ### `remote_server`
 
-`flint-remote-server` owns the remote adapter:
+`dez-remote-server` owns the remote adapter:
 
 - advertising the host index capability;
 - validating and serving history stream requests;
@@ -204,10 +204,10 @@ removed.
 The remote handler uses local filesystem operations. It does not call the
 existing `ListRemoteDirectory`, `GetPathMetadata`, or `ReadRemoteFile` handlers.
 
-One `flint-remote-server` process is scoped to a connection identifier. It owns
+One `dez-remote-server` process is scoped to a connection identifier. It owns
 one `HeadlessProject`, accepts reconnects for that identifier serially, and
 retains its in-process history service for that process lifetime. Separate
-workspaces, devices, and a local Flint application can run separate processes
+workspaces, devices, and a local dez application can run separate processes
 against the same host cache. In-process single-flight therefore coordinates
 requests within one server process; persisted storage provides cross-process
 sharing without cross-process task coordination.
@@ -231,7 +231,7 @@ resolve different values for `CODEX_HOME` or another provider override.
 Use a dedicated host-wide root:
 
 ```text
-~/.flint/cache/agent_threads/<kind>/<history-root-key>/index.json
+~/.dez/cache/agent_threads/<kind>/<history-root-key>/index.json
 ```
 
 `history-root-key` is a stable hash of the host path style and normalized
@@ -239,11 +239,11 @@ absolute history root. The index also stores the unhashed normalized root and
 rejects a file whose stored identity does not match the request.
 
 This path intentionally does not derive from `paths::data_dir()`.
-`flint-remote-server` stores its application data under `~/.flint/remote`,
-while a local Flint process uses its platform application-data directory. A
+`dez-remote-server` stores its application data under `~/.dez/remote`,
+while a local dez process uses its platform application-data directory. A
 dedicated home-relative cache allows both processes to share the same index.
-On macOS, this deliberately places shared cache data under `~/.flint` instead
-of `~/Library/Application Support`; host sharing with `flint-remote-server`
+On macOS, this deliberately places shared cache data under `~/.dez` instead
+of `~/Library/Application Support`; host sharing with `dez-remote-server`
 requires one process-independent location.
 
 Cache directories and files are private to the host user. On POSIX hosts,
@@ -379,7 +379,7 @@ All requests for the same `(agent kind, history root)` within one process join
 one refresh task. Each requester receives the result through its own local
 subscription or RPC stream.
 
-Local Flint and `flint-remote-server` can run concurrently for the same host
+Local dez and `dez-remote-server` can run concurrently for the same host
 user. Version 1 deliberately does not coordinate those processes with a file
 lock. A refresher:
 
@@ -448,12 +448,12 @@ The server validates:
 - collection sizes and path lengths are bounded; and
 - the request belongs to the authenticated remote project connection.
 
-The client-supplied history root is trusted under Flint's single-user model.
+The client-supplied history root is trusted under dez's single-user model.
 The remote client and server run as the same host user, and the existing remote
 filesystem protocol already lets that user list and read arbitrary paths. The
 history endpoint adds no filesystem authority. It still restricts parsing to a
 supported provider kind, bounds request and scan sizes, and writes only derived
-summaries to Flint's private cache.
+summaries to dez's private cache.
 
 An empty `project_roots` list means no project filter. Current Agent Threads
 requests always provide the visible worktree roots; the empty form preserves
@@ -525,7 +525,7 @@ History location and retrieval depend on whether the project is local or
 remote, not on the agent process route.
 
 Both Direct and Tunneled remote projects use the same remote project connection
-and `flint-remote-server` history capability. The index service:
+and `dez-remote-server` history capability. The index service:
 
 - does not resolve or install managed agent executables;
 - does not acquire an egress lease;
@@ -644,7 +644,7 @@ outside this design.
   one request stream without per-session filesystem RPCs.
 - A host with no index performs one host-local build and returns correct
   history without client-side remote file traversal.
-- Local Flint and `flint-remote-server` share the same cache for the same host
+- Local dez and `dez-remote-server` share the same cache for the same host
   user, agent kind, and history root.
 - Cache refresh preserves current Codex, Claude, and Pi results and scan limits.
 - History-directory overrides remain isolated and correct.
@@ -670,7 +670,7 @@ before implementation (defer the cross-process file lock; see concern 1).
   streaming today). The `Cached`-then-`Fresh` stream rides existing infra, not
   new plumbing.
 - `RemoteStarted` is real and currently `message RemoteStarted {}`
-  (`crates/proto/proto/flint.proto`, `RemoteStarted -> Ack` in
+  (`crates/proto/proto/dez.proto`, `RemoteStarted -> Ack` in
   `crates/proto/src/proto.rs`). Adding a `repeated` capability field is
   proto3-backward-compatible as claimed.
 - No file-locking primitive exists anywhere in the repo (only in-memory
@@ -706,14 +706,14 @@ before implementation (defer the cross-process file lock; see concern 1).
    refresh work, not corruption. The lock only de-duplicates concurrent
    refreshes; add it later if measurement shows it matters. If it stays, name
    the mechanism and specify networked-home fallback behavior.
-2. Pin down the `flint-remote-server` process/lifetime model the coordination
+2. Pin down the `dez-remote-server` process/lifetime model the coordination
    assumes. In-process single-flight only spans one server-process lifetime.
    State whether one server process is shared across all client connections to
    a host (single-flight has cross-connection reach) or whether cross-connection
    sharing falls entirely to the persisted file.
 3. State the trust model for the client-supplied `normalized_history_root`. The
    server validates absolute/path-style but cannot cheaply confirm the root is
-   the agent's real configured home. That is acceptable under Flint's
+   the agent's real configured home. That is acceptable under dez's
    single-user model (the user reads their own files); say so explicitly rather
    than leave it implicit.
 
@@ -725,9 +725,9 @@ before implementation (defer the cross-process file lock; see concern 1).
   sessions, and a persisted index makes raising the limit nearly free.
 - A `parser_version` bump is a fleet-wide cold-rebuild event (every
   host/kind/root re-scans once). Acceptable; worth stating as a conscious cost.
-- Local `~/.flint/cache` on macOS deliberately departs from
+- Local `~/.dez/cache` on macOS deliberately departs from
   `~/Library/Application Support`. It is necessary for host-sharing and
-  consistent with `~/.flint/remote`; worth one explicit line acknowledging the
+  consistent with `~/.dez/remote`; worth one explicit line acknowledging the
   deviation.
 - Delivery staging is sound, but commit 1 (shared crate + scanners + unit
   tests) is self-contained enough to be its own PR if a smaller review surface
@@ -740,7 +740,7 @@ change:
 
 - Defer the cross-process file lock.
 - Use in-process single-flight and atomic cache replacement.
-- Treat the persisted cache as eventually consistent across local Flint and
+- Treat the persisted cache as eventually consistent across local dez and
   separate remote-server processes.
 - Accept transient last-writer-wins staleness because each request revalidates
   against authoritative agent history.

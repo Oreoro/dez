@@ -1,32 +1,32 @@
 [book]
-authors = ["The Flint Team"]
+authors = ["The dez Team"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Flint"
+title = "dez"
 site-url = "/docs/"
 
 [build]
 extra-watch-dirs = ["../crates/docs_preprocessor"]
 
-# flint-html is a "custom" renderer that just wraps the
+# dez-html is a "custom" renderer that just wraps the
 # builtin mdbook html renderer, and applies post-processing
 # as post-processing is not possible with mdbook in the same way
 # pre-processing is
 # The config is passed directly to the html renderer, so all config
-# options that apply to html apply to flint-html
-[output.flint-html]
+# options that apply to html apply to dez-html
+[output.dez-html]
 command = "cargo run -p docs_preprocessor -- postprocess"
 # Set here instead of above as we only use it replace the `#description#` we set in the template
 # when no front-matter is provided value
-default-description = "Learn how to use and customize Flint, the fast, local-first code editor. Official docs on features, configuration, AI tools, and workflows."
-default-title = "Flint Code Editor Documentation"
+default-description = "Learn how to use and customize dez, the fast, local-first code editor. Official docs on features, configuration, AI tools, and workflows."
+default-title = "dez Code Editor Documentation"
 no-section-label = true
 preferred-dark-theme = "dark"
 additional-css = ["theme/page-toc.css", "theme/plugins.css", "theme/highlight.css", "theme/consent-banner.css"]
 additional-js  = ["theme/page-toc.js", "theme/plugins.js", "theme/c15t@2.0.0-rc.3.js", "theme/analytics.js"]
 
-[output.flint-html.print]
+[output.dez-html.print]
 enable = false
 
 # Redirects for `/docs` pages.
@@ -35,10 +35,10 @@ enable = false
 # 1. Not start with `/docs`
 # 2. End in `.html`
 #
-# The destination URLs are interpreted relative to `https://flint.dev`.
+# The destination URLs are interpreted relative to `https://dez.dev`.
 # - Redirects to other docs pages should end in `.html`
-# - You can link to pages on the Flint site by omitting the `/docs` in front of it.
-[output.flint-html.redirect]
+# - You can link to pages on the dez site by omitting the `/docs` in front of it.
+[output.dez-html.redirect]
 # AI
 "/ai.html" = "/docs/ai/overview.html"
 "/assistant-panel.html" = "/docs/ai/agent-panel.html"
@@ -55,15 +55,15 @@ enable = false
 "/language-model-integration.html" = "/docs/assistant/assistant.html"
 "/model-improvement.html" = "/docs/ai/ai-improvement.html"
 "/ai/temperature.html" = "/docs/ai/agent-settings.html#model-temperature"
-"/ai/subscription.html" = "/docs/account/flint-hosted-models.html"
-"/ai/models.html" = "/docs/account/flint-hosted-models.html"
+"/ai/subscription.html" = "/docs/account/dez-hosted-models.html"
+"/ai/models.html" = "/docs/account/dez-hosted-models.html"
 "/ai/plans-and-usage.html" = "/docs/account/plans-and-pricing.html"
 "/ai/billing.html" = "/docs/account/billing.html"
 "/ai/configuration.html" = "/docs/ai/quick-start.html"
 "/ai/set-up-ai.html" = "/docs/ai/quick-start.html"
 
 # Core
-"/configuring-flint.html" = "/docs/reference/all-settings.html"
+"/configuring-dez.html" = "/docs/reference/all-settings.html"
 
 # Collaboration
 "/channels.html" = "/docs/collaboration/channels.html"
@@ -94,10 +94,10 @@ enable = false
 "/python.html" = "/docs/languages/python.html"
 "/ruby.html" = "/docs/languages/ruby.html"
 
-# Flint development
-"/contribute-to-flint.html" = "/docs/development.html#contributor-links"
+# dez development
+"/contribute-to-dez.html" = "/docs/development.html#contributor-links"
 "/contributing.html" = "/docs/development.html#contributor-links"
-"/developing-flint.html" = "/docs/development.html"
+"/developing-dez.html" = "/docs/development.html"
 "/development/development/linux.html" = "/docs/development/linux.html"
 "/development/development/macos.html" = "/docs/development/macos.html"
 "/development/development/windows.html" = "/docs/development/windows.html"
@@ -106,6 +106,6 @@ enable = false
 # and other docs-related functions.
 #
 # Comment the below section out if you need to bypass the preprocessor for some reason.
-[preprocessor.flint_docs_preprocessor]
+[preprocessor.dez_docs_preprocessor]
 command = "cargo run -p docs_preprocessor --"
-renderer = ["html", "flint-html"]
+renderer = ["html", "dez-html"]

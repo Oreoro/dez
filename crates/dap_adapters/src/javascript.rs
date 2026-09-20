@@ -187,17 +187,17 @@ impl DebugAdapter for JsDebugAdapter {
         DebugAdapterName(Self::ADAPTER_NAME.into())
     }
 
-    async fn config_from_flint_format(&self, flint_scenario: FlintDebugConfig) -> Result<DebugScenario> {
+    async fn config_from_dez_format(&self, dez_scenario: dezDebugConfig) -> Result<DebugScenario> {
         let mut args = json!({
             "type": "pwa-node",
-            "request": match flint_scenario.request {
+            "request": match dez_scenario.request {
                 DebugRequest::Launch(_) => "launch",
                 DebugRequest::Attach(_) => "attach",
             },
         });
 
         let map = args.as_object_mut().unwrap();
-        match &flint_scenario.request {
+        match &dez_scenario.request {
             DebugRequest::Attach(attach) => {
                 map.insert("processId".into(), attach.process_id.into());
             }
@@ -215,7 +215,7 @@ impl DebugAdapter for JsDebugAdapter {
                     map.insert("env".into(), launch.env_json());
                 }
 
-                if let Some(stop_on_entry) = flint_scenario.stop_on_entry {
+                if let Some(stop_on_entry) = dez_scenario.stop_on_entry {
                     map.insert("stopOnEntry".into(), stop_on_entry.into());
                 }
                 if let Some(cwd) = launch.cwd.as_ref() {
@@ -225,8 +225,8 @@ impl DebugAdapter for JsDebugAdapter {
         };
 
         Ok(DebugScenario {
-            adapter: flint_scenario.adapter,
-            label: flint_scenario.label,
+            adapter: dez_scenario.adapter,
+            label: dez_scenario.label,
             build: None,
             config: args,
             tcp_connection: None,

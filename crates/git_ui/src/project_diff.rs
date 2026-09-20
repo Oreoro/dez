@@ -12,7 +12,7 @@ use editor::{
     multibuffer_context_lines,
     scroll::Autoscroll,
 };
-use flint_actions::git::{ViewStagedChanges, ViewUnstagedChanges};
+use dez_actions::git::{ViewStagedChanges, ViewUnstagedChanges};
 use futures_lite::future::yield_now;
 
 use git::{

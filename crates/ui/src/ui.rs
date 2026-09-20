@@ -1,6 +1,6 @@
-//! # UI – Flint UI Primitives & Components
+//! # UI – dez UI Primitives & Components
 //!
-//! This crate provides a set of UI primitives and components that are used to build all of the elements in Flint's UI.
+//! This crate provides a set of UI primitives and components that are used to build all of the elements in dez's UI.
 //!
 //! ## Related Crates:
 //!

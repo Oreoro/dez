@@ -8,7 +8,7 @@ use ui::{HighlightedLabel, ListItem, ListItemSpacing, prelude::*};
 use workspace::{ModalView, Workspace};
 
 pub fn init(cx: &mut App) {
-    cx.on_action(|_: &flint_actions::settings_profile_selector::Toggle, cx| {
+    cx.on_action(|_: &dez_actions::settings_profile_selector::Toggle, cx| {
         workspace::with_active_or_new_workspace(cx, |workspace, window, cx| {
             toggle_settings_profile_selector(workspace, window, cx);
         });
@@ -285,7 +285,7 @@ fn display_name(profile_name: &Option<String>, cx: &App) -> String {
 mod tests {
     use super::*;
     use editor;
-    use flint_actions::settings_profile_selector;
+    use dez_actions::settings_profile_selector;
     use gpui::{TestAppContext, UpdateGlobal, VisualTestContext};
     use menu::{Cancel, Confirm, SelectNext, SelectPrevious};
     use project::{FakeFs, Project};

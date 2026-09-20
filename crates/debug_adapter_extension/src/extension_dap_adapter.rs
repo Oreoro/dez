@@ -15,7 +15,7 @@ use dap::{
 };
 use extension::{Extension, WorktreeDelegate};
 use gpui::AsyncApp;
-use task::{DebugScenario, FlintDebugConfig};
+use task::{DebugScenario, dezDebugConfig};
 use util::rel_path::RelPath;
 
 pub(crate) struct ExtensionDapAdapter {
@@ -106,8 +106,8 @@ impl DebugAdapter for ExtensionDapAdapter {
             .await
     }
 
-    async fn config_from_flint_format(&self, flint_scenario: FlintDebugConfig) -> Result<DebugScenario> {
-        self.extension.dap_config_to_scenario(flint_scenario).await
+    async fn config_from_dez_format(&self, dez_scenario: dezDebugConfig) -> Result<DebugScenario> {
+        self.extension.dap_config_to_scenario(dez_scenario).await
     }
 
     async fn request_kind(

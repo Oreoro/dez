@@ -345,7 +345,7 @@ async fn test_editorconfig_support(cx: &mut gpui::TestAppContext) {
             tab_width = 10
             max_line_length = off
         "#,
-        ".flint": {
+        ".dez": {
             "settings.json": r#"{
                 "tab_size": 8,
                 "hard_tabs": false,
@@ -404,7 +404,7 @@ async fn test_editorconfig_support(cx: &mut gpui::TestAppContext) {
     let settings_c = settings_for("c.js", cx).await;
     let settings_d = settings_for("d/d.rs", cx).await;
     let settings_readme = settings_for("README.json", cx).await;
-    // .editorconfig overrides .flint/settings
+    // .editorconfig overrides .dez/settings
     assert_eq!(Some(settings_a.tab_size), NonZeroU32::new(3));
     assert_eq!(settings_a.hard_tabs, true);
     assert_eq!(settings_a.ensure_final_newline_on_save, true);
@@ -421,7 +421,7 @@ async fn test_editorconfig_support(cx: &mut gpui::TestAppContext) {
     // "indent_size" is not set, so "tab_width" is used
     assert_eq!(Some(settings_c.tab_size), NonZeroU32::new(10));
 
-    // When max_line_length is "off", default to .flint/settings.json
+    // When max_line_length is "off", default to .dez/settings.json
     assert_eq!(settings_b.preferred_line_length, 64);
     assert_eq!(settings_c.preferred_line_length, 64);
 
@@ -1060,7 +1060,7 @@ async fn test_git_provider_project_setting(cx: &mut gpui::TestAppContext) {
     fs.insert_tree(
         path!("/dir"),
         json!({
-            ".flint": {
+            ".dez": {
                 "settings.json": r#"{
                     "git_hosting_providers": [
                         {
@@ -1091,7 +1091,7 @@ async fn test_git_provider_project_setting(cx: &mut gpui::TestAppContext) {
     });
 
     fs.atomic_write(
-        Path::new(path!("/dir/.flint/settings.json")).to_owned(),
+        Path::new(path!("/dir/.dez/settings.json")).to_owned(),
         "{}".into(),
     )
     .await
@@ -1119,7 +1119,7 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
     fs.insert_tree(
         path!("/dir"),
         json!({
-            ".flint": {
+            ".dez": {
                 "settings.json": r#"{ "tab_size": 8 }"#,
                 "tasks.json": r#"[{
                     "label": "cargo check all",
@@ -1131,7 +1131,7 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
                 "a.rs": "fn a() {\n    A\n}"
             },
             "b": {
-                ".flint": {
+                ".dez": {
                     "settings.json": r#"{ "tab_size": 2 }"#,
                     "tasks.json": r#"[{
                         "label": "cargo check",
@@ -1161,8 +1161,8 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
 
     let topmost_local_task_source_kind = TaskSourceKind::Worktree {
         id: worktree_id,
-        directory_in_worktree: rel_path(".flint").into(),
-        id_base: "local worktree tasks from directory \".flint\"".into(),
+        directory_in_worktree: rel_path(".dez").into(),
+        id_base: "local worktree tasks from directory \".dez\"".into(),
     };
 
     let buffer_a = project
@@ -1205,8 +1205,8 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
             (
                 TaskSourceKind::Worktree {
                     id: worktree_id,
-                    directory_in_worktree: rel_path("b/.flint").into(),
-                    id_base: "local worktree tasks from directory \"b/.flint\"".into()
+                    directory_in_worktree: rel_path("b/.dez").into(),
+                    id_base: "local worktree tasks from directory \"b/.dez\"".into()
                 },
                 "cargo check".to_string(),
                 vec!["check".to_string()],
@@ -1286,8 +1286,8 @@ async fn test_managing_project_specific_settings(cx: &mut gpui::TestAppContext) 
             (
                 TaskSourceKind::Worktree {
                     id: worktree_id,
-                    directory_in_worktree: rel_path("b/.flint").into(),
-                    id_base: "local worktree tasks from directory \"b/.flint\"".into()
+                    directory_in_worktree: rel_path("b/.dez").into(),
+                    id_base: "local worktree tasks from directory \"b/.dez\"".into()
                 },
                 "cargo check".to_string(),
                 vec!["check".to_string()],
@@ -1318,13 +1318,13 @@ async fn test_invalid_local_tasks_shows_toast_with_doc_link(cx: &mut gpui::TestA
     init_test(cx);
     TaskStore::init(None);
 
-    // We need to start with a valid `.flint/tasks.json` file as otherwise the
+    // We need to start with a valid `.dez/tasks.json` file as otherwise the
     // event is emitted before we havd a chance to setup the event subscription.
     let fs = FakeFs::new(cx.executor());
     fs.insert_tree(
         path!("/dir"),
         json!({
-            ".flint": {
+            ".dez": {
                 "tasks.json": r#"[{ "label": "valid task", "command": "echo" }]"#,
             },
             "file.rs": ""
@@ -1335,10 +1335,10 @@ async fn test_invalid_local_tasks_shows_toast_with_doc_link(cx: &mut gpui::TestA
     let project = Project::test(fs.clone(), [path!("/dir").as_ref()], cx).await;
     let saw_toast = Rc::new(RefCell::new(false));
 
-    // Update the `.flint/tasks.json` file with an invalid variable, so we can
+    // Update the `.dez/tasks.json` file with an invalid variable, so we can
     // later assert that the `Event::Toast` even is emitted.
     fs.save(
-        path!("/dir/.flint/tasks.json").as_ref(),
+        path!("/dir/.dez/tasks.json").as_ref(),
         &r#"[{ "label": "test $ZED_FOO", "command": "echo" }]"#.into(),
         Default::default(),
     )
@@ -1358,7 +1358,7 @@ async fn test_invalid_local_tasks_shows_toast_with_doc_link(cx: &mut gpui::TestA
                 assert!(message.contains("ZED_FOO"));
                 assert_eq!(
                     *url,
-                    "https://github.com/shenghsi/flint/blob/main/docs/src/tasks.md"
+                    "https://github.com/shenghsi/dez/blob/main/docs/src/tasks.md"
                 );
                 *saw_toast.borrow_mut() = true;
             }
@@ -1383,7 +1383,7 @@ async fn test_fallback_to_single_worktree_tasks(cx: &mut gpui::TestAppContext) {
     fs.insert_tree(
         path!("/dir"),
         json!({
-            ".flint": {
+            ".dez": {
                 "tasks.json": r#"[{
                     "label": "test worktree root",
                     "command": "echo $ZED_WORKTREE_ROOT"
@@ -1458,8 +1458,8 @@ async fn test_fallback_to_single_worktree_tasks(cx: &mut gpui::TestAppContext) {
         vec![(
             TaskSourceKind::Worktree {
                 id: worktree_id,
-                directory_in_worktree: rel_path(".flint").into(),
-                id_base: "local worktree tasks from directory \".flint\"".into(),
+                directory_in_worktree: rel_path(".dez").into(),
+                id_base: "local worktree tasks from directory \".dez\"".into(),
             },
             "echo /dir".to_string(),
         )]
@@ -1518,7 +1518,7 @@ async fn test_running_multiple_instances_of_a_single_server_in_one_worktree(
     fs.insert_tree(
         path!("/the-root"),
         json!({
-            ".flint": {
+            ".dez": {
                 "settings.json": r#"
                 {
                     "languages": {
@@ -2196,7 +2196,7 @@ async fn test_language_server_relative_path(cx: &mut gpui::TestAppContext) {
     fs.insert_tree(
         path!("/the-root"),
         json!({
-            ".flint": {
+            ".dez": {
                 "settings.json": settings_json_contents.to_string(),
             },
             ".relative_path": {
@@ -2273,7 +2273,7 @@ async fn test_language_server_tilde_path(cx: &mut gpui::TestAppContext) {
     fs.insert_tree(
         path!("/root"),
         json!({
-            ".flint": {
+            ".dez": {
                 "settings.json": settings_json_contents.to_string(),
             },
             "src": {
@@ -13133,14 +13133,14 @@ async fn test_initial_scan_complete(cx: &mut gpui::TestAppContext) {
         json!({
             "a": {
                 ".git": {},
-                ".flint": {
+                ".dez": {
                     "tasks.json": r#"[{"label": "task-a", "command": "echo a"}]"#
                 },
                 "src": { "main.rs": "" }
             },
             "b": {
                 ".git": {},
-                ".flint": {
+                ".dez": {
                     "tasks.json": r#"[{"label": "task-b", "command": "echo b"}]"#
                 },
                 "src": { "lib.rs": "" }
@@ -13395,9 +13395,9 @@ fn git_cmd(work_dir: &Path) -> Command {
         .env("GIT_CONFIG_GLOBAL", "")
         .env("GIT_CONFIG_SYSTEM", "")
         .env("GIT_AUTHOR_NAME", "test")
-        .env("GIT_AUTHOR_EMAIL", "test@flint.dev")
+        .env("GIT_AUTHOR_EMAIL", "test@dez.dev")
         .env("GIT_COMMITTER_NAME", "test")
-        .env("GIT_COMMITTER_EMAIL", "test@flint.dev");
+        .env("GIT_COMMITTER_EMAIL", "test@dez.dev");
     cmd
 }
 

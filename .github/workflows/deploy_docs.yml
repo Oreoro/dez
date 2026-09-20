@@ -37,7 +37,7 @@ on:
         default: ''
 jobs:
   deploy_docs:
-    if: github.repository_owner == 'flint-industries'
+    if: github.repository_owner == 'dez-industries'
     name: Build and Deploy Docs
     runs-on: namespace-profile-16x32-ubuntu-2204
     env:
@@ -118,7 +118,7 @@ jobs:
       run: |
         mkdir -p target/deploy
         mdbook build ./docs --dest-dir=../target/deploy/docs/
-        MDBOOK_BOOK__LANGUAGE=zh-CN MDBOOK_BOOK__MULTILINGUAL=true MDBOOK_BOOK__SRC=src.zh-CN MDBOOK_BOOK__TITLE='Flint 文档' MDBOOK_BOOK__SITE_URL=/docs/zh-CN/ mdbook build ./docs --dest-dir=../target/deploy/docs/zh-CN/
+        MDBOOK_BOOK__LANGUAGE=zh-CN MDBOOK_BOOK__MULTILINGUAL=true MDBOOK_BOOK__SRC=src.zh-CN MDBOOK_BOOK__TITLE='dez 文档' MDBOOK_BOOK__SITE_URL=/docs/zh-CN/ mdbook build ./docs --dest-dir=../target/deploy/docs/zh-CN/
       env:
         DOCS_CHANNEL: ${{ steps.resolve-channel.outputs.channel }}
         MDBOOK_BOOK__SITE_URL: ${{ steps.resolve-channel.outputs.site_url }}
@@ -139,7 +139,7 @@ jobs:
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        command: r2 object put -f script/install.sh flint-open-source-website-assets/install.sh
+        command: r2 object put -f script/install.sh dez-open-source-website-assets/install.sh
     - name: deploy_docs::docs_deploy_steps::deploy_docs_worker
       uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65
       with:

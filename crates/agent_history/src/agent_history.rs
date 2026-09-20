@@ -2,8 +2,8 @@
 //!
 //! This crate performs agent history discovery, metadata validation, and
 //! parsing on the host that owns the history, persists a normalized index, and
-//! serves compact thread snapshots. It is used directly by the local Flint
-//! application for local projects and by `flint-remote-server` for remote
+//! serves compact thread snapshots. It is used directly by the local dez
+//! application for local projects and by `dez-remote-server` for remote
 //! projects, so it deliberately depends only on filesystem, serialization,
 //! time, and collection primitives -- never on GPUI, projects, workspaces, or
 //! RPC clients.
@@ -133,8 +133,8 @@ impl FileIdentity {
 }
 
 /// The filesystem operations history scanning needs, abstracted so the same
-/// provider code serves a host-local scan (`flint-remote-server` or a local
-/// Flint) and, for the legacy client fallback, a remote proxy.
+/// provider code serves a host-local scan (`dez-remote-server` or a local
+/// dez) and, for the legacy client fallback, a remote proxy.
 #[async_trait]
 pub trait HistoryFs: Send + Sync {
     async fn read_dir(&self, path: &Path) -> Result<Vec<PathBuf>>;
@@ -415,7 +415,7 @@ pub struct IndexService(Arc<IndexServiceInner>);
 
 impl IndexService {
     /// `cache_root` is the directory holding all agent-thread indexes on this
-    /// host, e.g. `~/.flint/cache/agent_threads`. `fs` is the host-local
+    /// host, e.g. `~/.dez/cache/agent_threads`. `fs` is the host-local
     /// filesystem used only for cache persistence.
     pub fn new(fs: Arc<dyn fs::Fs>, cache_root: PathBuf) -> Self {
         Self(Arc::new(IndexServiceInner {

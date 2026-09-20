@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Keep the Finder document icon bundled with Flint aligned with the stable application icon.
+Keep the Finder document icon bundled with dez aligned with the stable application icon.
 
 ## Design
 
-`script/generate-app-icons` will regenerate `crates/flint/resources/Document.icns` from the
+`script/generate-app-icons` will regenerate `crates/dez/resources/Document.icns` from the
 stable 1024px PNG after producing the channel PNG and Windows ICO assets. It will create the
 standard macOS iconset sizes (16px through 1024px) and convert that iconset to `Document.icns`.
 

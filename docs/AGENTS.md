@@ -117,7 +117,7 @@ Use bold labels for callouts:
 Images are hosted externally. Reference format:
 
 ```markdown
-![Alt text description](https://flint.dev/img/path/to/image.webp)
+![Alt text description](https://dez.dev/img/path/to/image.webp)
 ```
 
 ### Cross-Linking
@@ -130,11 +130,11 @@ Images are hosted externally. Reference format:
 
 ### Core Principles
 
-- **Practical over promotional**: Focus on what users can do, not on selling Flint. Avoid marketing language like "powerful," "revolutionary," or "best-in-class."
-- **Honest about limitations**: When Flint lacks a feature or doesn't match another tool's depth, say so directly. Pair limitations with workarounds or alternative workflows.
+- **Practical over promotional**: Focus on what users can do, not on selling dez. Avoid marketing language like "powerful," "revolutionary," or "best-in-class."
+- **Honest about limitations**: When dez lacks a feature or doesn't match another tool's depth, say so directly. Pair limitations with workarounds or alternative workflows.
 - **Direct and concise**: Use short sentences. Get to the point. Developers are scanning, not reading novels.
 - **Second person**: Address the reader as "you." Avoid "the user" or "one."
-- **Present tense**: "Flint opens the file" not "Flint will open the file."
+- **Present tense**: "dez opens the file" not "dez will open the file."
 
 ### What to Avoid
 
@@ -160,13 +160,13 @@ Or add this to your settings.json:
 ### Bad: Wordy and promotional
 
 ```
-Flint provides a powerful and seamless formatting experience. Simply navigate to the settings and you'll find the format_on_save option which enables Flint's incredible auto-formatting capabilities.
+dez provides a powerful and seamless formatting experience. Simply navigate to the settings and you'll find the format_on_save option which enables dez's incredible auto-formatting capabilities.
 ```
 
 ### Good: Honest about limitations
 
 ```
-Flint doesn't index your project like IntelliJ does. You open a folder and start working immediately—no waiting. The trade-off: cross-project analysis relies on language servers, which may not go as deep.
+dez doesn't index your project like IntelliJ does. You open a folder and start working immediately—no waiting. The trade-off: cross-project analysis relies on language servers, which may not go as deep.
 
 **How to adapt:**
 - Use `Cmd+Shift+F` for project-wide text search
@@ -176,7 +176,7 @@ Flint doesn't index your project like IntelliJ does. You open a folder and start
 ### Bad: Defensive or dismissive
 
 ```
-While some users might miss indexing, Flint's approach is actually better because it's faster.
+While some users might miss indexing, dez's approach is actually better because it's faster.
 ```
 
 ## Scope
@@ -266,11 +266,11 @@ Inherit all conventions from `docs/.rules`. Key points:
 | panel           | tool window, sidebar (be specific: "Project Panel," "Terminal Panel") |
 | language server | LSP (spell out first use, then LSP is fine)                           |
 
-## Flint-Specific Conventions
+## dez-Specific Conventions
 
 ### Recognized Rules Files
 
-When documenting rules/instructions for AI, note that Flint recognizes these files (in priority order):
+When documenting rules/instructions for AI, note that dez recognizes these files (in priority order):
 
 - `.rules`
 - `.cursorrules`
@@ -284,15 +284,15 @@ When documenting rules/instructions for AI, note that Flint recognizes these fil
 
 ### Settings File Locations
 
-- macOS: `~/.config/flint/settings.json`
-- Linux: `~/.config/flint/settings.json`
-- Windows: `%AppData%\Flint\settings.json`
+- macOS: `~/.config/dez/settings.json`
+- Linux: `~/.config/dez/settings.json`
+- Windows: `%AppData%\dez\settings.json`
 
 ### Keymap File Locations
 
-- macOS: `~/.config/flint/keymap.json`
-- Linux: `~/.config/flint/keymap.json`
-- Windows: `%AppData%\Flint\keymap.json`
+- macOS: `~/.config/dez/keymap.json`
+- Linux: `~/.config/dez/keymap.json`
+- Windows: `%AppData%\dez\keymap.json`
 
 ## Safety Constraints
 

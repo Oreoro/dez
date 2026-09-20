@@ -654,7 +654,7 @@ impl TerminalView {
                 hovered_path_like_target.clone(),
                 |menu, path_like_target| {
                     let menu = menu.separator().entry(
-                        localization::text(cx, "terminal-open-in-flint"),
+                        localization::text(cx, "terminal-open-in-dez"),
                         None,
                         {
                             let workspace = workspace.clone();
@@ -1241,8 +1241,8 @@ impl TerminalView {
     }
 }
 
-fn terminal_rerun_override(task: &TaskId) -> flint_actions::Rerun {
-    flint_actions::Rerun {
+fn terminal_rerun_override(task: &TaskId) -> dez_actions::Rerun {
+    dez_actions::Rerun {
         task_id: Some(task.0.clone()),
         allow_concurrent_runs: Some(true),
         use_new_terminal: Some(false),
@@ -1364,6 +1364,8 @@ fn subscribe_for_terminal_events(
                     ),
                 },
                 Event::BreadcrumbsChanged => cx.emit(ItemEvent::UpdateBreadcrumbs),
+                Event::ProcessInfoChanged => {}
+                Event::ProcessExited { .. } => {}
                 Event::CloseTerminal => cx.emit(ItemEvent::CloseItem),
                 Event::SelectionsChanged => {
                     window.invalidate_character_coordinates();

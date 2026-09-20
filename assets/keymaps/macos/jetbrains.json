@@ -11,8 +11,8 @@
   {
     "context": "Editor",
     "bindings": {
-      "ctrl->": ["flint::IncreaseBufferFontSize", { "persist": true }],
-      "ctrl-<": ["flint::DecreaseBufferFontSize", { "persist": true }],
+      "ctrl->": ["dez::IncreaseBufferFontSize", { "persist": true }],
+      "ctrl-<": ["dez::DecreaseBufferFontSize", { "persist": true }],
       "ctrl-shift-j": "editor::JoinLines",
       "cmd-d": "editor::DuplicateSelection",
       "cmd-backspace": "editor::DeleteLine",

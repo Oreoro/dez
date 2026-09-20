@@ -11,7 +11,7 @@ can pick one and build it, without re-deriving this analysis.
 These ideas come from [herdrdev/herdr](https://github.com/herdrdev/herdr), a
 terminal-based runtime for coding agents. Herdr uses a Session → Workspace →
 Tab → Pane → Agent hierarchy. Two of its mechanisms looked possibly
-transferable to Flint's `AgentThreadsPanel`:
+transferable to dez's `AgentThreadsPanel`:
 
 1. Tabs group panes by concern inside one workspace (for example "agents",
    "logs", "review").
@@ -25,7 +25,7 @@ A third herdr mechanism, an agent-to-agent automation API (`agent wait
 separate design commitment (naming scheme, a socket protocol) and is
 deliberately out of scope for this document.
 
-## Flint's current model
+## dez's current model
 
 Facts below are read directly from the code, not assumed from memory.
 
@@ -51,7 +51,7 @@ Facts below are read directly from the code, not assumed from memory.
   `FreshLive`. A live row always renders one static green "running" dot
   (`panel.rs:1559`), regardless of whether the underlying process is
   actively working or sitting idle at a prompt.
-- The only attention signal Flint has today is a one-shot PTY bell. An
+- The only attention signal dez has today is a one-shot PTY bell. An
   agent's Stop hook writes `\a`; Alacritty turns this into
   `TerminalBackendEvent::Bell` → `Event::Bell`
   (`crates/terminal/src/terminal.rs:1430`), which `terminal_view`
@@ -97,7 +97,7 @@ Goal: one place shows "what needs me" across every open project, mirroring
 herdr's sidebar.
 
 This idea is blocked by a real gap, not just missing UI: "needs me" is not a
-stored state in Flint today, it is a one-shot event (the bell). Rolling
+stored state in dez today, it is a one-shot event (the bell). Rolling
 anything up requires turning that event into state first.
 
 Sketch:

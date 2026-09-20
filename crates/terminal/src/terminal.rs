@@ -2,6 +2,7 @@ mod mappings;
 
 mod alacritty;
 mod pty_info;
+pub mod session_host;
 pub mod terminal_settings;
 
 #[cfg(not(windows))]
@@ -675,14 +676,14 @@ const DEBUG_TERMINAL_HEIGHT: Pixels = px(30.);
 const DEBUG_CELL_WIDTH: Pixels = px(5.);
 const DEBUG_LINE_HEIGHT: Pixels = px(5.);
 
-/// Inserts Flint-specific environment variables for terminal sessions.
+/// Inserts dez-specific environment variables for terminal sessions.
 /// Used by both local terminals and remote terminals (via SSH).
-pub fn insert_flint_terminal_env(
+pub fn insert_dez_terminal_env(
     env: &mut HashMap<String, String>,
     version: &impl std::fmt::Display,
 ) {
     env.insert("ZED_TERM".to_string(), "true".to_string());
-    env.insert("TERM_PROGRAM".to_string(), "flint".to_string());
+    env.insert("TERM_PROGRAM".to_string(), "dez".to_string());
     env.insert("TERM".to_string(), "xterm-256color".to_string());
     env.insert("COLORTERM".to_string(), "truecolor".to_string());
     env.insert("TERM_PROGRAM_VERSION".to_string(), version.to_string());
@@ -693,6 +694,11 @@ pub fn insert_flint_terminal_env(
 pub enum Event {
     TitleChanged,
     BreadcrumbsChanged,
+    /// The foreground command or working directory changed.
+    ProcessInfoChanged,
+    ProcessExited {
+        exit_code: Option<i32>,
+    },
     CloseTerminal,
     Bell,
     Wakeup,
@@ -700,6 +706,18 @@ pub enum Event {
     SelectionsChanged,
     NewNavigationTarget(Option<MaybeNavigationTarget>),
     Open(MaybeNavigationTarget),
+}
+
+/// Command boundary used by a client-side terminal emulator whose PTY is owned
+/// by a terminal host process.
+///
+/// Input, resize, and detach enqueue work from the GPUI foreground thread.
+/// Destructive termination completes only after the host acknowledges it.
+pub trait HostedTerminalController: Send + Sync {
+    fn input(&self, bytes: Vec<u8>) -> Result<()>;
+    fn resize(&self, columns: u16, rows: u16) -> Result<()>;
+    fn detach(&self) -> Result<()>;
+    fn terminate(&self) -> futures::future::BoxFuture<'static, Result<()>>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -967,6 +985,7 @@ impl TerminalBuilder {
 
         let terminal = Terminal {
             task: None,
+            session_id: session_host::TerminalSessionId::new(),
             terminal_type: TerminalType::DisplayOnly,
             completion_tx: None,
             term,
@@ -1063,7 +1082,7 @@ impl TerminalBuilder {
                     .or_insert_with(|| "en_US.UTF-8".to_string());
             }
 
-            insert_flint_terminal_env(&mut env, &version);
+            insert_dez_terminal_env(&mut env, &version);
 
             #[derive(Default)]
             struct ShellParams {
@@ -1190,6 +1209,7 @@ impl TerminalBuilder {
             let no_task = task.is_none();
             let terminal = Terminal {
                 task,
+                session_id: session_host::TerminalSessionId::new(),
                 terminal_type: TerminalType::Pty {
                     pty_tx,
                     info: Arc::new(pty_info),
@@ -1373,6 +1393,7 @@ enum TerminalType {
 }
 
 pub struct Terminal {
+    session_id: session_host::TerminalSessionId,
     terminal_type: TerminalType,
     completion_tx: Option<Sender<Option<ExitStatus>>>,
     term: Arc<AlacrittyTermLock>,
@@ -1483,10 +1504,12 @@ impl Terminal {
 
                 self.breadcrumb_text = title;
                 cx.emit(Event::BreadcrumbsChanged);
+                cx.emit(Event::ProcessInfoChanged);
             }
             TerminalBackendEvent::ResetTitle => {
                 self.breadcrumb_text = String::new();
                 cx.emit(Event::BreadcrumbsChanged);
+                cx.emit(Event::ProcessInfoChanged);
             }
             TerminalBackendEvent::ClipboardStore(data) => {
                 cx.write_to_clipboard(ClipboardItem::new_string(data))
@@ -1751,7 +1774,7 @@ impl Terminal {
     /// Resolves the navigation target (if any) for a hyperlink or file-like path
     /// under the given window position, without mutating hover/selection state.
     /// Used to populate the right-click context menu with an explicit choice
-    /// between opening in Flint and opening with the system's default app.
+    /// between opening in dez and opening with the system's default app.
     pub fn navigation_target_at_position(
         &mut self,
         position: GpuiPoint<Pixels>,
@@ -2674,7 +2697,7 @@ impl Terminal {
     /// that's running inside the terminal.
     ///
     /// This does *not* return the working directory of the shell that runs on the
-    /// remote host, in case Flint is connected to a remote host.
+    /// remote host, in case dez is connected to a remote host.
     fn client_side_working_directory(&self) -> Option<PathBuf> {
         match &self.terminal_type {
             TerminalType::Pty { info, .. } => info
@@ -2759,6 +2782,23 @@ impl Terminal {
         }
     }
 
+    pub fn session_id(&self) -> session_host::TerminalSessionId {
+        self.session_id
+    }
+
+    pub fn exit_code(&self) -> Option<i32> {
+        self.observed_exit_code()
+    }
+
+    pub fn set_hosted_foreground_command(
+        &mut self,
+        foreground_command: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        self.hosted_foreground_command = foreground_command;
+        cx.emit(Event::ProcessInfoChanged);
+    }
+
     pub fn pid_getter(&self) -> Option<&ProcessIdGetter> {
         match &self.terminal_type {
             TerminalType::Pty { info, .. } => Some(info.pid_getter()),
@@ -2793,6 +2833,9 @@ impl Terminal {
         if let Some(e) = exit_status {
             self.child_exited = Some(e);
         }
+        cx.emit(Event::ProcessExited {
+            exit_code: self.child_exited.and_then(|e| e.code()),
+        });
         let task = match &mut self.task {
             Some(task) => task,
             None => {
@@ -2837,7 +2880,7 @@ impl Terminal {
         if !lines_to_show.is_empty() {
             // SAFETY: the invocation happens on non `TaskStatus::Running` tasks, once,
             // after either `AlacTermEvent::Exit` or `AlacTermEvent::ChildExit` events that are spawned
-            // when Flint task finishes and no more output is made.
+            // when dez task finishes and no more output is made.
             // After the task summary is output once, no more text is appended to the terminal.
             unsafe { append_text_to_term(&mut self.term.lock(), &lines_to_show) };
         }
@@ -4277,7 +4320,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_hyperlink_ctrl_click_same_position(cx: &mut TestAppContext) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
 
         terminal.update(cx, |terminal, cx| {
             let click_position = point(px(80.0), px(10.0));
@@ -4296,7 +4339,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_hyperlink_ctrl_click_same_position_in_mouse_mode(cx: &mut TestAppContext) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
 
         terminal.update(cx, |terminal, cx| {
             terminal.last_content.mode = Modes::MOUSE_MODE;
@@ -4330,7 +4373,7 @@ mod tests {
             ("opencode", b"\x1b[?1003h\x1b[?1006h".as_slice(), true),
         ] {
             let mut output = prefix.to_vec();
-            output.extend_from_slice(b"Visit https://flint.dev/ for more\r\n");
+            output.extend_from_slice(b"Visit https://dez.dev/ for more\r\n");
             let terminal = init_ctrl_click_hyperlink_test(cx, &output);
 
             terminal.update(cx, |terminal, cx| {
@@ -4361,7 +4404,7 @@ mod tests {
     ) {
         let terminal = init_ctrl_click_hyperlink_test(
             cx,
-            b"Visit https://flint.dev/ for more\r\nThis is another line\r\n",
+            b"Visit https://dez.dev/ for more\r\nThis is another line\r\n",
         );
 
         terminal.update(cx, |terminal, cx| {
@@ -4396,7 +4439,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_plain_click_on_hyperlink_in_mouse_mode_is_reported(cx: &mut TestAppContext) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
 
         terminal.update(cx, |terminal, cx| {
             terminal.last_content.mode = Modes::MOUSE_MODE;
@@ -4422,7 +4465,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_ctrl_click_on_non_hyperlink_in_mouse_mode_is_reported(cx: &mut TestAppContext) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
 
         terminal.update(cx, |terminal, cx| {
             terminal.last_content.mode = Modes::MOUSE_MODE;
@@ -4448,7 +4491,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_ctrl_click_in_mouse_mode_forwards_when_setting_disabled(cx: &mut TestAppContext) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
         cx.update_global(|store: &mut settings::SettingsStore, cx| {
             store.update_user_settings(cx, |settings| {
                 settings
@@ -4484,7 +4527,7 @@ mod tests {
     async fn test_shift_ctrl_click_in_mouse_mode_opens_when_setting_disabled(
         cx: &mut TestAppContext,
     ) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
         cx.update_global(|store: &mut settings::SettingsStore, cx| {
             store.update_user_settings(cx, |settings| {
                 settings
@@ -4519,7 +4562,7 @@ mod tests {
     async fn test_hyperlink_ctrl_click_drag_outside_bounds(cx: &mut TestAppContext) {
         let terminal = init_ctrl_click_hyperlink_test(
             cx,
-            b"Visit https://flint.dev/ for more\r\nThis is another line\r\n",
+            b"Visit https://dez.dev/ for more\r\nThis is another line\r\n",
         );
 
         terminal.update(cx, |terminal, cx| {
@@ -4542,7 +4585,7 @@ mod tests {
 
     #[gpui::test]
     async fn test_hyperlink_ctrl_click_drag_within_bounds(cx: &mut TestAppContext) {
-        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://flint.dev/ for more\r\n");
+        let terminal = init_ctrl_click_hyperlink_test(cx, b"Visit https://dez.dev/ for more\r\n");
 
         terminal.update(cx, |terminal, cx| {
             let down_position = point(px(70.0), px(10.0));

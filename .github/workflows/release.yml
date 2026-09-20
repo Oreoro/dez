@@ -266,13 +266,13 @@ jobs:
       - run: ./script/bundle-mac aarch64-apple-darwin
       - uses: actions/upload-artifact@v4
         with:
-          name: Flint-aarch64.dmg
-          path: target/aarch64-apple-darwin/release/Flint-aarch64.dmg
+          name: dez-aarch64.dmg
+          path: target/aarch64-apple-darwin/release/dez-aarch64.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-remote-server-macos-aarch64.gz
-          path: target/flint-remote-server-macos-aarch64.gz
+          name: dez-remote-server-macos-aarch64.gz
+          path: target/dez-remote-server-macos-aarch64.gz
           if-no-files-found: error
     timeout-minutes: 150
 
@@ -311,13 +311,13 @@ jobs:
       - run: ./script/bundle-mac x86_64-apple-darwin
       - uses: actions/upload-artifact@v4
         with:
-          name: Flint-x86_64.dmg
-          path: target/x86_64-apple-darwin/release/Flint-x86_64.dmg
+          name: dez-x86_64.dmg
+          path: target/x86_64-apple-darwin/release/dez-x86_64.dmg
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-remote-server-macos-x86_64.gz
-          path: target/flint-remote-server-macos-x86_64.gz
+          name: dez-remote-server-macos-x86_64.gz
+          path: target/dez-remote-server-macos-x86_64.gz
           if-no-files-found: error
     timeout-minutes: 150
 
@@ -353,25 +353,25 @@ jobs:
       # - run: ./script/package-linux
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-linux-aarch64.tar.gz
-          path: target/release/flint-linux-aarch64.tar.gz
+          name: dez-linux-aarch64.tar.gz
+          path: target/release/dez-linux-aarch64.tar.gz
           if-no-files-found: error
       # DEB/RPM release artifacts are intentionally unpublished until they can
-      # participate in Flint's auto-update path.
+      # participate in dez's auto-update path.
       # - uses: actions/upload-artifact@v4
       #   with:
-      #     name: flint-linux-aarch64.deb
-      #     path: target/release/flint-linux-aarch64.deb
+      #     name: dez-linux-aarch64.deb
+      #     path: target/release/dez-linux-aarch64.deb
       #     if-no-files-found: error
       # - uses: actions/upload-artifact@v4
       #   with:
-      #     name: flint-linux-aarch64.rpm
-      #     path: target/release/flint-linux-aarch64.rpm
+      #     name: dez-linux-aarch64.rpm
+      #     path: target/release/dez-linux-aarch64.rpm
       #     if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-remote-server-linux-aarch64.gz
-          path: target/flint-remote-server-linux-aarch64.gz
+          name: dez-remote-server-linux-aarch64.gz
+          path: target/dez-remote-server-linux-aarch64.gz
           if-no-files-found: error
     timeout-minutes: 90
 
@@ -409,25 +409,25 @@ jobs:
       # - run: ./script/package-linux
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-linux-x86_64.tar.gz
-          path: target/release/flint-linux-x86_64.tar.gz
+          name: dez-linux-x86_64.tar.gz
+          path: target/release/dez-linux-x86_64.tar.gz
           if-no-files-found: error
       # DEB/RPM release artifacts are intentionally unpublished until they can
-      # participate in Flint's auto-update path.
+      # participate in dez's auto-update path.
       # - uses: actions/upload-artifact@v4
       #   with:
-      #     name: flint-linux-x86_64.deb
-      #     path: target/release/flint-linux-x86_64.deb
+      #     name: dez-linux-x86_64.deb
+      #     path: target/release/dez-linux-x86_64.deb
       #     if-no-files-found: error
       # - uses: actions/upload-artifact@v4
       #   with:
-      #     name: flint-linux-x86_64.rpm
-      #     path: target/release/flint-linux-x86_64.rpm
+      #     name: dez-linux-x86_64.rpm
+      #     path: target/release/dez-linux-x86_64.rpm
       #     if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-remote-server-linux-x86_64.gz
-          path: target/flint-remote-server-linux-x86_64.gz
+          name: dez-remote-server-linux-x86_64.gz
+          path: target/dez-remote-server-linux-x86_64.gz
           if-no-files-found: error
     timeout-minutes: 90
 
@@ -462,13 +462,13 @@ jobs:
         run: script/bundle-windows.ps1 -Architecture x86_64
       - uses: actions/upload-artifact@v4
         with:
-          name: Flint-x86_64.exe
-          path: target/Flint-x86_64.exe
+          name: dez-x86_64.exe
+          path: target/dez-x86_64.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-remote-server-windows-x86_64.zip
-          path: target/flint-remote-server-windows-x86_64.zip
+          name: dez-remote-server-windows-x86_64.zip
+          path: target/dez-remote-server-windows-x86_64.zip
           if-no-files-found: error
     timeout-minutes: 150
 
@@ -503,13 +503,13 @@ jobs:
         run: script/bundle-windows.ps1 -Architecture aarch64
       - uses: actions/upload-artifact@v4
         with:
-          name: Flint-aarch64.exe
-          path: target/Flint-aarch64.exe
+          name: dez-aarch64.exe
+          path: target/dez-aarch64.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: flint-remote-server-windows-aarch64.zip
-          path: target/flint-remote-server-windows-aarch64.zip
+          name: dez-remote-server-windows-aarch64.zip
+          path: target/dez-remote-server-windows-aarch64.zip
           if-no-files-found: error
     timeout-minutes: 150
 
@@ -535,24 +535,24 @@ jobs:
       - name: Prepare release artifacts
         run: |
           mkdir -p release-artifacts/
-          mv ./artifacts/Flint-aarch64.dmg/Flint-aarch64.dmg release-artifacts/Flint-aarch64.dmg
-          mv ./artifacts/Flint-x86_64.dmg/Flint-x86_64.dmg release-artifacts/Flint-x86_64.dmg
-          mv ./artifacts/flint-linux-aarch64.tar.gz/flint-linux-aarch64.tar.gz release-artifacts/flint-linux-aarch64.tar.gz
+          mv ./artifacts/dez-aarch64.dmg/dez-aarch64.dmg release-artifacts/dez-aarch64.dmg
+          mv ./artifacts/dez-x86_64.dmg/dez-x86_64.dmg release-artifacts/dez-x86_64.dmg
+          mv ./artifacts/dez-linux-aarch64.tar.gz/dez-linux-aarch64.tar.gz release-artifacts/dez-linux-aarch64.tar.gz
           # DEB/RPM artifacts are intentionally not uploaded because they do not
-          # support Flint's auto-update path.
-          # mv ./artifacts/flint-linux-aarch64.deb/flint-linux-aarch64.deb release-artifacts/flint-linux-aarch64.deb
-          # mv ./artifacts/flint-linux-aarch64.rpm/flint-linux-aarch64.rpm release-artifacts/flint-linux-aarch64.rpm
-          mv ./artifacts/flint-linux-x86_64.tar.gz/flint-linux-x86_64.tar.gz release-artifacts/flint-linux-x86_64.tar.gz
-          # mv ./artifacts/flint-linux-x86_64.deb/flint-linux-x86_64.deb release-artifacts/flint-linux-x86_64.deb
-          # mv ./artifacts/flint-linux-x86_64.rpm/flint-linux-x86_64.rpm release-artifacts/flint-linux-x86_64.rpm
-          mv ./artifacts/Flint-x86_64.exe/Flint-x86_64.exe release-artifacts/Flint-x86_64.exe
-          mv ./artifacts/Flint-aarch64.exe/Flint-aarch64.exe release-artifacts/Flint-aarch64.exe
-          mv ./artifacts/flint-remote-server-macos-aarch64.gz/flint-remote-server-macos-aarch64.gz release-artifacts/flint-remote-server-macos-aarch64.gz
-          mv ./artifacts/flint-remote-server-macos-x86_64.gz/flint-remote-server-macos-x86_64.gz release-artifacts/flint-remote-server-macos-x86_64.gz
-          mv ./artifacts/flint-remote-server-linux-aarch64.gz/flint-remote-server-linux-aarch64.gz release-artifacts/flint-remote-server-linux-aarch64.gz
-          mv ./artifacts/flint-remote-server-linux-x86_64.gz/flint-remote-server-linux-x86_64.gz release-artifacts/flint-remote-server-linux-x86_64.gz
-          mv ./artifacts/flint-remote-server-windows-aarch64.zip/flint-remote-server-windows-aarch64.zip release-artifacts/flint-remote-server-windows-aarch64.zip
-          mv ./artifacts/flint-remote-server-windows-x86_64.zip/flint-remote-server-windows-x86_64.zip release-artifacts/flint-remote-server-windows-x86_64.zip
+          # support dez's auto-update path.
+          # mv ./artifacts/dez-linux-aarch64.deb/dez-linux-aarch64.deb release-artifacts/dez-linux-aarch64.deb
+          # mv ./artifacts/dez-linux-aarch64.rpm/dez-linux-aarch64.rpm release-artifacts/dez-linux-aarch64.rpm
+          mv ./artifacts/dez-linux-x86_64.tar.gz/dez-linux-x86_64.tar.gz release-artifacts/dez-linux-x86_64.tar.gz
+          # mv ./artifacts/dez-linux-x86_64.deb/dez-linux-x86_64.deb release-artifacts/dez-linux-x86_64.deb
+          # mv ./artifacts/dez-linux-x86_64.rpm/dez-linux-x86_64.rpm release-artifacts/dez-linux-x86_64.rpm
+          mv ./artifacts/dez-x86_64.exe/dez-x86_64.exe release-artifacts/dez-x86_64.exe
+          mv ./artifacts/dez-aarch64.exe/dez-aarch64.exe release-artifacts/dez-aarch64.exe
+          mv ./artifacts/dez-remote-server-macos-aarch64.gz/dez-remote-server-macos-aarch64.gz release-artifacts/dez-remote-server-macos-aarch64.gz
+          mv ./artifacts/dez-remote-server-macos-x86_64.gz/dez-remote-server-macos-x86_64.gz release-artifacts/dez-remote-server-macos-x86_64.gz
+          mv ./artifacts/dez-remote-server-linux-aarch64.gz/dez-remote-server-linux-aarch64.gz release-artifacts/dez-remote-server-linux-aarch64.gz
+          mv ./artifacts/dez-remote-server-linux-x86_64.gz/dez-remote-server-linux-x86_64.gz release-artifacts/dez-remote-server-linux-x86_64.gz
+          mv ./artifacts/dez-remote-server-windows-aarch64.zip/dez-remote-server-windows-aarch64.zip release-artifacts/dez-remote-server-windows-aarch64.zip
+          mv ./artifacts/dez-remote-server-windows-x86_64.zip/dez-remote-server-windows-x86_64.zip release-artifacts/dez-remote-server-windows-x86_64.zip
       - name: Upload to GitHub Release
         run: gh release upload "$RELEASE_TAG" release-artifacts/*
         env:
@@ -569,8 +569,8 @@ jobs:
       - name: Validate all expected assets are present
         run: |
           # DEB/RPM assets are intentionally not expected because they do not
-          # support Flint's auto-update path.
-          EXPECTED_ASSETS='["Flint-aarch64.dmg", "Flint-x86_64.dmg", "flint-linux-aarch64.tar.gz", "flint-linux-x86_64.tar.gz", "Flint-x86_64.exe", "Flint-aarch64.exe", "flint-remote-server-macos-aarch64.gz", "flint-remote-server-macos-x86_64.gz", "flint-remote-server-linux-aarch64.gz", "flint-remote-server-linux-x86_64.gz", "flint-remote-server-windows-aarch64.zip", "flint-remote-server-windows-x86_64.zip"]'
+          # support dez's auto-update path.
+          EXPECTED_ASSETS='["dez-aarch64.dmg", "dez-x86_64.dmg", "dez-linux-aarch64.tar.gz", "dez-linux-x86_64.tar.gz", "dez-x86_64.exe", "dez-aarch64.exe", "dez-remote-server-macos-aarch64.gz", "dez-remote-server-macos-x86_64.gz", "dez-remote-server-linux-aarch64.gz", "dez-remote-server-linux-x86_64.gz", "dez-remote-server-windows-aarch64.zip", "dez-remote-server-windows-x86_64.zip"]'
           TAG="$RELEASE_TAG"
           ACTUAL_ASSETS=$(gh release view "$TAG" --json assets -q '[.assets[].name]')
           MISSING_ASSETS=$(echo "$EXPECTED_ASSETS" | jq -r --argjson actual "$ACTUAL_ASSETS" '. - $actual | .[]')

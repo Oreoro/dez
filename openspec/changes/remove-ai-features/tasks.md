@@ -29,7 +29,7 @@
 ## 4. Phase 4 — Fix `settings_content` and `default.json`
 
 - [x] 4.1 Delete `crates/settings_content/src/agent.rs` and `crates/settings_content/src/language_model.rs`
-- [x] 4.2 Remove `EditPredictionProvider` variants (Copilot, Flint, Codestral, Ollama, etc.) from `language.rs`, keeping only `None`
+- [x] 4.2 Remove `EditPredictionProvider` variants (Copilot, dez, Codestral, Ollama, etc.) from `language.rs`, keeping only `None`
 - [x] 4.3 Remove `EditPredictionSettingsContent` sub-structs (copilot, codestral, ollama, open_ai_compatible_api) from `language.rs`
 - [x] 4.4 Remove `context_servers`, `context_server_timeout`, `agent_servers`, `disable_ai` fields from `project.rs`
 - [x] 4.5 Remove `agent_ui_font_size`, `agent_buffer_font_size`, `show_edit_predictions`, `edit_predictions_disabled_in`, `edit_predictions`, `agent`, `language_models` fields from the top-level settings struct in `settings_content.rs`
@@ -51,14 +51,14 @@
 - [x] 6.1 Delete `crates/client/src/llm_token.rs`
 - [x] 6.2 Remove `cached_llm_token()`, `refresh_llm_token()` methods and cloud LLM client imports from `client.rs`
 - [x] 6.3 Remove `edit_prediction_usage` field and `EditPredictionUsage`/`RequestUsage` structs from `user.rs`
-- [x] 6.4 Remove `edit_prediction_docs()`, `acp_registry_blog()`, `shared_agent_thread_url()` from `flint_urls.rs`
+- [x] 6.4 Remove `edit_prediction_docs()`, `acp_registry_blog()`, `shared_agent_thread_url()` from `dez_urls.rs`
 - [x] 6.5 Strip AI-specific types from `cloud_api_types` (LLM token types, streaming types), keeping `Plan` and billing types
 - [x] 6.6 Remove `cloud_llm_client`, `cloud_api_client` from `crates/client/Cargo.toml`
 - [x] 6.7 Verify `cargo build -p client` compiles cleanly
 
 ## 7. Phase 7 — Fix remaining crates
 
-- [x] 7.1 `flint_actions`: Remove `pub mod agent` and `agents_sidebar` module blocks; remove `InlineAssist` action
+- [x] 7.1 `dez_actions`: Remove `pub mod agent` and `agents_sidebar` module blocks; remove `InlineAssist` action
 - [x] 7.2 `workspace`: Remove `ToggleEditPrediction`, agent panel position, `handle_agent_location_changed`, `active_item_for_agent`; remove `is_agent_panel()` from `Panel` trait in `dock.rs`
 - [x] 7.3 `onboarding`: Remove agent installation UI from `basics_page.rs`; remove agent state from `onboarding.rs`
 - [x] 7.4 `extensions_ui`: Remove `ExtensionProvides::ContextServers`/`AgentServers` labels and configure buttons; remove featured external agent links

@@ -103,11 +103,11 @@ host, request/response (not streaming).
 
 Crates: `crates/proto`, `crates/remote_server`, and the client caller.
 
-1. `flint.proto`: add `ExtractAgentTranscript` (project_id, kind,
+1. `dez.proto`: add `ExtractAgentTranscript` (project_id, kind,
    normalized_history_root, session_id/locator fields, budget) and
    `AgentTranscriptExcerpt` (rendered Markdown, diagnostics, `possibly_incomplete`).
    Follow the `StreamAgentThreadHistory`/`AgentThreadHistorySnapshot` field
-   style at `flint.proto:490`.
+   style at `dez.proto:490`.
 2. `proto.rs`: register both in the entity-message list (near `:283`) and add
    the request/response pair to the non-streaming list (the same list holding
    `ReadRemoteFile`), not the stream pairing at `:472`.
@@ -131,8 +131,8 @@ disclosure model, behind an explicit preview + confirm.
 
 Crate: `crates/agent_threads` (plus a small host op for remote writes).
 
-1. Document writer: `.flint/handoffs/<random-or-hash>.md`, atomic write, private
-   permissions, alongside a generated `.flint/handoffs/.gitignore` containing
+1. Document writer: `.dez/handoffs/<random-or-hash>.md`, atomic write, private
+   permissions, alongside a generated `.dez/handoffs/.gitignore` containing
    `*`. Written on the target's host (host op for remote; local `fs` for local).
    TTL/explicit cleanup.
 2. Default contents: source metadata, `git diff --stat`-style changed-file names
@@ -179,7 +179,7 @@ unavailable.
 
 ## Cross-cutting
 
-- Every phase runs `cargo fmt --all -- --check`, Flint's `script/clippy` for
+- Every phase runs `cargo fmt --all -- --check`, dez's `script/clippy` for
   affected crates, and the touched crates' test suites; Phase 2+ also runs the
   remote-server library tests and the Linux musl remote-server build.
 - Each PR title is imperative, crate-scoped where clear (e.g.
@@ -187,7 +187,7 @@ unavailable.
   section (`- N/A` through Phase 2; `- Added ...` from Phase 3 when a user
   surface appears).
 - Live validation from the design's *Live Validation* section runs after
-  Phase 4 against a fresh `/tmp/Flint-Local.app`.
+  Phase 4 against a fresh `/tmp/dez-Local.app`.
 
 ## Open items to resolve during implementation
 

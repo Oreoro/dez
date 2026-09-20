@@ -15,7 +15,7 @@ use workspace::{AppState, Workspace, WorkspaceStore};
 
 use component_preview::{ComponentPreview, init};
 
-actions!(flint, [Quit]);
+actions!(dez, [Quit]);
 
 fn quit(_: &Quit, cx: &mut App) {
     cx.quit();

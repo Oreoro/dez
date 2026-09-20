@@ -1,47 +1,47 @@
 ---
-title: Flint on Windows
-description: "Install the latest stable Flint build on Windows."
+title: dez on Windows
+description: "Install the latest stable dez build on Windows."
 ---
 
-# Flint on Windows
+# dez on Windows
 
-## Installing Flint
+## Installing dez
 
 Get the latest stable build via the
-[download page](https://flint.dev/download). After the first manual
-installation, Flint periodically checks for updates.
+[download page](https://dez.dev/download). After the first manual
+installation, dez periodically checks for updates.
 
-You can also build flint from source, see [these docs](https://flint.dev/docs/development/windows) for instructions.
+You can also build dez from source, see [these docs](https://dez.dev/docs/development/windows) for instructions.
 
 ### Package managers
 
-Additionally, you can install Flint using winget:
+Additionally, you can install dez using winget:
 
 ```sh
-winget install -e --id FlintIndustries.Flint
+winget install -e --id dezIndustries.dez
 ```
 
 ## Uninstall
 
-- Installed via installer: Use `Settings` → `Apps` → `Installed apps`, search for Flint, and click Uninstall.
+- Installed via installer: Use `Settings` → `Apps` → `Installed apps`, search for dez, and click Uninstall.
 - Built from source: Remove the build output directory you created (e.g., your target/install folder).
 
 Your settings and extensions live in your user profile. When uninstalling, you can choose to keep or remove them.
 
 ## Remote Development (SSH)
 
-Flint supports remote development on Windows through both SSH and WSL. You can connect to remote servers via SSH or work with files inside WSL distributions directly from Flint.
+dez supports remote development on Windows through both SSH and WSL. You can connect to remote servers via SSH or work with files inside WSL distributions directly from dez.
 
 For detailed instructions on setting up and using remote development features, including SSH configuration, WSL setup, and troubleshooting, see the [Remote Development documentation](./remote-development.md).
 
 ## Troubleshooting
 
-### Flint fails to start or shows a blank window
+### dez fails to start or shows a blank window
 
-- Check that your hardware and operating system version are compatible with Flint. See our [installation guide](./installation.md) for more information.
+- Check that your hardware and operating system version are compatible with dez. See our [installation guide](./installation.md) for more information.
 - Update your GPU drivers from your GPU vendor (Intel/AMD/NVIDIA/Qualcomm).
 - Ensure hardware acceleration is enabled in Windows and not blocked by third‑party software.
-- Try launching Flint with no extensions or custom settings to isolate conflicts.
+- Try launching dez with no extensions or custom settings to isolate conflicts.
 
 ### Terminal issues
 
@@ -53,9 +53,9 @@ When prompted for credentials, use the graphical askpass dialog. If it doesn’t
 
 ### Graphics issues
 
-#### Flint fails to open / degraded performance
+#### dez fails to open / degraded performance
 
-Flint requires a DirectX 11 compatible GPU to run. If Flint fails to open, your GPU may not meet the minimum requirements.
+dez requires a DirectX 11 compatible GPU to run. If dez fails to open, your GPU may not meet the minimum requirements.
 
 To check if your GPU supports DirectX 11, run the following command:
 
@@ -65,4 +65,4 @@ dxdiag
 
 This will open the DirectX Diagnostic Tool, which shows the DirectX version your GPU supports under `System` → `System Information` → `DirectX Version`.
 
-If you're running Flint inside a virtual machine, it will use the emulated adapter provided by your VM. While Flint will work in this environment, performance may be degraded.
+If you're running dez inside a virtual machine, it will use the emulated adapter provided by your VM. While dez will work in this environment, performance may be degraded.

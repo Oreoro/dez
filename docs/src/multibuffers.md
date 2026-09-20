@@ -1,11 +1,11 @@
 ---
-title: Multibuffers - Edit Multiple Files at Once in Flint
-description: Edit multiple files simultaneously in Flint using multibuffers. Combine with multi-cursor for fast cross-file refactoring.
+title: Multibuffers - Edit Multiple Files at Once in dez
+description: Edit multiple files simultaneously in dez using multibuffers. Combine with multi-cursor for fast cross-file refactoring.
 ---
 
 # Multibuffers
 
-One of the superpowers Flint gives you is the ability to edit multiple files simultaneously. When combined with multiple cursors, this makes wide-ranging refactors significantly faster.
+One of the superpowers dez gives you is the ability to edit multiple files simultaneously. When combined with multiple cursors, this makes wide-ranging refactors significantly faster.
 
 ## Editing in a multibuffer
 

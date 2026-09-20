@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make Through-Flint agent egress use the remote project's existing OpenSSH connection on macOS and Linux so load-balanced SSH aliases cannot place the reverse proxy on the wrong login node.
+**Goal:** Make Through-dez agent egress use the remote project's existing OpenSSH connection on macOS and Linux so load-balanced SSH aliases cannot place the reverse proxy on the wrong login node.
 
-**Architecture:** `RemotePortForward` will own a one-shot asynchronous closer rather than assuming every forward is represented by a long-lived child process. POSIX SSH creates the forward with `ssh -O forward` through Flint's shared `ControlPath`, retains an exact `ssh -O cancel` operation in the handle, and schedules that cancellation on drop; Windows keeps the existing dedicated child process.
+**Architecture:** `RemotePortForward` will own a one-shot asynchronous closer rather than assuming every forward is represented by a long-lived child process. POSIX SSH creates the forward with `ssh -O forward` through dez's shared `ControlPath`, retains an exact `ssh -O cancel` operation in the handle, and schedules that cancellation on drop; Windows keeps the existing dedicated child process.
 
 **Tech Stack:** Rust, OpenSSH multiplex control commands, `gpui::BackgroundExecutor`, `futures`, existing `remote` crate tests.
 
 ## Global Constraints
 
-- Apply shared-ControlMaster reverse forwarding only when Flint runs on macOS or Linux.
+- Apply shared-ControlMaster reverse forwarding only when dez runs on macOS or Linux.
 - Keep Windows on the existing dedicated `ssh -N -R` implementation.
 - Bind the remote listener only to `127.0.0.1` and the local target only to `127.0.0.1`.
 - Cancel a dynamic forward with the original port-zero `-R` request, not the allocated remote port.
@@ -191,7 +191,7 @@ Rename `reverse_forward_is_dedicated_and_loopback_only` to `reverse_forward_uses
 ```rust
 assert!(arguments.windows(2).any(|args| args == ["-O", "forward"]));
 assert!(arguments.windows(2).any(|args| {
-    args == ["-o", "ControlPath=/tmp/flint-ssh-socket"]
+    args == ["-o", "ControlPath=/tmp/dez-ssh-socket"]
 }));
 assert!(!arguments.iter().any(|argument| argument == "ControlPath=none"));
 assert!(arguments.windows(2).any(|args| {
@@ -361,7 +361,7 @@ git commit -m "remote: Route reverse forwards through shared SSH"
 
 **Interfaces:**
 - Consumes: completed implementation from Tasks 1-3.
-- Produces: formatted, linted, tested code and a fresh `/tmp/Flint-Local.app` for live validation.
+- Produces: formatted, linted, tested code and a fresh `/tmp/dez-Local.app` for live validation.
 
 - [x] **Step 1: Run formatting and lint checks**
 
@@ -396,14 +396,14 @@ Run:
 If the known debug-script bug fails only at `target/aarch64-apple-darwin/release/remote_server`, verify that the fresh debug bundle exists and copy it manually:
 
 ```bash
-cp -R target/aarch64-apple-darwin/debug/bundle/osx/Flint.app /tmp/Flint-Local.app
+cp -R target/aarch64-apple-darwin/debug/bundle/osx/dez.app /tmp/dez-Local.app
 ```
 
 Compare SHA-256 hashes of the target and `/tmp` executables before claiming the app is current.
 
 - [x] **Step 4: Perform live acceptance on the load-balanced host**
 
-Open a project Through Flint, launch Flint-managed Codex, and verify without printing proxy credentials:
+Open a project Through dez, launch dez-managed Codex, and verify without printing proxy credentials:
 
 ```bash
 pgrep -af codex

@@ -14,7 +14,7 @@ use editor::{
 };
 use feature_flags::{FeatureFlagAppExt, ProjectPanelUndoRedoFeatureFlag};
 use file_icons::FileIcons;
-use flint_actions::{
+use dez_actions::{
     project_panel::{Toggle, ToggleFocus},
     workspace::OpenWithSystem,
 };
@@ -1207,11 +1207,11 @@ impl ProjectPanel {
                         .separator()
                         .action(
                             localization::text(cx, "project-panel-copy-path"),
-                            Box::new(flint_actions::workspace::CopyPath),
+                            Box::new(dez_actions::workspace::CopyPath),
                         )
                         .action(
                             localization::text(cx, "project-panel-copy-relative-path"),
-                            Box::new(flint_actions::workspace::CopyRelativePath),
+                            Box::new(dez_actions::workspace::CopyRelativePath),
                         )
                         .when(has_git_repo, |menu| {
                             menu.separator()
@@ -3567,7 +3567,7 @@ impl ProjectPanel {
 
     fn copy_path(
         &mut self,
-        _: &flint_actions::workspace::CopyPath,
+        _: &dez_actions::workspace::CopyPath,
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {
@@ -3595,7 +3595,7 @@ impl ProjectPanel {
 
     fn copy_relative_path(
         &mut self,
-        _: &flint_actions::workspace::CopyRelativePath,
+        _: &dez_actions::workspace::CopyRelativePath,
         _: &mut Window,
         cx: &mut Context<Self>,
     ) {

@@ -192,7 +192,7 @@ impl WslRemoteConnection {
         };
 
         let binary_name = format!(
-            "flint-remote-server-{}-{}",
+            "dez-remote-server-{}-{}",
             release_channel.dev_name(),
             version_str
         );

@@ -1,0 +1,419 @@
+use std::{
+    fs::OpenOptions,
+    io::{ErrorKind, Read as _, Write as _},
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+    sync::Arc,
+    time::Duration,
+};
+
+use anyhow::{Context as _, Result};
+use gpui::{App, AppContext as _, BackgroundExecutor, Entity, Global};
+use terminal::session_host::{
+    TerminalHostId,
+    transport::{
+        TerminalHostAuthToken, TerminalHostConnection, TerminalHostEndpoint,
+        TerminalHostHandshakeRejection, TerminalHostStartupState, TerminalHostStartupStatus,
+        TerminalHostTransportError, terminal_host_enabled_for_app, terminal_host_executable_path,
+    },
+};
+use util::ResultExt as _;
+use uuid::Uuid;
+
+const TERMINAL_HOST_CONNECT_ATTEMPTS: usize = 40;
+const TERMINAL_HOST_CONNECT_INTERVAL: Duration = Duration::from_millis(50);
+pub const DEZ_TERMINAL_HOST_GENERATION: &str = "v1";
+const DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY: &str = "dez-terminal-host-v1";
+
+struct GlobalTerminalHostRuntime(Entity<TerminalHostRuntime>);
+
+impl Global for GlobalTerminalHostRuntime {}
+
+pub struct TerminalHostRuntime {
+    host_id: TerminalHostId,
+    connection_attempt: u64,
+}
+
+impl TerminalHostRuntime {
+    pub fn init(host_id: TerminalHostId, cx: &mut App) -> Entity<Self> {
+        if let Some(runtime) = Self::try_global(cx) {
+            return runtime;
+        }
+
+        terminal::session_host::transport::TerminalHostSnapshotRevision::init(cx);
+        TerminalHostStartupStatus::init(cx);
+        let enabled = terminal_host_enabled_for_app(paths::APP_NAME);
+        let runtime = cx.new(|_| Self {
+            host_id,
+            connection_attempt: 0,
+        });
+        cx.set_global(GlobalTerminalHostRuntime(runtime.clone()));
+        if !enabled {
+            return runtime;
+        }
+        runtime.update(cx, |runtime, cx| runtime.connect(cx));
+        runtime
+    }
+
+    fn connect(&mut self, cx: &mut gpui::Context<Self>) {
+        self.connection_attempt = self.connection_attempt.wrapping_add(1);
+        let connection_attempt = self.connection_attempt;
+        let host_id = self.host_id;
+        TerminalHostStartupStatus::set(TerminalHostStartupState::Connecting, cx);
+        let background_executor = cx.background_executor().clone();
+        cx.spawn(async move |runtime, cx| {
+            let result = connect_or_launch(host_id, &background_executor).await;
+            runtime
+                .update(cx, |runtime, cx| {
+                    if runtime.connection_attempt != connection_attempt {
+                        return;
+                    }
+                    match result {
+                        Ok(connection) => {
+                            let connection = Arc::new(connection);
+                            TerminalHostConnection::set_global(connection, cx);
+                        }
+                        Err(error) => {
+                            let message = format!("{error:#}");
+                            log::error!("durable terminal host startup failed: {message}");
+                            TerminalHostStartupStatus::set(
+                                TerminalHostStartupState::Failed { message },
+                                cx,
+                            );
+                        }
+                    }
+                    cx.notify();
+                })
+                .log_err();
+        })
+        .detach();
+    }
+
+    pub fn try_global(cx: &App) -> Option<Entity<Self>> {
+        cx.try_global::<GlobalTerminalHostRuntime>()
+            .map(|runtime| runtime.0.clone())
+    }
+
+    pub fn retry(cx: &mut App) -> bool {
+        let Some(runtime) = Self::try_global(cx) else {
+            return false;
+        };
+        if !matches!(
+            TerminalHostStartupStatus::state(cx),
+            TerminalHostStartupState::Failed { .. }
+        ) {
+            return false;
+        }
+        runtime.update(cx, |runtime, cx| runtime.connect(cx));
+        true
+    }
+}
+
+async fn connect_or_launch(
+    host_id: TerminalHostId,
+    background_executor: &BackgroundExecutor,
+) -> Result<TerminalHostConnection> {
+    let endpoint = prepare_runtime_endpoint()?;
+    let auth_token = read_or_create_auth_token(endpoint.token_file_path())?;
+
+    match TerminalHostConnection::connect(
+        &endpoint,
+        host_id,
+        auth_token.clone(),
+        background_executor,
+    )
+    .await
+    {
+        Ok(connection) => return Ok(connection),
+        // A helper from another installation or identity generation may still
+        // own the runtime socket. Remove it so the helper launched below binds
+        // a fresh socket that matches this app's identity.
+        Err(error) if is_identity_rejection(&error) => {
+            remove_stale_socket(endpoint.socket_path())?;
+        }
+        Err(error) if is_stale_socket_error(&error) => remove_stale_socket(endpoint.socket_path())?,
+        Err(error) => return Err(error.into()),
+    }
+
+    let helper = terminal_host_executable()?;
+    let mut helper_command = Command::new(&helper);
+    helper_command
+        .arg("serve")
+        .arg("--socket")
+        .arg(endpoint.socket_path())
+        .arg("--token-file")
+        .arg(endpoint.token_file_path())
+        .arg("--host-id")
+        .arg(host_id.to_string());
+    // The host owns the terminal processes, so it must not share the GUI's process session.
+    // In particular, quitting a foreground development build must not let its launcher reap the
+    // host and every terminal beneath it.
+    util::set_pre_exec_to_start_new_session(&mut helper_command);
+    // stdio must be configured on the smol wrapper: its `From` conversion drops stdio state.
+    let mut helper_command = smol::process::Command::from(helper_command);
+    helper_command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let mut helper_process = helper_command
+        .spawn()
+        .with_context(|| format!("launch terminal host helper {}", helper.display()))?;
+    std::thread::Builder::new()
+        .name("dez terminal host monitor".to_owned())
+        .spawn(move || {
+            // The forked async-process Child exposes only an async status; a dedicated
+            // thread may block on it.
+            if let Err(error) = futures::executor::block_on(helper_process.status()) {
+                log::warn!("failed to wait for terminal host helper: {error}");
+            }
+        })
+        .context("start terminal host process monitor")?;
+
+    let mut last_error = None;
+    for _ in 0..TERMINAL_HOST_CONNECT_ATTEMPTS {
+        match TerminalHostConnection::connect(
+            &endpoint,
+            host_id,
+            auth_token.clone(),
+            background_executor,
+        )
+        .await
+        {
+            Ok(connection) => return Ok(connection),
+            Err(error) if is_identity_rejection(&error) => return Err(error.into()),
+            Err(error) => last_error = Some(error),
+        }
+        background_executor
+            .timer(TERMINAL_HOST_CONNECT_INTERVAL)
+            .await;
+    }
+    match last_error {
+        Some(error) => Err(error).context("connect to launched terminal host helper"),
+        None => anyhow::bail!("terminal host helper did not accept a connection"),
+    }
+}
+
+fn is_identity_rejection(error: &TerminalHostTransportError) -> bool {
+    matches!(
+        error,
+        TerminalHostTransportError::HandshakeRejected(
+            TerminalHostHandshakeRejection::AuthenticationFailed
+                | TerminalHostHandshakeRejection::HostMismatch
+                | TerminalHostHandshakeRejection::ProtocolMismatch { .. }
+        ) | TerminalHostTransportError::HostMismatch
+            | TerminalHostTransportError::ProtocolMismatch { .. }
+    )
+}
+
+fn is_stale_socket_error(error: &TerminalHostTransportError) -> bool {
+    matches!(
+        error,
+        TerminalHostTransportError::Io(error)
+            if matches!(error.kind(), ErrorKind::NotFound | ErrorKind::ConnectionRefused)
+    )
+}
+
+fn prepare_runtime_endpoint() -> Result<TerminalHostEndpoint> {
+    let directory = terminal_host_runtime_directory(paths::state_dir(), paths::APP_NAME);
+    create_private_directory(&directory)?;
+    Ok(TerminalHostEndpoint::new(
+        directory.join("local.sock"),
+        directory.join("auth.token"),
+        DEZ_TERMINAL_HOST_GENERATION,
+    ))
+}
+
+fn terminal_host_runtime_directory(state_dir: &Path, app_name: &str) -> PathBuf {
+    terminal_host_runtime_directory_for_channel(
+        state_dir,
+        app_name,
+        storage_channel().as_deref(),
+    )
+}
+
+fn terminal_host_runtime_directory_for_channel(
+    state_dir: &Path,
+    app_name: &str,
+    channel: Option<&str>,
+) -> PathBuf {
+    if app_name == "Zed" {
+        return state_dir.join("terminal-host");
+    }
+    let directory = state_dir.join(DEZ_TERMINAL_HOST_RUNTIME_DIRECTORY);
+    // Parallel channel installations must never share a runtime socket or
+    // auth token: a helper left running by another channel would reject
+    // this app's handshake. Stable keeps the unsuffixed directory.
+    match channel {
+        None => directory,
+        Some(channel) => directory.join(channel),
+    }
+}
+
+fn storage_channel() -> Option<String> {
+    paths::storage_channel_suffix()
+}
+
+#[cfg(unix)]
+fn create_private_directory(path: &Path) -> Result<()> {
+    use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};
+
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(path)
+        .with_context(|| format!("create terminal host runtime directory {}", path.display()))?;
+    let metadata = std::fs::symlink_metadata(path)
+        .with_context(|| format!("inspect terminal host runtime directory {}", path.display()))?;
+    anyhow::ensure!(
+        metadata.file_type().is_dir(),
+        "terminal host runtime path is not a real directory"
+    );
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))
+        .with_context(|| format!("secure terminal host runtime directory {}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn create_private_directory(path: &Path) -> Result<()> {
+    std::fs::create_dir_all(path)
+        .with_context(|| format!("create terminal host runtime directory {}", path.display()))
+}
+
+fn read_or_create_auth_token(path: &Path) -> Result<TerminalHostAuthToken> {
+    match open_new_token_file(path) {
+        Ok(mut file) => {
+            let token = Uuid::new_v4().simple().to_string();
+            file.write_all(token.as_bytes())
+                .context("write terminal host authentication token")?;
+            file.sync_all()
+                .context("persist terminal host authentication token")?;
+            TerminalHostAuthToken::parse(token).context("parse new terminal host token")
+        }
+        Err(error) if error.kind() == ErrorKind::AlreadyExists => {
+            validate_existing_token_file(path)?;
+            let mut token = String::new();
+            OpenOptions::new()
+                .read(true)
+                .open(path)
+                .with_context(|| format!("open terminal host token {}", path.display()))?
+                .read_to_string(&mut token)
+                .context("read terminal host authentication token")?;
+            TerminalHostAuthToken::parse(token.trim().to_owned())
+                .context("parse existing terminal host token")
+        }
+        Err(error) => {
+            Err(error).with_context(|| format!("create terminal host token {}", path.display()))
+        }
+    }
+}
+
+#[cfg(unix)]
+fn validate_existing_token_file(path: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let metadata = std::fs::symlink_metadata(path)
+        .with_context(|| format!("inspect terminal host token {}", path.display()))?;
+    anyhow::ensure!(
+        metadata.file_type().is_file(),
+        "terminal host token path is not a regular file"
+    );
+    anyhow::ensure!(
+        metadata.permissions().mode() & 0o077 == 0,
+        "terminal host token file must not be accessible by group or other users"
+    );
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn validate_existing_token_file(path: &Path) -> Result<()> {
+    anyhow::ensure!(path.is_file(), "terminal host token path is not a file");
+    Ok(())
+}
+
+#[cfg(unix)]
+fn open_new_token_file(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt as _;
+
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+}
+
+#[cfg(not(unix))]
+fn open_new_token_file(path: &Path) -> std::io::Result<std::fs::File> {
+    OpenOptions::new().write(true).create_new(true).open(path)
+}
+
+#[cfg(unix)]
+fn remove_stale_socket(path: &Path) -> Result<()> {
+    use std::os::unix::fs::FileTypeExt as _;
+
+    let metadata = match std::fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error).context("inspect terminal host socket"),
+    };
+    anyhow::ensure!(
+        metadata.file_type().is_socket(),
+        "refusing to remove non-socket terminal host path {}",
+        path.display()
+    );
+    std::fs::remove_file(path)
+        .with_context(|| format!("remove stale terminal host socket {}", path.display()))
+}
+
+#[cfg(not(unix))]
+fn remove_stale_socket(path: &Path) -> Result<()> {
+    match std::fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error)
+            .with_context(|| format!("remove stale terminal host socket {}", path.display())),
+    }
+}
+
+fn terminal_host_executable() -> Result<PathBuf> {
+    let helper = terminal_host_executable_path().context("locate Dez terminal host helper")?;
+    anyhow::ensure!(
+        helper.is_file(),
+        "terminal host helper is not installed at {}",
+        helper.display()
+    );
+    Ok(helper)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_dez_host_does_not_reuse_a_legacy_terminal_host_socket() {
+        let state_dir = Path::new("/state");
+        assert_eq!(
+            terminal_host_runtime_directory(state_dir, "Dez"),
+            state_dir.join("dez-terminal-host-v1")
+        );
+        assert_eq!(
+            terminal_host_runtime_directory(state_dir, "Zed"),
+            state_dir.join("terminal-host")
+        );
+    }
+
+    #[test]
+    fn non_stable_channels_isolate_their_runtime_directory() {
+        let state_dir = Path::new("/state");
+        for channel in ["preview", "nightly", "dev"] {
+            assert_eq!(
+                terminal_host_runtime_directory_for_channel(state_dir, "Dez", Some(channel)),
+                state_dir.join("dez-terminal-host-v1").join(channel),
+                "channel {channel} must own its runtime directory"
+            );
+        }
+        assert_eq!(
+            terminal_host_runtime_directory_for_channel(state_dir, "Dez", None),
+            state_dir.join("dez-terminal-host-v1"),
+            "stable must keep the unsuffixed runtime directory"
+        );
+    }
+}

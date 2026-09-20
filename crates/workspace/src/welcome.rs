@@ -11,7 +11,7 @@ use gpui::{
 };
 use menu::{SelectNext, SelectPrevious};
 
-use flint_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
+use dez_actions::{Extensions, OpenKeymap, OpenOnboarding, OpenSettings, command_palette};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ui::{ButtonLike, Divider, DividerColor, KeyBinding, Vector, VectorName, prelude::*};
@@ -25,9 +25,9 @@ pub struct OpenRecentProject {
 }
 
 actions!(
-    flint,
+    dez,
     [
-        /// Show the Flint welcome screen
+        /// Show the dez welcome screen
         ShowWelcome
     ]
 );
@@ -310,7 +310,7 @@ impl WelcomePage {
                         })
                         .log_err();
                 } else {
-                    use flint_actions::OpenRecent;
+                    use dez_actions::OpenRecent;
                     window.dispatch_action(OpenRecent::default().boxed_clone(), cx);
                 }
             }
@@ -388,9 +388,9 @@ impl Render for WelcomePage {
         };
 
         let welcome_label = if self.fallback_to_recent_projects {
-            "Welcome back to Flint"
+            "Welcome back to dez"
         } else {
-            "Welcome to Flint"
+            "Welcome to dez"
         };
 
         h_flex()
@@ -417,7 +417,7 @@ impl Render for WelcomePage {
                             .justify_center()
                             .mb_4()
                             .gap_4()
-                            .child(Vector::square(VectorName::FlintLogo, rems_from_px(45.)))
+                            .child(Vector::square(VectorName::dezLogo, rems_from_px(45.)))
                             .child(
                                 v_flex().child(Headline::new(welcome_label)).child(
                                     Label::new(localization::text(cx, "workspace-welcome-tagline"))
@@ -620,8 +620,8 @@ mod tests {
     #[test]
     fn test_project_name_multiple() {
         // PathList sorts lexicographically, so filenames appear in alpha order
-        let paths = PathList::new(&["/home/user/flint", "/home/user/api"]);
-        assert_eq!(project_name(&paths), "api, flint");
+        let paths = PathList::new(&["/home/user/dez", "/home/user/api"]);
+        assert_eq!(project_name(&paths), "api, dez");
     }
 
     #[test]

@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+require_pattern() {
+    local file="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if ! rg --quiet "$pattern" "$file"; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
+reject_pattern() {
+    local file="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if rg --quiet "$pattern" "$file"; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
+require_file() {
+    local file="$1"
+    local description="$2"
+
+    if [[ ! -f "$file" ]]; then
+        echo "Dez identity check failed: $description" >&2
+        exit 1
+    fi
+}
+
+# --- Workspace wiring ---
+
+require_pattern Cargo.toml \
+    '"crates/dez"' \
+    'the workspace member list must include crates/dez'
+
+require_pattern Cargo.toml \
+    'default-members = \["crates/dez"\]' \
+    'the default workspace member must be crates/dez'
+
+require_pattern Cargo.toml \
+    '^dez = \{ path = "crates/dez" \}' \
+    'the dez crate must be wired into workspace dependencies'
+
+require_pattern Cargo.toml \
+    '^dez_actions = \{ path = "crates/dez_actions" \}' \
+    'the dez_actions crate must be wired into workspace dependencies'
+
+# --- Main crate identity ---
+
+require_pattern crates/dez/Cargo.toml \
+    '^name = "dez"' \
+    'the main crate must be named dez'
+
+require_pattern crates/dez/Cargo.toml \
+    'default-run = "dez"' \
+    'the main crate default-run must be dez'
+
+require_pattern crates/dez/Cargo.toml \
+    'name = "dez"' \
+    'the main binary must be named dez'
+
+require_pattern crates/dez/Cargo.toml \
+    'identifier = "dev\.dez\.Dez"' \
+    'the stable macOS bundle identifier must be dev.dez.Dez'
+
+require_pattern crates/dez/Cargo.toml \
+    'osx_url_schemes = \["dez"\]' \
+    'the macOS URL scheme must be dez'
+
+# --- Release channel branding ---
+
+require_pattern crates/release_channel/src/lib.rs \
+    '"dev\.dez\.Dez"' \
+    'release_channel must report dez bundle identifiers'
+
+require_pattern crates/release_channel/src/lib.rs \
+    '"Dez"' \
+    'release_channel must report the Dez display name'
+
+reject_pattern crates/release_channel/src/lib.rs \
+    '"Flint|dev\.flint|flint\.dev' \
+    'release_channel still references Flint branding'
+
+# --- No Flint residue in load-bearing files ---
+
+for f in Cargo.toml crates/dez/Cargo.toml crates/dez_actions/Cargo.toml \
+         crates/dez_env_vars/Cargo.toml crates/dez_credentials_provider/Cargo.toml \
+         crates/release_channel/src/lib.rs crates/util/src/paths.rs \
+         crates/dez/src/main.rs script/bundle-mac script/bundle-linux; do
+    if [[ -f "$f" ]]; then
+        reject_pattern "$f" \
+            '\bflint\b|\bFlint\b|FLINT_' \
+            "$f still references Flint"
+    fi
+done
+
+# --- Protected upstream surfaces must stay Zed (extension compat) ---
+
+require_pattern crates/extension_host/src/wasm_host/wit/since_v0_2_0.rs \
+    '"zed:extension/' \
+    'the extension WIT namespace must stay zed: for extension compatibility'
+
+require_pattern Cargo.toml \
+    'package = "zed-reqwest"' \
+    'the vendored reqwest fork must keep its upstream package name'
+
+# --- dezctl skill ships under the dez name ---
+
+require_file crates/agent_control_skill/skills/dezctl/SKILL.md \
+    'the dezctl agent control skill is missing'
+
+# --- Remote protocol marker ---
+
+require_pattern crates/remote/src/transport.rs \
+    '__DEZ_REMOTE_TARGET__' \
+    'the remote transport handshake must use the DEZ marker'
+
+# --- CI ---
+
+require_file .github/workflows/dez-build.yml \
+    'the dez build workflow is missing'
+
+echo "Dez identity checks passed"

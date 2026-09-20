@@ -11,7 +11,7 @@ use crate::{
 use anyhow::{Context as _, Result, anyhow};
 use collections::{HashMap, HashSet};
 use file_icons::FileIcons;
-use flint_actions::preview::{
+use dez_actions::preview::{
     markdown::OpenPreview as OpenMarkdownPreview, svg::OpenPreview as OpenSvgPreview,
 };
 use fs::MTime;
@@ -2136,7 +2136,7 @@ mod tests {
         });
     }
 
-    // Regression test for https://github.com/zed-industries/flint/issues/35947
+    // Regression test for https://github.com/zed-industries/dez/issues/35947
     // Verifies that deserializing a non-worktree editor does not add the item
     // to any pane as a side effect.
     #[gpui::test]

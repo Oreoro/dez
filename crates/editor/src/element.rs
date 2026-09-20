@@ -6600,7 +6600,7 @@ pub fn render_breadcrumb_text(
                                             "editor-show-symbol-outline",
                                         )))
                                         .child(ui::KeyBinding::for_action_in(
-                                            &flint_actions::outline::ToggleOutline,
+                                            &dez_actions::outline::ToggleOutline,
                                             &focus_handle,
                                             cx,
                                         )),
@@ -6626,7 +6626,7 @@ pub fn render_breadcrumb_text(
                             move |_, window, cx| {
                                 if let Some((editor, callback)) = editor
                                     .upgrade()
-                                    .zip(flint_actions::outline::TOGGLE_OUTLINE.get())
+                                    .zip(dez_actions::outline::TOGGLE_OUTLINE.get())
                                 {
                                     callback(editor.to_any_view(), window, cx);
                                 }

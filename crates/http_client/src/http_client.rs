@@ -267,8 +267,8 @@ impl HttpClientWithUrl {
         format!("{}{}", self.base_url(), path)
     }
 
-    /// Builds a Flint API URL using the given path.
-    pub fn build_flint_api_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
+    /// Builds a dez API URL using the given path.
+    pub fn build_dez_api_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
         let base_url = self.base_url();
         let base_api_url = match base_url.as_ref() {
             "https://zed.dev" => "https://api.zed.dev",
@@ -283,8 +283,8 @@ impl HttpClientWithUrl {
         )?)
     }
 
-    /// Builds a Flint Cloud URL using the given path.
-    pub fn build_flint_cloud_url(&self, path: &str) -> Result<Url> {
+    /// Builds a dez Cloud URL using the given path.
+    pub fn build_dez_cloud_url(&self, path: &str) -> Result<Url> {
         let base_url = self.base_url();
         let base_api_url = match base_url.as_ref() {
             "https://zed.dev" => "https://cloud.zed.dev",
@@ -296,8 +296,8 @@ impl HttpClientWithUrl {
         Ok(Url::parse(&format!("{}{}", base_api_url, path))?)
     }
 
-    /// Builds a Flint LLM URL using the given path.
-    pub fn build_flint_llm_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
+    /// Builds a dez LLM URL using the given path.
+    pub fn build_dez_llm_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
         let base_url = self.base_url();
         let base_api_url = match base_url.as_ref() {
             "https://zed.dev" => "https://cloud.zed.dev",
@@ -540,7 +540,7 @@ mod tests {
     fn zed_base_url_uses_upstream_zed_api() -> Result<()> {
         let client = HttpClientWithUrl::new(Arc::new(TestHttpClient), "https://zed.dev", None);
 
-        let url = client.build_flint_api_url("/extensions", &[("filter", "rust")])?;
+        let url = client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
 
         assert_eq!(url.as_str(), "https://api.zed.dev/extensions?filter=rust");
         Ok(())
@@ -550,7 +550,7 @@ mod tests {
     fn custom_base_url_is_preserved_for_api_urls() -> Result<()> {
         let client = HttpClientWithUrl::new(Arc::new(TestHttpClient), "https://example.com", None);
 
-        let url = client.build_flint_api_url("/extensions", &[("filter", "rust")])?;
+        let url = client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
 
         assert_eq!(url.as_str(), "https://example.com/extensions?filter=rust");
         Ok(())
@@ -565,7 +565,7 @@ mod tests {
         );
 
         let client = client.with_base_url("https://zed.dev");
-        let url = client.build_flint_api_url("/extensions", &[("filter", "rust")])?;
+        let url = client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
 
         assert_eq!(url.as_str(), "https://api.zed.dev/extensions?filter=rust");
         assert_eq!(

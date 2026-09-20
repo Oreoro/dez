@@ -19,11 +19,11 @@ fn synchronize_control_skills_in(environment: &SkillEnvironment) -> Vec<String> 
             .into_iter()
             .filter_map(|outcome| match outcome.state {
                 SkillState::Modified => Some(format!(
-                    "The Flint control skill for {} was modified and was not updated",
+                    "The dez control skill for {} was modified and was not updated",
                     outcome.agent.label()
                 )),
                 SkillState::Missing => Some(format!(
-                    "The Flint control skill for {} is missing; reinstall it or remove its ownership record",
+                    "The dez control skill for {} is missing; reinstall it or remove its ownership record",
                     outcome.agent.label()
                 )),
                 SkillState::NotInstalled
@@ -32,7 +32,7 @@ fn synchronize_control_skills_in(environment: &SkillEnvironment) -> Vec<String> 
                 | SkillState::InstalledOutdated => None,
             })
             .collect(),
-        Err(error) => vec![format!("Could not update Flint control skills: {error:#}")],
+        Err(error) => vec![format!("Could not update dez control skills: {error:#}")],
     }
 }
 
@@ -95,7 +95,7 @@ pub(crate) fn show_install_reminder(
     cx.spawn_in(window, async move |_workspace, cx| {
         if matches!(prompt.await.ok(), Some(0)) {
             cx.update(|window, cx| {
-                window.dispatch_action(flint_actions::ManageAgentControlSkill.boxed_clone(), cx);
+                window.dispatch_action(dez_actions::ManageAgentControlSkill.boxed_clone(), cx);
             })?;
         }
         anyhow::Ok(())

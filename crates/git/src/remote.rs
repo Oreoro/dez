@@ -36,34 +36,34 @@ mod tests {
     fn test_parsing_valid_remote_urls() {
         let valid_urls = vec![
             (
-                "https://github.com/octocat/flint.git",
+                "https://github.com/octocat/dez.git",
                 "https",
                 "github.com",
-                "/octocat/flint.git",
+                "/octocat/dez.git",
             ),
             (
-                "git@github.com:octocat/flint.git",
+                "git@github.com:octocat/dez.git",
                 "ssh",
                 "github.com",
-                "/octocat/flint.git",
+                "/octocat/dez.git",
             ),
             (
-                "org-000000@github.com:octocat/flint.git",
+                "org-000000@github.com:octocat/dez.git",
                 "ssh",
                 "github.com",
-                "/octocat/flint.git",
+                "/octocat/dez.git",
             ),
             (
-                "ssh://git@github.com/octocat/flint.git",
+                "ssh://git@github.com/octocat/dez.git",
                 "ssh",
                 "github.com",
-                "/octocat/flint.git",
+                "/octocat/dez.git",
             ),
             (
-                "file:///path/to/local/flint",
+                "file:///path/to/local/dez",
                 "file",
                 "",
-                "/path/to/local/flint",
+                "/path/to/local/dez",
             ),
         ];
 

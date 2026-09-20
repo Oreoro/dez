@@ -25,7 +25,7 @@ use workspace::{
 };
 
 use crate::git_panel::show_error_toast;
-use flint_actions::{
+use dez_actions::{
     CreateWorktree, NewWorktreeBranchTarget, OpenWorktreeInNewWindow, SwitchWorktree,
 };
 

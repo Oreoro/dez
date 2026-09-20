@@ -21,7 +21,7 @@ tree version of the file against its committed (HEAD) version.
 
 ### 1. Visibility / gating
 
-File: `crates/flint/src/flint/quick_action_bar.rs`
+File: `crates/dez/src/dez/quick_action_bar.rs`
 
 The icon is shown only when:
 - the active pane item is an `Editor`, and
@@ -46,7 +46,7 @@ File: `crates/git_ui/src/solo_diff_view.rs`
 (working tree vs HEAD, with stage/unstage/restore controls and the
 split/unified toggle) given a `GitStatusEntry` + `Entity<Repository>`. Its
 fields are `pub(crate)` to `git_ui`, so a new entry point is needed for
-callers (like `flint`) that only have an open buffer, not a pre-built
+callers (like `dez`) that only have an open buffer, not a pre-built
 `GitStatusEntry`:
 
 ```rust
@@ -76,7 +76,7 @@ caller's `detach_and_notify_err`.
 
 ### 3. Toolbar wiring
 
-File: `crates/flint/src/flint/quick_action_bar.rs`
+File: `crates/dez/src/dez/quick_action_bar.rs`
 
 A new `IconButton` with `Tooltip::text("Open Changes")` — a plain text
 tooltip, not `Tooltip::for_action_*`, consistent with the existing Selection

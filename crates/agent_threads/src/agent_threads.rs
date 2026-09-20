@@ -189,7 +189,7 @@ pub struct AgentKindDefinition {
     pub resume_options: Vec<ResumeOption>,
     /// CLI flag for assigning a session id to a fresh session (e.g.
     /// `--session-id` for Claude Code). Without it the CLI generates an id
-    /// internally that Flint never learns, so fresh threads can't be
+    /// internally that dez never learns, so fresh threads can't be
     /// resumed or restored across app restarts.
     pub session_id_flag: Option<&'static str>,
     pub initial_prompt_strategy: InitialPromptStrategy,
@@ -597,7 +597,7 @@ pub fn init(cx: &mut App) {
 
 fn manage_agent_control_skill(
     _workspace: &mut Workspace,
-    _: &flint_actions::ManageAgentControlSkill,
+    _: &dez_actions::ManageAgentControlSkill,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
@@ -686,7 +686,7 @@ fn manage_agent_control_skill(
                     &localization::text(cx, "agent-threads-control-skills-all-title"),
                     Some(&detail),
                     &buttons,
-                    ui_prompt::flint_prompt_renderer,
+                    ui_prompt::dez_prompt_renderer,
                     cx,
                 )
             })?;
@@ -713,7 +713,7 @@ fn manage_agent_control_skill(
                 workspace.show_toast(
                     Toast::new(
                         NotificationId::unique::<ControlSkillChange>(),
-                        "Installed Flint control skills for all supported agents",
+                        "Installed dez control skills for all supported agents",
                     )
                     .autohide(),
                     cx,
@@ -763,7 +763,7 @@ fn manage_agent_control_skill(
                 &localization::text_with_args(cx, "agent-threads-control-skill-title", &args),
                 Some(&detail),
                 &buttons,
-                ui_prompt::flint_prompt_renderer,
+                ui_prompt::dez_prompt_renderer,
                 cx,
             )
         })?;
@@ -771,19 +771,19 @@ fn manage_agent_control_skill(
         let message = match (operation, choice) {
             (ControlSkillOperation::Install, Some(0)) => {
                 agent_control_skill::install(agent, &environment, false)?;
-                format!("Installed the Flint control skill for {}", agent.label())
+                format!("Installed the dez control skill for {}", agent.label())
             }
             (ControlSkillOperation::UpdateOrUninstall, Some(0)) => {
                 agent_control_skill::install(agent, &environment, true)?;
-                format!("Updated the Flint control skill for {}", agent.label())
+                format!("Updated the dez control skill for {}", agent.label())
             }
             (ControlSkillOperation::UpdateOrUninstall, Some(1)) => {
                 agent_control_skill::uninstall(agent, &environment, false)?;
-                format!("Uninstalled the Flint control skill for {}", agent.label())
+                format!("Uninstalled the dez control skill for {}", agent.label())
             }
             (ControlSkillOperation::Replace, Some(0)) => {
                 agent_control_skill::install(agent, &environment, true)?;
-                format!("Replaced the Flint control skill for {}", agent.label())
+                format!("Replaced the dez control skill for {}", agent.label())
             }
             _ => return Ok(()),
         };
@@ -953,7 +953,7 @@ pub fn focus_priority_terminal(
 /// runs for every test (`crate::init(cx)` in test setup), and this binds a
 /// real OS socket under the real `paths::data_dir()` -- a side effect no
 /// test should trigger implicitly. The real app entry point
-/// (`crates/flint/src/flint.rs`) calls this separately, once, after `init`.
+/// (`crates/dez/src/dez.rs`) calls this separately, once, after `init`.
 /// No-op on unsupported platforms, where the control server doesn't exist.
 pub fn init_control_server(cx: &mut App) {
     #[cfg(any(unix, windows))]

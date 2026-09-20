@@ -1180,13 +1180,13 @@ impl FontMetrics {
 /// Maps well-known virtual font names to their concrete equivalents.
 #[allow(unused)]
 pub fn font_name_with_fallbacks<'a>(name: &'a str, system: &'a str) -> &'a str {
-    // Note: the "Flint Plex" fonts were deprecated as we are not allowed to use "Plex"
+    // Note: the "dez Plex" fonts were deprecated as we are not allowed to use "Plex"
     // in a derived font name. They are essentially indistinguishable from IBM Plex/Lilex,
     // and so retained here for backward compatibility.
     match name {
         ".SystemUIFont" => system,
-        ".ZedSans" | "Flint Plex Sans" => "IBM Plex Sans",
-        ".ZedMono" | "Flint Plex Mono" => "Lilex",
+        ".ZedSans" | "dez Plex Sans" => "IBM Plex Sans",
+        ".ZedMono" | "dez Plex Mono" => "Lilex",
         _ => name,
     }
 }
@@ -1197,13 +1197,13 @@ pub fn font_name_with_fallbacks_shared<'a>(
     name: &'a SharedString,
     system: &'a SharedString,
 ) -> &'a SharedString {
-    // Note: the "Flint Plex" fonts were deprecated as we are not allowed to use "Plex"
+    // Note: the "dez Plex" fonts were deprecated as we are not allowed to use "Plex"
     // in a derived font name. They are essentially indistinguishable from IBM Plex/Lilex,
     // and so retained here for backward compatibility.
     match name.as_str() {
         ".SystemUIFont" => system,
-        ".ZedSans" | "Flint Plex Sans" => const { &SharedString::new_static("IBM Plex Sans") },
-        ".ZedMono" | "Flint Plex Mono" => const { &SharedString::new_static("Lilex") },
+        ".ZedSans" | "dez Plex Sans" => const { &SharedString::new_static("IBM Plex Sans") },
+        ".ZedMono" | "dez Plex Mono" => const { &SharedString::new_static("Lilex") },
         _ => name,
     }
 }

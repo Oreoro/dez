@@ -3,8 +3,8 @@
 triage_project_sync.py
 ======================
 
-Sync triage state from `flint-industries/flint` issues into the
-"Flint weekly triage" project (#84).
+Sync triage state from `dez-industries/dez` issues into the
+"dez weekly triage" project (#84).
 
 Auto-derives `Status`, `Stale since`, `Aged?`, `Intake week` from issue labels
 + comment activity + assignees. Mutates the project to
@@ -26,7 +26,7 @@ Auth
 ----
 Reads `GITHUB_TOKEN` from env. For production, this is an installation token
 from the `ZED_COMMUNITY_BOT_APP_ID` GitHub App, scoped to
-`owner: flint-industries`, with `Organization Projects: Read and write`.
+`owner: dez-industries`, with `Organization Projects: Read and write`.
 
 For local `--dry-run` testing, a personal token with `repo, read:org,
 read:project` is sufficient.
@@ -59,8 +59,8 @@ import requests
 # ---------------------------------------------------------------------------
 # Constants
 
-REPO_OWNER = "flint-industries"
-REPO_NAME = "flint"
+REPO_OWNER = "dez-industries"
+REPO_NAME = "dez"
 REPO = f"{REPO_OWNER}/{REPO_NAME}"
 
 PROJECT_NUMBER = 84

@@ -1,6 +1,6 @@
 ## Context
 
-Flint is a fork of Zed. The upstream Zed codebase has grown an extensive AI surface: ~36 crates covering LLM provider clients, a chat agent, GitHub Copilot, inline edit predictions, MCP context servers, and related UI and settings. These crates were disabled in Flint via `disable_ai: true` in `default.json`, but remained compiled and tested. The goal is permanent removal so Flint compiles and ships with none of this code.
+dez is a fork of Zed. The upstream Zed codebase has grown an extensive AI surface: ~36 crates covering LLM provider clients, a chat agent, GitHub Copilot, inline edit predictions, MCP context servers, and related UI and settings. These crates were disabled in dez via `disable_ai: true` in `default.json`, but remained compiled and tested. The goal is permanent removal so dez compiles and ships with none of this code.
 
 The work is purely subtractive — no new behavior is introduced. The challenge is that AI code is both concentrated (dedicated crates) and diffuse (fields and methods scattered throughout `editor`, `project`, `settings_content`).
 
@@ -49,7 +49,7 @@ Upstream sync will conflict in removed files → Deleted crates/files will produ
 
 ## Migration Plan
 
-No user-facing migration needed — users of Flint never had AI features enabled. The settings keys being removed were already ignored (default `disable_ai: true` meant they had no effect).
+No user-facing migration needed — users of dez never had AI features enabled. The settings keys being removed were already ignored (default `disable_ai: true` meant they had no effect).
 
 For the codebase:
 1. One PR per phase, keeping main compilable between merges

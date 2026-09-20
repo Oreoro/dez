@@ -16,7 +16,7 @@ use ui::{
     WithScrollbar as _, prelude::*, rems_from_px,
 };
 
-use flint_actions::OpenOnboarding;
+use dez_actions::OpenOnboarding;
 pub use workspace::welcome::ShowWelcome;
 use workspace::welcome::WelcomePage;
 use workspace::{
@@ -33,7 +33,7 @@ mod theme_preview;
 
 /// Imports settings from Visual Studio Code.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = flint)]
+#[action(namespace = dez)]
 #[serde(deny_unknown_fields)]
 pub struct ImportVsCodeSettings {
     #[serde(default)]
@@ -42,7 +42,7 @@ pub struct ImportVsCodeSettings {
 
 /// Imports settings from Cursor editor.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = flint)]
+#[action(namespace = dez)]
 #[serde(deny_unknown_fields)]
 pub struct ImportCursorSettings {
     #[serde(default)]
@@ -279,7 +279,7 @@ impl Render for Onboarding {
                                     .child(
                                         h_flex()
                                             .gap_4()
-                                            .child(Vector::square(VectorName::FlintLogo, rems(2.5)))
+                                            .child(Vector::square(VectorName::dezLogo, rems(2.5)))
                                             .child(
                                                 v_flex()
                                                     .child(

@@ -2,7 +2,7 @@ name: background_agent_mvp
 
 # NOTE: Scheduled runs disabled as of 2026-02-24. The workflow can still be
 # triggered manually via workflow_dispatch. See Notion doc "Background Agent
-# for Flint" for current status and contact info to resume this work.
+# for dez" for current status and contact info to resume this work.
 on:
   # schedule:
   #   - cron: "0 16 * * 1-5"
@@ -29,7 +29,7 @@ permissions:
 env:
   FACTORY_API_KEY: ${{ secrets.FACTORY_API_KEY }}
   DROID_MODEL: claude-opus-4-5-20251101
-  SENTRY_ORG: flint-dev
+  SENTRY_ORG: dez-dev
 
 jobs:
   run-mvp:

@@ -16,7 +16,7 @@ use std::{
 use task::{Shell, ShellBuilder, ShellKind, SpawnInTerminal};
 use terminal::{
     RemoteTerminalControlRegistration, TaskState, TaskStatus, Terminal, TerminalBuilder,
-    insert_flint_terminal_env, terminal_settings::TerminalSettings,
+    insert_dez_terminal_env, terminal_settings::TerminalSettings,
 };
 use util::{
     command::new_std_command, get_default_system_shell, get_system_shell, maybe, rel_path::RelPath,
@@ -313,14 +313,14 @@ impl Project {
     }
 
     /// Creates a local terminal even if the project is remote.
-    /// In remote projects: opens in Flint's launch directory (bypasses SSH).
+    /// In remote projects: opens in dez's launch directory (bypasses SSH).
     /// In local projects: opens in the project directory (same as regular terminals).
     pub fn create_local_terminal(
         &mut self,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Terminal>>> {
         let working_directory = if self.remote_client.is_some() {
-            // Remote project: don't use remote paths, let shell use Flint's cwd
+            // Remote project: don't use remote paths, let shell use dez's cwd
             None
         } else {
             // Local project: use project directory like normal terminals
@@ -700,7 +700,7 @@ fn create_remote_shell(
     HashMap<String, String>,
     Option<RemoteTerminalControlRegistration>,
 )> {
-    insert_flint_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
+    insert_dez_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
 
     let remote_client_state = remote_client.read(cx);
     let remote_shell = remote_client_state
@@ -1033,7 +1033,7 @@ mod tests {
     #[test]
     fn initialization_command_runs_before_the_quoted_task() {
         let task = SpawnInTerminal {
-            command: Some("/opt/Flint Agents/codex".to_string()),
+            command: Some("/opt/dez Agents/codex".to_string()),
             args: vec!["resume".to_string(), "session with spaces".to_string()],
             shell: Shell::System,
             ..SpawnInTerminal::default()
@@ -1048,7 +1048,7 @@ mod tests {
             vec![
                 "-i",
                 "-c",
-                "source ~/.profile && '/opt/Flint Agents/codex' resume 'session with spaces'"
+                "source ~/.profile && '/opt/dez Agents/codex' resume 'session with spaces'"
             ]
         );
     }
@@ -1056,12 +1056,12 @@ mod tests {
     #[test]
     fn remote_registration_preserves_direct_and_tunneled_agent_executables() {
         let arguments = vec!["resume".to_string(), "session with spaces".to_string()];
-        for executable in ["/usr/local/bin/codex", "/home/user/.flint/agents/codex"] {
+        for executable in ["/usr/local/bin/codex", "/home/user/.dez/agents/codex"] {
             let executable = executable.to_string();
             let (program, wrapped_arguments) = wrap_remote_terminal_command(
                 ShellKind::new("/bin/sh", false),
                 "/bin/sh",
-                "/home/user/.flint/remote/remote_server",
+                "/home/user/.dez/remote/remote_server",
                 "registration-1",
                 Some((&executable, &arguments)),
             )

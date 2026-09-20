@@ -1,4 +1,4 @@
-onboarding-title = Welcome to Flint
+onboarding-title = Welcome to dez
 onboarding-tab-title = Onboarding
 onboarding-tagline = The editor for what's next
 onboarding-finish-setup = Finish Setup
@@ -12,8 +12,8 @@ onboarding-select-base-keymap = Select a base keymap...
 onboarding-vim-mode = Vim Mode
 onboarding-vim-mode-description = Coming from Neovim? Use our first-class implementation of Vim Mode
 onboarding-trust-all-projects = Trust All Projects By Default
-onboarding-trust-all-projects-description = Automatically mark all new projects as trusted to unlock all Flint's features
-onboarding-trust-tooltip = Flint can only allow services like language servers, project settings, and MCP servers to run after you mark a new project as trusted.
+onboarding-trust-all-projects-description = Automatically mark all new projects as trusted to unlock all dez's features
+onboarding-trust-tooltip = dez can only allow services like language servers, project settings, and MCP servers to run after you mark a new project as trusted.
 onboarding-import-settings = Import Settings
 onboarding-import-settings-description = Automatically pull your settings from other editors
 onboarding-multibuffer-hint = Edit and save files directly in the results multibuffer!

@@ -11,7 +11,7 @@
     "light": "One Light",
     "dark": "One Dark",
   },
-  "icon_theme": "Flint (Default)",
+  "icon_theme": "dez (Default)",
   // The name of a base set of key bindings to use.
   // This setting can take six values, each named after another
   // text editor:
@@ -1537,7 +1537,7 @@
     "dock": "left",
     // Whether the Agent Threads panel should open on startup.
     "starts_open": true,
-    // Allow a local agent thread's own CLI process to ask Flint to re-tie
+    // Allow a local agent thread's own CLI process to ask dez to re-tie
     // itself to a different worktree or spawn a sibling thread.
     "agent_control": true,
   },
@@ -2382,7 +2382,7 @@
   "command_aliases": {},
   // ssh_connections is an array of ssh connections.
   // You can configure these from `project: Open Remote` in the command palette.
-  // Flint's SSH support will pull configuration from your ~/.ssh too.
+  // dez's SSH support will pull configuration from your ~/.ssh too.
   // Examples:
   // [
   //   {

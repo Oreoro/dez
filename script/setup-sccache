@@ -66,7 +66,7 @@ configure_sccache() {
     if [[ -n "${R2_ACCOUNT_ID:-}" ]]; then
         echo "Configuring sccache with Cloudflare R2..."
 
-        local bucket="${SCCACHE_BUCKET:-sccache-flint}"
+        local bucket="${SCCACHE_BUCKET:-sccache-dez}"
         local key_prefix="${SCCACHE_KEY_PREFIX:-sccache/}"
 
         export SCCACHE_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"

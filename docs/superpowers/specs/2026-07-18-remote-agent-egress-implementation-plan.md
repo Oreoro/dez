@@ -4,9 +4,9 @@
 
 Implement the approved
 [Remote Agent Egress and Provisioning Design](./2026-07-18-remote-agent-egress-design.md)
-without replacing Flint's terminal-first Agent Threads model. Supported Codex
+without replacing dez's terminal-first Agent Threads model. Supported Codex
 and Claude Code processes continue to run on the SSH host in the real remote
-project. Flint may provision a pinned official executable through a verified
+project. dez may provision a pinned official executable through a verified
 local download and SSH upload, and the user may independently choose whether
 that agent's provider traffic goes `Tunneled` or `Direct`.
 
@@ -20,18 +20,18 @@ later stage while a focused test from an earlier stage is failing.
   `Direct` without a prompt. Connectivity probes and request errors
   never select or change the route.
 - Provisioning and routing are independent. An ambient or explicitly
-  configured agent can use either route, and a Flint-managed agent can use
+  configured agent can use either route, and a dez-managed agent can use
   either route.
 - Opening a project never downloads or installs an agent. Provisioning is lazy
   on an agent/login action or starts from an explicit management action.
-- Flint-managed artifacts are exact official releases pinned by the current
-  Flint release. Runtime settings cannot replace their source URL, digest,
+- dez-managed artifacts are exact official releases pinned by the current
+  dez release. Runtime settings cannot replace their source URL, digest,
   signature metadata, target, or version matcher.
 - Download, manifest/signature verification, archive extraction when needed,
   and source-artifact digest verification happen locally. The remote host runs
   no vendor installer, package manager, download tool, or archive extractor.
 - The normalized executable uploaded to the host has its own pinned digest.
-  Flint verifies that digest locally and again through `remote_server` before
+  dez verifies that digest locally and again through `remote_server` before
   committing the installation.
 - Managed installations are per-user, require no `sudo`, do not modify a shell
   profile or general `PATH`, and are launched by absolute path.
@@ -44,7 +44,7 @@ later stage while a focused test from an earlier stage is failing.
   a host firewall.
 - The OAuth browser-callback `-L` forward is independent of the egress session
   and is available under either route.
-- The remote host owns the provider credential. Flint never reads or copies a
+- The remote host owns the provider credential. dez never reads or copies a
   credential store, terminates provider TLS, injects provider authorization,
   or persists a proxy capability.
 - Keep raw SSH mechanics and generic remote operations in `remote`; keep agent
@@ -139,7 +139,7 @@ Implement:
   Agent Threads consumes the target already owned by the connected transport.
   Update the mock to make its target deterministic.
 - Keep remote-server asset naming based on OS and architecture. Adding libc to
-  `RemotePlatform` must not change the existing Flint remote-server download
+  `RemotePlatform` must not change the existing dez remote-server download
   URL or bundle name.
 - Define immutable `AgentRelease`, `AgentArtifactFormat`, source-verification,
   target, version-matcher, executable-name, and self-update-environment data in
@@ -160,7 +160,7 @@ cargo test -p agent_threads agent_release
 cargo check -p remote_connection -p project_benchmarks
 ```
 
-Expected result: Flint has one reusable remote target including libc, and the
+Expected result: dez has one reusable remote target including libc, and the
 compiled catalogue can reject an unsupported or unpinned release without doing
 I/O.
 
@@ -169,7 +169,7 @@ I/O.
 Files:
 
 - Create `crates/proto/proto/remote_management.proto`
-- Modify `crates/proto/proto/flint.proto`
+- Modify `crates/proto/proto/dez.proto`
 - Modify `crates/proto/src/proto.rs`
 - Modify `crates/remote/src/remote_client.rs`
 - Modify `crates/remote/src/transport/ssh.rs`
@@ -183,7 +183,7 @@ Files:
 Write tests first:
 
 - Add protocol request/response coverage for:
-  - retrieving Flint's remote per-user application-data directory;
+  - retrieving dez's remote per-user application-data directory;
   - computing a file's SHA-256 digest;
   - creating a private directory tree;
   - setting a file executable for its user where the platform supports it;
@@ -292,7 +292,7 @@ Implement:
 - Add a dedicated cache root below `paths::data_dir()` and keep artifacts
   addressed by the pinned source digest, not by an untrusted URL filename.
 - Split acquisition behind a narrow interface used later by
-  `ManagedAgentProvisioner`; production uses Flint's `HttpClient`, while tests
+  `ManagedAgentProvisioner`; production uses dez's `HttpClient`, while tests
   use an in-memory fake.
 - Validate the compiled official-source rule before issuing the request.
 - Disable uninspected follow-all redirects. Follow only a small bounded chain
@@ -305,7 +305,7 @@ Implement:
   its target can differ from the local machine.
 - Use unique partial paths, flush/sync before rename where supported, and leave
   an older valid cache entry untouched on a failed acquisition.
-- Integrate with Flint's bounded cache cleanup policy. Cleanup failures are
+- Integrate with dez's bounded cache cleanup policy. Cleanup failures are
   warnings; verification and acquisition failures remain launch errors.
 
 Validation:
@@ -316,7 +316,7 @@ cargo check -p agent_threads
 ```
 
 Expected result: a caller receives only a locally normalized executable whose
-source provenance and installed bytes match the signed Flint catalogue.
+source provenance and installed bytes match the signed dez catalogue.
 
 ## 4. Implement Transactional Managed Provisioning
 
@@ -347,7 +347,7 @@ Write tests first:
 - Install a newer pinned version beside the old version and keep a live-use
   guard on the old path. New launches switch only after full verification.
 - Test explicit removal: prevent new managed selections first, require live
-  users to close, delete only Flint-managed paths and receipts, and preserve
+  users to close, delete only dez-managed paths and receipts, and preserve
   credential/history directories and ambient executables.
 - Test POSIX and Windows path construction using the remote application-data
   directory returned by the server. No expected path may use a locally derived
@@ -363,9 +363,9 @@ Implement:
 
 - Add one `ManagedAgentProvisioner` with injected artifact and remote-host
   interfaces. Keep download/cache concerns out of its transaction logic.
-- Use `agents/<agent>/<version>/<target>/` below Flint's remote
+- Use `agents/<agent>/<version>/<target>/` below dez's remote
   application-data directory (the platform-specific equivalent of
-  `flint/agents/...`) and a unique sibling staging directory for each attempt.
+  `dez/agents/...`) and a unique sibling staging directory for each attempt.
 - Upload the normalized executable and a non-secret receipt into staging.
   Verify the remote digest, set user-only execution permission on POSIX, and
   run the staged absolute path with `--version` before it becomes active.
@@ -395,7 +395,7 @@ cargo test -p remote_server remote_management
 ```
 
 Expected result: an offline SSH host can receive a verified executable through
-Flint, and every failed transaction preserves the prior working state.
+dez, and every failed transaction preserves the prior working state.
 
 ## 5. Persist and Render the Two Remote Agent Routes
 
@@ -489,7 +489,7 @@ Write tests first:
   askpass inputs, and keeps stderr captured.
 - On non-Windows clients, assert every owned forward contains
   `ControlMaster=no` and `ControlPath=none`, even when the normal connection
-  uses Flint's or an external ControlMaster.
+  uses dez's or an external ControlMaster.
 - Build a callback command and assert `ssh -N -L` binds only the requested local
   loopback port and targets only the remote loopback callback port. It must not
   reference an egress lease or CONNECT proxy.
@@ -519,7 +519,7 @@ Implement:
   attempt owns its short-lived local-forward process.
 - Use `ConnectionSharing::Dedicated` and explicitly disable ControlMaster and
   ControlPath on non-Windows. Do not add or cancel a forward on a master
-  connection Flint may not own.
+  connection dez may not own.
 - Treat `ExitOnForwardFailure` startup errors separately from authentication
   and remote-server disconnect errors. Preserve bounded stderr for the UI but
   redact command environment and any future proxy URL.
@@ -588,7 +588,7 @@ cargo test -p settings_content remote_agent_egress
 Implement:
 
 - Add a loopback-only async CONNECT listener with a small explicit parser; do
-  not turn Flint's general HTTP client into a server or add plain HTTP proxying.
+  not turn dez's general HTTP client into a server or add plain HTTP proxying.
 - Represent capabilities with a type whose `Debug` and `Display` output is
   always redacted. Generate cryptographically random per-lease values and use
   standard proxy authorization supported by the pinned agent version.
@@ -677,7 +677,7 @@ cargo test -p agent_threads egress
 cargo test -p remote remote_loopback_tcp_exchange
 ```
 
-Expected result: concurrent through-Flint threads share one tunnel but not one
+Expected result: concurrent through-dez threads share one tunnel but not one
 capability, and the final release removes the egress path.
 
 ## 9. Integrate Provisioning and Route Preparation into Agent Launch
@@ -708,8 +708,8 @@ Write tests first:
   | ---------- | ----------------- | --------- | ----------------------- |
   | Ambient    | Direct | No        | No                      |
   | Managed    | Direct | No        | Yes                     |
-  | Ambient    | Through Flint     | Yes       | Yes                     |
-  | Managed    | Through Flint     | Yes       | Yes                     |
+  | Ambient    | Through dez     | Yes       | Yes                     |
+  | Managed    | Through dez     | Yes       | Yes                     |
 
 - Under `Tunneled`, assert supported proxy variables plus controlled
   `NO_PROXY` and `no_proxy` exactly equal
@@ -756,7 +756,7 @@ Implement:
 - Acquire egress only for `Tunneled`, wait for readiness, and inject the
   proxy URL only into the selected agent process. The proxy URL must never be
   added to `ProjectEnvironment`, project settings, command labels, or logs.
-- Apply catalogue self-update suppression to every through-Flint process and
+- Apply catalogue self-update suppression to every through-dez process and
   every managed process. Do not modify an ambient installation's persistent
   configuration.
 - Make launch/resume APIs return or detach a fallible task through an existing
@@ -908,7 +908,7 @@ Implement:
 - Represent an in-progress disconnect in the Agent Thread store before closing
   terminals so no new launch can race between containment and logout.
 - Persist only the route and managed selection. Credential status is queried on
-  demand and secrets are never copied into Flint state.
+  demand and secrets are never copied into dez state.
 
 Validation:
 
@@ -919,7 +919,7 @@ cargo test -p remote port_forward
 
 Expected result: the user can authenticate natively on the remote host, remove
 the remote credential copy, and reach the provider's authoritative revocation
-surface without Flint receiving the credential.
+surface without dez receiving the credential.
 
 ## 12. Implement Disconnect, Reconnect, and Runtime Failure Handling
 
@@ -938,7 +938,7 @@ Write tests first:
 - Emit observable connection-state transitions for connected, heartbeat
   missed, reconnecting, reconnected, and permanently disconnected states while
   preserving the existing `Disconnected { server_not_running }` behavior.
-- On connection loss, reject new leases, mark existing through-Flint threads
+- On connection loss, reject new leases, mark existing through-dez threads
   unavailable, and keep their stable remote port/capabilities in memory without
   claiming the forward is alive.
 - On reconnect, start a new dedicated reverse-forward process on the same
@@ -1021,7 +1021,7 @@ Write tests first:
   - direct ambient launch with no proxy environment or egress lease;
   - direct provider failure with no route change;
   - callback `-L` under direct routing without a reverse forward;
-  - through-Flint ambient launch without reinstall;
+  - through-dez ambient launch without reinstall;
   - an SSH host with no outbound network and no agent executable;
   - locally verified signed test artifact upload, no-`sudo` install, absolute
     managed launch, and streaming authenticated CONNECT;
@@ -1074,7 +1074,7 @@ cargo test -p remote
 cargo test -p remote_server
 cargo test -p agent_threads
 cargo test -p recent_projects
-cargo check -p flint
+cargo check -p dez
 script/test-remote-agent-egress
 ```
 
@@ -1094,10 +1094,10 @@ install and restricted egress path without live services.
 - [ ] A connectivity probe or provider failure never changes the stored route.
 - [ ] Direct ambient launch is byte-for-byte equivalent at the command/env/cwd
       boundary to today's behavior.
-- [ ] Through-Flint ambient launch does not force provisioning and suppresses
+- [ ] Through-dez ambient launch does not force provisioning and suppresses
       self-update only for the launched process.
 - [ ] Managed provisioning downloads only an exact official pin locally,
-      verifies source and installed bytes, uploads through Flint, and requires
+      verifies source and installed bytes, uploads through dez, and requires
       no remote internet, package manager, or `sudo`.
 - [ ] Managed launch uses an absolute versioned path and explicit updates retain
       the prior version until no live thread uses it.
@@ -1111,7 +1111,7 @@ install and restricted egress path without live services.
       same remote port or requires thread restart.
 - [ ] OAuth callback forwarding works under either route and has an independent
       lifecycle.
-- [ ] Logout and provider revocation are distinct actions, and Flint never
+- [ ] Logout and provider revocation are distinct actions, and dez never
       reads the remote credential.
 - [ ] POSIX and Windows remote launch paths preserve the prepared environment.
 - [ ] Ordinary terminals, remote editing, history, resume, and non-SSH remote

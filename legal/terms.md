@@ -5,7 +5,7 @@ slug: terms
 
 **Last Updated**: July 15, 2026
 
-Flint is an open-source, community-maintained fork of [Zed](https://github.com/zed-industries/zed). It is not operated by a company and there is no paid subscription, account, or hosted service associated with it. These Terms exist only to set basic expectations for using the Software.
+dez is an open-source, community-maintained fork of [Zed](https://github.com/zed-industries/zed). It is not operated by a company and there is no paid subscription, account, or hosted service associated with it. These Terms exist only to set basic expectations for using the Software.
 
 ## License
 
@@ -21,7 +21,7 @@ AI features are off by default. If you turn them on and configure a model provid
 
 ## Infrastructure
 
-Flint does not run an account, collaboration, telemetry, crash-reporting, extension-registry, or update service. Extension requests use Zed's public extension registry and are governed by Zed's terms. Update requests use GitHub Releases and are governed by GitHub's terms. Flint stores reliability diagnostics locally and does not upload them.
+dez does not run an account, collaboration, telemetry, crash-reporting, extension-registry, or update service. Extension requests use Zed's public extension registry and are governed by Zed's terms. Update requests use GitHub Releases and are governed by GitHub's terms. dez stores reliability diagnostics locally and does not upload them.
 
 ## Changes
 
@@ -29,4 +29,4 @@ These Terms may change as the project evolves. Continuing to use the Software af
 
 ## Contact
 
-Questions about these Terms can be raised as an issue on the [project's GitHub repository](https://github.com/shenghsi/flint).
+Questions about these Terms can be raised as an issue on the [project's GitHub repository](https://github.com/shenghsi/dez).

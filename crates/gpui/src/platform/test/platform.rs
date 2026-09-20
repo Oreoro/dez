@@ -515,10 +515,10 @@ struct TestKeyboardLayout;
 
 impl PlatformKeyboardLayout for TestKeyboardLayout {
     fn id(&self) -> &str {
-        "flint.keyboard.example"
+        "dez.keyboard.example"
     }
 
     fn name(&self) -> &str {
-        "flint.keyboard.example"
+        "dez.keyboard.example"
     }
 }

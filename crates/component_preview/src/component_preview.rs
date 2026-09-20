@@ -548,7 +548,7 @@ impl ComponentPreview {
         if let Some(workspace) = self.workspace.upgrade() {
             workspace.update(cx, |workspace, cx| {
                 let status_toast = StatusToast::new(
-                    "`flint/new-notification-system` created!",
+                    "`dez/new-notification-system` created!",
                     cx,
                     |this, _cx| {
                         this.icon(

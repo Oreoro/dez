@@ -15,4 +15,4 @@ dev-container-invalid-project = 不在有效项目中
 dev-container-command-failed = 外部程序失败：{ $program }
 dev-container-filesystem-error = 无法在本地下载资源
 dev-container-resource-fetch-failed = 无法从模板或功能仓库获取资源
-dev-container-multiple-containers = 多个容器与此项目的开发容器标签匹配（{ $ids }）。Flint 无法选择要连接的容器。请使用 `docker stop <id>` 和 `docker rm <id>` 停止并删除过期容器，然后重试。
+dev-container-multiple-containers = 多个容器与此项目的开发容器标签匹配（{ $ids }）。dez 无法选择要连接的容器。请使用 `docker stop <id>` 和 `docker rm <id>` 停止并删除过期容器，然后重试。

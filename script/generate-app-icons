@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Regenerates every app-icon PNG/ICO/ICNS under crates/flint/resources from the
+# Regenerates every app-icon PNG/ICO/ICNS under crates/dez/resources from the
 # single vector source (app-icon.svg), instead of hand-editing the exported
 # bitmaps per release channel. Each channel only differs by the background
 # fill color of the rounded-square backplate.
@@ -21,7 +21,7 @@ if ! command -v iconutil >/dev/null 2>&1 || ! command -v sips >/dev/null 2>&1; t
     exit 1
 fi
 
-resources_dir="crates/flint/resources"
+resources_dir="crates/dez/resources"
 svg_source="${resources_dir}/app-icon.svg"
 work_dir="$(mktemp -d)"
 trap 'rm -rf "${work_dir}"' EXIT

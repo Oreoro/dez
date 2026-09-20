@@ -11,7 +11,7 @@ use cloud_api_types::{ExtensionMetadata, ExtensionProvides};
 use collections::{BTreeMap, BTreeSet};
 use editor::{Editor, EditorElement, EditorStyle};
 use extension_host::{ExtensionManifest, ExtensionOperation, ExtensionStore};
-use flint_actions::ExtensionCategoryFilter;
+use dez_actions::ExtensionCategoryFilter;
 use fuzzy::{StringMatchCandidate, match_strings};
 use gpui::{
     Action, Anchor, App, ClipboardItem, Context, Entity, EventEmitter, Focusable,
@@ -41,7 +41,7 @@ use crate::extension_version_selector::{
 };
 
 actions!(
-    flint,
+    dez,
     [
         /// Installs an extension from a local directory for development.
         InstallDevExtension
@@ -52,7 +52,7 @@ pub fn init(cx: &mut App) {
     cx.observe_new(move |workspace: &mut Workspace, _window, _cx| {
         workspace
             .register_action(
-                move |workspace, action: &flint_actions::Extensions, window, cx| {
+                move |workspace, action: &dez_actions::Extensions, window, cx| {
                     let provides_filter = action.category_filter.map(|category| match category {
                         ExtensionCategoryFilter::Themes => ExtensionProvides::Themes,
                         ExtensionCategoryFilter::IconThemes => ExtensionProvides::IconThemes,
@@ -397,7 +397,7 @@ impl ExtensionsPage {
             workspace
                 .update(cx, |_workspace, cx| {
                     window.dispatch_action(
-                        flint_actions::theme_selector::Toggle {
+                        dez_actions::theme_selector::Toggle {
                             themes_filter: Some(themes),
                         }
                         .boxed_clone(),
@@ -416,7 +416,7 @@ impl ExtensionsPage {
             workspace
                 .update(cx, |_workspace, cx| {
                     window.dispatch_action(
-                        flint_actions::icon_theme_selector::Toggle {
+                        dez_actions::icon_theme_selector::Toggle {
                             themes_filter: Some(icon_themes),
                         }
                         .boxed_clone(),

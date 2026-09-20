@@ -1,5 +1,5 @@
 [package]
-description = "Shared protocol for Flint"
+description = "Shared protocol for dez"
 edition.workspace = true
 name = "proto"
 version = "0.1.0"

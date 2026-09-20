@@ -54,11 +54,11 @@ way to resume a past conversation with extra CLI flags like
 
 - Removed: `crates/terminal_view/src/terminal_threads.rs`,
   `crates/settings_content/src/terminal_threads.rs`, the 4 related menu items
-  in `crates/flint/src/flint/app_menus.rs`, the `"terminal_threads"` block in
+  in `crates/dez/src/dez/app_menus.rs`, the `"terminal_threads"` block in
   `assets/settings/default.json`
 - Added: `crates/agent_threads` crate (registry, history providers, panel,
   store), `crates/settings_content/src/agent_threads.rs`,
-  `agent_threads::{Toggle, ToggleFocus}` in `flint_actions`, panel
-  registration in `crates/flint/src/flint.rs` `initialize_panels`
+  `agent_threads::{Toggle, ToggleFocus}` in `dez_actions`, panel
+  registration in `crates/dez/src/dez.rs` `initialize_panels`
 - No settings migration: existing user overrides under `terminal_threads`
   silently stop applying

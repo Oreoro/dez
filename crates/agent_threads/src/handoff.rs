@@ -2,7 +2,7 @@
 //!
 //! Builds a disposable, disclosure-minimized Markdown document from a source
 //! thread's extracted transcript excerpt and writes it under
-//! `.flint/handoffs/` on the host where the target agent will run. See
+//! `.dez/handoffs/` on the host where the target agent will run. See
 //! `docs/superpowers/specs/2026-07-25-cross-agent-handoff-design.md`.
 
 use std::path::{Path, PathBuf};
@@ -91,7 +91,7 @@ pub(crate) fn build_handoff_markdown(params: &HandoffParams) -> String {
 }
 
 /// Writes `markdown` to a fresh, gitignored file under
-/// `<project_root>/.flint/handoffs/` and returns its path. The directory gets a
+/// `<project_root>/.dez/handoffs/` and returns its path. The directory gets a
 /// `.gitignore` of `*` so a secret-bearing document never appears in
 /// `git status`. The filename is random (never the raw session id, which is not
 /// guaranteed path-safe), and the write is atomic.
@@ -100,7 +100,7 @@ pub(crate) async fn write_handoff_document(
     project_root: &Path,
     markdown: &str,
 ) -> Result<PathBuf> {
-    let directory = project_root.join(".flint").join("handoffs");
+    let directory = project_root.join(".dez").join("handoffs");
     fs.create_dir(&directory).await?;
 
     let gitignore = directory.join(".gitignore");
@@ -198,14 +198,14 @@ mod tests {
 
         // A gitignore of `*` guards the directory.
         let gitignore = fs
-            .load(Path::new("/work/project/.flint/handoffs/.gitignore"))
+            .load(Path::new("/work/project/.dez/handoffs/.gitignore"))
             .await
             .unwrap();
         assert_eq!(gitignore, "*\n");
 
         // Random, distinct filenames; not the session id.
         assert_ne!(first, second);
-        assert!(first.starts_with(Path::new("/work/project/.flint/handoffs/")));
+        assert!(first.starts_with(Path::new("/work/project/.dez/handoffs/")));
         assert_eq!(fs.load(&first).await.unwrap(), "doc one");
         assert_eq!(fs.load(&second).await.unwrap(), "doc two");
     }

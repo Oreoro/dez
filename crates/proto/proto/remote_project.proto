@@ -1,5 +1,5 @@
 syntax = "proto3";
-package flint.messages;
+package dez.messages;
 
 import "git.proto";
 import "worktree.proto";

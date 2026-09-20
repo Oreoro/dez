@@ -220,8 +220,8 @@ pub fn prevent_root_execution() {
     if is_root && !allow_root {
         eprintln!(
             "\
-Error: Running Flint as root or via sudo is unsupported.
-       Doing so (even once) may subtly break things for all subsequent non-root usage of Flint.
+Error: Running dez as root or via sudo is unsupported.
+       Doing so (even once) may subtly break things for all subsequent non-root usage of dez.
        It is untested and not recommended, don't complain when things break.
        If you wish to proceed anyways, set `ZED_ALLOW_ROOT=true` in your environment."
         );
@@ -284,51 +284,51 @@ fn load_shell_from_passwd() -> Result<()> {
     Ok(())
 }
 
-/// Returns a shell escaped path for the current flint executable
-pub fn get_shell_safe_flint_path(shell_kind: shell::ShellKind) -> anyhow::Result<String> {
+/// Returns a shell escaped path for the current dez executable
+pub fn get_shell_safe_dez_path(shell_kind: shell::ShellKind) -> anyhow::Result<String> {
     use anyhow::Context as _;
     use paths::PathExt;
-    let mut flint_path =
-        std::env::current_exe().context("Failed to determine current flint executable path.")?;
+    let mut dez_path =
+        std::env::current_exe().context("Failed to determine current dez executable path.")?;
     if cfg!(target_os = "linux")
-        && !flint_path.is_file()
-        && let Some(truncated) = flint_path
+        && !dez_path.is_file()
+        && let Some(truncated) = dez_path
             .clone()
             .file_name()
             .and_then(|s| s.to_str())
             .and_then(|n| n.strip_suffix(" (deleted)"))
     {
         // Might have been deleted during update; let's use the new binary if there is one.
-        flint_path.set_file_name(truncated);
+        dez_path.set_file_name(truncated);
     }
 
-    flint_path
+    dez_path
         .try_shell_safe(shell_kind)
-        .context("Failed to shell-escape Flint executable path.")
+        .context("Failed to shell-escape dez executable path.")
 }
 
-/// Returns a path for the flint cli executable, this function
-/// should be called from the flint executable, not flint-cli.
-pub fn get_flint_cli_path() -> Result<PathBuf> {
+/// Returns a path for the dez cli executable, this function
+/// should be called from the dez executable, not dez-cli.
+pub fn get_dez_cli_path() -> Result<PathBuf> {
     use anyhow::Context as _;
-    let flint_path =
-        std::env::current_exe().context("Failed to determine current flint executable path.")?;
-    let parent = flint_path
+    let dez_path =
+        std::env::current_exe().context("Failed to determine current dez executable path.")?;
+    let parent = dez_path
         .parent()
-        .context("Failed to determine parent directory of flint executable path.")?;
+        .context("Failed to determine parent directory of dez executable path.")?;
 
     let possible_locations: &[&str] = if cfg!(target_os = "macos") {
-        // On macOS, the flint executable and flint-cli are inside the app bundle,
+        // On macOS, the dez executable and dez-cli are inside the app bundle,
         // so here ./cli is for both installed and development builds.
         &["./cli"]
     } else if cfg!(target_os = "windows") {
-        // bin/flint.exe is for installed builds, ./cli.exe is for development builds.
-        &["bin/flint.exe", "./cli.exe"]
+        // bin/dez.exe is for installed builds, ./cli.exe is for development builds.
+        &["bin/dez.exe", "./cli.exe"]
     } else if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") {
         // bin is the standard, ./cli is for the target directory in development builds.
-        &["../bin/flint", "./cli"]
+        &["../bin/dez", "./cli"]
     } else {
-        anyhow::bail!("unsupported platform for determining flint-cli path");
+        anyhow::bail!("unsupported platform for determining dez-cli path");
     };
 
     possible_locations
@@ -338,40 +338,40 @@ pub fn get_flint_cli_path() -> Result<PathBuf> {
                 .join(p)
                 .canonicalize()
                 .ok()
-                .filter(|p| p != &flint_path)
+                .filter(|p| p != &dez_path)
         })
         .with_context(|| {
             format!(
-                "could not find flint-cli from any of: {}",
+                "could not find dez-cli from any of: {}",
                 possible_locations.join(", ")
             )
         })
 }
 
-/// Returns a path for the `flintctl` executable, mirroring
-/// `get_flint_cli_path` above.
+/// Returns a path for the `dezctl` executable, mirroring
+/// `get_dez_cli_path` above.
 #[cfg(any(unix, windows))]
-pub fn get_flintctl_path() -> Result<PathBuf> {
+pub fn get_dezctl_path() -> Result<PathBuf> {
     use anyhow::Context as _;
-    let flint_path =
-        std::env::current_exe().context("Failed to determine current flint executable path.")?;
-    let parent = flint_path
+    let dez_path =
+        std::env::current_exe().context("Failed to determine current dez executable path.")?;
+    let parent = dez_path
         .parent()
-        .context("Failed to determine parent directory of flint executable path.")?;
+        .context("Failed to determine parent directory of dez executable path.")?;
 
     let possible_locations: &[&str] = if cfg!(target_os = "macos") {
         // Both the app bundle's Contents/MacOS/ and the dev target/<triple>/debug/
-        // layout put flintctl beside flint.
-        &["./flintctl"]
+        // layout put dezctl beside dez.
+        &["./dezctl"]
     } else if cfg!(target_os = "linux") || cfg!(target_os = "freebsd") {
-        // libexec is the standard installed layout, ./flintctl is
+        // libexec is the standard installed layout, ./dezctl is
         // for the target directory in development builds.
-        &["../libexec/flintctl", "./flintctl"]
+        &["../libexec/dezctl", "./dezctl"]
     } else if cfg!(windows) {
-        // Installed and development Windows layouts place the helper beside Flint.exe.
-        &["./flintctl.exe"]
+        // Installed and development Windows layouts place the helper beside dez.exe.
+        &["./dezctl.exe"]
     } else {
-        anyhow::bail!("unsupported platform for determining flintctl path");
+        anyhow::bail!("unsupported platform for determining dezctl path");
     };
 
     possible_locations
@@ -381,11 +381,11 @@ pub fn get_flintctl_path() -> Result<PathBuf> {
                 .join(p)
                 .canonicalize()
                 .ok()
-                .filter(|p| p != &flint_path)
+                .filter(|p| p != &dez_path)
         })
         .with_context(|| {
             format!(
-                "could not find flintctl from any of: {}",
+                "could not find dezctl from any of: {}",
                 possible_locations.join(", ")
             )
         })
@@ -406,9 +406,9 @@ pub async fn load_login_shell_environment() -> Result<()> {
         .await
         .with_context(|| format!("capturing environment with {:?}", get_system_shell()))?
     {
-        // Skip SHLVL to prevent it from polluting Flint's process environment.
+        // Skip SHLVL to prevent it from polluting dez's process environment.
         // The login shell used for env capture increments SHLVL, and if we propagate it,
-        // terminals spawned by Flint will inherit it and increment again, causing SHLVL
+        // terminals spawned by dez will inherit it and increment again, causing SHLVL
         // to start at 2 instead of 1 (and increase by 2 on each reload).
         if name == "SHLVL" {
             continue;

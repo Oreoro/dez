@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make `New — Flint-managed Codex` confirm uncached official CLI downloads,
+Make `New — dez-managed Codex` confirm uncached official CLI downloads,
 display byte progress, and coalesce repeated launch gestures into one verified
 download, one remote installation, and one Agent Thread.
 
@@ -74,7 +74,7 @@ phase updates, owner-only completion, and retry after cleanup.
 Add the focused GPUI view to `crates/agent_threads/src/managed_agent_progress.rs`
 and register the module in `crates/agent_threads/src/agent_threads.rs`.
 
-1. Use `NotificationFrame` and Flint's themed `ProgressBar` for known totals.
+1. Use `NotificationFrame` and dez's themed `ProgressBar` for known totals.
 2. Show percentage and human-readable downloaded/total bytes.
 3. Use a spinner and transferred-byte count when total length is unknown.
 4. Replace byte progress with concise verification, upload, and install states.
@@ -115,7 +115,7 @@ cargo test -p agent_threads --lib
 ```
 
 If the known debug bundling tail fails after producing the fresh bundle, retain
-the previous `/tmp/Flint-Local.app`, complete the documented safe copy fallback,
+the previous `/tmp/dez-Local.app`, complete the documented safe copy fallback,
 and verify the app signature. Manually validate one uncached confirmation,
 visible progress, repeated-click coalescing, remote install, and one Codex
 thread.

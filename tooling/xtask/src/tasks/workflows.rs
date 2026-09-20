@@ -9,7 +9,7 @@ use crate::tasks::workflow_checks::{self};
 
 mod after_release;
 mod autofix_pr;
-mod bump_flint_version;
+mod bump_dez_version;
 mod bump_patch_version;
 mod cherry_pick;
 mod compare_perf;
@@ -213,7 +213,7 @@ impl WorkflowType {
 }
 
 pub fn run_workflows(args: GenerateWorkflowArgs) -> Result<()> {
-    if !Path::new("crates/flint/").is_dir() {
+    if !Path::new("crates/dez/").is_dir() {
         anyhow::bail!("xtask workflows must be ran from the project root");
     }
 
@@ -224,7 +224,7 @@ pub fn run_workflows(args: GenerateWorkflowArgs) -> Result<()> {
         WorkflowFile::zed(after_release::after_release),
         WorkflowFile::zed(autofix_pr::autofix_pr),
         WorkflowFile::zed(bump_patch_version::bump_patch_version),
-        WorkflowFile::zed(bump_flint_version::bump_zed_version),
+        WorkflowFile::zed(bump_dez_version::bump_zed_version),
         WorkflowFile::zed(cherry_pick::cherry_pick),
         WorkflowFile::zed(compare_perf::compare_perf),
         WorkflowFile::zed(compliance_check::compliance_check),

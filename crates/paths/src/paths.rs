@@ -1,4 +1,4 @@
-//! Paths to locations used by Flint.
+//! Paths to locations used by dez.
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -14,8 +14,8 @@ pub const EDITORCONFIG_NAME: &str = ".editorconfig";
 /// The application name, used to derive platform-specific data, config, cache,
 /// and state directory paths.
 ///
-/// Forks should change this to avoid colliding with Flint's user data.
-pub const APP_NAME: &str = "Flint";
+/// Forks should change this to avoid colliding with dez's user data.
+pub const APP_NAME: &str = "dez";
 
 /// Lowercased form of [`APP_NAME`], for use in XDG-style paths on
 /// Linux/FreeBSD and the macOS `~/.config` fallback.
@@ -53,33 +53,33 @@ static CUSTOM_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// The resolved data directory, combining custom override or platform defaults.
 /// This is set once and cached for subsequent calls.
-/// On macOS, this is `~/Library/Application Support/Flint`.
-/// On Linux/FreeBSD, this is `$XDG_DATA_HOME/flint`.
-/// On Windows, this is `%LOCALAPPDATA%\Flint`.
+/// On macOS, this is `~/Library/Application Support/dez`.
+/// On Linux/FreeBSD, this is `$XDG_DATA_HOME/dez`.
+/// On Windows, this is `%LOCALAPPDATA%\dez`.
 static CURRENT_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// The resolved config directory, combining custom override or platform defaults.
 /// This is set once and cached for subsequent calls.
-/// On macOS, this is `~/.config/flint`.
-/// On Linux/FreeBSD, this is `$XDG_CONFIG_HOME/flint`.
-/// On Windows, this is `%APPDATA%\Flint`.
+/// On macOS, this is `~/.config/dez`.
+/// On Linux/FreeBSD, this is `$XDG_CONFIG_HOME/dez`.
+/// On Windows, this is `%APPDATA%\dez`.
 static CONFIG_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-/// Returns the relative path to the flint_server directory on the ssh host.
+/// Returns the relative path to the dez_server directory on the ssh host.
 ///
 /// Deliberately diverges from upstream Zed's `.zed_server` so that a host used by both
-/// Zed and Flint doesn't have two unrelated daemons sharing one socket/binary directory.
+/// Zed and dez doesn't have two unrelated daemons sharing one socket/binary directory.
 pub fn remote_server_dir_relative() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".flint_server").unwrap());
+        LazyLock::new(|| RelPath::unix(".dez_server").unwrap());
     *CACHED
 }
 
 // Remove this once 223 goes stable
-/// Returns the relative path to the flint_wsl_server directory on the wsl host.
+/// Returns the relative path to the dez_wsl_server directory on the wsl host.
 pub fn remote_wsl_server_dir_relative() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".flint_wsl_server").unwrap());
+        LazyLock::new(|| RelPath::unix(".dez_wsl_server").unwrap());
     *CACHED
 }
 
@@ -121,7 +121,7 @@ pub fn set_custom_data_dir(dir: &str) -> &'static PathBuf {
     })
 }
 
-/// Returns the path to the configuration directory used by Flint.
+/// Returns the path to the configuration directory used by dez.
 pub fn config_dir() -> &'static PathBuf {
     CONFIG_DIR.get_or_init(|| {
         if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
@@ -143,7 +143,7 @@ pub fn config_dir() -> &'static PathBuf {
     })
 }
 
-/// Returns the path to the data directory used by Flint.
+/// Returns the path to the data directory used by dez.
 pub fn data_dir() -> &'static PathBuf {
     CURRENT_DATA_DIR.get_or_init(|| {
         if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
@@ -197,7 +197,7 @@ pub fn state_dir() -> &'static PathBuf {
     })
 }
 
-/// Returns the path to the temp directory used by Flint.
+/// Returns the path to the temp directory used by dez.
 pub fn temp_dir() -> &'static PathBuf {
     static TEMP_DIR: OnceLock<PathBuf> = OnceLock::new();
     TEMP_DIR.get_or_init(|| {
@@ -244,19 +244,19 @@ pub fn logs_dir() -> &'static PathBuf {
     })
 }
 
-/// Returns the path to the Flint server directory on this SSH host.
+/// Returns the path to the dez server directory on this SSH host.
 pub fn remote_server_state_dir() -> &'static PathBuf {
     static REMOTE_SERVER_STATE: OnceLock<PathBuf> = OnceLock::new();
     REMOTE_SERVER_STATE.get_or_init(|| data_dir().join("server_state"))
 }
 
-/// Returns the path to the `Flint.log` file.
+/// Returns the path to the `dez.log` file.
 pub fn log_file() -> &'static PathBuf {
     static LOG_FILE: OnceLock<PathBuf> = OnceLock::new();
     LOG_FILE.get_or_init(|| logs_dir().join(format!("{}.log", APP_NAME)))
 }
 
-/// Returns the path to the `Flint.log.old` file.
+/// Returns the path to the `dez.log.old` file.
 pub fn old_log_file() -> &'static PathBuf {
     static OLD_LOG_FILE: OnceLock<PathBuf> = OnceLock::new();
     OLD_LOG_FILE.get_or_init(|| logs_dir().join(format!("{}.log.old", APP_NAME)))
@@ -327,7 +327,7 @@ pub fn debug_scenarios_file() -> &'static PathBuf {
 /// Returns the path to the user-global `AGENTS.md` file.
 ///
 /// This file holds personal agent instructions that apply to every project the
-/// user opens, and is loaded into the native Flint agent's system prompt.
+/// user opens, and is loaded into the native dez agent's system prompt.
 pub fn agents_file() -> &'static PathBuf {
     static AGENTS_FILE: OnceLock<PathBuf> = OnceLock::new();
     AGENTS_FILE.get_or_init(|| config_dir().join("AGENTS.md"))
@@ -408,7 +408,7 @@ pub fn prompts_dir() -> &'static PathBuf {
 ///
 /// # Arguments
 ///
-/// * `dev_mode` - If true, assumes the current working directory is the Flint repository.
+/// * `dev_mode` - If true, assumes the current working directory is the dez repository.
 pub fn prompt_overrides_dir(repo_path: Option<&Path>) -> PathBuf {
     if let Some(path) = repo_path {
         let dev_path = path.join("assets").join("prompts");
@@ -445,7 +445,7 @@ pub fn embeddings_dir() -> &'static PathBuf {
 
 /// Returns the path to the languages directory.
 ///
-/// This is where language servers are downloaded to for languages built-in to Flint.
+/// This is where language servers are downloaded to for languages built-in to dez.
 pub fn languages_dir() -> &'static PathBuf {
     static LANGUAGES_DIR: OnceLock<PathBuf> = OnceLock::new();
     LANGUAGES_DIR.get_or_init(|| data_dir().join("languages"))
@@ -453,7 +453,7 @@ pub fn languages_dir() -> &'static PathBuf {
 
 /// Returns the path to the debug adapters directory
 ///
-/// This is where debug adapters are downloaded to for DAPs that are built-in to Flint.
+/// This is where debug adapters are downloaded to for DAPs that are built-in to dez.
 pub fn debug_adapters_dir() -> &'static PathBuf {
     static DEBUG_ADAPTERS_DIR: OnceLock<PathBuf> = OnceLock::new();
     DEBUG_ADAPTERS_DIR.get_or_init(|| data_dir().join("debug_adapters"))
@@ -491,9 +491,9 @@ pub fn devcontainer_dir() -> &'static PathBuf {
     DEVCONTAINER_DIR.get_or_init(|| data_dir().join("devcontainer"))
 }
 
-/// Returns the relative path to a `.flint` folder within a project.
+/// Returns the relative path to a `.dez` folder within a project.
 pub fn local_settings_folder_name() -> &'static str {
-    ".flint"
+    ".dez"
 }
 
 /// Returns the relative path to a `.vscode` folder within a project.
@@ -504,14 +504,14 @@ pub fn local_vscode_folder_name() -> &'static str {
 /// Returns the relative path to a `settings.json` file within a project.
 pub fn local_settings_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".flint/settings.json").unwrap());
+        LazyLock::new(|| RelPath::unix(".dez/settings.json").unwrap());
     *CACHED
 }
 
 /// Returns the relative path to a `tasks.json` file within a project.
 pub fn local_tasks_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".flint/tasks.json").unwrap());
+        LazyLock::new(|| RelPath::unix(".dez/tasks.json").unwrap());
     *CACHED
 }
 
@@ -531,10 +531,10 @@ pub fn task_file_name() -> &'static str {
 }
 
 /// Returns the relative path to a `debug.json` file within a project.
-/// .flint/debug.json
+/// .dez/debug.json
 pub fn local_debug_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".flint/debug.json").unwrap());
+        LazyLock::new(|| RelPath::unix(".dez/debug.json").unwrap());
     *CACHED
 }
 

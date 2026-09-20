@@ -1,17 +1,17 @@
 ---
-title: Helix Mode - Flint
-description: Helix-style keybindings and modal editing in Flint. Selection-first editing built on top of Vim mode.
+title: Helix Mode - dez
+description: Helix-style keybindings and modal editing in dez. Selection-first editing built on top of Vim mode.
 ---
 
 # Helix Mode
 
 _Work in progress. Not all Helix keybindings are implemented yet._
 
-Flint's Helix mode is an emulation layer that brings Helix-style keybindings and modal editing to Flint. It builds upon Flint's [Vim mode](./vim.md), so much of the core functionality is shared. Enabling `helix_mode` will also enable `vim_mode`.
+dez's Helix mode is an emulation layer that brings Helix-style keybindings and modal editing to dez. It builds upon dez's [Vim mode](./vim.md), so much of the core functionality is shared. Enabling `helix_mode` will also enable `vim_mode`.
 
 For a guide on Vim-related features that are also available in Helix mode, please refer to our [Vim mode documentation](./vim.md).
 
-To check the current status of Helix mode, or to request a missing Helix feature, see the ["Are we Helix yet?" discussion](https://github.com/zed-industries/flint/discussions/33580).
+To check the current status of Helix mode, or to request a missing Helix feature, see the ["Are we Helix yet?" discussion](https://github.com/zed-industries/dez/discussions/33580).
 
 For a detailed list of Helix's default keybindings, please visit the [official Helix documentation](https://docs.helix-editor.com/keymap.html).
 

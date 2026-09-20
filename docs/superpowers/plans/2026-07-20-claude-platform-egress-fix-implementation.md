@@ -1,19 +1,19 @@
-# Claude Platform Through-Flint Egress Fix Implementation Plan
+# Claude Platform Through-dez Egress Fix Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Permit the pinned Claude CLI to reach its current official Console-authentication hostname through Flint's restricted proxy.
+**Goal:** Permit the pinned Claude CLI to reach its current official Console-authentication hostname through dez's restricted proxy.
 
 **Architecture:** Correct the versioned Claude destination data in `agent_threads.rs`; the existing CONNECT proxy continues enforcing exact hosts and port 443. The existing exact-list regression test provides the complete behavioral seam.
 
-**Tech Stack:** Rust, Flint agent-kind destination policy, Cargo tests.
+**Tech Stack:** Rust, dez agent-kind destination policy, Cargo tests.
 
 ## Global Constraints
 
 - Replace `console.anthropic.com` with `platform.claude.com`.
 - Keep `api.anthropic.com` and `claude.ai` unchanged.
 - Do not add wildcard, update, installer, telemetry, or general internet hosts.
-- Do not change SSH forwarding, proxy authentication, credentials, or Not-through-Flint behavior.
+- Do not change SSH forwarding, proxy authentication, credentials, or Not-through-dez behavior.
 - Automated tests must not contact Anthropic.
 
 ---
@@ -84,7 +84,7 @@ git commit -m "Fix Claude platform egress policy"
 
 **Interfaces:**
 - Consumes: corrected Claude destination data.
-- Produces: automated verification record and fresh `/tmp/Flint-Local.app` for live Claude validation.
+- Produces: automated verification record and fresh `/tmp/dez-Local.app` for live Claude validation.
 
 - [x] **Step 1: Run complete verification**
 
@@ -102,13 +102,13 @@ Expected: every command succeeds.
 - [x] **Step 2: Build and verify the local app**
 
 Run `./script/bundle-tmp-app`. If its documented debug-build release-path bug
-stops before the copy, preserve the existing `/tmp/Flint-Local.app`, copy the
-fresh `target/aarch64-apple-darwin/debug/bundle/osx/Flint.app`, compare the
-source and copied `Contents/MacOS/flint` SHA-256 digests, and verify the copied
+stops before the copy, preserve the existing `/tmp/dez-Local.app`, copy the
+fresh `target/aarch64-apple-darwin/debug/bundle/osx/dez.app`, compare the
+source and copied `Contents/MacOS/dez` SHA-256 digests, and verify the copied
 bundle with:
 
 ```bash
-codesign --verify --deep --strict /tmp/Flint-Local.app
+codesign --verify --deep --strict /tmp/dez-Local.app
 ```
 
 - [x] **Step 3: Record completion**

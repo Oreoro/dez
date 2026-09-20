@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use flint_actions::toast;
+use dez_actions::toast;
 use gpui::{DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement};
 use ui::{Tooltip, prelude::*};
 use workspace::{ToastAction, ToastView};
@@ -175,7 +175,7 @@ impl Component for StatusToast {
         });
 
         let success_example =
-            StatusToast::new("Pushed 4 changes to `flint/main`", cx, |this, _| {
+            StatusToast::new("Pushed 4 changes to `dez/main`", cx, |this, _| {
                 this.icon(
                     Icon::new(IconName::Check)
                         .size(IconSize::Small)
@@ -184,7 +184,7 @@ impl Component for StatusToast {
             });
 
         let error_example = StatusToast::new(
-            "git push: Couldn't find remote origin `iamnbutler/flint`",
+            "git push: Couldn't find remote origin `iamnbutler/dez`",
             cx,
             |this, _cx| {
                 this.icon(
@@ -206,7 +206,7 @@ impl Component for StatusToast {
         });
 
         let pr_example = StatusToast::new(
-            "`flint/new-notification-system` created!",
+            "`dez/new-notification-system` created!",
             cx,
             |this, _cx| {
                 this.icon(

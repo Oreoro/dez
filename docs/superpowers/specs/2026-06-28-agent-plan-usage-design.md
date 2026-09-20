@@ -19,7 +19,7 @@ enabled.
 
 - Display percentage used, not percentage remaining, for the five-hour and
   weekly windows.
-- Work for local Flint installations on Windows, Linux, and macOS.
+- Work for local dez installations on Windows, Linux, and macOS.
 - Query official Codex and Claude Code subscriptions as well as the five known
   third-party provider families.
 - Stop all usage-query work when the setting is disabled.
@@ -32,7 +32,7 @@ enabled.
 - Login, OAuth refresh, or credential management. Users authenticate with the
   provider's CLI as they do today.
 - Remote-project credential lookup. The first version reads the local CLI
-  configuration used by Flint's local terminal threads.
+  configuration used by dez's local terminal threads.
 
 ## Settings
 
@@ -44,7 +44,7 @@ Expose it in the Agent Threads section of Settings UI as **Show Plan Usage**:
 
 > Show five-hour and weekly plan usage beside Codex and Claude headings.
 
-Changing the value takes effect without restarting Flint. Turning it off:
+Changing the value takes effect without restarting dez. Turning it off:
 
 1. drops the polling task, cancelling an in-flight request where cancellation
    is supported by the HTTP future;
@@ -101,7 +101,7 @@ environment. Without both values, Volcengine usage remains hidden.
 
 ## Query adapters
 
-All adapters use Flint's existing HTTP client with a 15-second timeout. They
+All adapters use dez's existing HTTP client with a 15-second timeout. They
 return `PlanUsage` and do not expose provider response types to the panel.
 
 ### Official Claude Code
@@ -233,7 +233,7 @@ Use test-first changes in the existing crate tests plus focused tests in
   windows.
 
 Run the focused `agent_threads` and `settings_ui` tests, then `./script/clippy`
-for the affected workspace crates. Build `/tmp/Flint-Local.app` with
+for the affected workspace crates. Build `/tmp/dez-Local.app` with
 `./script/bundle-tmp-app` for the final manual verification.
 
 ## Files

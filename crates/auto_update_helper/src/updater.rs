@@ -172,17 +172,17 @@ pub(crate) static JOBS: LazyLock<[Job; 24]> = LazyLock::new(|| {
         // Move old files
         // Not deleting because installing new files can fail
         Job::mkdir(p("old")),
-        Job::move_file(p("Flint.exe"), p("old\\Flint.exe")),
+        Job::move_file(p("dez.exe"), p("old\\dez.exe")),
         // Existing installs from before agent control was introduced do not
         // have this companion yet, so the first update must tolerate its
         // absence while still preserving it for rollback on later updates.
         Job::move_if_exists(
-            p("flint-agent-control.exe"),
-            p("old\\flint-agent-control.exe"),
+            p("dez-agent-control.exe"),
+            p("old\\dez-agent-control.exe"),
         ),
         Job::mkdir(p("old\\bin")),
-        Job::move_file(p("bin\\Flint.exe"), p("old\\bin\\Flint.exe")),
-        Job::move_file(p("bin\\flint"), p("old\\bin\\flint")),
+        Job::move_file(p("bin\\dez.exe"), p("old\\bin\\dez.exe")),
+        Job::move_file(p("bin\\dez"), p("old\\bin\\dez")),
         //
         // TODO: remove after a few weeks once everyone is on the new version and this file never exists
         Job::move_if_exists(p("OpenConsole.exe"), p("old\\OpenConsole.exe")),
@@ -196,10 +196,10 @@ pub(crate) static JOBS: LazyLock<[Job; 24]> = LazyLock::new(|| {
         //
         Job::move_file(p("conpty.dll"), p("old\\conpty.dll")),
         // Copy new files
-        Job::move_file(p("install\\Flint.exe"), p("Flint.exe")),
-        Job::move_file(p("install\\flintctl.exe"), p("flintctl.exe")),
-        Job::move_file(p("install\\bin\\Flint.exe"), p("bin\\Flint.exe")),
-        Job::move_file(p("install\\bin\\flint"), p("bin\\flint")),
+        Job::move_file(p("install\\dez.exe"), p("dez.exe")),
+        Job::move_file(p("install\\dezctl.exe"), p("dezctl.exe")),
+        Job::move_file(p("install\\bin\\dez.exe"), p("bin\\dez.exe")),
+        Job::move_file(p("install\\bin\\dez"), p("bin\\dez")),
         //
         Job::mkdir_if_exists(p("x64"), p("install\\x64")),
         Job::mkdir_if_exists(p("arm64"), p("install\\arm64")),
@@ -287,11 +287,11 @@ pub(crate) static JOBS: LazyLock<[Job; 9]> = LazyLock::new(|| {
 fn release_file_handles(app_dir: &Path) -> Result<()> {
     // Files that commonly get locked by Explorer or other processes
     let files_to_release = [
-        app_dir.join("Flint.exe"),
-        app_dir.join("flint-agent-control.exe"),
-        app_dir.join("flintctl.exe"),
-        app_dir.join("bin\\Flint.exe"),
-        app_dir.join("bin\\flint"),
+        app_dir.join("dez.exe"),
+        app_dir.join("dez-agent-control.exe"),
+        app_dir.join("dezctl.exe"),
+        app_dir.join("bin\\dez.exe"),
+        app_dir.join("bin\\dez"),
         app_dir.join("conpty.dll"),
     ];
 
@@ -438,7 +438,7 @@ pub(crate) fn perform_update(app_dir: &Path, hwnd: Option<isize>, launch: bool) 
 
     if launch {
         #[allow(clippy::disallowed_methods, reason = "doesn't run in the main binary")]
-        let _ = std::process::Command::new(app_dir.join("Flint.exe")).spawn();
+        let _ = std::process::Command::new(app_dir.join("dez.exe")).spawn();
     }
     log::info!("Update completed successfully");
     Ok(())
@@ -451,64 +451,64 @@ mod test {
     use super::{Job, perform_update};
 
     #[test]
-    fn flintctl_replaces_old_control_helper_and_rollback_restores_it() {
+    fn dezctl_replaces_old_control_helper_and_rollback_restores_it() {
         let app_dir = tempfile::tempdir().expect("create app directory");
         let app_dir = app_dir.path();
         std::fs::create_dir_all(app_dir.join("old")).expect("create old directory");
         std::fs::create_dir_all(app_dir.join("install")).expect("create install directory");
-        std::fs::write(app_dir.join("flint-agent-control.exe"), "old").expect("write old helper");
-        std::fs::write(app_dir.join("install\\flintctl.exe"), "new").expect("write new helper");
+        std::fs::write(app_dir.join("dez-agent-control.exe"), "old").expect("write old helper");
+        std::fs::write(app_dir.join("install\\dezctl.exe"), "new").expect("write new helper");
 
         let move_old = Job::move_if_exists(
-            Path::new("flint-agent-control.exe"),
-            Path::new("old\\flint-agent-control.exe"),
+            Path::new("dez-agent-control.exe"),
+            Path::new("old\\dez-agent-control.exe"),
         );
         let install_new = Job::move_file(
-            Path::new("install\\flintctl.exe"),
-            Path::new("flintctl.exe"),
+            Path::new("install\\dezctl.exe"),
+            Path::new("dezctl.exe"),
         );
         (move_old.apply)(app_dir).expect("move old helper");
         (install_new.apply)(app_dir).expect("install new helper");
         assert_eq!(
-            std::fs::read_to_string(app_dir.join("flintctl.exe")).expect("read installed helper"),
+            std::fs::read_to_string(app_dir.join("dezctl.exe")).expect("read installed helper"),
             "new"
         );
 
         (install_new.rollback)(app_dir).expect("remove replacement helper");
         (move_old.rollback)(app_dir).expect("restore old helper");
         assert_eq!(
-            std::fs::read_to_string(app_dir.join("flint-agent-control.exe"))
+            std::fs::read_to_string(app_dir.join("dez-agent-control.exe"))
                 .expect("read restored helper"),
             "old"
         );
     }
 
     #[test]
-    fn flintctl_can_be_installed_when_the_old_control_helper_is_absent() {
+    fn dezctl_can_be_installed_when_the_old_control_helper_is_absent() {
         let app_dir = tempfile::tempdir().expect("create app directory");
         let app_dir = app_dir.path();
         std::fs::create_dir_all(app_dir.join("old")).expect("create old directory");
         std::fs::create_dir_all(app_dir.join("install")).expect("create install directory");
-        std::fs::write(app_dir.join("install\\flintctl.exe"), "new").expect("write new helper");
+        std::fs::write(app_dir.join("install\\dezctl.exe"), "new").expect("write new helper");
 
         let move_old = Job::move_if_exists(
-            Path::new("flint-agent-control.exe"),
-            Path::new("old\\flint-agent-control.exe"),
+            Path::new("dez-agent-control.exe"),
+            Path::new("old\\dez-agent-control.exe"),
         );
         let install_new = Job::move_file(
-            Path::new("install\\flintctl.exe"),
-            Path::new("flintctl.exe"),
+            Path::new("install\\dezctl.exe"),
+            Path::new("dezctl.exe"),
         );
         (move_old.apply)(app_dir).expect("skip absent old helper");
         (install_new.apply)(app_dir).expect("install new helper");
         assert_eq!(
-            std::fs::read_to_string(app_dir.join("flintctl.exe")).expect("read installed helper"),
+            std::fs::read_to_string(app_dir.join("dezctl.exe")).expect("read installed helper"),
             "new"
         );
 
         (install_new.rollback)(app_dir).expect("remove replacement helper");
         (move_old.rollback)(app_dir).expect("keep old helper absent");
-        assert!(!app_dir.join("flintctl.exe").exists());
+        assert!(!app_dir.join("dezctl.exe").exists());
     }
 
     #[test]

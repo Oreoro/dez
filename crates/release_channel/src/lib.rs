@@ -1,4 +1,4 @@
-//! Provides constructs for the Flint app version and release channel.
+//! Provides constructs for the dez app version and release channel.
 
 #![deny(missing_docs)]
 
@@ -7,19 +7,19 @@ use std::{env, str::FromStr, sync::LazyLock};
 use gpui::{App, Global};
 use semver::Version;
 
-const FLINT_DOCS_URL: &str = "https://flint.dev/docs";
+const DEZ_DOCS_URL: &str = "https://dez.dev/docs";
 const CHINESE_DOCUMENTATION_PAGES: &[&str] = &["", "development/glossary", "getting-started"];
 
 /// stable | dev | nightly | preview
 pub static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
     if cfg!(debug_assertions) {
         env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| {
-            include_str!("../../flint/RELEASE_CHANNEL")
+            include_str!("../../dez/RELEASE_CHANNEL")
                 .trim()
                 .to_string()
         })
     } else {
-        include_str!("../../flint/RELEASE_CHANNEL")
+        include_str!("../../dez/RELEASE_CHANNEL")
             .trim()
             .to_string()
     }
@@ -36,14 +36,14 @@ pub static RELEASE_CHANNEL: LazyLock<ReleaseChannel> =
 #[cfg(target_os = "windows")]
 pub fn app_identifier() -> &'static str {
     match *RELEASE_CHANNEL {
-        ReleaseChannel::Dev => "Flint-Editor-Dev",
-        ReleaseChannel::Nightly => "Flint-Editor-Nightly",
-        ReleaseChannel::Preview => "Flint-Editor-Preview",
-        ReleaseChannel::Stable => "Flint-Editor-Stable",
+        ReleaseChannel::Dev => "dez-Editor-Dev",
+        ReleaseChannel::Nightly => "dez-Editor-Nightly",
+        ReleaseChannel::Preview => "dez-Editor-Preview",
+        ReleaseChannel::Stable => "dez-Editor-Stable",
     }
 }
 
-/// The Git commit SHA that Flint was built at.
+/// The Git commit SHA that dez was built at.
 #[derive(Clone, Eq, Debug, PartialEq)]
 pub struct AppCommitSha(String);
 
@@ -83,7 +83,7 @@ struct GlobalAppVersion(Version);
 
 impl Global for GlobalAppVersion {}
 
-/// The version of Flint.
+/// The version of dez.
 pub struct AppVersion;
 
 impl AppVersion {
@@ -126,12 +126,12 @@ impl AppVersion {
     }
 }
 
-/// A Flint release channel.
+/// A dez release channel.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub enum ReleaseChannel {
     /// The development release channel.
     ///
-    /// Used for local debug builds of Flint.
+    /// Used for local debug builds of dez.
     #[default]
     Dev,
 
@@ -161,7 +161,7 @@ pub fn init_test(app_version: Version, release_channel: ReleaseChannel, cx: &mut
     cx.set_global(GlobalReleaseChannel(release_channel))
 }
 
-/// Returns the Flint docs URL for the current release channel for the given
+/// Returns the dez docs URL for the current release channel for the given
 /// `slug`.
 pub fn docs_url(slug: &str, cx: &App) -> String {
     let english_url = ReleaseChannel::try_global(cx)
@@ -192,8 +192,8 @@ pub fn docs_url(slug: &str, cx: &App) -> String {
         format!("{page}.html")
     };
     match anchor {
-        Some(anchor) => format!("{FLINT_DOCS_URL}/zh-CN/{page}#{anchor}"),
-        None => format!("{FLINT_DOCS_URL}/zh-CN/{page}"),
+        Some(anchor) => format!("{DEZ_DOCS_URL}/zh-CN/{page}#{anchor}"),
+        None => format!("{DEZ_DOCS_URL}/zh-CN/{page}"),
     }
 }
 
@@ -225,10 +225,10 @@ impl ReleaseChannel {
     /// Returns the display name for this [`ReleaseChannel`].
     pub fn display_name(&self) -> &'static str {
         match self {
-            ReleaseChannel::Dev => "Flint Dev",
-            ReleaseChannel::Nightly => "Flint Nightly",
-            ReleaseChannel::Preview => "Flint Preview",
-            ReleaseChannel::Stable => "Flint",
+            ReleaseChannel::Dev => "Dez Dev",
+            ReleaseChannel::Nightly => "Dez Nightly",
+            ReleaseChannel::Preview => "Dez Preview",
+            ReleaseChannel::Stable => "Dez",
         }
     }
 
@@ -244,13 +244,13 @@ impl ReleaseChannel {
 
     /// Returns the application ID that's used by Wayland as application ID
     /// and WM_CLASS on X11.
-    /// This also has to match the bundle identifier for Flint on macOS.
+    /// This also has to match the bundle identifier for dez on macOS.
     pub fn app_id(&self) -> &'static str {
         match self {
-            ReleaseChannel::Dev => "dev.flint.Flint-Dev",
-            ReleaseChannel::Nightly => "dev.flint.Flint-Nightly",
-            ReleaseChannel::Preview => "dev.flint.Flint-Preview",
-            ReleaseChannel::Stable => "dev.flint.Flint",
+            ReleaseChannel::Dev => "dev.dez.Dez-Dev",
+            ReleaseChannel::Nightly => "dev.dez.Dez-Nightly",
+            ReleaseChannel::Preview => "dev.dez.Dez-Preview",
+            ReleaseChannel::Stable => "dev.dez.Dez",
         }
     }
 
@@ -264,17 +264,17 @@ impl ReleaseChannel {
         }
     }
 
-    /// Returns the Flint docs URL for the given `slug`.
+    /// Returns the dez docs URL for the given `slug`.
     ///
     /// Documentation has one hosted copy for all release channels.
     pub fn docs_url(&self, slug: &str) -> String {
         if slug.is_empty() {
-            return FLINT_DOCS_URL.to_string();
+            return DEZ_DOCS_URL.to_string();
         }
 
         match slug.split_once('#') {
-            Some((page, anchor)) => format!("{FLINT_DOCS_URL}/{page}.html#{anchor}"),
-            None => format!("{FLINT_DOCS_URL}/{slug}.html"),
+            Some((page, anchor)) => format!("{DEZ_DOCS_URL}/{page}.html#{anchor}"),
+            None => format!("{DEZ_DOCS_URL}/{slug}.html"),
         }
     }
 }
@@ -304,14 +304,14 @@ mod tests {
 
     #[test]
     fn test_docs_url_for_release_channel() {
-        let expected = "https://flint.dev/docs/settings.html";
+        let expected = "https://dez.dev/docs/settings.html";
         assert_eq!(ReleaseChannel::Dev.docs_url("settings"), expected);
         assert_eq!(ReleaseChannel::Nightly.docs_url("settings"), expected);
         assert_eq!(ReleaseChannel::Preview.docs_url("settings"), expected);
         assert_eq!(ReleaseChannel::Stable.docs_url("settings"), expected);
         assert_eq!(
             ReleaseChannel::Stable.docs_url("tasks#custom-git-commands"),
-            "https://flint.dev/docs/tasks.html#custom-git-commands"
+            "https://dez.dev/docs/tasks.html#custom-git-commands"
         );
     }
 
@@ -324,11 +324,11 @@ mod tests {
 
             assert_eq!(
                 super::docs_url("getting-started", cx),
-                "https://flint.dev/docs/zh-CN/getting-started.html"
+                "https://dez.dev/docs/zh-CN/getting-started.html"
             );
             assert_eq!(
                 super::docs_url("tasks#custom-git-commands", cx),
-                "https://flint.dev/docs/tasks.html?language-fallback=zh-CN#custom-git-commands"
+                "https://dez.dev/docs/tasks.html?language-fallback=zh-CN#custom-git-commands"
             );
         });
     }

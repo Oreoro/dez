@@ -74,7 +74,7 @@ fn start_surface_configuration_worker(
 /// builds. The delay holds the same device permit as a real WSI stall.
 #[cfg(all(not(target_family = "wasm"), debug_assertions))]
 fn test_surface_configuration_delay() -> Option<Duration> {
-    const ENV: &str = "FLINT_TEST_SURFACE_CONFIGURE_DELAY_MS";
+    const ENV: &str = "DEZ_TEST_SURFACE_CONFIGURE_DELAY_MS";
     std::env::var(ENV)
         .ok()?
         .parse::<u64>()

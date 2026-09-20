@@ -5,8 +5,8 @@
 `RemoteAgentRoute` has two values (`crates/settings_content/src/settings_content.rs:1010`):
 
 - `Direct` (the default) runs the configured ambient executable on the remote.
-- `Tunneled` runs the pinned Flint-managed executable on the remote and routes
-  its traffic through local Flint.
+- `Tunneled` runs the pinned dez-managed executable on the remote and routes
+  its traffic through local dez.
 
 The route is already visible in two places:
 
@@ -153,7 +153,7 @@ different UI font would get GPUI's fallback, which can differ in weight or
 optical size from surrounding text. The SVG has no such failure mode and picks
 up `Color` like every other glyph in these surfaces.
 
-Converting the font glyph to an SVG asset was considered and rejected. Flint's
+Converting the font glyph to an SVG asset was considered and rejected. dez's
 icons are stroke-based line art (`fill="none"`, `stroke-width="1.2"`, rounded
 caps); a font glyph converts to filled outlines and would read heavier than its
 neighbors. It would also create a derivative of an SIL OFL 1.1 font with a
@@ -256,7 +256,7 @@ inconsistency is not mistaken for a bug in this feature.
 
 Settings changes call `cx.refresh_windows()`
 (`crates/settings/src/settings_store.rs:392-401`, wired at
-`crates/flint/src/main.rs:490-493`), GPUI marks every window for refresh
+`crates/dez/src/main.rs:490-493`), GPUI marks every window for refresh
 (`crates/gpui/src/app.rs:942-946`), and refresh bypasses cached view rendering
 (`crates/gpui/src/view.rs:155-178`). Reading the route during render is
 therefore reactive with no explicit subscription.

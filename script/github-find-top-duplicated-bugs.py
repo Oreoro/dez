@@ -28,8 +28,8 @@ from collections import Counter, defaultdict
 
 import requests
 
-OWNER = "flint-industries"
-REPO = "flint"
+OWNER = "dez-industries"
+REPO = "dez"
 
 GRAPHQL_URL = "https://api.github.com/graphql"
 REST_API_URL = "https://api.github.com"

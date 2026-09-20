@@ -1,6 +1,6 @@
-//! Wire types shared between `agent_control_cli` (the `flintctl`
+//! Wire types shared between `agent_control_cli` (the `dezctl`
 //! binary an agent's own CLI process invokes) and `agent_threads::control`
-//! (the local control server inside Flint that handles the request). Kept
+//! (the local control server inside dez that handles the request). Kept
 //! dependency-free of GPUI/terminal so the CLI binary stays small.
 
 use std::path::PathBuf;
@@ -135,12 +135,12 @@ pub const PROTOCOL_VERSION: ProtocolVersion = ProtocolVersion { major: 1, minor:
 static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
     if cfg!(debug_assertions) {
         std::env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| {
-            include_str!("../../flint/RELEASE_CHANNEL")
+            include_str!("../../dez/RELEASE_CHANNEL")
                 .trim()
                 .to_string()
         })
     } else {
-        include_str!("../../flint/RELEASE_CHANNEL")
+        include_str!("../../dez/RELEASE_CHANNEL")
             .trim()
             .to_string()
     }
@@ -159,12 +159,12 @@ pub fn socket_path() -> PathBuf {
     paths::data_dir().join(format!("agent-control-{}.sock", *RELEASE_CHANNEL_NAME))
 }
 
-/// Path to the marker file at which Flint records where its own
-/// `flintctl` executable lives, so an agent's own CLI process can
+/// Path to the marker file at which dez records where its own
+/// `dezctl` executable lives, so an agent's own CLI process can
 /// discover what command to run in the first place. One location per
-/// release channel; rewritten on each Flint launch so it always refers to the
+/// release channel; rewritten on each dez launch so it always refers to the
 /// current installed version. It is not per-thread because the executable's
-/// location is the same for every thread in one Flint session.
+/// location is the same for every thread in one dez session.
 #[cfg(unix)]
 pub fn executable_location_path() -> PathBuf {
     paths::data_dir().join(format!(
@@ -201,7 +201,7 @@ impl WindowsControlScope {
     pub fn for_session(data_dir: PathBuf, session_id: u32) -> Self {
         let stem = format!("agent-control-{}-{session_id}", *RELEASE_CHANNEL_NAME);
         Self {
-            pipe_name: format!(r"\\.\pipe\flint-{stem}"),
+            pipe_name: format!(r"\\.\pipe\dez-{stem}"),
             executable_location_path: data_dir.join(format!("{stem}-executable.json")),
         }
     }
@@ -435,7 +435,7 @@ pub struct TerminalWaitOutputRequest {
 /// The connecting process could not yet be matched to a registered thread --
 /// either because it hasn't finished registering (the terminal spawned very
 /// recently and `AgentThreadStore::register` hasn't run yet), or because it
-/// genuinely isn't one Flint is tracking. These two cases are indistinguishable
+/// genuinely isn't one dez is tracking. These two cases are indistinguishable
 /// from the server's side without extra bookkeeping this design deliberately
 /// avoids, so both get `NotReady` rather than a hard error: the CLI retries
 /// with bounded backoff, and a request that's never going to match simply
@@ -536,7 +536,7 @@ pub enum ControlSuccess {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusResult {
-    pub flint_version: String,
+    pub dez_version: String,
     pub protocol_version: ProtocolVersion,
     pub release_channel: String,
     pub capabilities: Vec<String>,
@@ -713,7 +713,7 @@ mod tests {
             "result":{
                 "kind":"status",
                 "data":{
-                    "flint_version":"1.2.3",
+                    "dez_version":"1.2.3",
                     "protocol_version":{"major":1,"minor":1},
                     "release_channel":"stable",
                     "capabilities":["terminal-read"],
@@ -823,7 +823,7 @@ mod tests {
     #[test]
     fn agent_control_location_round_trips_through_json() {
         let location = AgentControlLocation {
-            executable: PathBuf::from("/Applications/Flint.app/Contents/MacOS/flintctl"),
+            executable: PathBuf::from("/Applications/dez.app/Contents/MacOS/dezctl"),
         };
         let json = serde_json::to_string(&location).expect("serialize");
         let decoded: AgentControlLocation = serde_json::from_str(&json).expect("deserialize");
@@ -874,12 +874,12 @@ mod tests {
     fn terminal_run_request_round_trips_without_conflicting_command_fields() {
         let request = ControlRequest::current(ControlCommand::TerminalRun(TerminalRunRequest {
             terminal_id: TerminalControlId("terminal-1".to_string()),
-            command: "flintctl --help".to_string(),
+            command: "dezctl --help".to_string(),
         }));
 
         let json = serde_json::to_value(&request).expect("serialize");
         assert_eq!(json["command"], "terminal-run");
-        assert_eq!(json["text"], "flintctl --help");
+        assert_eq!(json["text"], "dezctl --help");
 
         let decoded: ControlRequest = serde_json::from_value(json).expect("deserialize");
         match decoded.command {
@@ -888,7 +888,7 @@ mod tests {
                     request.terminal_id,
                     TerminalControlId("terminal-1".to_string())
                 );
-                assert_eq!(request.command, "flintctl --help");
+                assert_eq!(request.command, "dezctl --help");
             }
             other => panic!("expected TerminalRun, got {other:?}"),
         }
@@ -1014,13 +1014,13 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn windows_scope_uses_one_release_and_session_identity() {
-        let data_dir = PathBuf::from(r"C:\Users\test\AppData\Local\Flint");
+        let data_dir = PathBuf::from(r"C:\Users\test\AppData\Local\dez");
         let scope = WindowsControlScope::for_session(data_dir.clone(), 42);
         let expected_stem = format!("agent-control-{}-42", *RELEASE_CHANNEL_NAME);
 
         assert_eq!(
             scope.pipe_name(),
-            format!(r"\\.\pipe\flint-{expected_stem}")
+            format!(r"\\.\pipe\dez-{expected_stem}")
         );
         assert_eq!(
             scope.executable_location_path(),
@@ -1031,7 +1031,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn windows_scopes_are_isolated_by_terminal_services_session() {
-        let data_dir = PathBuf::from(r"C:\Flint");
+        let data_dir = PathBuf::from(r"C:\dez");
         let first = WindowsControlScope::for_session(data_dir.clone(), 1);
         let second = WindowsControlScope::for_session(data_dir, 2);
 

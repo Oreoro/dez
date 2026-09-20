@@ -43,7 +43,7 @@ use workspace::{
     register_serializable_item, with_active_or_new_workspace,
 };
 
-use flint_actions::{ChangeKeybinding, OpenKeymap};
+use dez_actions::{ChangeKeybinding, OpenKeymap};
 pub use ui_components::*;
 
 use crate::{
@@ -232,7 +232,7 @@ impl FilterState {
 #[derive(Default, PartialEq, Eq, Copy, Clone)]
 struct SourceFilters {
     user: bool,
-    flint_defaults: bool,
+    dez_defaults: bool,
     vim_defaults: bool,
 }
 
@@ -242,7 +242,7 @@ impl SourceFilters {
             Some(KeybindSource::User) => self.user,
             Some(KeybindSource::Vim) => self.vim_defaults,
             Some(KeybindSource::Base | KeybindSource::Default | KeybindSource::Unknown) | None => {
-                self.flint_defaults
+                self.dez_defaults
             }
         }
     }
@@ -605,7 +605,7 @@ impl KeymapEditor {
             filter_state: FilterState::default(),
             source_filters: SourceFilters {
                 user: true,
-                flint_defaults: true,
+                dez_defaults: true,
                 vim_defaults: true,
             },
             show_no_action_bindings: true,
@@ -794,7 +794,7 @@ impl KeymapEditor {
 
     fn process_bindings(
         json_language: Arc<Language>,
-        flint_keybind_context_language: Arc<Language>,
+        dez_keybind_context_language: Arc<Language>,
         humanized_action_names: &HumanizedActionNameCache,
         cx: &mut App,
     ) -> (
@@ -838,7 +838,7 @@ impl KeymapEditor {
                 .map(|predicate| {
                     KeybindContextString::Local(
                         predicate.to_string().into(),
-                        flint_keybind_context_language.clone(),
+                        dez_keybind_context_language.clone(),
                     )
                 })
                 .unwrap_or(KeybindContextString::Global);
@@ -898,14 +898,14 @@ impl KeymapEditor {
         let workspace = self.workspace.clone();
         cx.spawn_in(window, async move |this, cx| {
             let json_language = load_json_language(workspace.clone(), cx).await;
-            let flint_keybind_context_language =
+            let dez_keybind_context_language =
                 load_keybind_context_language(workspace.clone(), cx).await;
 
             let (action_query, keystroke_query) = this.update(cx, |this, cx| {
                 let (key_bindings, string_match_candidates, actions_with_schemas) =
                     Self::process_bindings(
                         json_language,
-                        flint_keybind_context_language,
+                        dez_keybind_context_language,
                         &this.humanized_action_names,
                         cx,
                     );
@@ -1469,8 +1469,8 @@ impl KeymapEditor {
         self.on_query_changed(cx);
     }
 
-    fn toggle_flint_defaults_filter(&mut self, cx: &mut Context<Self>) {
-        self.source_filters.flint_defaults = !self.source_filters.flint_defaults;
+    fn toggle_dez_defaults_filter(&mut self, cx: &mut Context<Self>) {
+        self.source_filters.dez_defaults = !self.source_filters.dez_defaults;
         self.on_query_changed(cx);
     }
 
@@ -1610,12 +1610,12 @@ impl KeymapEditor {
                             ))
                             .map(add_filter(
                                 localization::text(cx, "keymap-default"),
-                                source_filters.flint_defaults,
+                                source_filters.dez_defaults,
                                 None,
                                 &focus_handle,
                                 &keymap_editor,
                                 Some(|editor, cx| {
-                                    editor.toggle_flint_defaults_filter(cx);
+                                    editor.toggle_dez_defaults_filter(cx);
                                 }),
                             ))
                             .map(add_filter(
@@ -2035,12 +2035,12 @@ impl Render for KeymapEditor {
                                         Button::new("edit-in-json", localization::text(cx, "keymap-edit-json"))
                                             .style(ButtonStyle::Subtle)
                                             .key_binding(
-                                                ui::KeyBinding::for_action_in(&flint_actions::OpenKeymapFile, &focus_handle, cx)
+                                                ui::KeyBinding::for_action_in(&dez_actions::OpenKeymapFile, &focus_handle, cx)
                                                     .map(|kb| kb.size(rems_from_px(10.))),
                                             )
                                             .on_click(|_, window, cx| {
                                                 window.dispatch_action(
-                                                    flint_actions::OpenKeymapFile.boxed_clone(),
+                                                    dez_actions::OpenKeymapFile.boxed_clone(),
                                                     cx,
                                                 );
                                             })
@@ -3563,21 +3563,21 @@ async fn load_keybind_context_language(
                 .project()
                 .read(cx)
                 .languages()
-                .language_for_name("Flint Keybind Context")
+                .language_for_name("dez Keybind Context")
         })
-        .context("Failed to load Flint Keybind Context language")
+        .context("Failed to load dez Keybind Context language")
         .log_err();
     let language = match language_task {
         Some(task) => task
             .await
-            .context("Failed to load Flint Keybind Context language")
+            .context("Failed to load dez Keybind Context language")
             .log_err(),
         None => None,
     };
     language.unwrap_or_else(|| {
         Arc::new(Language::new(
             LanguageConfig {
-                name: "Flint Keybind Context".into(),
+                name: "dez Keybind Context".into(),
                 ..Default::default()
             },
             Some(tree_sitter_rust::LANGUAGE.into()),
@@ -4132,7 +4132,7 @@ mod tests {
 
     #[test]
     fn binding_is_unbound_by_unbind_respects_precedence() {
-        let binding = gpui::KeyBinding::new("tab", flint_actions::OpenKeymap, None);
+        let binding = gpui::KeyBinding::new("tab", dez_actions::OpenKeymap, None);
         let unbind =
             gpui::KeyBinding::new("tab", gpui::Unbind(binding.action().name().into()), None);
 

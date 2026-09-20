@@ -19,7 +19,7 @@ struct VsCodeDebugTaskDefinition {
 }
 
 impl VsCodeDebugTaskDefinition {
-    fn try_to_flint(mut self, replacer: &EnvVariableReplacer) -> anyhow::Result<DebugScenario> {
+    fn try_to_dez(mut self, replacer: &EnvVariableReplacer) -> anyhow::Result<DebugScenario> {
         let label = replacer.replace(&self.name);
         let mut config = replacer.replace_value(self.other_attributes);
         let adapter = task_type_to_adapter_name(&self.r#type);
@@ -76,7 +76,7 @@ impl TryFrom<VsCodeDebugTaskFile> for DebugTaskFile {
         let templates = file
             .configurations
             .into_iter()
-            .filter_map(|config| config.try_to_flint(&replacer).log_err())
+            .filter_map(|config| config.try_to_dez(&replacer).log_err())
             .collect::<Vec<_>>();
         Ok(DebugTaskFile(templates))
     }
@@ -129,9 +129,9 @@ mod tests {
         "#;
         let parsed: VsCodeDebugTaskFile =
             serde_json_lenient::from_str(raw).expect("deserializing launch.json");
-        let flint = DebugTaskFile::try_from(parsed).expect("converting to Flint debug templates");
+        let dez = DebugTaskFile::try_from(parsed).expect("converting to dez debug templates");
         pretty_assertions::assert_eq!(
-            flint,
+            dez,
             DebugTaskFile(vec![DebugScenario {
                 label: "Debug my JS app".into(),
                 adapter: "JavaScript".into(),
@@ -174,11 +174,11 @@ mod tests {
         "#;
         let parsed: VsCodeDebugTaskFile =
             serde_json_lenient::from_str(raw).expect("deserializing launch.json");
-        let flint = DebugTaskFile::try_from(parsed).expect("converting to Flint debug templates");
+        let dez = DebugTaskFile::try_from(parsed).expect("converting to dez debug templates");
 
         let expected_placeholder = format!("${{{}}}", VariableName::PickProcessId);
         pretty_assertions::assert_eq!(
-            flint,
+            dez,
             DebugTaskFile(vec![DebugScenario {
                 label: "Attach to Process".into(),
                 adapter: "CodeLLDB".into(),

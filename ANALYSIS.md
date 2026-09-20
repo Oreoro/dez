@@ -11,15 +11,15 @@ Production startup loaded `AgentThreadsPanel` for each workspace without first c
 `agent_threads::init`. The panel constructor immediately reads the global
 `AgentThreadStore`, so the first workspace window panicked during launch.
 
-Tests did not expose the omission because the shared Flint test setup called
+Tests did not expose the omission because the shared Dez test setup called
 `agent_threads::init` directly.
 
 ## Reproduction
 
-The regression test initializes Flint through the shared workspace startup path and then
+The regression test initializes Dez through the shared workspace startup path and then
 reads the global agent thread store:
 
-`cargo test -p flint test_initialize_workspace_initializes_agent_threads`
+`cargo test -p Dez test_initialize_workspace_initializes_agent_threads`
 
 Before the fix, it panics with the same missing-global error as the installed application.
 

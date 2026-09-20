@@ -1,14 +1,14 @@
 #![allow(clippy::disallowed_methods, reason = "build scripts are exempt")]
 use std::process::Command;
 
-const ZED_MANIFEST: &str = include_str!("../flint/Cargo.toml");
+const ZED_MANIFEST: &str = include_str!("../dez/Cargo.toml");
 
 fn main() {
-    let flint_cargo_toml: cargo_toml::Manifest =
-        toml::from_str(ZED_MANIFEST).expect("failed to parse flint Cargo.toml");
+    let dez_cargo_toml: cargo_toml::Manifest =
+        toml::from_str(ZED_MANIFEST).expect("failed to parse dez Cargo.toml");
     println!(
         "cargo:rustc-env=ZED_PKG_VERSION={}",
-        flint_cargo_toml.package.unwrap().version.unwrap()
+        dez_cargo_toml.package.unwrap().version.unwrap()
     );
     println!(
         "cargo:rustc-env=TARGET={}",

@@ -1,7 +1,7 @@
 [
   {
     "bindings": {
-      "ctrl-alt-s": "flint::OpenSettings",
+      "ctrl-alt-s": "dez::OpenSettings",
       "ctrl-{": "pane::ActivatePreviousItem",
       "ctrl-}": "pane::ActivateNextItem",
       "shift-escape": null, // Unmap workspace::zoom
@@ -11,8 +11,8 @@
   {
     "context": "Editor",
     "bindings": {
-      "ctrl->": ["flint::IncreaseBufferFontSize", { "persist": true }],
-      "ctrl-<": ["flint::DecreaseBufferFontSize", { "persist": true }],
+      "ctrl->": ["dez::IncreaseBufferFontSize", { "persist": true }],
+      "ctrl-<": ["dez::DecreaseBufferFontSize", { "persist": true }],
       "ctrl-shift-j": "editor::JoinLines",
       "ctrl-d": "editor::DuplicateSelection",
       "ctrl-y": "editor::DeleteLine",

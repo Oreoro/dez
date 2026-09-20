@@ -58,7 +58,7 @@ const POSIX_TARGET_PROBE: &str = concat!(
     "case \"$ldd_output\" in *musl*) libc=musl ;; esac; ",
     "fi; ",
     "fi; ",
-    "printf '__FLINT_REMOTE_TARGET__\\t%s\\t%s\\t%s\\n' \"$os\" \"$arch\" \"$libc\"",
+    "printf '__DEZ_REMOTE_TARGET__\\t%s\\t%s\\t%s\\n' \"$os\" \"$arch\" \"$libc\"",
 );
 
 fn posix_target_probe_command() -> (&'static str, [&'static str; 2]) {
@@ -66,7 +66,7 @@ fn posix_target_probe_command() -> (&'static str, [&'static str; 2]) {
 }
 
 fn parse_platform(output: &str) -> Result<RemotePlatform> {
-    const TARGET_PREFIX: &str = "__FLINT_REMOTE_TARGET__\t";
+    const TARGET_PREFIX: &str = "__DEZ_REMOTE_TARGET__\t";
 
     let target = output
         .lines()
@@ -87,7 +87,7 @@ fn parse_platform(output: &str) -> Result<RemotePlatform> {
         "Linux" => RemoteOs::Linux,
         "Windows" => RemoteOs::Windows,
         _ => anyhow::bail!(
-            "Prebuilt remote servers are not yet available for {os:?}. See https://github.com/shenghsi/flint/blob/main/docs/src/remote-development.md"
+            "Prebuilt remote servers are not yet available for {os:?}. See https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
         ),
     };
 
@@ -102,7 +102,7 @@ fn parse_platform(output: &str) -> Result<RemotePlatform> {
         RemoteArch::X86_64
     } else {
         anyhow::bail!(
-            "Prebuilt remote servers are not yet available for {arch:?}. See https://github.com/shenghsi/flint/blob/main/docs/src/remote-development.md"
+            "Prebuilt remote servers are not yet available for {arch:?}. See https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
         )
     };
 
@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn parses_tagged_glibc_linux_target() {
-        let result = parse_platform("__FLINT_REMOTE_TARGET__\tLinux\tx86_64\tglibc\n")
+        let result = parse_platform("__DEZ_REMOTE_TARGET__\tLinux\tx86_64\tglibc\n")
             .expect("tagged target should parse");
 
         assert_eq!(
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn parses_tagged_windows_target_without_libc() {
-        let result = parse_platform("__FLINT_REMOTE_TARGET__\tWindows\tAMD64\tnone\n")
+        let result = parse_platform("__DEZ_REMOTE_TARGET__\tWindows\tAMD64\tnone\n")
             .expect("tagged Windows target should parse");
 
         assert_eq!(
@@ -531,7 +531,7 @@ mod tests {
     #[test]
     fn parses_target_after_shell_startup_noise() {
         let result = parse_platform(
-            "welcome from shell startup\n__FLINT_REMOTE_TARGET__\tLinux\taarch64\tmusl\n",
+            "welcome from shell startup\n__DEZ_REMOTE_TARGET__\tLinux\taarch64\tmusl\n",
         )
         .expect("tagged target should be found after startup noise");
 
@@ -541,7 +541,7 @@ mod tests {
 
     #[test]
     fn preserves_linux_target_when_libc_is_unknown() {
-        let result = parse_platform("__FLINT_REMOTE_TARGET__\tLinux\tx86_64\tunknown\n")
+        let result = parse_platform("__DEZ_REMOTE_TARGET__\tLinux\tx86_64\tunknown\n")
             .expect("unknown libc should not hide the base target");
 
         assert_eq!(result.os, RemoteOs::Linux);
@@ -551,7 +551,7 @@ mod tests {
 
     #[test]
     fn parses_tagged_macos_target_without_libc() {
-        let result = parse_platform("__FLINT_REMOTE_TARGET__\tDarwin\tarm64\tnone\n")
+        let result = parse_platform("__DEZ_REMOTE_TARGET__\tDarwin\tarm64\tnone\n")
             .expect("tagged macOS target should parse");
 
         assert_eq!(result.os, RemoteOs::MacOs);
@@ -580,23 +580,23 @@ mod tests {
     #[test]
     fn remote_server_command_path_is_absolute_for_each_path_style() {
         let relative =
-            RelPath::unix(".flint_server/flint-remote-server").expect("relative server path");
+            RelPath::unix(".dez_server/dez-remote-server").expect("relative server path");
 
         assert_eq!(
-            remote_server_executable_path("/home/flint", relative, PathStyle::Posix),
-            "/home/flint/.flint_server/flint-remote-server"
+            remote_server_executable_path("/home/dez", relative, PathStyle::Posix),
+            "/home/dez/.dez_server/dez-remote-server"
         );
         assert_eq!(
-            remote_server_executable_path(r"C:\Users\flint", relative, PathStyle::Windows),
-            r"C:\Users\flint\.flint_server\flint-remote-server"
+            remote_server_executable_path(r"C:\Users\dez", relative, PathStyle::Windows),
+            r"C:\Users\dez\.dez_server\dez-remote-server"
         );
     }
 
     #[test]
     fn remote_home_directory_uses_the_last_nonempty_output_line() {
         assert_eq!(
-            parse_remote_home_directory("shell notice\n/home/flint\n").expect("parse remote home"),
-            "/home/flint"
+            parse_remote_home_directory("shell notice\n/home/dez\n").expect("parse remote home"),
+            "/home/dez"
         );
     }
 }

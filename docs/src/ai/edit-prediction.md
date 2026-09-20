@@ -16,7 +16,7 @@ For privacy and training data details, see
 
 ## Configuring Zeta
 
-Flint does not support signing in to a Flint account, so Zeta is unavailable. Use [other providers](#other-providers) instead.
+dez does not support signing in to a dez account, so Zeta is unavailable. Use [other providers](#other-providers) instead.
 
 You can confirm that Zeta is properly configured by opening the [Settings Editor](zed://settings/edit_predictions.providers) (`Cmd+,` on macOS or `Ctrl+,` on Linux/Windows) and searching for `edit_predictions`. The `provider` field should be set to `Zed AI`.
 

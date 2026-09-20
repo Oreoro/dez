@@ -4,5 +4,5 @@ compatibility_date = "2024-05-03"
 workers_dev = true
 
 [[routes]]
-pattern = "flint.dev/docs*"
-zone_name = "flint.dev"
+pattern = "dez.dev/docs*"
+zone_name = "dez.dev"

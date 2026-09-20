@@ -1,4 +1,4 @@
-//! Which-key support for Flint.
+//! Which-key support for dez.
 
 mod which_key_modal;
 mod which_key_settings;

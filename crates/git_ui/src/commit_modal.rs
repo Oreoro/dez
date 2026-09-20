@@ -3,7 +3,7 @@ use crate::git_panel::{
     GitPanel, commit_message_editor, commit_title_exceeds_limit, git_commit_editor_style,
 };
 use crate::git_panel_settings::GitPanelSettings;
-use flint_actions::{DecreaseBufferFontSize, IncreaseBufferFontSize, ResetBufferFontSize};
+use dez_actions::{DecreaseBufferFontSize, IncreaseBufferFontSize, ResetBufferFontSize};
 use git::repository::CommitOptions;
 use git::{Amend, Commit, Signoff};
 use settings::Settings;
@@ -374,7 +374,7 @@ impl CommitModal {
             .style(ButtonStyle::Transparent)
             .color(Color::Muted)
             .on_click(cx.listener(|_, _, window, cx| {
-                window.dispatch_action(flint_actions::git::Branch.boxed_clone(), cx);
+                window.dispatch_action(dez_actions::git::Branch.boxed_clone(), cx);
             }));
 
         let branch_picker = PopoverMenu::new("popover-button")
@@ -392,7 +392,7 @@ impl CommitModal {
                 branch_picker_button,
                 Tooltip::for_action_title(
                     localization::text(cx, "git-switch-branch"),
-                    &flint_actions::git::Branch,
+                    &dez_actions::git::Branch,
                 ),
             )
             .anchor(Anchor::BottomLeft)
@@ -595,17 +595,17 @@ impl Render for CommitModal {
             .on_action(cx.listener(Self::decrease_font_size))
             .on_action(cx.listener(Self::reset_font_size))
             .on_action(
-                cx.listener(|this, _: &flint_actions::git::Branch, window, cx| {
+                cx.listener(|this, _: &dez_actions::git::Branch, window, cx| {
                     this.toggle_branch_selector(window, cx);
                 }),
             )
             .on_action(
-                cx.listener(|this, _: &flint_actions::git::CheckoutBranch, window, cx| {
+                cx.listener(|this, _: &dez_actions::git::CheckoutBranch, window, cx| {
                     this.toggle_branch_selector(window, cx);
                 }),
             )
             .on_action(
-                cx.listener(|this, _: &flint_actions::git::Switch, window, cx| {
+                cx.listener(|this, _: &dez_actions::git::Switch, window, cx| {
                     this.toggle_branch_selector(window, cx);
                 }),
             )

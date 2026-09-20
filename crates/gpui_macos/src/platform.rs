@@ -313,7 +313,7 @@ impl MacPlatform {
                 } => {
                     // Note that this is intentionally using earlier bindings, whereas typically
                     // later ones take display precedence. See the discussion on
-                    // https://github.com/zed-industries/flint/issues/23621
+                    // https://github.com/zed-industries/dez/issues/23621
                     let keystrokes = keymap
                         .bindings_for_action(action.as_ref())
                         .find_or_first(|binding| {
@@ -727,7 +727,7 @@ impl Platform for MacPlatform {
             // NSUserNotificationCenter is deprecated in favor of
             // UNUserNotificationCenter, but the replacement needs an async
             // authorization request plus a delegate just to remain visible
-            // while Flint is frontmost -- unwarranted ceremony for a
+            // while dez is frontmost -- unwarranted ceremony for a
             // fire-and-forget notification, and NSUserNotificationCenter
             // still works on all currently supported macOS versions.
             let bundle: id = msg_send![class!(NSBundle), mainBundle];
@@ -841,7 +841,7 @@ impl Platform for MacPlatform {
                                         .split(|&b| b == b'.')
                                         .collect::<Vec<_>>();
 
-                                    // https://github.com/zed-industries/flint/issues/16969
+                                    // https://github.com/zed-industries/dez/issues/16969
                                     // Workaround a bug in macOS Sequoia that adds an extra file-extension
                                     // sometimes. e.g. `a.sql` becomes `a.sql.s` or `a.txtx` becomes `a.txtx.txt`
                                     //
@@ -1243,7 +1243,7 @@ extern "C" fn did_finish_launching(this: &mut Object, _: Sel, _: id) {
         // NSUserNotificationCenter drops notifications posted by the
         // frontmost app unless a delegate opts in via
         // `shouldPresentNotification:` -- without this, agent-thread bell
-        // notifications never show up while Flint itself is focused.
+        // notifications never show up while dez itself is focused.
         let user_notification_center: id = msg_send![
             class!(NSUserNotificationCenter),
             defaultUserNotificationCenter

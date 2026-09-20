@@ -82,7 +82,7 @@ impl KeyContextView {
                         "".to_string()
                     };
                     let mut name = binding.action().name();
-                    if name == "flint::NoAction" {
+                    if name == "dez::NoAction" {
                         name = "(null)"
                     }
 
@@ -135,7 +135,7 @@ impl KeyContextView {
         if let Some(last_action) = a {
             last_action.partial_eq(b)
         } else {
-            b.name() == "flint::NoAction"
+            b.name() == "dez::NoAction"
         }
     }
 }
@@ -205,25 +205,25 @@ impl Render for KeyContextView {
                     .child(
                         Button::new("open_documentation", localization::text(cx, "key-context-open-documentation"))
                             .style(ButtonStyle::Filled)
-                            .on_click(|_, _, cx| cx.open_url("https://github.com/shenghsi/flint/blob/main/docs/src/key-bindings.md")),
+                            .on_click(|_, _, cx| cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/key-bindings.md")),
                     )
                     .child(
                         Button::new("view_default_keymap", localization::text(cx, "key-context-view-default-keymap"))
                             .style(ButtonStyle::Filled)
                             .key_binding(ui::KeyBinding::for_action(
-                                &flint_actions::OpenDefaultKeymap,
+                                &dez_actions::OpenDefaultKeymap,
                                 cx
                             ))
                             .on_click(|_, window, cx| {
-                                window.dispatch_action(flint_actions::OpenDefaultKeymap.boxed_clone(), cx);
+                                window.dispatch_action(dez_actions::OpenDefaultKeymap.boxed_clone(), cx);
                             }),
                     )
                     .child(
                         Button::new("edit_your_keymap", localization::text(cx, "key-context-edit-keymap"))
                             .style(ButtonStyle::Filled)
-                            .key_binding(ui::KeyBinding::for_action(&flint_actions::OpenKeymapFile, cx))
+                            .key_binding(ui::KeyBinding::for_action(&dez_actions::OpenKeymapFile, cx))
                             .on_click(|_, window, cx| {
-                                window.dispatch_action(flint_actions::OpenKeymapFile.boxed_clone(), cx);
+                                window.dispatch_action(dez_actions::OpenKeymapFile.boxed_clone(), cx);
                             }),
                     ),
             )

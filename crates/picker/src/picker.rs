@@ -9,7 +9,7 @@ pub use preview::{Layout as PreviewLayout, Update as PreviewUpdate};
 
 use anyhow::Result;
 
-use flint_actions::editor::{MoveDown, MoveUp};
+use dez_actions::editor::{MoveDown, MoveUp};
 use gpui::{
     Action, AnyElement, App, Bounds, ClickEvent, Context, CursorStyle, DismissEvent, DragMoveEvent,
     Entity, EventEmitter, FocusHandle, Focusable, Length, ListSizingBehavior, ListState,

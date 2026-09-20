@@ -1,0 +1,474 @@
+use std::{
+    collections::{HashMap, VecDeque},
+    io::{self, ErrorKind, Read as _, Write as _},
+    num::NonZeroUsize,
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+        mpsc,
+    },
+    thread,
+    time::{Duration, Instant},
+};
+
+#[cfg(unix)]
+use std::os::fd::AsRawFd as _;
+
+use alacritty_terminal::{
+    event::{OnResize as _, WindowSize},
+    tty::{self, ChildEvent, EventedPty as _, EventedReadWrite as _},
+};
+use polling::{Event, Events, PollMode, Poller};
+#[cfg(unix)]
+use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System, UpdateKind};
+
+const PTY_READ_BUFFER_BYTES: usize = 64 * 1024;
+const PTY_INPUT_QUEUE_CAPACITY: usize = 256;
+pub(super) const MAX_PTY_QUEUED_INPUT_BYTES: usize = 4 * 1024 * 1024;
+const FOREGROUND_PROCESS_REFRESH_INTERVAL: Duration = Duration::from_millis(200);
+const FOREGROUND_PROCESS_WATCH_DURATION: Duration = Duration::from_secs(2);
+// `EventedPty` assigns these fixed polling keys during registration, but the
+// current Alacritty revision no longer exports their names to consumers.
+const PTY_READ_WRITE_TOKEN: usize = 0;
+const PTY_CHILD_EVENT_TOKEN: usize = 1;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TerminalHostPtyEvent {
+    Output(Vec<u8>),
+    ForegroundProcessChanged { command: Option<String> },
+    Exited { exit_code: Option<i32> },
+    Failed(String),
+}
+
+struct ForegroundProcessObserver {
+    last_refresh: Option<Instant>,
+    last_command: Option<String>,
+    has_observation: bool,
+    #[cfg(unix)]
+    system: System,
+    #[cfg(unix)]
+    refresh_kind: ProcessRefreshKind,
+    #[cfg(unix)]
+    last_pid: Option<Pid>,
+}
+
+impl ForegroundProcessObserver {
+    fn new() -> Self {
+        Self {
+            last_refresh: None,
+            last_command: None,
+            has_observation: false,
+            #[cfg(unix)]
+            system: System::new(),
+            #[cfg(unix)]
+            refresh_kind: ProcessRefreshKind::nothing()
+                .with_cmd(UpdateKind::Always)
+                .with_exe(UpdateKind::Always)
+                .without_tasks(),
+            #[cfg(unix)]
+            last_pid: None,
+        }
+    }
+
+    fn refresh(&mut self, pty: &tty::Pty, force: bool) -> Option<Option<String>> {
+        let now = Instant::now();
+        if !force
+            && self.last_refresh.is_some_and(|last_refresh| {
+                now.duration_since(last_refresh) < FOREGROUND_PROCESS_REFRESH_INTERVAL
+            })
+        {
+            return None;
+        }
+        self.last_refresh = Some(now);
+
+        let command = self.foreground_command(pty);
+        if self.has_observation && self.last_command == command {
+            return None;
+        }
+        self.has_observation = true;
+        self.last_command = command.clone();
+        Some(command)
+    }
+
+    #[cfg(unix)]
+    fn foreground_command(&mut self, pty: &tty::Pty) -> Option<String> {
+        let process_group_id = unsafe { libc::tcgetpgrp(pty.file().as_raw_fd()) };
+        if process_group_id <= 0 {
+            return None;
+        }
+        let pid = Pid::from_u32(process_group_id as u32);
+        if self.last_pid.replace(pid) != Some(pid) {
+            self.system = System::new();
+        }
+        self.system.refresh_processes_specifics(
+            ProcessesToUpdate::Some(&[pid]),
+            true,
+            self.refresh_kind,
+        );
+        let process = self.system.process(pid)?;
+        let argv = process
+            .cmd()
+            .iter()
+            .filter_map(|argument| argument.to_str().map(ToOwned::to_owned))
+            .collect::<Vec<_>>();
+        crate::foreground_process_command_from_argv(&argv)
+    }
+
+    #[cfg(not(unix))]
+    fn foreground_command(&mut self, _pty: &tty::Pty) -> Option<String> {
+        None
+    }
+}
+
+enum TerminalHostPtyControl {
+    Resize {
+        columns: u16,
+        rows: u16,
+    },
+    Terminate {
+        completion: Option<async_channel::Sender<()>>,
+    },
+}
+
+/// Process handle owned by a terminal host rather than a GPUI entity.
+///
+/// The underlying PTY and child live on their I/O thread. Dropping the handle
+/// requests termination through the priority control channel, so a long-lived
+/// helper must retain one handle per hosted session.
+pub struct TerminalHostPtyHandle {
+    input_tx: mpsc::SyncSender<Vec<u8>>,
+    control_tx: mpsc::Sender<TerminalHostPtyControl>,
+    queued_input_bytes: Arc<AtomicUsize>,
+    poller: Arc<Poller>,
+    process_id: Option<u32>,
+}
+
+impl Drop for TerminalHostPtyHandle {
+    fn drop(&mut self) {
+        if self
+            .control_tx
+            .send(TerminalHostPtyControl::Terminate { completion: None })
+            .is_ok()
+            && let Err(error) = self.poller.notify()
+        {
+            log::debug!("failed to wake terminal host PTY for shutdown: {error}");
+        }
+    }
+}
+
+impl TerminalHostPtyHandle {
+    pub fn spawn(
+        working_directory: Option<PathBuf>,
+        shell: Option<super::TerminalSessionShell>,
+        environment: HashMap<String, String>,
+        columns: u16,
+        rows: u16,
+        event_handler: impl Fn(TerminalHostPtyEvent) + Send + 'static,
+    ) -> io::Result<Self> {
+        let options = tty::Options {
+            shell: shell.map(|shell| tty::Shell::new(shell.program, shell.args)),
+            working_directory,
+            drain_on_exit: true,
+            env: environment,
+            #[cfg(not(windows))]
+            child_signal_mask: Some(tty::SignalMask::current()?),
+            #[cfg(windows)]
+            escape_args: false,
+        };
+        let window_size = WindowSize {
+            num_lines: rows.max(1),
+            num_cols: columns.max(1),
+            cell_width: 8,
+            cell_height: 16,
+        };
+        let pty = tty::new(&options, window_size, 0)?;
+        let process_id = pty_process_id(&pty);
+        let (input_tx, input_rx) = mpsc::sync_channel(PTY_INPUT_QUEUE_CAPACITY);
+        let (control_tx, control_rx) = mpsc::channel();
+        let queued_input_bytes = Arc::new(AtomicUsize::new(0));
+        let poller = Arc::new(Poller::new()?);
+        thread::Builder::new()
+            .name("dez terminal host PTY".to_owned())
+            .spawn({
+                let poller = poller.clone();
+                let queued_input_bytes = queued_input_bytes.clone();
+                move || {
+                    run_pty(
+                        pty,
+                        input_rx,
+                        control_rx,
+                        queued_input_bytes,
+                        poller,
+                        event_handler,
+                    )
+                }
+            })?;
+        Ok(Self {
+            input_tx,
+            control_tx,
+            queued_input_bytes,
+            poller,
+            process_id,
+        })
+    }
+
+    pub fn process_id(&self) -> Option<u32> {
+        self.process_id
+    }
+
+    pub fn input(&self, bytes: Vec<u8>) -> io::Result<()> {
+        if bytes.is_empty() {
+            return Ok(());
+        }
+        let byte_count = bytes.len();
+        self.queued_input_bytes
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |queued| {
+                queued
+                    .checked_add(byte_count)
+                    .filter(|total| *total <= MAX_PTY_QUEUED_INPUT_BYTES)
+            })
+            .map_err(|_| {
+                io::Error::new(
+                    ErrorKind::WouldBlock,
+                    "terminal host PTY input buffer is full",
+                )
+            })?;
+        if let Err(error) = self.input_tx.try_send(bytes) {
+            self.queued_input_bytes
+                .fetch_sub(byte_count, Ordering::AcqRel);
+            return Err(match error {
+                mpsc::TrySendError::Full(_) => io::Error::new(
+                    ErrorKind::WouldBlock,
+                    "terminal host PTY input queue is full",
+                ),
+                mpsc::TrySendError::Disconnected(_) => {
+                    io::Error::new(ErrorKind::BrokenPipe, "terminal host PTY closed")
+                }
+            });
+        }
+        self.poller.notify()
+    }
+
+    pub fn resize(&self, columns: u16, rows: u16) -> io::Result<()> {
+        self.send_control(TerminalHostPtyControl::Resize { columns, rows })
+    }
+
+    pub fn terminate(&self) -> io::Result<async_channel::Receiver<()>> {
+        let (completion_tx, completion_rx) = async_channel::bounded(1);
+        self.send_control(TerminalHostPtyControl::Terminate {
+            completion: Some(completion_tx),
+        })?;
+        Ok(completion_rx)
+    }
+
+    fn send_control(&self, control: TerminalHostPtyControl) -> io::Result<()> {
+        self.control_tx
+            .send(control)
+            .map_err(|_| io::Error::new(ErrorKind::BrokenPipe, "terminal host PTY closed"))?;
+        self.poller.notify()
+    }
+}
+
+fn run_pty(
+    mut pty: tty::Pty,
+    input_rx: mpsc::Receiver<Vec<u8>>,
+    control_rx: mpsc::Receiver<TerminalHostPtyControl>,
+    queued_input_bytes: Arc<AtomicUsize>,
+    poller: Arc<Poller>,
+    event_handler: impl Fn(TerminalHostPtyEvent),
+) {
+    let mut pending_input = VecDeque::<(Vec<u8>, usize)>::new();
+    let mut read_buffer = vec![0; PTY_READ_BUFFER_BYTES];
+    let mut interest = Event::readable(PTY_READ_WRITE_TOKEN);
+    if let Err(error) = unsafe { pty.register(&poller, interest, PollMode::Level) } {
+        event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+        return;
+    }
+    let Some(event_capacity) = NonZeroUsize::new(128) else {
+        event_handler(TerminalHostPtyEvent::Failed(
+            "terminal host event capacity must be non-zero".to_owned(),
+        ));
+        if let Err(error) = pty.deregister(&poller) {
+            event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+        }
+        return;
+    };
+    let mut events = Events::with_capacity(event_capacity);
+    let mut foreground_process = ForegroundProcessObserver::new();
+    let mut foreground_process_watch_until = None;
+    let mut termination_completion = None;
+    if let Some(command) = foreground_process.refresh(&pty, true) {
+        event_handler(TerminalHostPtyEvent::ForegroundProcessChanged { command });
+    }
+
+    'host: loop {
+        events.clear();
+        let foreground_process_wait = foreground_process_watch_until
+            .filter(|watch_until| *watch_until > Instant::now())
+            .map(|_| FOREGROUND_PROCESS_REFRESH_INTERVAL);
+        if let Err(error) = poller.wait(&mut events, foreground_process_wait) {
+            if error.kind() == ErrorKind::Interrupted {
+                continue;
+            }
+            event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+            break;
+        }
+
+        let mut latest_resize = None;
+        loop {
+            match control_rx.try_recv() {
+                Ok(TerminalHostPtyControl::Resize { columns, rows }) => {
+                    latest_resize = Some((columns, rows));
+                }
+                Ok(TerminalHostPtyControl::Terminate { completion }) => {
+                    termination_completion = completion;
+                    break 'host;
+                }
+                Err(mpsc::TryRecvError::Empty) => break,
+                Err(mpsc::TryRecvError::Disconnected) => break 'host,
+            }
+        }
+        if let Some((columns, rows)) = latest_resize {
+            pty.on_resize(WindowSize {
+                num_lines: rows.max(1),
+                num_cols: columns.max(1),
+                cell_width: 8,
+                cell_height: 16,
+            });
+        }
+        while let Ok(bytes) = input_rx.try_recv() {
+            pending_input.push_back((bytes, 0));
+            foreground_process_watch_until =
+                Some(Instant::now() + FOREGROUND_PROCESS_WATCH_DURATION);
+        }
+
+        for event in events.iter() {
+            match event.key {
+                PTY_CHILD_EVENT_TOKEN => {
+                    if let Some(ChildEvent::Exited(exit_status)) = pty.next_child_event() {
+                        if let Err(error) =
+                            drain_pty_output(&mut pty, &mut read_buffer, &event_handler)
+                            && !is_closed_pty_error(&error)
+                        {
+                            event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+                        }
+                        event_handler(TerminalHostPtyEvent::Exited {
+                            exit_code: exit_status.and_then(|status| status.code()),
+                        });
+                        break 'host;
+                    }
+                }
+                PTY_READ_WRITE_TOKEN => {
+                    if event.is_interrupt() {
+                        continue;
+                    }
+                    if event.readable
+                        && let Err(error) =
+                            drain_pty_output(&mut pty, &mut read_buffer, &event_handler)
+                        && !is_closed_pty_error(&error)
+                    {
+                        event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+                        break 'host;
+                    }
+                    if event.writable
+                        && let Err(error) =
+                            write_pending_input(&mut pty, &mut pending_input, &queued_input_bytes)
+                    {
+                        event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+                        break 'host;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(command) = foreground_process.refresh(&pty, false) {
+            event_handler(TerminalHostPtyEvent::ForegroundProcessChanged { command });
+        }
+
+        let needs_write = !pending_input.is_empty();
+        if needs_write != interest.writable {
+            interest.writable = needs_write;
+            if let Err(error) = pty.reregister(&poller, interest, PollMode::Level) {
+                event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+                break;
+            }
+        }
+    }
+
+    if let Err(error) = pty.deregister(&poller) {
+        event_handler(TerminalHostPtyEvent::Failed(error.to_string()));
+    }
+    if let Some(completion) = termination_completion {
+        // Alacritty's PTY teardown owns the child shutdown. A destructive
+        // request is acknowledged only after that owner has been dropped.
+        drop(pty);
+        event_handler(TerminalHostPtyEvent::Exited { exit_code: None });
+        if completion.try_send(()).is_err() {
+            log::debug!("terminal host PTY termination receiver was dropped");
+        }
+    }
+}
+
+fn drain_pty_output(
+    pty: &mut tty::Pty,
+    read_buffer: &mut [u8],
+    event_handler: &impl Fn(TerminalHostPtyEvent),
+) -> io::Result<()> {
+    loop {
+        match pty.reader().read(read_buffer) {
+            Ok(0) => return Ok(()),
+            Ok(read) => event_handler(TerminalHostPtyEvent::Output(
+                read_buffer.get(..read).unwrap_or_default().to_vec(),
+            )),
+            Err(error) if error.kind() == ErrorKind::Interrupted => continue,
+            Err(error) if error.kind() == ErrorKind::WouldBlock => return Ok(()),
+            Err(error) => return Err(error),
+        }
+    }
+}
+
+fn write_pending_input(
+    pty: &mut tty::Pty,
+    pending_input: &mut VecDeque<(Vec<u8>, usize)>,
+    queued_input_bytes: &AtomicUsize,
+) -> io::Result<()> {
+    while let Some((bytes, offset)) = pending_input.front_mut() {
+        match pty.writer().write(bytes.get(*offset..).unwrap_or_default()) {
+            Ok(0) => return Ok(()),
+            Ok(written) => {
+                *offset += written;
+                queued_input_bytes.fetch_sub(written, Ordering::AcqRel);
+                if *offset >= bytes.len() {
+                    pending_input.pop_front();
+                }
+            }
+            Err(error) if error.kind() == ErrorKind::Interrupted => continue,
+            Err(error) if error.kind() == ErrorKind::WouldBlock => return Ok(()),
+            Err(error) => return Err(error),
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn pty_process_id(pty: &tty::Pty) -> Option<u32> {
+    Some(pty.child().id())
+}
+
+#[cfg(windows)]
+fn pty_process_id(pty: &tty::Pty) -> Option<u32> {
+    pty.child_watcher().pid().map(u32::from)
+}
+
+#[cfg(not(windows))]
+fn is_closed_pty_error(error: &io::Error) -> bool {
+    // Unix PTYs commonly report EIO after the slave side exits.
+    error.raw_os_error() == Some(libc::EIO)
+}
+
+#[cfg(windows)]
+fn is_closed_pty_error(_error: &io::Error) -> bool {
+    false
+}

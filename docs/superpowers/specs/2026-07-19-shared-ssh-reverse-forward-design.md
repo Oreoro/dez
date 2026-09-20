@@ -5,21 +5,21 @@
 
 ## Problem
 
-Through-Flint agent egress currently creates its SSH reverse forward with a
+Through-dez agent egress currently creates its SSH reverse forward with a
 dedicated SSH connection. When the configured SSH destination is a
 load-balanced cluster alias, that connection can terminate on a different
-login node from Flint's project connection. The remote Codex process then
+login node from dez's project connection. The remote Codex process then
 receives a loopback proxy URL for a listener that does not exist on its node and
 fails with `Connection refused`.
 
 The live reproduction had these properties:
 
-- the Flint project connection and Codex process were on `login04`;
-- Flint's local CONNECT proxy was listening successfully;
+- the dez project connection and Codex process were on `login04`;
+- dez's local CONNECT proxy was listening successfully;
 - the dedicated reverse-forward process was still alive; and
 - the advertised remote proxy port had no listener on `login04`.
 
-A temporary reverse forward installed through Flint's existing OpenSSH
+A temporary reverse forward installed through dez's existing OpenSSH
 ControlMaster appeared on `login04` and accepted explicit cancellation. This
 confirms that the failure is connection placement, not provider connectivity,
 proxy policy, or proxy authentication.
@@ -47,12 +47,12 @@ separate cross-platform transport design is reviewed.
 
 ## Considered Approaches
 
-### Add the forward to Flint's existing OpenSSH ControlMaster
+### Add the forward to dez's existing OpenSSH ControlMaster
 
 This is the selected approach for macOS and Linux. It guarantees that the
 loopback listener is created in the same remote network namespace as the
 project and agent processes. OpenSSH supplies explicit `forward` and `cancel`
-control operations, so Flint does not need to infer the backend hostname.
+control operations, so dez does not need to infer the backend hostname.
 
 ### Resolve and reconnect to the selected backend hostname
 
@@ -60,7 +60,7 @@ This is rejected. Backend discovery is cluster-specific, concrete login-node
 names may not be directly reachable, and authentication or jump-host policy
 can differ from the load-balanced alias.
 
-### Carry proxy bytes through Flint's remote-server RPC
+### Carry proxy bytes through dez's remote-server RPC
 
 This would be transport-independent and could cover Windows, but it adds a new
 stream-multiplexing protocol and more failure and flow-control behavior. It is
@@ -69,12 +69,12 @@ unnecessary for the approved macOS/Linux-first scope.
 ## POSIX Forward Lifecycle
 
 On macOS and Linux, reverse-forward creation runs a one-shot OpenSSH control
-operation against Flint's existing socket:
+operation against dez's existing socket:
 
 ```text
 ssh <configured options> \
   -o ControlMaster=no \
-  -o ControlPath=<Flint socket> \
+  -o ControlPath=<dez socket> \
   -O forward \
   -o ExitOnForwardFailure=yes \
   -R 127.0.0.1:0:127.0.0.1:<local proxy port> \
@@ -82,7 +82,7 @@ ssh <configured options> \
 ```
 
 OpenSSH prints the dynamically allocated remote port and exits, while the
-forward remains owned by the existing master connection. Flint parses and
+forward remains owned by the existing master connection. dez parses and
 validates that port before returning a ready handle.
 
 The handle retains a cancellation specification containing the SSH socket,
@@ -93,7 +93,7 @@ port zero with the allocated port:
 ```text
 ssh <configured options> \
   -o ControlMaster=no \
-  -o ControlPath=<Flint socket> \
+  -o ControlPath=<dez socket> \
   -O cancel \
   -R 127.0.0.1:0:127.0.0.1:<local proxy port> \
   <destination>
@@ -115,7 +115,7 @@ after that child exits.
 
 ## Windows Behavior
 
-The existing dedicated `ssh -N -R` process remains in use when Flint runs on
+The existing dedicated `ssh -N -R` process remains in use when dez runs on
 Windows. Windows OpenSSH does not provide the ControlMaster socket used by this
 design. This preserves existing behavior but does not guarantee same-node
 placement for load-balanced SSH aliases; that limitation must remain explicit
@@ -142,7 +142,7 @@ connection. Automatic forward recreation remains outside this change.
 
 Tests follow red-green-refactor and cover the production command-building seam:
 
-- POSIX reverse-forward creation uses Flint's shared `ControlPath` and never
+- POSIX reverse-forward creation uses dez's shared `ControlPath` and never
   `ControlPath=none`;
 - creation uses `-O forward`, a loopback-only dynamic `-R` request, and
   `ExitOnForwardFailure=yes`;
@@ -155,17 +155,17 @@ Tests follow red-green-refactor and cover the production command-building seam:
 - local callback-forward behavior remains dedicated and unchanged.
 
 The focused `remote` transport tests run first, followed by the full `remote`
-and `agent_threads` suites, formatting, and Flint clippy checks.
+and `agent_threads` suites, formatting, and dez clippy checks.
 
 ## Acceptance Criteria
 
-- A Through-Flint Codex process on a load-balanced SSH destination can reach its
-  Flint proxy without `Connection refused` while its project connection is
+- A Through-dez Codex process on a load-balanced SSH destination can reach its
+  dez proxy without `Connection refused` while its project connection is
   healthy.
-- The remote proxy listener is visible on the same host as the Flint project
+- The remote proxy listener is visible on the same host as the dez project
   connection.
 - Closing the last egress lease removes the reverse listener from the shared
   SSH master.
 - Starting another egress session after cleanup allocates one new listener and
   does not reuse stale cancellation state.
-- Not-through-Flint launches remain unchanged and receive no proxy variables.
+- Not-through-dez launches remain unchanged and receive no proxy variables.

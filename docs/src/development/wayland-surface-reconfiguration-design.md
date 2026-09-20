@@ -20,13 +20,13 @@ until an active surface operation completes.
 
 ## Summary {#wayland-reconfiguration-summary}
 
-Flint can stop processing user input when wgpu reconfigures a Wayland surface.
+dez can stop processing user input when wgpu reconfigures a Wayland surface.
 The main thread calls `wgpu::Surface::configure` from a frame callback. The
 NVIDIA Vulkan driver can make a synchronous Wayland round trip during this
 call. If the compositor is slow, the main thread waits in `poll` with no
 timeout.
 
-Flint will move runtime surface configuration to a dedicated worker. A
+dez will move runtime surface configuration to a dedicated worker. A
 device-wide coordinator will serialize configuration with GPU submissions.
 The main thread will use only nonblocking coordinator operations. It will skip
 frames while configuration is active, but it will continue to process input and
@@ -42,7 +42,7 @@ This document uses these terms:
 
 - **Surface**: A `wgpu::Surface` that connects a native window to a swapchain.
 - **Surface configuration**: The size, format, present mode, alpha mode, usage,
-  and frame-latency values that Flint gives to `Surface::configure`.
+  and frame-latency values that dez gives to `Surface::configure`.
 - **Configuration request**: A request to apply a surface configuration or to
   recreate and configure a surface.
 - **Configuration generation**: A number that identifies one requested surface
@@ -80,13 +80,13 @@ The observed incidents have these properties:
 
 - Each incident has the same main-thread stack.
 - The main thread waits in the NVIDIA Wayland Vulkan path.
-- Other Flint threads are idle or parked.
-- No Flint lock owner blocks the main thread.
+- Other dez threads are idle or parked.
+- No dez lock owner blocks the main thread.
 - The host has sustained storage pressure.
 - The compositor can wait on Mesa shader-cache file I/O at the same time.
 
 This is an availability fault at a synchronous system boundary. The compositor
-can recover, but Flint must not make its event loop depend on prompt compositor
+can recover, but dez must not make its event loop depend on prompt compositor
 service.
 
 ## Current Behavior {#wayland-reconfiguration-current-behavior}
@@ -119,7 +119,7 @@ or cancellation argument. `VK_KHR_get_surface_capabilities2` does not add one.
 The Wayland round trip occurs inside the Vulkan driver. The Rust
 `wayland-client` event queue cannot control it.
 
-Flint can detect a slow call, but it cannot safely cancel the call. It must not
+dez can detect a slow call, but it cannot safely cancel the call. It must not
 start a second operation on the same surface while the first operation can
 still complete.
 
@@ -128,7 +128,7 @@ still complete.
 {#wayland-reconfiguration-device-synchronization}
 
 wgpu waits for the device to become idle during `Surface::configure`. A queue
-submission during this wait can cause a validation error. Flint shares one
+submission during this wait can cause a validation error. dez shares one
 `wgpu::Device` between windows. A background configuration task must therefore
 coordinate with all renderers that use that device.
 
@@ -151,7 +151,7 @@ the operation.
 
 {#wayland-reconfiguration-window-lifetime}
 
-A Vulkan surface can refer to a native `wl_surface`. Flint must keep the native
+A Vulkan surface can refer to a native `wl_surface`. dez must keep the native
 window and its raw handles valid until a configuration operation completes.
 Window close must not destroy the native surface while the worker can still use
 it.
@@ -243,7 +243,7 @@ from using the surface during configuration.
 Each renderer stores a monotonically increasing configuration generation and
 the latest desired configuration.
 
-When Flint receives a resize or another configuration change:
+When dez receives a resize or another configuration change:
 
 1. Update the desired configuration.
 2. Increment its generation.
@@ -384,7 +384,7 @@ The handler must never wait for the worker.
 
 ## Error and Retry Policy {#wayland-reconfiguration-errors}
 
-`Surface::configure` returns no direct result in the public wgpu API. Flint
+`Surface::configure` returns no direct result in the public wgpu API. dez
 currently receives configuration errors through the device error callback. The
 implementation must associate such errors with the active configuration when
 possible. An error scope can be used if the selected wgpu API permits the
@@ -431,7 +431,7 @@ Add counters for:
 ## Window Close and Shutdown {#wayland-reconfiguration-shutdown}
 
 Window close creates a lifetime problem if the surface worker is blocked.
-Flint must not destroy the native `wl_surface` while Vulkan can use it.
+dez must not destroy the native `wl_surface` while Vulkan can use it.
 
 Use this policy:
 
@@ -454,7 +454,7 @@ end the worker.
 
 wgpu queries surface capabilities during every configuration. The Vulkan HAL
 then creates the swapchain without another explicit capability query. A cache
-inside the Flint wgpu fork could avoid the exact capability call in the
+inside the dez wgpu fork could avoid the exact capability call in the
 observed stack.
 
 Do not include this cache in the first fix. Surface capabilities can change,
@@ -578,11 +578,11 @@ Vulkan backend. Check that:
 - No second configuration starts during the delay.
 - Rendering resumes after the delayed call returns.
 
-For a local debug build, Flint also supports a worker-delay hook. It delays the
+For a local debug build, dez also supports a worker-delay hook. It delays the
 surface worker while it holds the same device permit as a real WSI stall:
 
 ```sh
-FLINT_TEST_SURFACE_CONFIGURE_DELAY_MS=3000 cargo run -p flint
+DEZ_TEST_SURFACE_CONFIGURE_DELAY_MS=3000 cargo run -p dez
 ```
 
 Resize a Wayland window while this variable is set. Input and window events
@@ -640,7 +640,7 @@ The design is complete when all these statements are true:
 - Can wgpu error scopes return a configuration result on the worker without an
   additional main-thread poll?
 - Should a worker that remains blocked for a long threshold disable rendering
-  for all windows on that device, or should Flint offer a controlled device
+  for all windows on that device, or should dez offer a controlled device
   recovery action?
 - Does the first implementation support only Vulkan, or does the same worker
   also handle the Wayland GLES backend?

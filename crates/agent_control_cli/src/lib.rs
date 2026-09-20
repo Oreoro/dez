@@ -1,5 +1,5 @@
-//! Shared `flintctl` parser and output implementation. The local binary uses
-//! Flint's local control endpoint. `flint-remote-server` supplies its remote
+//! Shared `dezctl` parser and output implementation. The local binary uses
+//! dez's local control endpoint. `dez-remote-server` supplies its remote
 //! endpoint transport to the same implementation. Caller identity comes from
 //! the operating system, not CLI data.
 //!
@@ -22,15 +22,15 @@ use agent_control_protocol::{
 use clap::{ArgGroup, Parser, Subcommand, ValueEnum};
 
 #[derive(Parser)]
-#[command(name = "flintctl", about = "Control a running Flint application")]
+#[command(name = "dezctl", about = "Control a running dez application")]
 struct Cli {
-    /// Unix socket to connect to. Defaults to the same path Flint's control
+    /// Unix socket to connect to. Defaults to the same path dez's control
     /// server computes and binds -- only useful to override for testing.
     #[cfg(unix)]
     #[arg(long, global = true, hide = true)]
     socket: Option<PathBuf>,
     /// Windows named pipe to connect to. Defaults to the session-scoped name
-    /// Flint's control server computes; only useful to override for testing.
+    /// dez's control server computes; only useful to override for testing.
     #[cfg(windows)]
     #[arg(long, global = true, hide = true)]
     pipe: Option<String>,
@@ -285,7 +285,7 @@ pub fn main() {
         match result {
             Ok(()) => return,
             Err(error) => {
-                eprintln!("flintctl: {error:#}");
+                eprintln!("dezctl: {error:#}");
                 std::process::exit(1);
             }
         }
@@ -297,7 +297,7 @@ pub fn main() {
     let (request, wants_json) = match cli.into_request() {
         Ok(request) => request,
         Err(error) => {
-            eprintln!("flintctl: {error:#}");
+            eprintln!("dezctl: {error:#}");
             std::process::exit(2);
         }
     };
@@ -312,7 +312,7 @@ pub fn main() {
     match result {
         Ok(response) => std::process::exit(print_response(&response, wants_json)),
         Err(error) => {
-            eprintln!("flintctl: {error:#}");
+            eprintln!("dezctl: {error:#}");
             std::process::exit(1);
         }
     }
@@ -326,7 +326,7 @@ pub fn main_with_transport(
         match result {
             Ok(()) => return,
             Err(error) => {
-                eprintln!("flintctl: {error:#}");
+                eprintln!("dezctl: {error:#}");
                 std::process::exit(1);
             }
         }
@@ -334,7 +334,7 @@ pub fn main_with_transport(
     let (request, wants_json) = match cli.into_request() {
         Ok(request) => request,
         Err(error) => {
-            eprintln!("flintctl: {error:#}");
+            eprintln!("dezctl: {error:#}");
             std::process::exit(2);
         }
     };
@@ -342,7 +342,7 @@ pub fn main_with_transport(
     match transport(request) {
         Ok(response) => std::process::exit(print_response(&response, wants_json)),
         Err(error) => {
-            eprintln!("flintctl: {error:#}");
+            eprintln!("dezctl: {error:#}");
             std::process::exit(1);
         }
     }
@@ -513,17 +513,17 @@ fn run_skill_command(command: &SkillCommand) -> anyhow::Result<()> {
         SkillCommand::Install { agent, replace } => {
             let agent = (*agent).into();
             agent_control_skill::install(agent, &environment, *replace)?;
-            println!("Installed the Flint control skill for {}", agent.label());
+            println!("Installed the dez control skill for {}", agent.label());
         }
         SkillCommand::Update { agent } => {
             let agent = (*agent).into();
             match agent_control_skill::status(agent, &environment)? {
                 SkillState::InstalledOutdated => {
                     agent_control_skill::install(agent, &environment, true)?;
-                    println!("Updated the Flint control skill for {}", agent.label());
+                    println!("Updated the dez control skill for {}", agent.label());
                 }
                 SkillState::InstalledCurrent => {
-                    println!("The Flint control skill for {} is current", agent.label());
+                    println!("The dez control skill for {} is current", agent.label());
                 }
                 SkillState::Modified => anyhow::bail!(
                     "the installed {} skill was modified; use skill install --replace only after review",
@@ -531,7 +531,7 @@ fn run_skill_command(command: &SkillCommand) -> anyhow::Result<()> {
                 ),
                 SkillState::NotInstalled | SkillState::Unowned | SkillState::Missing => {
                     anyhow::bail!(
-                        "the Flint control skill for {} is not installed",
+                        "the dez control skill for {} is not installed",
                         agent.label()
                     )
                 }
@@ -540,7 +540,7 @@ fn run_skill_command(command: &SkillCommand) -> anyhow::Result<()> {
         SkillCommand::Uninstall { agent, force } => {
             let agent = (*agent).into();
             agent_control_skill::uninstall(agent, &environment, *force)?;
-            println!("Uninstalled the Flint control skill for {}", agent.label());
+            println!("Uninstalled the dez control skill for {}", agent.label());
         }
     }
     Ok(())
@@ -601,7 +601,7 @@ fn run(request: ControlRequest, pipe_override: Option<String>) -> anyhow::Result
 
 #[cfg(not(any(unix, windows)))]
 fn run(_request: ControlRequest) -> anyhow::Result<ControlResponse> {
-    anyhow::bail!("flintctl is not supported on this platform")
+    anyhow::bail!("dezctl is not supported on this platform")
 }
 
 #[cfg(windows)]
@@ -645,7 +645,7 @@ mod windows_client {
         fn drop(&mut self) {
             // SAFETY: this type exclusively owns the valid handle returned by CreateFileW.
             if let Err(error) = unsafe { CloseHandle(self.0) } {
-                eprintln!("flintctl: failed to close named pipe: {error}");
+                eprintln!("dezctl: failed to close named pipe: {error}");
             }
         }
     }
@@ -657,7 +657,7 @@ mod windows_client {
         let pipe_name = match pipe_override {
             Some(pipe_name) => pipe_name,
             None => agent_control_protocol::pipe_name()
-                .context("failed to derive Flint's agent control pipe name")?,
+                .context("failed to derive dez's agent control pipe name")?,
         };
 
         let mut attempt = 0;
@@ -692,7 +692,7 @@ mod windows_client {
         .as_bool()
         {
             bail!(
-                "Flint's agent control pipe at {pipe_name} was unavailable or stayed busy for {} ms: {}",
+                "dez's agent control pipe at {pipe_name} was unavailable or stayed busy for {} ms: {}",
                 PIPE_AVAILABLE_TIMEOUT.as_millis(),
                 WindowsError::from_win32()
             );
@@ -711,7 +711,7 @@ mod windows_client {
             )
         }
         .with_context(|| {
-            format!("failed to connect to Flint's agent control pipe at {pipe_name}")
+            format!("failed to connect to dez's agent control pipe at {pipe_name}")
         })?;
         let handle = PipeHandle(handle);
         let mode = PIPE_READMODE_MESSAGE;
@@ -822,14 +822,14 @@ mod windows_client {
                     // ERROR_NOT_FOUND is a normal completion race. In every
                     // case we still observe terminal completion below before
                     // releasing the OVERLAPPED or its buffer.
-                    eprintln!("flintctl: named-pipe cancellation reported {cancel_error}");
+                    eprintln!("dezctl: named-pipe cancellation reported {cancel_error}");
                 }
                 // SAFETY: waiting here ensures buffers can be released only after terminal completion.
                 let terminal =
                     unsafe { GetOverlappedResult(handle, overlapped, transferred, true) };
                 if let Err(terminal_error) = terminal {
                     eprintln!(
-                        "flintctl: cancelled named-pipe operation completed with {terminal_error}"
+                        "dezctl: cancelled named-pipe operation completed with {terminal_error}"
                     );
                 }
                 bail!("named-pipe I/O timed out after {} ms", timeout.as_millis());
@@ -859,7 +859,7 @@ fn print_response(response: &ControlResponse, wants_json: bool) -> i32 {
     if wants_json {
         match serde_json::to_string(response) {
             Ok(json) => println!("{json}"),
-            Err(error) => eprintln!("flintctl: failed to encode response: {error}"),
+            Err(error) => eprintln!("dezctl: failed to encode response: {error}"),
         }
         return exit_code_for(response);
     }
@@ -873,8 +873,8 @@ fn print_response(response: &ControlResponse, wants_json: bool) -> i32 {
         }
         ControlResult::Ok(ControlSuccess::Status(status)) => {
             println!(
-                "Flint {} ({}, protocol {}.{})",
-                status.flint_version,
+                "dez {} ({}, protocol {}.{})",
+                status.dez_version,
                 status.release_channel,
                 status.protocol_version.major,
                 status.protocol_version.minor
@@ -895,19 +895,19 @@ fn print_response(response: &ControlResponse, wants_json: bool) -> i32 {
         | ControlResult::Ok(ControlSuccess::TerminalWaitOutput(snapshot)) => {
             print!("{}", snapshot.text);
             eprintln!(
-                "flintctl: cursor {} (pass as --since to read only what's new)",
+                "dezctl: cursor {} (pass as --since to read only what's new)",
                 encode_read_cursor(&snapshot.cursor)
             );
         }
         ControlResult::Ok(ControlSuccess::TerminalInputAccepted) => {}
         ControlResult::NotReady => {
             eprintln!(
-                "flintctl: this process does not appear to be in a controllable Flint terminal"
+                "dezctl: this process does not appear to be in a controllable dez terminal"
             );
         }
         ControlResult::Error(error) => {
             eprintln!(
-                "flintctl: {}: {}",
+                "dezctl: {}: {}",
                 error_code_name(error.code),
                 error.message
             );
@@ -977,7 +977,7 @@ mod unix {
     };
     use anyhow::{Context as _, bail};
 
-    /// Bounded backoff for a `NotReady` response, which means Flint hasn't
+    /// Bounded backoff for a `NotReady` response, which means dez hasn't
     /// (yet, or ever will) matched the connecting process's PID ancestry to
     /// a registered thread. Keeping the wait client-side avoids parking
     /// requests inside the server.
@@ -1016,7 +1016,7 @@ mod unix {
     ) -> anyhow::Result<ControlResponse> {
         let mut stream = UnixStream::connect(socket_path).with_context(|| {
             format!(
-                "failed to connect to Flint's agent control socket at {}",
+                "failed to connect to dez's agent control socket at {}",
                 socket_path.display()
             )
         })?;
@@ -1046,19 +1046,19 @@ mod tests {
 
     #[test]
     fn skill_commands_parse_without_a_control_endpoint() {
-        assert!(Cli::try_parse_from(["flintctl", "skill", "print"]).is_ok());
-        assert!(Cli::try_parse_from(["flintctl", "skill", "status", "--agent", "codex"]).is_ok());
-        assert!(Cli::try_parse_from(["flintctl", "skill", "install", "--agent", "claude"]).is_ok());
-        assert!(Cli::try_parse_from(["flintctl", "skill", "update", "--agent", "codex"]).is_ok());
+        assert!(Cli::try_parse_from(["dezctl", "skill", "print"]).is_ok());
+        assert!(Cli::try_parse_from(["dezctl", "skill", "status", "--agent", "codex"]).is_ok());
+        assert!(Cli::try_parse_from(["dezctl", "skill", "install", "--agent", "claude"]).is_ok());
+        assert!(Cli::try_parse_from(["dezctl", "skill", "update", "--agent", "codex"]).is_ok());
         assert!(
-            Cli::try_parse_from(["flintctl", "skill", "uninstall", "--agent", "claude"]).is_ok()
+            Cli::try_parse_from(["dezctl", "skill", "uninstall", "--agent", "claude"]).is_ok()
         );
     }
 
     #[test]
     fn noun_first_thread_command_builds_current_request() {
         let cli = Cli::try_parse_from([
-            "flintctl",
+            "dezctl",
             "thread",
             "retie",
             "--worktree",
@@ -1078,12 +1078,12 @@ mod tests {
     #[test]
     fn old_flat_commands_are_rejected() {
         assert!(
-            Cli::try_parse_from(["flintctl", "retie-thread", "--worktree", "/repo/worktree"])
+            Cli::try_parse_from(["dezctl", "retie-thread", "--worktree", "/repo/worktree"])
                 .is_err()
         );
         assert!(
             Cli::try_parse_from([
-                "flintctl",
+                "dezctl",
                 "create-thread",
                 "--worktree",
                 "current",
@@ -1100,7 +1100,7 @@ mod tests {
     fn terminal_wait_requires_exactly_one_matcher() {
         assert!(
             Cli::try_parse_from([
-                "flintctl",
+                "dezctl",
                 "terminal",
                 "wait-output",
                 "t1",
@@ -1109,10 +1109,10 @@ mod tests {
             ])
             .is_ok()
         );
-        assert!(Cli::try_parse_from(["flintctl", "terminal", "wait-output", "t1"]).is_err());
+        assert!(Cli::try_parse_from(["dezctl", "terminal", "wait-output", "t1"]).is_err());
         assert!(
             Cli::try_parse_from([
-                "flintctl",
+                "dezctl",
                 "terminal",
                 "wait-output",
                 "t1",
@@ -1128,7 +1128,7 @@ mod tests {
     #[test]
     fn terminal_open_and_split_build_creation_requests() {
         let open = Cli::try_parse_from([
-            "flintctl", "terminal", "open", "--cwd", "/tmp", "--focus", "--json",
+            "dezctl", "terminal", "open", "--cwd", "/tmp", "--focus", "--json",
         ])
         .expect("parse terminal open");
         let (request, wants_json) = open.into_request().expect("build terminal open request");
@@ -1140,7 +1140,7 @@ mod tests {
         ));
 
         let split = Cli::try_parse_from([
-            "flintctl",
+            "dezctl",
             "terminal",
             "split",
             "--terminal",
@@ -1165,11 +1165,11 @@ mod tests {
     #[test]
     fn terminal_split_requires_one_target_and_a_valid_direction() {
         assert!(
-            Cli::try_parse_from(["flintctl", "terminal", "split", "--direction", "right"]).is_err()
+            Cli::try_parse_from(["dezctl", "terminal", "split", "--direction", "right"]).is_err()
         );
         assert!(
             Cli::try_parse_from([
-                "flintctl",
+                "dezctl",
                 "terminal",
                 "split",
                 "--current",
@@ -1182,7 +1182,7 @@ mod tests {
         );
         assert!(
             Cli::try_parse_from([
-                "flintctl",
+                "dezctl",
                 "terminal",
                 "split",
                 "--current",
@@ -1223,7 +1223,7 @@ mod tests {
             anchor: "previous tail".to_string(),
         };
         let encoded = encode_read_cursor(&cursor);
-        let cli = Cli::try_parse_from(["flintctl", "terminal", "read", "t1", "--since", &encoded])
+        let cli = Cli::try_parse_from(["dezctl", "terminal", "read", "t1", "--since", &encoded])
             .expect("parse terminal read with --since");
 
         let (request, _wants_json) = cli.into_request().expect("build request");
@@ -1235,7 +1235,7 @@ mod tests {
 
     #[test]
     fn terminal_read_without_since_defaults_to_none() {
-        let cli = Cli::try_parse_from(["flintctl", "terminal", "read", "t1"])
+        let cli = Cli::try_parse_from(["dezctl", "terminal", "read", "t1"])
             .expect("parse terminal read");
 
         let (request, _wants_json) = cli.into_request().expect("build request");
@@ -1248,7 +1248,7 @@ mod tests {
     #[test]
     fn terminal_read_source_detection_is_parsed() {
         let cli = Cli::try_parse_from([
-            "flintctl",
+            "dezctl",
             "terminal",
             "read",
             "t1",
@@ -1270,16 +1270,16 @@ mod tests {
     #[test]
     fn windows_pipe_override_is_parsed_as_a_pipe_name() {
         let cli = Cli::try_parse_from([
-            "flintctl",
+            "dezctl",
             "--pipe",
-            r"\\.\pipe\flint-test",
+            r"\\.\pipe\dez-test",
             "thread",
             "retie",
             "--worktree",
             r"C:\repo",
         ])
         .expect("parse Windows pipe override");
-        assert_eq!(cli.pipe.as_deref(), Some(r"\\.\pipe\flint-test"));
+        assert_eq!(cli.pipe.as_deref(), Some(r"\\.\pipe\dez-test"));
     }
 
     #[cfg(windows)]
@@ -1302,7 +1302,7 @@ mod tests {
         use windows::core::{HSTRING, PCWSTR};
 
         let pipe_name = format!(
-            r"\\.\pipe\flint-agent-control-cli-test-{}",
+            r"\\.\pipe\dez-agent-control-cli-test-{}",
             std::process::id()
         );
         let wide_name = HSTRING::from(&pipe_name);

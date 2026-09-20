@@ -163,7 +163,7 @@ The following VS Code settings are automatically imported when you use **Import 
 | `chat.agent.enabled`       | `agent.enabled`                                          |
 | `mcp`                      | `context_servers`                                        |
 
-Flint doesn’t import extensions or keybindings, but this import gets core editor behavior close to your VS Code setup. VS Code's telemetry setting has no Flint equivalent because Flint has no telemetry uploader. If you skip that step during setup, you can still import settings manually later via the command palette:
+dez doesn’t import extensions or keybindings, but this import gets core editor behavior close to your VS Code setup. VS Code's telemetry setting has no dez equivalent because dez has no telemetry uploader. If you skip that step during setup, you can still import settings manually later via the command palette:
 
 `Cmd+Shift+P → {#action zed::ImportVsCodeSettings}`
 

@@ -1,6 +1,6 @@
-# The Flint Rust Extension API
+# The dez Rust Extension API
 
-This crate lets you write extensions for Flint in Rust.
+This crate lets you write extensions for dez in Rust.
 
 ## Extension Manifest
 
@@ -18,12 +18,12 @@ repository = "https://github.com/your/extension-repository"
 
 ## Cargo metadata
 
-Flint extensions are packaged as WebAssembly files. In your Cargo.toml, you'll
+dez extensions are packaged as WebAssembly files. In your Cargo.toml, you'll
 need to set your `crate-type` accordingly:
 
 ```toml
 [dependencies]
-flint_extension_api = "0.6.0"
+dez_extension_api = "0.6.0"
 
 [lib]
 crate-type = ["cdylib"]
@@ -34,36 +34,36 @@ crate-type = ["cdylib"]
 To define your extension, create a type that implements the `Extension` trait, and register it.
 
 ```rust
-use flint_extension_api as flint;
+use dez_extension_api as dez;
 
 struct MyExtension {
     // ... state
 }
 
-impl flint::Extension for MyExtension {
+impl dez::Extension for MyExtension {
     // ...
 }
 
-flint::register_extension!(MyExtension);
+dez::register_extension!(MyExtension);
 ```
 
 ## Testing your extension
 
-To run your extension in Flint as you're developing it:
+To run your extension in dez as you're developing it:
 
 - Make sure you have [Rust installed](https://www.rust-lang.org/learn/get-started)
 - Have the `wasm32-wasip2` target installed (`rustup target add wasm32-wasip2`)
-- Open the extensions view using the `flint: extensions` action in the command palette.
+- Open the extensions view using the `dez: extensions` action in the command palette.
 - Click the `Install Dev Extension` button in the top right
 - Choose the path to your extension directory.
 
-## Compatible Flint versions
+## Compatible dez versions
 
-Extensions created using newer versions of the Flint extension API won't be compatible with older versions of Flint.
+Extensions created using newer versions of the dez extension API won't be compatible with older versions of dez.
 
-Here is the compatibility of the `flint_extension_api` with versions of Flint:
+Here is the compatibility of the `dez_extension_api` with versions of dez:
 
-| Flint version | `flint_extension_api` version |
+| dez version | `dez_extension_api` version |
 | ----------- | --------------------------- |
 | `0.192.x`   | `0.0.1` - `0.6.0`           |
 | `0.186.x`   | `0.0.1` - `0.5.0`           |

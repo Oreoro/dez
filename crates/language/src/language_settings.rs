@@ -83,7 +83,7 @@ pub struct LanguageSettings {
     pub line_ending: LineEndingSetting,
     /// How to perform a buffer format.
     pub formatter: settings::FormatterList,
-    /// Flint's Prettier integration settings.
+    /// dez's Prettier integration settings.
     pub prettier: PrettierSettings,
     /// Whether to automatically close JSX tags.
     pub jsx_tag_auto_close: bool,
@@ -233,13 +233,13 @@ pub struct LanguageTaskSettings {
     /// Extra task variables to set for a particular language.
     pub variables: HashMap<String, String>,
     pub enabled: bool,
-    /// Use LSP tasks over Flint language extension ones.
+    /// Use LSP tasks over dez language extension ones.
     /// If no LSP tasks are returned due to error/timeout or regular execution,
-    /// Flint language extension tasks will be used instead.
+    /// dez language extension tasks will be used instead.
     ///
-    /// Other Flint tasks will still be shown:
-    /// * Flint task from either of the task config file
-    /// * Flint task from history (e.g. one-off task was spawned before)
+    /// Other dez tasks will still be shown:
+    /// * dez task from either of the task config file
+    /// * dez task from history (e.g. one-off task was spawned before)
     pub prefer_lsp: bool,
 }
 

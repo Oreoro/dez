@@ -8,10 +8,10 @@
 Resume historical and automatically restored Codex sessions according to the
 active SSH host route:
 
-- **Through Flint** resolves the shared pinned Flint-managed Codex, requires a
-  Flint egress lease, and never falls back to ambient Codex or direct routing.
+- **Through dez** resolves the shared pinned dez-managed Codex, requires a
+  dez egress lease, and never falls back to ambient Codex or direct routing.
 - **Direct** uses the configured or ambient Codex command without
-  managed resolution, Flint egress, or Flint proxy variables.
+  managed resolution, dez egress, or dez proxy variables.
 
 Existing valid remote installations must be visibly reused without a local
 download prompt, upload, or reinstall.
@@ -19,7 +19,7 @@ download prompt, upload, or reinstall.
 ## Constraints
 
 - Keep executable selection and egress enforcement explicit even though the
-  approved Through-Flint resume policy requires both managed Codex and egress.
+  approved Through-dez resume policy requires both managed Codex and egress.
 - Preserve the existing new-thread choices and managed-new action.
 - Keep one managed executable per remote identity, agent, pinned version, and
   platform; do not create per-thread copies.
@@ -143,9 +143,9 @@ Add tests proving:
 
 1. **Direct** resume retains the configured command, resume session
    ID, resume options, and environment, and requests no managed resolution;
-2. **Through Flint** resume replaces the command with the managed absolute
+2. **Through dez** resume replaces the command with the managed absolute
    path, retains the resume session ID and options, applies self-update policy,
-   and reaches the route-aware launcher with a required Through-Flint route;
+   and reaches the route-aware launcher with a required Through-dez route;
 3. managed resolution cancellation or failure creates no terminal and does not
    call the configured command;
 4. egress acquisition failure creates no terminal and does not retry without
@@ -170,12 +170,12 @@ reads the current SSH route:
 
 - For **Direct**, build the history provider's configured/ambient
   resume command and launch with required route `Direct`.
-- For **Through Flint**, resolve the shared managed installation, build the
+- For **Through dez**, resolve the shared managed installation, build the
   provider's resume command with its command replaced by the verified absolute
   path, and launch with required route `Tunneled`.
 
 Extend the route-aware launcher so a required route is checked at preparation
-and immediately before terminal creation. Through-Flint launch must acquire
+and immediately before terminal creation. Through-dez launch must acquire
 egress before process creation, apply proxy variables, and retain the lease in
 the live thread entry. A mismatch or lease failure returns an error without a
 terminal or alternate launch.
@@ -203,7 +203,7 @@ Add tests proving that:
 
 1. automatic restoration invokes the same route-driven resume operation as a
    manual resume;
-2. two Through-Flint Codex records finish managed resolution sequentially, so
+2. two Through-dez Codex records finish managed resolution sequentially, so
    the second reuses the first installation;
 3. an uncached first restoration displays one download prompt;
 4. declining that prompt counts the first record as not restored without
@@ -289,22 +289,22 @@ Build with:
 
 If the documented debug-tail bug prevents the final copy, verify and stage the
 fresh signed bundle from
-`target/aarch64-apple-darwin/debug/bundle/osx/Flint.app`. Do not overwrite a
-running app bundle. Preserve the previous `/tmp/Flint-Local.app` under a unique
+`target/aarch64-apple-darwin/debug/bundle/osx/dez.app`. Do not overwrite a
+running app bundle. Preserve the previous `/tmp/dez-Local.app` under a unique
 backup path before installing the new bundle.
 
 On the existing offline SSH project:
 
-1. Select **Through Flint** and resume a known Codex session.
+1. Select **Through dez** and resume a known Codex session.
 2. Verify the UI says the existing managed installation is checked and reused.
 3. Verify local cache and remote installed-file timestamps do not change.
 4. Verify the remote process command is the shared managed absolute path with
    the expected `resume <session-id>` arguments.
-5. Verify the process receives the Through-Flint proxy environment and the SSH
+5. Verify the process receives the Through-dez proxy environment and the SSH
    reverse forward remains present for its terminal lifetime.
 6. Verify a failed egress setup creates no Codex process and no direct retry.
 7. Select **Direct**, resume, and verify the configured/ambient
-   command is used without a Flint proxy or reverse-forward lease.
+   command is used without a dez proxy or reverse-forward lease.
 
 Record any live-only limitation separately. Do not claim OS-enforced network
 isolation or automatic tunnel restoration.

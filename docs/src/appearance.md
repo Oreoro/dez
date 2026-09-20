@@ -1,17 +1,17 @@
 ---
-title: Appearance and Visual Customization - Flint
-description: Customize Flint's themes, fonts, icons, UI density, and other visual settings to match your preferences.
+title: Appearance and Visual Customization - dez
+description: Customize dez's themes, fonts, icons, UI density, and other visual settings to match your preferences.
 ---
 
 # Appearance
 
-Customize Flint's visual appearance to match your preferences. This guide covers themes, fonts, icons, and other visual settings.
+Customize dez's visual appearance to match your preferences. This guide covers themes, fonts, icons, and other visual settings.
 
 For information on how the settings system works, see [All Settings](./reference/all-settings.md).
 
-## Customize Flint in 5 Minutes
+## Customize dez in 5 Minutes
 
-Here's how to make Flint feel like home:
+Here's how to make dez feel like home:
 
 1. **Pick a theme**: Press {#kb theme_selector::Toggle} to open the Theme Selector. Arrow through the list to preview themes in real time, and press Enter to apply.
 
@@ -19,17 +19,17 @@ Here's how to make Flint feel like home:
 
 3. **Choose an icon theme**: Run {#action icon_theme_selector::Toggle} from the command palette to browse icon themes.
 
-4. **Set your font**: Open the Settings Editor with {#kb flint::OpenSettings} and search for `buffer_font_family`. Set it to your preferred coding font.
+4. **Set your font**: Open the Settings Editor with {#kb dez::OpenSettings} and search for `buffer_font_family`. Set it to your preferred coding font.
 
 5. **Adjust font size**: In the same Settings Editor, search for `buffer_font_size` and `ui_font_size` to tweak the editor and interface text sizes.
 
-That's it. You now have a personalized Flint setup.
+That's it. You now have a personalized dez setup.
 
 ## Themes
 
-Install themes from the Extensions page ({#action flint::Extensions}), then switch between them with the Theme Selector ({#kb theme_selector::Toggle}).
+Install themes from the Extensions page ({#action dez::Extensions}), then switch between them with the Theme Selector ({#kb theme_selector::Toggle}).
 
-Flint supports separate themes for light and dark mode with automatic switching based on your system preference:
+dez supports separate themes for light and dark mode with automatic switching based on your system preference:
 
 ```json [settings]
 {
@@ -55,8 +55,8 @@ Like color themes, icon themes support separate light and dark variants:
 {
   "icon_theme": {
     "mode": "system",
-    "light": "Flint (Default)",
-    "dark": "Flint (Default)"
+    "light": "dez (Default)",
+    "dark": "dez (Default)"
   }
 }
 ```
@@ -65,7 +65,7 @@ Like color themes, icon themes support separate light and dark variants:
 
 ## Fonts
 
-Flint uses three font settings for different contexts:
+dez uses three font settings for different contexts:
 
 | Setting                | Used for                  |
 | ---------------------- | ------------------------- |
@@ -110,7 +110,7 @@ Adjust line spacing with `buffer_line_height`:
 
 ## UI Elements
 
-Flint provides extensive control over UI elements including:
+dez provides extensive control over UI elements including:
 
 - **Tab bar** — Show/hide, navigation buttons, file icons, git status
 - **Status bar** — Language selector, cursor position, line endings

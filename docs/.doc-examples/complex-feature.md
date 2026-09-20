@@ -15,16 +15,16 @@
 
 ---
 
-description: Flint is a text editor that supports lots of Git features
-title: Flint Editor Git integration documentation
+description: dez is a text editor that supports lots of Git features
+title: dez Editor Git integration documentation
 
 ---
 
 # Git
 
-Flint has built-in Git support that lets you manage version control without leaving the editor. The Git Panel shows your working tree state, staging area, and branch information. Changes you make on the command line are reflected immediately in Flint.
+dez has built-in Git support that lets you manage version control without leaving the editor. The Git Panel shows your working tree state, staging area, and branch information. Changes you make on the command line are reflected immediately in dez.
 
-For operations that Flint doesn't support natively, you can use the integrated terminal.
+For operations that dez doesn't support natively, you can use the integrated terminal.
 
 ## Git Panel {#git-panel}
 
@@ -34,7 +34,7 @@ You can open the Git Panel using {#action git_panel::ToggleFocus}, or by clickin
 
 In the panel you can see the state of your project at a glance: which repository and branch are active, what files have changed and the current staging state of each file.
 
-Flint monitors your repository so that changes you make on the command line are instantly reflected.
+dez monitors your repository so that changes you make on the command line are instantly reflected.
 
 ### Configuration {#configuration}
 
@@ -53,7 +53,7 @@ The Git Panel shows a flat list of changed files by default. To see files organi
 
 #### Inline Blame
 
-Flint shows Git blame information on the current line. To turn this off or add a delay before it appears, go to **Version Control > Inline Git Blame**.
+dez shows Git blame information on the current line. To turn this off or add a delay before it appears, go to **Version Control > Inline Git Blame**.
 
 #### Hiding the Gutter Indicators
 
@@ -61,11 +61,11 @@ The colored bars in the gutter that show added, modified, and deleted lines can 
 
 #### Commit Message Line Length
 
-Flint wraps commit messages at 72 characters (a Git convention). To change this, search for "Git Commit" in Settings and adjust **Preferred Line Length**.
+dez wraps commit messages at 72 characters (a Git convention). To change this, search for "Git Commit" in Settings and adjust **Preferred Line Length**.
 
 ## Project Diff {#project-diff}
 
-You can see all of the changes captured by Git in Flint by opening the Project Diff ({#kb git::Diff}), accessible via the {#action git::Diff} action in the Command Palette or the Git Panel.
+You can see all of the changes captured by Git in dez by opening the Project Diff ({#kb git::Diff}), accessible via the {#action git::Diff} action in the Command Palette or the Git Panel.
 
 All of the changes displayed in the Project Diff behave exactly the same as any other multibuffer: they are all editable excerpts of files.
 
@@ -73,7 +73,7 @@ You can stage or unstage each hunk as well as a whole file by hitting the button
 
 ### Word Diff Highlighting {#word-diff}
 
-By default, Flint highlights changed words within modified lines to make it easier to spot exactly what changed. To disable this globally, open the Settings Editor and go to **Languages & Tools > Miscellaneous**, then turn off **Word Diff Enabled**.
+By default, dez highlights changed words within modified lines to make it easier to spot exactly what changed. To disable this globally, open the Settings Editor and go to **Languages & Tools > Miscellaneous**, then turn off **Word Diff Enabled**.
 
 To disable word diff for specific languages only, add this to your settings.json:
 
@@ -100,25 +100,25 @@ To view File History:
 
 ## Fetch, Push, and Pull {#fetch-push-pull}
 
-Fetch, push, or pull from your Git repository in Flint via the buttons available on the Git Panel or via the Command Palette by looking at the respective actions: {#action git::Fetch}, {#action git::Push}, and {#action git::Pull}.
+Fetch, push, or pull from your Git repository in dez via the buttons available on the Git Panel or via the Command Palette by looking at the respective actions: {#action git::Fetch}, {#action git::Push}, and {#action git::Pull}.
 
 ### Push Configuration {#push-configuration}
 
-Flint respects Git's push configuration. When pushing, Flint checks the following in order:
+dez respects Git's push configuration. When pushing, dez checks the following in order:
 
 1. `pushRemote` configured for the current branch
 2. `remote.pushDefault` in your Git config
 3. The branch's tracking remote
 
-This matches Git's standard behavior, so if you've configured `pushRemote` or `pushDefault` in your `.gitconfig` or via `git config`, Flint will use those settings.
+This matches Git's standard behavior, so if you've configured `pushRemote` or `pushDefault` in your `.gitconfig` or via `git config`, dez will use those settings.
 
 ## Remotes {#remotes}
 
-When your repository has multiple remotes, Flint shows a remote selector in the Git Panel. Click the remote button next to push/pull to choose which remote to use for that operation.
+When your repository has multiple remotes, dez shows a remote selector in the Git Panel. Click the remote button next to push/pull to choose which remote to use for that operation.
 
 ## Staging Workflow {#staging-workflow}
 
-Flint has two primary staging workflows, using either the Project Diff or the panel directly.
+dez has two primary staging workflows, using either the Project Diff or the panel directly.
 
 ### Using the Project Diff {#staging-project-diff}
 
@@ -134,19 +134,19 @@ Entries can be staged using each individual entry's checkbox. All changes can be
 
 ## Committing {#committing}
 
-Flint offers two commit textareas:
+dez offers two commit textareas:
 
 1. The first one is available right at the bottom of the Git Panel. Hitting {#kb git::Commit} immediately commits all of your staged changes.
 2. The second is available via the action {#action git::ExpandCommitEditor} or via hitting the {#kb git::ExpandCommitEditor} while focused in the Git Panel commit textarea.
 
 ### Undoing a Commit {#undo-commit}
 
-As soon as you commit in Flint, in the Git Panel, you'll see a bar right under the commit textarea, which will show the recently submitted commit.
+As soon as you commit in dez, in the Git Panel, you'll see a bar right under the commit textarea, which will show the recently submitted commit.
 In there, you can use the "Uncommit" button, which performs the `git reset HEADˆ--soft` command.
 
 ### Configuring Commit Line Length
 
-By default, Flint sets the commit line length to `72` but it can be configured in your local `settings.json` file.
+By default, dez sets the commit line length to `72` but it can be configured in your local `settings.json` file.
 
 Find more information about setting the `preferred-line-length` in the [Configuration](#configuration) section.
 
@@ -158,13 +158,13 @@ Create a new branch using {#action git::Branch} or switch to an existing branch 
 
 ### Deleting Branches {#delete-branches}
 
-To delete a branch, open the branch switcher with {#action git::Switch}, find the branch you want to delete, and use the delete option. Flint will confirm before deleting to prevent accidental data loss.
+To delete a branch, open the branch switcher with {#action git::Switch}, find the branch you want to delete, and use the delete option. dez will confirm before deleting to prevent accidental data loss.
 
 > **Note:** You cannot delete the branch you currently have checked out. Switch to a different branch first.
 
 ## Merge Conflicts {#merge-conflicts}
 
-When you encounter merge conflicts after a merge, rebase, or pull, Flint highlights the conflicting regions in your files and displays resolution buttons above each conflict.
+When you encounter merge conflicts after a merge, rebase, or pull, dez highlights the conflicting regions in your files and displays resolution buttons above each conflict.
 
 ### Viewing Conflicts {#viewing-conflicts}
 
@@ -195,7 +195,7 @@ To stash all your current changes, use the {#action git::StashAll} action. This 
 
 ### Managing Stashes {#managing-stashes}
 
-Flint provides a stash picker accessible via {#action git::ViewStash} or from the Git Panel's overflow menu. From the stash picker, you can:
+dez provides a stash picker accessible via {#action git::ViewStash} or from the Git Panel's overflow menu. From the stash picker, you can:
 
 - **View stash list**: Browse all your saved stashes with their descriptions and timestamps
 - **Open diffs**: See exactly what changes are stored in each stash
@@ -205,7 +205,7 @@ Flint provides a stash picker accessible via {#action git::ViewStash} or from th
 
 ### Quick Stash Operations {#quick-stash}
 
-For faster workflows, Flint provides direct actions to work with the most recent stash:
+For faster workflows, dez provides direct actions to work with the most recent stash:
 
 - **Apply latest stash**: Use {#action git::StashApply} to apply the most recent stash without removing it
 - **Pop latest stash**: Use {#action git::StashPop} to apply and remove the most recent stash
@@ -222,10 +222,10 @@ To view a stash's contents, select it in the stash picker and press {#kb stash_p
 
 ## AI Support in Git {#ai-support}
 
-Flint currently supports LLM-powered commit message generation.
+dez currently supports LLM-powered commit message generation.
 You can ask AI to generate a commit message by focusing on the message editor within the Git Panel and either clicking on the pencil icon in the bottom left, or reaching for the {#action git::GenerateCommitMessage} ({#kb git::GenerateCommitMessage}) keybinding.
 
-> **Note:** You need to have an LLM provider configured either via your own API keys or through Flint's hosted AI models.
+> **Note:** You need to have an LLM provider configured either via your own API keys or through dez's hosted AI models.
 > Visit [AI Quick Start](./ai/quick-start.md) to learn how to do so.
 
 You can specify your preferred model to use by providing a `commit_message_model` agent setting.
@@ -249,9 +249,9 @@ Any specific instructions for commit messages added to [Rules files](./ai/rules.
 
 ## Git Integrations {#git-integrations}
 
-Flint integrates with popular Git hosting services to ensure that Git commit hashes and references to Issues, Pull Requests, and Merge Requests become clickable links.
+dez integrates with popular Git hosting services to ensure that Git commit hashes and references to Issues, Pull Requests, and Merge Requests become clickable links.
 
-Flint currently supports links to the hosted versions of
+dez currently supports links to the hosted versions of
 [GitHub](https://github.com),
 [GitLab](https://gitlab.com),
 [Bitbucket](https://bitbucket.org),
@@ -260,9 +260,9 @@ Flint currently supports links to the hosted versions of
 
 ### Self-Hosted Instances {#self-hosted}
 
-Flint automatically identifies Git hosting providers by checking for keywords in your Git remote URL. For example, if your self-hosted URL contains `gitlab`, `gitea`, or other recognized provider names, Flint will automatically register that hosting provider without any configuration needed.
+dez automatically identifies Git hosting providers by checking for keywords in your Git remote URL. For example, if your self-hosted URL contains `gitlab`, `gitea`, or other recognized provider names, dez will automatically register that hosting provider without any configuration needed.
 
-However, if your self-hosted Git instance URL doesn't contain identifying keywords, you can manually configure Flint to create clickable links to your instance by adding a `git_hosting_providers` setting so commit hashes and permalinks resolve to your domain:
+However, if your self-hosted Git instance URL doesn't contain identifying keywords, you can manually configure dez to create clickable links to your instance by adding a `git_hosting_providers` setting so commit hashes and permalinks resolve to your domain:
 
 ```json [settings]
 {
@@ -282,7 +282,7 @@ You can configure multiple custom providers if you work with several self-hosted
 
 ### Permalinks {#permalinks}
 
-Flint also has a Copy Permalink feature to create a permanent link to a code snippet on your Git hosting service.
+dez also has a Copy Permalink feature to create a permanent link to a code snippet on your Git hosting service.
 These links are useful for sharing a specific line or range of lines in a file at a specific commit.
 Trigger this action via the [Command Palette](./getting-started.md#command-palette) (search for `permalink`),
 by creating a [custom key bindings](key-bindings.md#custom-key-bindings) to the
@@ -291,7 +291,7 @@ or by simply right clicking and selecting `Copy Permalink` with line(s) selected
 
 ## Diff Hunk Keyboard Shortcuts {#diff-hunks}
 
-When viewing files with changes, Flint displays diff hunks that can be expanded or collapsed for detailed review:
+When viewing files with changes, dez displays diff hunks that can be expanded or collapsed for detailed review:
 
 - **Expand all diff hunks**: {#action editor::ExpandAllDiffHunks} ({#kb editor::ExpandAllDiffHunks})
 - **Collapse all diff hunks**: Press `Escape` (bound to {#action editor::Cancel})
@@ -336,14 +336,14 @@ When viewing files with changes, Flint displays diff hunks that can be expanded 
 
 ## Git CLI Configuration {#cli-configuration}
 
-If you would like to also use Flint for your [git commit message editor](https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration#_core_editor) when committing from the command line you can use `flint --wait`:
+If you would like to also use dez for your [git commit message editor](https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration#_core_editor) when committing from the command line you can use `dez --wait`:
 
 ```sh
-git config --global core.editor "flint --wait"
+git config --global core.editor "dez --wait"
 ```
 
 Or add the following to your shell environment (in `~/.zshrc`, `~/.bashrc`, etc):
 
 ```sh
-export GIT_EDITOR="flint --wait"
+export GIT_EDITOR="dez --wait"
 ```

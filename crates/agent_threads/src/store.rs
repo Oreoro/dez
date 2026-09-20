@@ -62,10 +62,10 @@ pub struct AgentThreadMetadata {
     /// current state from which to rediscover which repository owned it.
     pub tied_repo_main_root: Option<PathBuf>,
     pub launched_at: SystemTime,
-    /// The thread's CLI session id, when Flint knows it: either the id the
+    /// The thread's CLI session id, when dez knows it: either the id the
     /// thread was resumed from, or the id assigned at launch via the kind's
     /// `session_id_flag`. `None` means the CLI generated its own id that
-    /// Flint can't see (e.g. fresh Codex threads).
+    /// dez can't see (e.g. fresh Codex threads).
     pub resumed_session_id: Option<SharedString>,
 }
 
@@ -166,7 +166,7 @@ pub enum DiscoveredSession {
 }
 
 /// Resolves which (if any) newly indexed session belongs to a fresh live
-/// thread that has no Flint-assigned session id (some CLIs have no
+/// thread that has no dez-assigned session id (some CLIs have no
 /// `session_id_flag`, see `AgentKindDefinition::session_id_flag`). A session is
 /// a candidate when its recorded activity is at or after the thread's
 /// `launched_at` -- the same signal `merge_threads` already uses to suppress
@@ -523,7 +523,7 @@ pub(crate) enum ThreadDisplayStatus {
 /// How long to wait after the last `Wakeup` before reclassifying, so a burst
 /// of streamed output settles into one classification instead of many.
 /// Loosely mirrors herdr's ~300ms poll tick (`pane.rs`'s `TICK_IDENTIFIED`)
-/// without literally polling: Flint only reclassifies when GPUI's own
+/// without literally polling: dez only reclassifies when GPUI's own
 /// (already a few ms debounced) `Wakeup` event says new output arrived, not
 /// on a fixed timer regardless of activity.
 const ATTENTION_WAKEUP_DEBOUNCE: Duration = Duration::from_millis(300);
@@ -847,7 +847,7 @@ impl AgentThreadStore {
     }
 
     /// Live threads eligible for background session discovery: no
-    /// Flint-assigned id (the kind has no `session_id_flag`), a history
+    /// dez-assigned id (the kind has no `session_id_flag`), a history
     /// provider that can index one, and a local (non-remote) workspace,
     /// matching the existing on-demand handoff discovery's constraints.
     fn session_discovery_candidates(&self, cx: &App) -> Vec<SessionDiscoveryCandidate> {
@@ -1394,7 +1394,7 @@ impl AgentThreadStore {
     /// match. Some agent CLIs (Codex, notably) delegate tool-call shell
     /// execution to a separate, already-running daemon rather than forking
     /// it as a child of the interactive session, so no ancestor PID is
-    /// ever one Flint tracks. The delegated shell's cwd identifies either
+    /// ever one dez tracks. The delegated shell's cwd identifies either
     /// the tied worktree or a newly-created linked worktree in the same git
     /// repository. `kind_id` disambiguates threads when cwd or repository
     /// identity alone can't. Remote threads are
@@ -3619,7 +3619,7 @@ mod tests {
             ..AgentLaunchCommand::default()
         };
         let managed_executable =
-            PathBuf::from("/remote/flint/agents/codex/0.144.6/linux-x86_64-glibc/codex");
+            PathBuf::from("/remote/dez/agents/codex/0.144.6/linux-x86_64-glibc/codex");
 
         let command = build_managed_resume_command(
             &kind,
@@ -4090,15 +4090,15 @@ mod tests {
             .env
             .insert("NO_PROXY".to_string(), "metadata.internal".to_string());
 
-        apply_proxy_environment(&mut command, "http://flint:redacted@127.0.0.1:43123");
+        apply_proxy_environment(&mut command, "http://dez:redacted@127.0.0.1:43123");
 
         assert_eq!(
             command.env.get("HTTPS_PROXY").map(String::as_str),
-            Some("http://flint:redacted@127.0.0.1:43123")
+            Some("http://dez:redacted@127.0.0.1:43123")
         );
         assert_eq!(
             command.env.get("https_proxy").map(String::as_str),
-            Some("http://flint:redacted@127.0.0.1:43123")
+            Some("http://dez:redacted@127.0.0.1:43123")
         );
         assert_eq!(
             command.env.get("NO_PROXY").map(String::as_str),

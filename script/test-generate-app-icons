@@ -7,9 +7,9 @@ cd "$(dirname "$0")/.."
 temporary_directory="$(mktemp -d)"
 trap 'rm -rf "${temporary_directory}"' EXIT
 
-iconutil -c iconset crates/flint/resources/Document.icns -o "${temporary_directory}/Document.iconset"
+iconutil -c iconset crates/dez/resources/Document.icns -o "${temporary_directory}/Document.iconset"
 
-python3 - <<'PY' "${temporary_directory}/Document.iconset/icon_512x512@2x.png" crates/flint/resources/app-icon@2x.png
+python3 - <<'PY' "${temporary_directory}/Document.iconset/icon_512x512@2x.png" crates/dez/resources/app-icon@2x.png
 from pathlib import Path
 import sys
 

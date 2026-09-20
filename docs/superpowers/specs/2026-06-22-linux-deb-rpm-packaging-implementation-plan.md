@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add native Linux packages without changing Flint's compiled application or
+Add native Linux packages without changing dez's compiled application or
 portable tarball. A new packaging script will consume the tarball produced by
 `script/bundle-linux`, map its contents into system paths, generate DEB and RPM
 artifacts through a pinned `nfpm`, and validate both packages before release.
@@ -14,7 +14,7 @@ Create:
 - `script/package-linux`
 - `script/install-nfpm`
 - `script/test-package-linux`
-- `crates/flint/resources/linux/nfpm.yaml.in`
+- `crates/dez/resources/linux/nfpm.yaml.in`
 
 Modify:
 
@@ -66,17 +66,17 @@ fail before extraction.
 
 Files:
 
-- Create `crates/flint/resources/linux/nfpm.yaml.in`
+- Create `crates/dez/resources/linux/nfpm.yaml.in`
 
 Define shared metadata and file mappings using values supplied by
 `script/package-linux`:
 
 - Package name, version, architecture, description, license, maintainer, and
   homepage.
-- Conflict entries for the other Flint channel package names.
+- Conflict entries for the other dez channel package names.
 - The staged application tree copied to
-  `/usr/lib/flint/$APP_DIRECTORY`.
-- A symbolic link from `/usr/bin/flint` to the staged CLI launcher.
+  `/usr/lib/dez/$APP_DIRECTORY`.
+- A symbolic link from `/usr/bin/dez` to the staged CLI launcher.
 - The channel-specific desktop file copied to `/usr/share/applications`.
 - The 512px and 1024px icons copied to the matching hicolor directories.
 
@@ -100,7 +100,7 @@ script that creates minimal fixture tarballs with the same directory shape as
 - Executable dummy CLI and editor files.
 - One dummy bundled library.
 - The desktop entry matching that fixture's release channel.
-- Valid 512px and 1024px PNG files copied from existing Flint resources.
+- Valid 512px and 1024px PNG files copied from existing dez resources.
 - A license file.
 
 Run the package command before implementing it and confirm the test fails
@@ -108,14 +108,14 @@ because `script/package-linux` does not exist. Once implementation begins, run
 the package command against the stable fixture and assert:
 
 - Both expected artifact files are created.
-- DEB metadata reports package `flint` and the host's mapped architecture.
-- RPM metadata reports package `flint` and the host's mapped architecture.
+- DEB metadata reports package `dez` and the host's mapped architecture.
+- RPM metadata reports package `dez` and the host's mapped architecture.
 - Both package file lists contain the editor, CLI, library, desktop entry,
-  icons, license, and `/usr/bin/flint`.
-- Extracted `/usr/bin/flint` resolves to
-  `/usr/lib/flint/flint.app/bin/flint`.
-- The desktop file uses `/usr/bin/flint` for `TryExec` and `Exec`, and uses
-  `flint` for `Icon`.
+  icons, license, and `/usr/bin/dez`.
+- Extracted `/usr/bin/dez` resolves to
+  `/usr/lib/dez/dez.app/bin/dez`.
+- The desktop file uses `/usr/bin/dez` for `TryExec` and `Exec`, and uses
+  `dez` for `Icon`.
 
 Run a second fixture case for preview and assert the package name,
 application-directory suffix, desktop ID, and conflicts are channel-specific.
@@ -136,7 +136,7 @@ exist.
 Files:
 
 - Create `script/package-linux`
-- Use `crates/flint/resources/linux/nfpm.yaml.in`
+- Use `crates/dez/resources/linux/nfpm.yaml.in`
 
 Implement a strict-mode script with:
 
@@ -148,11 +148,11 @@ Usage: script/package-linux [--archive PATH] [--output-dir PATH]
 Defaults:
 
 - Archive:
-  `target/release/flint-linux-$(uname -m).tar.gz`
+  `target/release/dez-linux-$(uname -m).tar.gz`
 - Output directory: `target/release`
 - Architecture: `uname -m`
-- Release channel: `crates/flint/RELEASE_CHANNEL`
-- Version: `script/get-crate-version flint`
+- Release channel: `crates/dez/RELEASE_CHANNEL`
+- Version: `script/get-crate-version dez`
 - `nfpm`: `NFPM` when set, otherwise `target/tools/nfpm/bin/nfpm`
 
 The script will:
@@ -165,15 +165,15 @@ The script will:
    `trap`.
 5. Verify all required source files before invoking `nfpm`.
 6. Copy the bundled desktop entry into package staging and rewrite only:
-   - `TryExec=/usr/bin/flint`
-   - `Exec=/usr/bin/flint ...`
+   - `TryExec=/usr/bin/dez`
+   - `Exec=/usr/bin/dez ...`
    - Preserve desktop actions while rewriting their `Exec` values.
 7. Render one temporary `nfpm` configuration per format so DEB and RPM receive
    their native architecture names while all other metadata and file mappings
    remain shared.
 8. Generate:
-   - `flint-linux-$(uname -m).deb`
-   - `flint-linux-$(uname -m).rpm`
+   - `dez-linux-$(uname -m).deb`
+   - `dez-linux-$(uname -m).rpm`
 9. Inspect package metadata and contents, failing on any mismatch.
 10. Extract each package into separate temporary roots with `dpkg-deb -x` and
     `rpm2cpio`/`cpio`, then validate the symlink, desktop entry, and PNG files.
@@ -220,10 +220,10 @@ artifact names match the actual build architecture.
 Update release aggregation to move these files into `release-artifacts/`:
 
 ```text
-flint-linux-aarch64.deb
-flint-linux-aarch64.rpm
-flint-linux-x86_64.deb
-flint-linux-x86_64.rpm
+dez-linux-aarch64.deb
+dez-linux-aarch64.rpm
+dez-linux-x86_64.deb
+dez-linux-x86_64.rpm
 ```
 
 Update release expected-asset validation to require all four files.
@@ -258,8 +258,8 @@ In the manual-download section:
 - Show local-file installation commands:
 
 ```sh
-sudo apt install ./flint-linux-x86_64.deb
-sudo dnf install ./flint-linux-x86_64.rpm
+sudo apt install ./dez-linux-x86_64.deb
+sudo dnf install ./dez-linux-x86_64.rpm
 ```
 
 - State that native packages install the launcher, desktop entry, MIME
@@ -285,8 +285,8 @@ On a Linux x86_64 host, additionally run the full path:
 ```sh
 script/bundle-linux
 script/package-linux
-dpkg-deb --info target/release/flint-linux-x86_64.deb
-rpm -qip target/release/flint-linux-x86_64.rpm
+dpkg-deb --info target/release/dez-linux-x86_64.deb
+rpm -qip target/release/dez-linux-x86_64.rpm
 ```
 
 If the current development host is not Linux, rely on the fixture test for
@@ -300,14 +300,14 @@ merging.
 - Release and nightly GitHub releases publish all six Linux application
   artifacts.
 - Installing a native package puts the desktop file at a filename matching
-  Flint's runtime app ID.
-- The installed desktop entry launches `/usr/bin/flint` and resolves the
-  channel-specific Flint icon through the hicolor icon theme.
+  dez's runtime app ID.
+- The installed desktop entry launches `/usr/bin/dez` and resolves the
+  channel-specific dez icon through the hicolor icon theme.
 - DEB and RPM contain equivalent application files and metadata.
 - Stable, preview, nightly, and dev metadata map to their existing application
   IDs and package names.
 - Channel packages explicitly conflict because they provide the same
-  `/usr/bin/flint`.
+  `/usr/bin/dez`.
 - The portable tarball and existing installer remain unchanged.
 - Package fixture tests, shell checks, workflow lint, and package-content
   validation pass.

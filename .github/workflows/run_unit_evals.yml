@@ -49,7 +49,7 @@ jobs:
         R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
         R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-        SCCACHE_BUCKET: sccache-flint
+        SCCACHE_BUCKET: sccache-dez
     - name: ./script/run-unit-evals
       run: ./script/run-unit-evals
       env:

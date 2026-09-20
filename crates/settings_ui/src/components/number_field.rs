@@ -11,7 +11,7 @@ use gpui::{
     TextStyleRefinement, WeakEntity,
 };
 
-use flint_actions::editor::{MoveDown, MoveUp};
+use dez_actions::editor::{MoveDown, MoveUp};
 use settings::{
     CenteredPaddingSettings, CodeFade, DelayMs, FontSize, FontWeightContent, InactiveOpacity,
     MinimumContrast,

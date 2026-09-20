@@ -1,14 +1,14 @@
 # Ported from herdrdev/herdr (https://github.com/herdrdev/herdr,
-# src/detect/manifests/claude.toml), trimmed to what Flint's classifier
+# src/detect/manifests/claude.toml), trimmed to what dez's classifier
 # (attention_detection.rs) can actually use:
 #
 # - `state = "unknown"` rules (transcript_viewer, model_picker_menu) are
 #   dropped: they exist upstream to set `skip_state_update`, which only
 #   matters to herdr's continuous polling loop -- it doesn't want a
-#   transcript-scrollback view misread as the live state. Flint's classifier
+#   transcript-scrollback view misread as the live state. dez's classifier
 #   has no such notion of "skip this update"; store.rs's caller decides what
 #   an inconclusive result means for the triggering event instead.
-# - `osc_progress`-region rules are dropped: Flint's terminal doesn't parse
+# - `osc_progress`-region rules are dropped: dez's terminal doesn't parse
 #   that escape sequence.
 # - Regions run against a bounded recent tail (see SCREEN_TAIL_LINE_COUNT in
 #   attention_detection.rs), not herdr's full scrollback.

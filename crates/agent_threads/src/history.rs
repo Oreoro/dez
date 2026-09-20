@@ -107,7 +107,7 @@ pub(crate) fn remote_indexed_history_stream(
 
 pub(crate) fn history_index_cache_root() -> PathBuf {
     paths::home_dir()
-        .join(".flint")
+        .join(".dez")
         .join("cache")
         .join("agent_threads")
 }
@@ -399,7 +399,7 @@ pub fn project_worktree_roots(project: &Project, cx: &App) -> Vec<PathBuf> {
 /// Deliberately does *not* go through `MultiWorkspace`/`Window` to find
 /// sibling workspaces: `Repository::linked_worktrees()` already reflects
 /// every worktree on disk for this repo, independent of which of them
-/// currently have an open Flint workspace, which is the correct, wider
+/// currently have an open dez workspace, which is the correct, wider
 /// scope for "could plausibly have this repo's agent thread history".
 pub fn project_group_worktree_roots(project: &Project, cx: &App) -> Vec<PathBuf> {
     let mut roots: Vec<PathBuf> = project_worktree_roots(project, cx);
@@ -732,7 +732,7 @@ mod tests {
         .await;
         let service = agent_history::IndexService::new(
             fs.clone(),
-            PathBuf::from("/home/user/.flint/cache/agent_threads"),
+            PathBuf::from("/home/user/.dez/cache/agent_threads"),
         );
         let host = agent_history::HistoryHost {
             fs: Arc::new(agent_history::LocalHistoryFs(fs)),
@@ -777,7 +777,7 @@ mod tests {
         .await;
         let service = agent_history::IndexService::new(
             fs.clone(),
-            PathBuf::from("/home/user/.flint/cache/agent_threads"),
+            PathBuf::from("/home/user/.dez/cache/agent_threads"),
         );
         let host = agent_history::HistoryHost {
             fs: Arc::new(agent_history::LocalHistoryFs(fs.clone())),
@@ -961,7 +961,7 @@ mod tests {
         .await;
         let service = agent_history::IndexService::new(
             fs.clone(),
-            PathBuf::from("/home/user/.flint/cache/agent_threads"),
+            PathBuf::from("/home/user/.dez/cache/agent_threads"),
         );
         let host = agent_history::HistoryHost {
             fs: Arc::new(agent_history::LocalHistoryFs(fs)),

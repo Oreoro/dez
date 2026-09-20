@@ -8,7 +8,7 @@ Design owner: Codex.
 
 ## Problem
 
-Flint determines a POSIX remote's operating system, architecture, and Linux
+dez determines a POSIX remote's operating system, architecture, and Linux
 libc before selecting a remote-server artifact. The shared target probe is a
 multiline `sh -c` script used by SSH, Docker, and WSL transports.
 
@@ -56,4 +56,4 @@ compact probe runs under a local POSIX `sh` and produces a parseable tagged
 target.
 
 Run the focused `remote` crate tests, formatting, and workspace clippy. Build
-and install a fresh `/tmp/Flint-Local.app` for manual SSH validation.
+and install a fresh `/tmp/dez-Local.app` for manual SSH validation.

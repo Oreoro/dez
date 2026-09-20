@@ -185,7 +185,7 @@ pub struct CrashInfo {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct InitCrashHandler {
     pub session_id: String,
-    pub flint_version: String,
+    pub dez_version: String,
     pub binary: String,
     pub release_channel: String,
     pub commit_sha: String,
@@ -550,8 +550,8 @@ mod tests {
         let future = init(
             InitCrashHandler {
                 session_id: "session".to_owned(),
-                flint_version: "1.2.3".to_owned(),
-                binary: "flint".to_owned(),
+                dez_version: "1.2.3".to_owned(),
+                binary: "dez".to_owned(),
                 release_channel: "stable".to_owned(),
                 commit_sha: "abc123".to_owned(),
             },
@@ -583,14 +583,14 @@ mod tests {
         let crash_info = CrashInfo {
             init: InitCrashHandler {
                 session_id: "session".to_owned(),
-                flint_version: "1.2.3".to_owned(),
-                binary: "flint".to_owned(),
+                dez_version: "1.2.3".to_owned(),
+                binary: "dez".to_owned(),
                 release_channel: "stable".to_owned(),
                 commit_sha: "abc123".to_owned(),
             },
             panic: Some(CrashPanic {
                 message: "test panic".to_owned(),
-                span: "crates/flint/src/main.rs:1".to_owned(),
+                span: "crates/dez/src/main.rs:1".to_owned(),
             }),
             minidump_error: None,
             gpus: Vec::new(),
@@ -599,8 +599,8 @@ mod tests {
 
         let metadata_path = write_crash_metadata(directory.path(), &crash_info)?;
         let metadata: serde_json::Value = serde_json::from_slice(&fs::read(metadata_path)?)?;
-        assert_eq!(metadata["init"]["flint_version"], "1.2.3");
-        assert_eq!(metadata["init"]["binary"], "flint");
+        assert_eq!(metadata["init"]["dez_version"], "1.2.3");
+        assert_eq!(metadata["init"]["binary"], "dez");
         assert_eq!(metadata["init"]["release_channel"], "stable");
         assert_eq!(metadata["init"]["commit_sha"], "abc123");
         assert_eq!(metadata["panic"]["message"], "test panic");

@@ -1847,25 +1847,25 @@ mod tests {
         .await;
 
         cx.set_state(indoc! {"
-            Let's test a [complex](https://flint.dev/channel/had-(oops)) caseˇ.
+            Let's test a [complex](https://dez.dev/channel/had-(oops)) caseˇ.
         "});
 
         let screen_coord = cx.pixel_position(indoc! {"
-            Let's test a [complex](https://flint.dev/channel/had-(ˇoops)) case.
+            Let's test a [complex](https://dez.dev/channel/had-(ˇoops)) case.
             "});
 
         cx.simulate_mouse_move(screen_coord, None, Modifiers::secondary_key());
         cx.assert_editor_text_highlights(
             HighlightKey::HoveredLinkState,
             indoc! {"
-            Let's test a [complex](«https://flint.dev/channel/had-(oops)ˇ») case.
+            Let's test a [complex](«https://dez.dev/channel/had-(oops)ˇ») case.
         "},
         );
 
         cx.simulate_click(screen_coord, Modifiers::secondary_key());
         assert_eq!(
             cx.opened_url(),
-            Some("https://flint.dev/channel/had-(oops)".into())
+            Some("https://dez.dev/channel/had-(oops)".into())
         );
     }
 
@@ -1898,26 +1898,26 @@ mod tests {
 
         // No link
         cx.set_state(indoc! {"
-            Let's test a [complex](https://flint.dev/channel/) caseˇ.
+            Let's test a [complex](https://dez.dev/channel/) caseˇ.
         "});
         assert_no_highlight!(cx);
 
         // No modifier
         let screen_coord = cx.pixel_position(indoc! {"
-            Let's test a [complex](https://flint.dev/channel/ˇ) case.
+            Let's test a [complex](https://dez.dev/channel/ˇ) case.
             "});
         cx.simulate_mouse_move(screen_coord, None, Modifiers::none());
         assert_no_highlight!(cx);
 
         // Modifier active
         let screen_coord = cx.pixel_position(indoc! {"
-            Let's test a [complex](https://flint.dev/channeˇl/) case.
+            Let's test a [complex](https://dez.dev/channeˇl/) case.
             "});
         cx.simulate_mouse_move(screen_coord, None, Modifiers::secondary_key());
         cx.assert_editor_text_highlights(
             HighlightKey::HoveredLinkState,
             indoc! {"
-            Let's test a [complex](«https://flint.dev/channel/ˇ») case.
+            Let's test a [complex](«https://dez.dev/channel/ˇ») case.
         "},
         );
     }
@@ -1933,19 +1933,19 @@ mod tests {
         )
         .await;
 
-        cx.set_state(indoc! {"https://flint.dev/releases is a cool ˇwebpage."});
+        cx.set_state(indoc! {"https://dez.dev/releases is a cool ˇwebpage."});
 
         let screen_coord =
-            cx.pixel_position(indoc! {"https://flint.dev/relˇeases is a cool webpage."});
+            cx.pixel_position(indoc! {"https://dez.dev/relˇeases is a cool webpage."});
 
         cx.simulate_mouse_move(screen_coord, None, Modifiers::secondary_key());
         cx.assert_editor_text_highlights(
             HighlightKey::HoveredLinkState,
-            indoc! {"«https://flint.dev/releasesˇ» is a cool webpage."},
+            indoc! {"«https://dez.dev/releasesˇ» is a cool webpage."},
         );
 
         cx.simulate_click(screen_coord, Modifiers::secondary_key());
-        assert_eq!(cx.opened_url(), Some("https://flint.dev/releases".into()));
+        assert_eq!(cx.opened_url(), Some("https://dez.dev/releases".into()));
     }
 
     #[gpui::test]
@@ -1959,19 +1959,19 @@ mod tests {
         )
         .await;
 
-        cx.set_state(indoc! {"A cool ˇwebpage is https://flint.dev/releases"});
+        cx.set_state(indoc! {"A cool ˇwebpage is https://dez.dev/releases"});
 
         let screen_coord =
-            cx.pixel_position(indoc! {"A cool webpage is https://flint.dev/releˇases"});
+            cx.pixel_position(indoc! {"A cool webpage is https://dez.dev/releˇases"});
 
         cx.simulate_mouse_move(screen_coord, None, Modifiers::secondary_key());
         cx.assert_editor_text_highlights(
             HighlightKey::HoveredLinkState,
-            indoc! {"A cool webpage is «https://flint.dev/releasesˇ»"},
+            indoc! {"A cool webpage is «https://dez.dev/releasesˇ»"},
         );
 
         cx.simulate_click(screen_coord, Modifiers::secondary_key());
-        assert_eq!(cx.opened_url(), Some("https://flint.dev/releases".into()));
+        assert_eq!(cx.opened_url(), Some("https://dez.dev/releases".into()));
     }
 
     #[test]

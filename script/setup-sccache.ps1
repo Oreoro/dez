@@ -76,7 +76,7 @@ function Configure-Sccache {
     if ($env:R2_ACCOUNT_ID) {
         Write-Host "Configuring sccache with Cloudflare R2..."
 
-        $bucket = if ($env:SCCACHE_BUCKET) { $env:SCCACHE_BUCKET } else { "sccache-flint" }
+        $bucket = if ($env:SCCACHE_BUCKET) { $env:SCCACHE_BUCKET } else { "sccache-dez" }
         $keyPrefix = if ($env:SCCACHE_KEY_PREFIX) { $env:SCCACHE_KEY_PREFIX } else { "sccache/" }
 
         $env:SCCACHE_ENDPOINT = "https://$($env:R2_ACCOUNT_ID).r2.cloudflarestorage.com"

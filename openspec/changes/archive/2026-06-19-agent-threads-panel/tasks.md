@@ -2,7 +2,7 @@
 
 - [x] 1.1 Delete `crates/terminal_view/src/terminal_threads.rs` and remove its `mod`/`init(cx)` call in `crates/terminal_view/src/terminal_view.rs`
 - [x] 1.2 Delete `crates/settings_content/src/terminal_threads.rs` and remove its `mod`/`pub use`/field from `crates/settings_content/src/settings_content.rs`
-- [x] 1.3 Remove the 4 terminal-thread menu items from `crates/flint/src/flint/app_menus.rs`
+- [x] 1.3 Remove the 4 terminal-thread menu items from `crates/dez/src/dez/app_menus.rs`
 - [x] 1.4 Remove the `"terminal_threads"` block from `assets/settings/default.json`
 
 ## 2. Scaffold `agent_threads` Crate
@@ -10,7 +10,7 @@
 - [x] 2.1 Create `crates/agent_threads` with `[lib] path = "src/agent_threads.rs"`, add it to the workspace `Cargo.toml`
 - [x] 2.2 Add `crates/settings_content/src/agent_threads.rs` (codex/claude command content + `max_visible_threads_per_agent`, default 5) and register it in `settings_content.rs`
 - [x] 2.3 Add the `"agent_threads"` block to `assets/settings/default.json`
-- [x] 2.4 Add `agent_threads::{Toggle, ToggleFocus}` to `crates/flint_actions/src/lib.rs`
+- [x] 2.4 Add `agent_threads::{Toggle, ToggleFocus}` to `crates/dez_actions/src/lib.rs`
 
 ## 3. Agent Registry & Live Store
 
@@ -29,7 +29,7 @@
 
 ## 5. Panel UI
 
-- [x] 5.1 Implement `AgentThreadsPanel` (`Panel` impl, default dock `Left`, valid `Left | Right`), registered in `crates/flint/src/flint.rs` `initialize_panels`
+- [x] 5.1 Implement `AgentThreadsPanel` (`Panel` impl, default dock `Left`, valid `Left | Right`), registered in `crates/dez/src/dez.rs` `initialize_panels`
 - [x] 5.2 Render one section per registry entry: icon + label + count + `Disclosure` fold/unfold + "+" button wired to the new-thread action
 - [x] 5.3 Render merged rows capped to `max_visible_threads_per_agent`, with a trailing "Show more" row that lifts the cap for that section
 - [x] 5.4 Wire live-row click to focus the existing terminal tab; historical-row left-click to default resume

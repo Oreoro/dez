@@ -29,7 +29,7 @@ ui.workspace = true
 util.workspace = true
 workspace.workspace = true
 language.workspace = true
-flint_actions.workspace = true
+dez_actions.workspace = true
 
 [dev-dependencies]
 editor = { workspace = true, features = ["test-support"] }

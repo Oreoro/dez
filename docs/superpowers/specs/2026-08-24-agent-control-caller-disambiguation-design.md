@@ -38,7 +38,7 @@ long-lived daemon instead of forking its own child process.
 ## Background
 
 `control.rs` and
-`docs/superpowers/specs/2026-08-21-flintctl-terminal-control-design.md` already
+`docs/superpowers/specs/2026-08-21-dezctl-terminal-control-design.md` already
 describe a two-step caller resolution:
 
 1. **Process ancestry.** The server reads the true peer process ID of the
@@ -48,7 +48,7 @@ describe a two-step caller resolution:
    needs no cooperation from the agent CLI. It is the strong signal.
 2. **Working-directory fallback.** Codex runs tool commands through an
    already-running daemon (`codex app-server`). No ancestor PID is one that
-   Flint tracks, so step 1 finds nothing. The server then matches the connecting
+   dez tracks, so step 1 finds nothing. The server then matches the connecting
    process's own working directory against each tracked thread's tied worktree
    root. When more than one thread ties to that root, the server tries to break
    the tie with the caller's ancestry process names against each candidate's
@@ -66,17 +66,17 @@ the caller's process name matches every candidate equally. The server correctly
 refuses to guess (`resolve_caller_thread_refuses_an_ambiguous_cwd_match`).
 
 This is the normal case for a user who runs more than one Codex thread in one
-worktree. This machine's own Flint log
-(`~/.local/share/flint/logs/Flint.log`) shows it:
+worktree. This machine's own dez log
+(`~/.local/share/dez/logs/dez.log`) shows it:
 
 ```text
 agent control caller 891556 could not be resolved:
-ancestry [(891556, "flintctl"), (2946707, "codex"), (2946588, "node"), (1, "systemd")]
+ancestry [(891556, "dezctl"), (2946707, "codex"), (2946588, "node"), (1, "systemd")]
 matched none of the tracked pids [...]
 tracked worktrees:
-  (codex, /mnt/storage/xis/dev/flint)
-  (codex, /mnt/storage/xis/dev/flint)
-  (claude, /mnt/storage/xis/dev/flint)
+  (codex, /mnt/storage/xis/dev/dez)
+  (codex, /mnt/storage/xis/dev/dez)
+  (claude, /mnt/storage/xis/dev/dez)
   ...
 ```
 
@@ -89,8 +89,8 @@ Change A and Change B have no dependency on each other. Ship them separately.
 
 ## Change A: remove the stale environment gate
 
-`crates/agent_control_skill/skills/flintctl/SKILL.md` gates all use of
-`flintctl` on `FLINT_AGENT_THREAD=1` in the caller's own environment. Flint sets
+`crates/agent_control_skill/skills/dezctl/SKILL.md` gates all use of
+`dezctl` on `DEZ_AGENT_THREAD=1` in the caller's own environment. dez sets
 this variable once, at launch, for every local Agent Thread process
 (`apply_control_skill_environment` in `store.rs`).
 
@@ -101,57 +101,57 @@ Agent Thread from the skill even when the server would resolve the caller.
 
 This is a confirmed defect, and it needs nothing from Change B. Ship it alone.
 
-Remove `FLINT_AGENT_THREAD` completely. Put no environment variable in its
-place. Flint also sets `TERM_PROGRAM=flint`, `TERM_PROGRAM_VERSION`, and
-`ZED_TERM=true` in every terminal (`insert_flint_terminal_env` in
+Remove `DEZ_AGENT_THREAD` completely. Put no environment variable in its
+place. dez also sets `TERM_PROGRAM=dez`, `TERM_PROGRAM_VERSION`, and
+`ZED_TERM=true` in every terminal (`insert_dez_terminal_env` in
 `crates/terminal/src/terminal.rs`), but those carry the same defect and must not
 become the new gate. A daemon-routed tool process inherits the daemon's
 environment, so such variables fail in both directions. They are absent when the
-daemon started outside Flint although the caller really is in a thread, and they
-persist after Flint quit although the caller is not.
+daemon started outside dez although the caller really is in a thread, and they
+persist after dez quit although the caller is not.
 
 The skill uses a two-stage gate instead.
 
 **Stage 1: a cheap negative check.** Test that the release-matched marker exists
 and that the control endpoint exists — the socket on Unix, the named pipe on
 Windows. Neither test reads the caller's environment, so no stale daemon can
-affect the answer. The marker proves Flint is installed. The endpoint proves
-Flint is running, because the control server creates it at start and removes it
-on quit. If either is absent, continue the task without Flint.
+affect the answer. The marker proves dez is installed. The endpoint proves
+dez is running, because the control server creates it at start and removes it
+on quit. If either is absent, continue the task without dez.
 
 Stage 1 earns its place on cost. When the server cannot resolve the caller, the
 CLI sleeps through `RETRY_BACKOFFS` of 250 ms, 500 ms, and 1000 ms before it
 reports `caller-not-recognized` (`crates/agent_control_cli/src/lib.rs`). An agent
-that never runs in Flint would pay about two seconds on every skill activation.
+that never runs in dez would pay about two seconds on every skill activation.
 
-**Stage 2: the probe.** Run `flintctl terminal current --json`. It is the only
+**Stage 2: the probe.** Run `dezctl terminal current --json`. It is the only
 authoritative answer, and one call answers two questions:
 
-- The call succeeds. The caller is in a live Flint terminal and can use the
+- The call succeeds. The caller is in a live dez terminal and can use the
   terminal commands.
 - The response also has `is_agent_thread: true`. The caller is an Agent Thread
   and can additionally use `thread retie` and `thread create`.
 
 A connection failure, a protocol mismatch, or `caller-not-recognized` means the
-skill continues without any Flint control. `is_agent_thread: false` is not such a
+skill continues without any dez control. `is_agent_thread: false` is not such a
 case. It withdraws only the thread commands.
 
 Also correct the skill's frontmatter description. It currently reads "Outside a
-Flint Agent Thread, continue without Flint control commands", which understates
-what an ordinary Flint terminal caller may do.
+dez Agent Thread, continue without dez control commands", which understates
+what an ordinary dez terminal caller may do.
 
 ## Change B: session-ID tie-break
 
 **Rule:** never treat a value a local process can freely claim about itself as
 sufficient identity on its own. Use it only to break a tie after the operating
-system has supplied the peer PID and Flint has narrowed the candidates by working
+system has supplied the peer PID and dez has narrowed the candidates by working
 directory and agent kind. The session ID is a disambiguation signal. It is not an
 authorization token.
 
 The daemon fallback stays weaker than terminal-PID ancestry. A same-user process
 can choose its working directory, process name, and environment. The local socket
 remains user-scoped and the server still requires a matching live local Agent
-Thread, but the fallback cannot prove the caller descended from a Flint PTY. This
+Thread, but the fallback cannot prove the caller descended from a dez PTY. This
 is an accepted limit. The server must not describe this fallback as equivalent to
 the ancestry match.
 
@@ -161,8 +161,8 @@ Add one step, used only when the working-directory step still leaves more than
 one candidate of the *same* kind:
 
 3. **Session-ID tie-break.** Codex sets `CODEX_THREAD_ID` in the environment of
-   the tool-call process, so a `flintctl` run from that process inherits it.
-   Flint already stores a Codex session ID per thread for history resume
+   the tool-call process, so a `dezctl` run from that process inherits it.
+   dez already stores a Codex session ID per thread for history resume
    (`AgentThreadMetadata::resumed_session_id`, populated by
    `attach_discovered_session_id` in `store.rs`). The server keeps only the
    candidate whose stored session ID equals the caller's. Exactly one match
@@ -171,12 +171,12 @@ one candidate of the *same* kind:
 ### The server reads the peer's environment
 
 The server reads the connecting process's own environment through `sysinfo`'s
-`Process::environ()` and `ProcessRefreshKind::with_environ`. `flintctl` does not
+`Process::environ()` and `ProcessRefreshKind::with_environ`. `dezctl` does not
 send the value.
 
 The deciding reason is which side knows what to look for. By this point the
 server has narrowed the candidates to one kind and knows that kind's
-`caller_session_env_var`. A generic `flintctl` binary is not told in advance
+`caller_session_env_var`. A generic `dezctl` binary is not told in advance
 which kind it will be matched against, so it cannot know which variable to read.
 It would have to send every known kind's value speculatively, which grows the
 request surface with each new kind and leaks values the server does not need.
@@ -250,19 +250,19 @@ its own tool subprocess never needs it, because step 1 already answers for it.
 ### Remote callers
 
 Remote development uses this same resolution order on the remote host, as
-`docs/superpowers/specs/2026-08-22-flintctl-remote-dev-design.md` requires. That
+`docs/superpowers/specs/2026-08-22-dezctl-remote-dev-design.md` requires. That
 document owns the mechanism; this section states only what Change B must supply.
 
 The remote server reads the peer PID, ancestry, working directory, process
 names, and the configured session variable from the true remote peer process.
-`AgentKindDefinition` is local application state, so local Flint must send the
+`AgentKindDefinition` is local application state, so local dez must send the
 kind, the kind's `caller_session_env_var`, the attached session ID, and the tied
 worktree root as connection-bound metadata on the matching remote PTY
 registration. The tied worktree root is needed because the working directory
 captured at PTY registration does not follow a later retie.
 
 All paths in this metadata are remote-host paths. The remote server must not
-scan local paths or infer identity from a client claim. Local Flint sends the
+scan local paths or infer identity from a client claim. Local dez sends the
 metadata when it binds the registration and updates it after a retie or after
 session discovery attaches an ID. Each update is bound to the authenticated
 project connection and the current registration generation; the server rejects a
@@ -280,7 +280,7 @@ on the next bounded interval.
 
 ## What this does not fix
 
-Codex has `session_id_flag: None` (`agent_threads.rs`), so Flint cannot assign a
+Codex has `session_id_flag: None` (`agent_threads.rs`), so dez cannot assign a
 session ID at launch. The ID arrives only from the background history scan, which
 runs every 30 seconds and can itself stay ambiguous when several new sessions
 appear in one project.
@@ -293,8 +293,8 @@ discovered. It does not fix the first 30 seconds.
 
 Measure this before you commit to Change B. If most real reports are fresh
 threads, the tie-break buys less than its cost, and the better answer is a
-supported Codex-to-Flint session registration channel. The current official Codex
-documentation does not establish a launch option that lets Flint assign a session
+supported Codex-to-dez session registration channel. The current official Codex
+documentation does not establish a launch option that lets dez assign a session
 ID to a fresh session, so this design does not invent one.
 
 The skill can retry a not-ready response through the existing CLI retry deadline,
@@ -303,7 +303,7 @@ but it must not wait without a bound.
 ## Non-goals
 
 - Giving a daemon-routed caller the same strong ancestry proof as a direct child
-  of a Flint PTY.
+  of a dez PTY.
 - Solving ambiguity for a daemon-routed kind that has no per-session environment
   variable on its tool-call processes. Such a kind stays unresolved when two of
   its threads share a worktree, the same as today.
@@ -316,7 +316,7 @@ but it must not wait without a bound.
 - Does every supported Codex version put `CODEX_THREAD_ID` in every tool-call
   process? The implementation must fail closed when it is absent.
 - Can a supported future Codex hook or app-server protocol report the session ID
-  together with a Flint-provided terminal identity? That would remove the
+  together with a dez-provided terminal identity? That would remove the
   fresh-session limit and make Change B unnecessary.
 
 ## Verification
@@ -327,13 +327,13 @@ For Change A:
   that keeps the terminal commands and withdraws only the thread commands, a
   missing marker, a missing endpoint, a connection failure, a protocol mismatch,
   and `caller-not-recognized`.
-- A test that stage 1 stops before it runs `flintctl` when the endpoint is
-  absent, so a caller outside Flint never pays the retry backoff.
-- A test that a stale `TERM_PROGRAM=flint` or `ZED_TERM=true` in the caller's
+- A test that stage 1 stops before it runs `dezctl` when the endpoint is
+  absent, so a caller outside dez never pays the retry backoff.
+- A test that a stale `TERM_PROGRAM=dez` or `ZED_TERM=true` in the caller's
   environment changes no decision, in either direction.
 - Remove the production and test references to the exact variable
-  `FLINT_AGENT_THREAD`, which appear only in `store.rs` and `SKILL.md`. Do not
-  remove `FLINT_AGENT_THREAD_ID` in `crates/agent_threads/src/remote_process.rs`.
+  `DEZ_AGENT_THREAD`, which appear only in `store.rs` and `SKILL.md`. Do not
+  remove `DEZ_AGENT_THREAD_ID` in `crates/agent_threads/src/remote_process.rs`.
   That is a different variable, it carries the remote lifecycle guard that stops
   orphaned remote agent processes, and a substring search matches it too.
 
@@ -387,10 +387,10 @@ Change A, shippable on its own:
 
 1. Update `SKILL.md` to the two-stage gate, and correct its frontmatter
    description so it does not restrict the terminal commands to Agent Threads.
-2. Remove `FLINT_AGENT_THREAD`, `apply_control_skill_environment`, its launch
+2. Remove `DEZ_AGENT_THREAD`, `apply_control_skill_environment`, its launch
    path call, and its unit test from `store.rs`.
 3. Update
-   `openspec/changes/add-flintctl-terminal-control/specs/terminal-agent-threads/spec.md`
+   `openspec/changes/add-dezctl-terminal-control/specs/terminal-agent-threads/spec.md`
    and its related tasks so they require the probe instead of the environment
    gate.
 
@@ -412,6 +412,6 @@ Change B, only after step 0 passes:
    generation checks, and extend background session discovery to remote projects.
    See "Remote callers".
 8. Add the new step to the "Caller resolution and access boundary" section of
-   `docs/superpowers/specs/2026-08-21-flintctl-terminal-control-design.md`, so the
+   `docs/superpowers/specs/2026-08-21-dezctl-terminal-control-design.md`, so the
    two documents stay consistent. That section already carries the weaker-fallback
    caveat; only the new step is missing.

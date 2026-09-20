@@ -1,6 +1,6 @@
-# Flint Schema Generator
+# dez Schema Generator
 
-Prints various Flint schemas to stdout.
+Prints various dez schemas to stdout.
 
 ## Usage
 

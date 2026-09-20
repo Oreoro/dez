@@ -681,7 +681,7 @@ enum RemoteEntry {
 }
 
 impl RemoteEntry {
-    fn is_from_flint(&self) -> bool {
+    fn is_from_dez(&self) -> bool {
         matches!(self, Self::Project { .. })
     }
 
@@ -1999,7 +1999,7 @@ impl RemoteServerProjects {
     ) -> impl IntoElement {
         let entry = visible.entry;
         let create_new_window = self.create_new_window;
-        let is_from_flint = server.is_from_flint();
+        let is_from_dez = server.is_from_dez();
         let element_id_base = SharedString::from(format!(
             "remote-project-{}",
             match server_ix {
@@ -2102,7 +2102,7 @@ impl RemoteServerProjects {
                         callback(this, secondary_confirm, window, cx)
                     }))
                     .tooltip(Tooltip::text(entry.project.paths.join("\n")))
-                    .when(is_from_flint, |server_list_item| {
+                    .when(is_from_dez, |server_list_item| {
                         server_list_item
                             .end_slot(
                                 div()
@@ -2471,7 +2471,7 @@ impl RemoteServerProjects {
                                         .start_slot(Icon::new(IconName::File).color(Color::Muted))
                                         .child(Label::new(localization::text(
                                             cx,
-                                            "remote-open-flint-log",
+                                            "remote-open-dez-log",
                                         )))
                                         .on_click(cx.listener(|_, _, window, cx| {
                                             window.dispatch_action(Box::new(OpenLog), cx);
@@ -2643,7 +2643,7 @@ impl RemoteServerProjects {
                                             )
                                             .on_click(|_, _, cx| {
                                                 cx.open_url(
-                                                    "https://github.com/shenghsi/flint/blob/main/docs/src/remote-development.md",
+                                                    "https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md",
                                                 );
                                             }),
                                     ),

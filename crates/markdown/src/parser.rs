@@ -1039,7 +1039,7 @@ mod tests {
     #[test]
     fn test_metadata_block_text_is_verbatim() {
         let parsed = parse_markdown_with_options(
-            "---\nurl: https://flint.dev\n---\nBody",
+            "---\nurl: https://dez.dev\n---\nBody",
             false,
             false,
             true,
@@ -1056,7 +1056,7 @@ mod tests {
     #[test]
     fn test_metadata_blocks_store_table_rows() {
         let parsed = parse_markdown_with_options(
-            "---\ntitle: Post\nauthor: Flint\n---\nBody",
+            "---\ntitle: Post\nauthor: dez\n---\nBody",
             false,
             false,
             true,
@@ -1087,7 +1087,7 @@ mod tests {
     #[test]
     fn test_metadata_blocks_store_fallback_for_nested_yaml() {
         let parsed = parse_markdown_with_options(
-            "---\ntags:\n  - flint\n---\nBody",
+            "---\ntags:\n  - dez\n---\nBody",
             false,
             false,
             true,
@@ -1108,7 +1108,7 @@ mod tests {
 
     #[test]
     fn test_metadata_table_rows_parse_simple_colon_pairs() {
-        let source = "title: Post\nauthor: Flint\n";
+        let source = "title: Post\nauthor: dez\n";
         let Some(rows) = parse_metadata_table_rows(source, 0..source.len()) else {
             panic!("expected metadata rows");
         };
@@ -1117,13 +1117,13 @@ mod tests {
             .map(|row| (&source[row.key], &source[row.value]))
             .collect::<Vec<_>>();
 
-        assert_eq!(pairs, vec![("title", "Post"), ("author", "Flint")]);
+        assert_eq!(pairs, vec![("title", "Post"), ("author", "dez")]);
     }
 
     #[test]
     fn test_metadata_table_rows_reject_non_simple_colon_pairs() {
         for source in [
-            "tags:\n  - flint\n",
+            "tags:\n  - dez\n",
             "title = Post\n",
             "title:\n",
             "title:   \n",

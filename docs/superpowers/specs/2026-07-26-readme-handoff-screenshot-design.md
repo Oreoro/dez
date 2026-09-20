@@ -26,4 +26,4 @@ size.
 - Confirm the PNG decodes successfully and record its dimensions.
 - Confirm the README image path resolves with exact filename casing.
 - Run `git diff --check` and inspect the rendered Markdown structure.
-- Do not include the unrelated modification to `flint-workspace.png`.
+- Do not include the unrelated modification to `dez-workspace.png`.

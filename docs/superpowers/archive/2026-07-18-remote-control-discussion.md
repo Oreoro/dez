@@ -5,7 +5,7 @@ agents is [Remote Agent Egress Design](../specs/2026-07-18-remote-agent-egress-d
 
 ## Problem
 
-Flint's agent threads spawn the agent process through
+dez's agent threads spawn the agent process through
 `project.create_terminal_task` (`crates/agent_threads/src/store.rs`). For an
 SSH project that terminal — and therefore the `claude` / `codex` process
 itself — runs on the remote host via `remote_server`. This requires the
@@ -18,7 +18,7 @@ commands act on the **remote** project.
 
 ## What already exists
 
-Flint's remote stack already covers the transport and most operations, for
+dez's remote stack already covers the transport and most operations, for
 its own UI:
 
 - Authenticated SSH channel + `remote_server` RPC.
@@ -31,21 +31,21 @@ its own UI:
 - Remote process/terminal spawn (the same path `create_terminal_task` uses).
 - Remote project search over the project protocol.
 
-The gap is not Flint capability. It is that the agent is an external local
+The gap is not dez capability. It is that the agent is an external local
 process whose native tools (Read/Edit/Grep/Bash) talk to the local
-filesystem and local shell, with no route into Flint's remote connection.
-The work is purely about exposing what Flint already has to the local agent.
+filesystem and local shell, with no route into dez's remote connection.
+The work is purely about exposing what dez already has to the local agent.
 
 ## Options considered
 
-### 1. Reverse tunnel (no Flint changes)
+### 1. Reverse tunnel (no dez changes)
 
 If "can't install" really means "no outbound network", keep the agent
 remote: `scp` the self-contained `claude` binary up and tunnel API traffic
 through `ssh -R` + `HTTPS_PROXY`. Cheapest path when the constraint is
 network, useless when it is policy/exec/arch.
 
-### 2. Manual mirror + ssh (no Flint changes)
+### 2. Manual mirror + ssh (no dez changes)
 
 Local git clone or mutagen/rsync mirror; agent runs locally against the
 mirror; builds/tests via `ssh host 'cd … && cmd'` (CLAUDE.md instruction +
@@ -53,7 +53,7 @@ wrapper script). Works today; costs sync drift and a second copy of the repo.
 
 ### 3. Bridge tools over the existing RPC (recommended)
 
-A `flint mcp` stdio server, or `flint remote-exec` / `flint remote-cat`
+A `dez mcp` stdio server, or `dez remote-exec` / `dez remote-cat`
 style subcommands, that connect to the running app over the existing
 CLI↔app IPC and proxy to the active remote project's connection:
 
@@ -77,7 +77,7 @@ measured before investing in option 4.
 
 ### 4. Loopback filesystem mount backed by the same RPC
 
-Flint serves the remote worktree as a local mount — on macOS a localhost
+dez serves the remote worktree as a local mount — on macOS a localhost
 NFS server avoids the macFUSE kernel-extension problem — backed by the same
 RPCs. Native agent tools then work unchanged; only shell commands need the
 exec bridge. Best ergonomics, but real infrastructure (caching, coherence,
@@ -98,14 +98,14 @@ must not grow a parallel remote implementation.
 
 The primary adapter is **ACP**, per the scoped charter change recorded in
 the discussion below: native TUI terminal threads remain the default for
-local projects; remote projects get Flint-rendered ACP threads, because
+local projects; remote projects get dez-rendered ACP threads, because
 that is the only architecture where remote-correctness is by construction
 (file and terminal operations route through the client by protocol) rather
 than by enforcement profile. The ACP stack is re-vendored from upstream
 Zed, which actively maintains the protocol, the thread/agent-server crates,
 and the per-agent adapters — restoring it reduces fork divergence rather
 than adding owned surface. Agent authentication stays with the agent CLI:
-ACP's `authenticate` flow only triggers the agent's own login; Flint never
+ACP's `authenticate` flow only triggers the agent's own login; dez never
 holds tokens.
 
 Phases:
@@ -138,8 +138,8 @@ tools to the local machine. A dependable design must give the agent a
 project-aware tool boundary or virtualize the remote environment.
 
 The strongest boundary is a local ACP-compatible agent with filesystem and
-terminal operations implemented by Flint. The flow would be local agent →
-ACP → local Flint → SSH/`remote_server` → remote project. Flint's former ACP
+terminal operations implemented by dez. The flow would be local agent →
+ACP → local dez → SSH/`remote_server` → remote project. dez's former ACP
 implementation demonstrated this shape: it advertised client filesystem
 and terminal capabilities, routed file edits through project buffers, and
 created commands through `project.create_terminal_task`. It still spawned
@@ -148,18 +148,18 @@ decision while retaining the forwarded operations would keep agent
 credentials and model traffic local while making project operations remote.
 
 ACP provides the clearest correctness and permission model, but restoring
-it would also restore a substantial protocol and UI surface that Flint
+it would also restore a substantial protocol and UI surface that dez
 intentionally removed. It is therefore a better long-term architecture than
-a first implementation in Flint's current lean, terminal-based agent model.
+a first implementation in dez's current lean, terminal-based agent model.
 
 The MCP bridge fits the current Agent Threads design better. Codex or Claude
 keeps its native local TUI, authentication, configuration, and history,
-while Flint supplies explicit remote read, write, search, and command tools.
+while dez supplies explicit remote read, write, search, and command tools.
 The limitation is enforceability: MCP tools are added alongside the agent's
 native local tools rather than replacing them. Instructions are not a hard
 boundary. A remote-only profile should disable or sandbox native project
 filesystem and shell tools where each agent supports that. If an agent
-cannot enforce this, Flint should describe the mode as best-effort rather
+cannot enforce this, dez should describe the mode as best-effort rather
 than guarantee that every operation is remote.
 
 A loopback filesystem mount makes native file tools work without agent
@@ -168,7 +168,7 @@ introduces caching and coherence behavior at the filesystem boundary, where
 stale data can corrupt edits. It should remain a later option, driven by
 measured MCP usability problems rather than built into v1.
 
-For Flint's current architecture, start with the MCP/CLI bridge and reuse
+For dez's current architecture, start with the MCP/CLI bridge and reuse
 the running window's remote connection. This keeps the first version scoped
 to an open remote project, reuses authentication and connection lifecycle,
 and permits buffer-aware conflict handling. Independent, headless SSH
@@ -181,18 +181,18 @@ Agreed on the overall shape: MCP/CLI bridge first, attached to the running
 window's connection; ACP as the better long-term boundary but too much
 restored surface for a v1; mount stays a measured later option.
 
-One correction to the enforceability concern: for the two agents Flint
+One correction to the enforceability concern: for the two agents dez
 actually launches, a remote-only profile can be a hard boundary, not just
 instructions.
 
-- **Claude Code**: Flint can generate a project-scoped
+- **Claude Code**: dez can generate a project-scoped
   `.claude/settings.json` whose `permissions.deny` blocks `Edit`, `Write`,
   `Bash`, etc., allowing only the bridge's MCP tools. Deny rules are
   enforced by the harness, not by prompt compliance; a `PreToolUse` hook can
   serve as a second fence. That is a guarantee, not best-effort.
 - **Codex**: `--sandbox read-only` OS-level-sandboxes native shell and patch
   application. Whether MCP server child processes inherit the sandbox needs
-  verification — but the bridge only needs to reach Flint's local IPC
+  verification — but the bridge only needs to reach dez's local IPC
   socket, so even an inherited read-only sandbox likely leaves it working.
   If verification fails, Codex mode is labeled best-effort as proposed.
 
@@ -204,7 +204,7 @@ Two additions for the v1 plan:
   to use the bridge" failures into immediate, visible errors instead of
   silent edits to the wrong machine.
 - The generated profile (settings + CLAUDE.md stanza + MCP registration)
-  should be written by Flint at thread spawn time so it always matches the
+  should be written by dez at thread spawn time so it always matches the
   project's connection, rather than asking users to maintain it by hand.
 
 On the ACP note: reversing the placement decision is the right framing, but
@@ -223,7 +223,7 @@ provides.
 For Claude Code, the current CLI exposes a stronger and simpler primary
 fence than enumerating deny rules: `--tools ""` removes all built-in tools
 while leaving MCP tools available, and `--strict-mcp-config` restricts MCP
-discovery to Flint's generated configuration. Flint can then allow only the
+discovery to dez's generated configuration. dez can then allow only the
 bridge tools. `permissions.deny` and a `PreToolUse` hook remain useful as
 defense in depth, but do not need to carry the whole policy. This makes a
 hard remote-tool-only mode feasible for Claude Code. See the current
@@ -238,22 +238,22 @@ Codex hooks do not close that gap: the current documentation describes tool
 hooks as a guardrail rather than a complete enforcement boundary. Codex
 therefore remains best-effort for the stronger claim that every command is
 remote, even if local writes are reliably blocked. We must also verify whether
-a stdio MCP server launched by Codex can reach Flint's local IPC endpoint under
+a stdio MCP server launched by Codex can reach dez's local IPC endpoint under
 the selected sandbox policy. See the current
 [Codex sandbox documentation](https://learn.chatgpt.com/docs/sandboxing) and
 [hooks documentation](https://learn.chatgpt.com/docs/hooks).
 
-The scratch cwd creates a Flint integration requirement. Codex and Claude
-record native session history against their process cwd, while Flint currently
+The scratch cwd creates a dez integration requirement. Codex and Claude
+record native session history against their process cwd, while dez currently
 associates historical threads with a project by comparing those recorded paths
 to the project roots. Once the process cwd is a scratch directory, that
-inference no longer works. Flint must persist its own mapping from the agent
+inference no longer works. dez must persist its own mapping from the agent
 session to the remote connection identity and remote project path, then use
 that mapping for history, resume, and window restoration.
 
 The generated bridge configuration should bind to an opaque project-session
 handle, not ask the CLI IPC endpoint for whichever window is active when a tool
-runs. Window focus can change during a turn. Flint should create the handle at
+runs. Window focus can change during a turn. dez should create the handle at
 thread launch, keep it bound to the selected remote project across reconnects,
 and invalidate it when the project or thread closes. This prevents a delayed
 tool call from reaching the wrong remote project.
@@ -263,14 +263,14 @@ tool call from reaching the wrong remote project.
 The requirement is now a long-term solution rather than the smallest useful
 v1. That changes my recommendation: MCP should not be the architectural
 foundation. It can remain a compatibility adapter or an experiment, but the
-meaning of a remote agent session must live inside Flint.
+meaning of a remote agent session must live inside dez.
 
 The stable core should be a protocol-independent **Remote Agent Workspace**.
-One instance is bound to one Flint project and exposes the capabilities an
+One instance is bound to one dez project and exposes the capabilities an
 agent needs:
 
 - Read, list, stat, search, and resolve remote project paths.
-- Apply edits through Flint's project and buffer layer.
+- Apply edits through dez's project and buffer layer.
 - Start, stream, wait for, and cancel remote commands and terminals.
 - Request and enforce edit and command permissions.
 - Preserve session identity across SSH reconnects.
@@ -286,14 +286,14 @@ explicitly rather than inferring it from the local process cwd.
 Protocol integrations sit outside that core. An adapter translates a protocol
 request into a Remote Agent Workspace operation and translates the result back.
 The primary adapter should be ACP because it already models client-provided
-filesystem and terminal capabilities. For an SSH project, Flint always starts
+filesystem and terminal capabilities. For an SSH project, dez always starts
 the ACP agent process locally, while ACP file and terminal requests execute
 through the project-bound workspace on the remote host:
 
 ```text
 local agent process
         ↓ ACP
-local Flint protocol adapter
+local dez protocol adapter
         ↓
 Remote Agent Workspace
         ↓ Project / RemoteClient
@@ -302,9 +302,9 @@ SSH + remote_server
 remote files and commands
 ```
 
-This does not require restoring Flint's former AI product. The reusable pieces
+This does not require restoring dez's former AI product. The reusable pieces
 are the ACP transport, session protocol, and project-backed filesystem and
-terminal handlers. Flint does not need to restore hosted LLM providers, cloud
+terminal handlers. dez does not need to restore hosted LLM providers, cloud
 accounts, edit prediction, MCP registries, or the old native agent stack.
 
 MCP can expose the same workspace capabilities for local CLI agents, but it is
@@ -316,7 +316,7 @@ the same workspace rather than a second remote-control implementation.
 The important architectural rule is that protocol adapters never access
 `RemoteClient`, buffers, or terminals directly. They depend only on the Remote
 Agent Workspace contract. The workspace contains the remote-project policy;
-adapters contain only protocol translation. This lets Flint replace or add an
+adapters contain only protocol translation. This lets dez replace or add an
 agent protocol without rewriting remote execution.
 
 The long-term test boundary follows the same split:
@@ -331,7 +331,7 @@ The long-term test boundary follows the same split:
   cancellation, and edit conflicts.
 
 One product decision remains open: whether long-term support may require an ACP
-adapter for each supported agent, or whether Flint must also preserve
+adapter for each supported agent, or whether dez must also preserve
 unmodified Codex and Claude CLI/TUI behavior. The latter would require a mount
 or agent-specific compatibility layer, but it should still build on the Remote
 Agent Workspace rather than shape its core API.
@@ -362,7 +362,7 @@ native AI client" and that authentication, model selection, permissions, and
 tools "belong to the CLI or TUI running inside the terminal." ACP is not a
 neutral transport choice — an ACP agent runs headless and the client renders
 the conversation and owns the permission UX, which is precisely the surface
-Flint deliberately removed. Preserving unmodified Codex/Claude CLI/TUI
+dez deliberately removed. Preserving unmodified Codex/Claude CLI/TUI
 behavior is therefore a charter requirement, not one branch of an open
 question. The primary adapters are MCP (structured ops, phase 1) and the
 loopback mount (native file-tool ergonomics, phase 2) — the mount is
@@ -377,7 +377,7 @@ deliverable: write the workspace contract so an ACP adapter would be
 straightforward (session lifecycle, streamed command output, permission
 requests as first-class operations). That is cheap insurance. If the
 charter ever changes, re-vendor upstream Zed's maintained ACP crates rather
-than writing fresh — Flint is a fork, so pulling back a subset is tractable.
+than writing fresh — dez is a fork, so pulling back a subset is tractable.
 
 On the enforcement reply: agreed on `--tools ""` + `--strict-mcp-config` as
 the primary fence for Claude Code with deny rules as depth, and agreed Codex
@@ -393,7 +393,7 @@ better solution, the charter can change. Re-evaluating on merits only, my
 position changes.
 
 The charter argument's backbone was maintenance surface, and it does not
-survive contact with one Flint-specific fact: Flint syncs from upstream Zed
+survive contact with one dez-specific fact: dez syncs from upstream Zed
 regularly, and upstream actively maintains the whole ACP stack — protocol,
 `acp_thread`/`agent_servers` crates, and per-agent adapters. Restoring
 those crates is re-vendoring plus de-branding, and it _reduces_ fork
@@ -419,12 +419,12 @@ Two caveats become the spike that gates phase 1:
    capabilities cover file read/write and terminals, but Claude Code's
    internal Grep/Glob/LS run against the local disk of the agent process,
    and adapters may assume local fs proximity (@-mentions, context
-   gathering). Flint controls the launch config and can disable those tools
+   gathering). dez controls the launch config and can disable those tools
    so search falls back to remotely-routed shell commands — but this must
    be demonstrated, not assumed.
 2. **The product cost is real even though the maintenance cost is not:**
    users trade the native TUI (plan mode, todo display, familiar UX) for
-   Flint-rendered chat, and adapter feature-lag versus the CLI is a
+   dez-rendered chat, and adapter feature-lag versus the CLI is a
    permanent tax. This is why the TUI path stays the local-project default.
 
 Consequence for sequencing: the MCP bridge loses its stepping-stone
@@ -433,7 +433,7 @@ Workspace only if unmodified-TUI remote support turns out to be needed. The
 workspace core survives unchanged from Codex's proposal; the adapter
 priority flips. Authentication needs no new work in either path: ACP's
 `authenticate` request only triggers the agent CLI's own OAuth flow, so
-credentials remain local and Flint never stores tokens.
+credentials remain local and dez never stores tokens.
 
 ### 2026-07-18 — Claude (tunnel mode for installable-but-offline hosts)
 
@@ -444,10 +444,10 @@ plan — when the TUI can run remotely, it should, per the scoped charter.
 
 Mechanics, all within the current terminal-first model:
 
-- **Binary delivery**: both CLIs ship self-contained binaries; Flint
+- **Binary delivery**: both CLIs ship self-contained binaries; dez
   already uploads `remote_server` over SSH on connect, and an agent binary
   can ride the same machinery.
-- **Traffic**: Flint runs a small local HTTP CONNECT proxy, opens a single
+- **Traffic**: dez runs a small local HTTP CONNECT proxy, opens a single
   `ssh -R` reverse forward over the existing connection, and injects
   `HTTPS_PROXY` into the spawned thread's environment. A CONNECT proxy
   (not a single-destination forward) is required because agents reach
@@ -517,10 +517,10 @@ session:
   failure. `AllowTcpForwarding`/`PermitListen` policy can make this mode
   unavailable even though normal SSH terminals work.
 
-Flint does not yet have the SSH lifecycle primitive this design assumes.
+dez does not yet have the SSH lifecycle primitive this design assumes.
 `RemoteClient::build_forward_ports_command` and the SSH command builders emit
 only local `-L` forwards. The SSH parser permits a user-supplied `-R` argument,
-but that is static connection configuration, not a per-thread forward that Flint
+but that is static connection configuration, not a per-thread forward that dez
 can allocate, health-check, recreate, and cancel. The implementation should add
 a small owned `RemoteEgressTunnel` abstraction rather than exposing raw SSH
 flags to Agent Threads. Its lifecycle is:
@@ -534,10 +534,10 @@ flags to Agent Threads. Its lifecycle is:
    reconnect when possible.
 5. Cancel the forward and stop the proxy when the thread closes.
 
-On platforms with Flint's SSH ControlMaster support, the transport can manage
+On platforms with dez's SSH ControlMaster support, the transport can manage
 the forward through the existing connection. The Windows OpenSSH client lacks
 that support, so it needs a dedicated long-lived tunnel process. There is a
-second Windows issue: Flint's current remote-Windows command builder ignores
+second Windows issue: dez's current remote-Windows command builder ignores
 the supplied environment map, so it cannot inject `HTTPS_PROXY` today. Either
 fix remote environment transport first or explicitly scope the first release to
 POSIX remote hosts.
@@ -590,7 +590,7 @@ separate attributed section.
 
 The resolved design now sets a controlled loopback `NO_PROXY`/`no_proxy`, states
 how an offline host can be provisioned before use without making installation a
-Flint responsibility, and uses one independently owned `ssh -N -R` connection
+dez responsibility, and uses one independently owned `ssh -N -R` connection
 per egress session on every local platform. The dedicated connection avoids
 mutating a user-owned ControlMaster; one extra SSH authentication per live
 egress session is the accepted reliability tradeoff. The first remote port is

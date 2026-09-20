@@ -1,13 +1,13 @@
 //! The local-only server backing agent-initiated worktree
 //! control: a thread's own CLI process (Codex, Claude Code, etc.) invokes
-//! the `flintctl` binary (`agent_control_cli`), which sends one
+//! the `dezctl` binary (`agent_control_cli`), which sends one
 //! JSON request over the platform transport per invocation.
 //!
 //! Caller identity is established by asking the kernel who actually
 //! connected -- `LOCAL_PEERPID` on macOS, `SO_PEERCRED` on Linux, or the
 //! named-pipe client PID on Windows -- and
 //! walking that process's parent-PID ancestry (via `sysinfo`) looking for a
-//! PID Flint recognizes as a live thread's own terminal process. There is
+//! PID dez recognizes as a live thread's own terminal process. There is
 //! no client-presented secret: nothing is minted, delivered, or can go
 //! stale by being overwritten. See `agent_control_protocol::AgentControlLocation`
 //! for why environment variables and a per-thread token were tried first
@@ -118,7 +118,7 @@ async fn run_server(
         match UnixStream::connect(&socket_path).await {
             Ok(_stream) => {
                 log::info!(
-                    "agent_threads: another Flint instance already owns the agent control socket at {socket_path:?}; disabling this instance's control server"
+                    "agent_threads: another dez instance already owns the agent control socket at {socket_path:?}; disabling this instance's control server"
                 );
                 return Ok(());
             }
@@ -159,18 +159,18 @@ async fn run_server(
     }
 }
 
-/// Records where this Flint instance's own `flintctl` executable
+/// Records where this dez instance's own `dezctl` executable
 /// lives, so an agent's CLI process can discover what command to run in the
 /// first place. Best-effort: if the executable can't be resolved (e.g. a
 /// dev build with no bundled binary alongside it), the server still starts
 /// -- an explicit platform endpoint override or a PATH-installed binary can
 /// still reach it, just not via this file.
 pub(crate) fn write_executable_location(executable_location_path: &std::path::Path) -> bool {
-    let executable = match util::get_flintctl_path() {
+    let executable = match util::get_dezctl_path() {
         Ok(executable) => executable,
         Err(error) => {
             log::warn!(
-                "agent_threads: could not resolve flintctl's own path, so agents \
+                "agent_threads: could not resolve dezctl's own path, so agents \
                  won't be able to discover it via the marker file: {error:#}"
             );
             return false;
@@ -345,7 +345,7 @@ fn get_peer_pid(_stream: &UnixStream) -> Result<u32> {
 /// tool-call shells are NOT descendants of the interactive session at all
 /// -- Codex CLI, for instance, delegates shell execution to a separate,
 /// already-running `codex app-server` daemon rather than forking it as its
-/// own child, so no ancestor PID is ever one Flint tracks. A tool-invoked
+/// own child, so no ancestor PID is ever one dez tracks. A tool-invoked
 /// shell's cwd identifies the tied worktree in the usual case. Immediately
 /// after the agent creates a linked worktree, its cwd can instead identify
 /// that new worktree; the shared git common directory then identifies the
@@ -627,7 +627,7 @@ pub(crate) async fn dispatch(
         );
     }
     if matches!(request.command, ControlCommand::Status) {
-        let (flint_version, release_channel) = cx.update(|cx| {
+        let (dez_version, release_channel) = cx.update(|cx| {
             (
                 release_channel::AppVersion::global(cx).to_string(),
                 release_channel::ReleaseChannel::try_global(cx)
@@ -637,7 +637,7 @@ pub(crate) async fn dispatch(
             )
         });
         return ControlResponse::ok(ControlSuccess::Status(StatusResult {
-            flint_version,
+            dez_version,
             protocol_version: PROTOCOL_VERSION,
             release_channel,
             capabilities: command_capabilities(),
@@ -755,7 +755,7 @@ pub(crate) async fn dispatch_remote(
     };
 
     if matches!(request.command, ControlCommand::Status) {
-        let (flint_version, release_channel) = cx.update(|cx| {
+        let (dez_version, release_channel) = cx.update(|cx| {
             (
                 release_channel::AppVersion::global(cx).to_string(),
                 release_channel::ReleaseChannel::try_global(cx)
@@ -765,7 +765,7 @@ pub(crate) async fn dispatch_remote(
             )
         });
         return ControlResponse::ok(ControlSuccess::Status(StatusResult {
-            flint_version,
+            dez_version,
             protocol_version: PROTOCOL_VERSION,
             release_channel,
             capabilities: command_capabilities(),
@@ -1767,9 +1767,9 @@ async fn handle_create_thread(
             seeded_launch_response(worktree, task.await, creation_error_code, cx)
         }
         CreateThreadWorktree::New => {
-            let action = flint_actions::CreateWorktree {
+            let action = dez_actions::CreateWorktree {
                 worktree_name: request.name.clone(),
-                branch_target: flint_actions::NewWorktreeBranchTarget::CurrentBranch,
+                branch_target: dez_actions::NewWorktreeBranchTarget::CurrentBranch,
             };
             let created_task = window_handle.update(cx, |_, window, cx| {
                 source_workspace.update(cx, |workspace, cx| {
@@ -2203,13 +2203,13 @@ mod tests {
     }
 
     #[test]
-    fn executable_marker_replaces_an_older_flintctl_path() {
+    fn executable_marker_replaces_an_older_dezctl_path() {
         let directory = tempfile::tempdir().expect("create marker directory");
         let marker = directory
             .path()
             .join("agent-control-stable-executable.json");
-        std::fs::write(&marker, r#"{"executable":"/old/flintctl"}"#).expect("write old marker");
-        let current = PathBuf::from("/current/Flint.app/Contents/MacOS/flintctl");
+        std::fs::write(&marker, r#"{"executable":"/old/dezctl"}"#).expect("write old marker");
+        let current = PathBuf::from("/current/dez.app/Contents/MacOS/dezctl");
 
         assert!(write_executable_location_for(&marker, current.clone()));
 
@@ -2583,7 +2583,7 @@ mod tests {
             .expect("spawned terminal must be registered");
         let request = ControlRequest::current(ControlCommand::TerminalOpen(
             agent_control_protocol::TerminalOpenRequest {
-                cwd: Some(PathBuf::from("/definitely/not/a/real/flint-directory")),
+                cwd: Some(PathBuf::from("/definitely/not/a/real/dez-directory")),
                 focus: false,
             },
         ));

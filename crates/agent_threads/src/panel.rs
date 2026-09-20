@@ -2162,7 +2162,7 @@ impl AgentThreadsPanel {
 }
 
 /// Cross-agent handoff: resolves `source_metadata`'s session id (discovering
-/// it for a fresh Codex thread when Flint wasn't assigned one), extracts a
+/// it for a fresh Codex thread when dez wasn't assigned one), extracts a
 /// bounded transcript excerpt, gathers a changed-file list, writes a
 /// disclosure-minimized handoff document after explicit confirmation, and
 /// launches a fresh `target_kind` thread seeded to read it.
@@ -2455,7 +2455,7 @@ impl Panel for AgentThreadsPanel {
     }
 
     fn toggle_action(&self) -> Box<dyn Action> {
-        Box::new(flint_actions::agent_threads::ToggleFocus)
+        Box::new(dez_actions::agent_threads::ToggleFocus)
     }
 
     fn starts_open(&self, _: &Window, cx: &App) -> bool {
@@ -4488,7 +4488,7 @@ mod tests {
         // A busy-spinner OSC title classifies as Working (codex's
         // osc_title_working rule). Reached via a plain Wakeup, not a Bell,
         // matching how this would happen for real -- the CLI updates its
-        // title as it resumes, Flint doesn't get another bell for that.
+        // title as it resumes, dez doesn't get another bell for that.
         terminal.update(cx, |terminal, cx| {
             terminal.breadcrumb_text = "⠙ codex".to_string();
             cx.emit(terminal::Event::Wakeup);

@@ -41,7 +41,7 @@
 - [AI Quick Start](./ai/quick-start.md)
 - [AI by Company](./ai/by-company.md)
 - [Agents](./ai/agents.md)
-  - [Flint Agent](./ai/flint-agent.md)
+  - [dez Agent](./ai/dez-agent.md)
   - [External Agents](./ai/external-agents.md)
   - [Terminal Threads](./ai/terminal-threads.md)
 - [Agent Panel](./ai/agent-panel.md)
@@ -191,9 +191,9 @@
 - [All Actions](./all-actions.md)
 - [CLI Reference](./reference/cli.md)
 
-# Developing Flint
+# Developing dez
 
-- [Developing Flint](./development.md)
+- [Developing dez](./development.md)
   - [macOS](./development/macos.md)
   - [Linux](./development/linux.md)
   - [Windows](./development/windows.md)

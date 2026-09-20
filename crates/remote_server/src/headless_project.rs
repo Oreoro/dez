@@ -1503,11 +1503,11 @@ impl HeadlessProject {
 }
 
 /// Where the host-owned agent thread history index persists, shared by a local
-/// Flint and `flint-remote-server` running as the same host user. Intentionally
+/// dez and `dez-remote-server` running as the same host user. Intentionally
 /// home-relative rather than under `paths::data_dir()` so both processes agree.
 fn agent_thread_history_cache_root() -> PathBuf {
     util::paths::home_dir()
-        .join(".flint")
+        .join(".dez")
         .join("cache")
         .join("agent_threads")
 }
@@ -1804,7 +1804,7 @@ mod remote_management_tests {
         smol::block_on(async {
             let directory = tempfile::tempdir().expect("temporary directory should be created");
             let path = directory.path().join("agent");
-            smol::fs::write(&path, b"flint-managed-agent")
+            smol::fs::write(&path, b"dez-managed-agent")
                 .await
                 .expect("fixture should be written");
 

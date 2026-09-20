@@ -892,7 +892,7 @@ impl RemoteConnection for SshRemoteConnection {
 }
 
 /// Check if the user already has an active SSH ControlMaster session for the
-/// given destination. See: https://github.com/zed-industries/flint/issues/45271
+/// given destination. See: https://github.com/zed-industries/dez/issues/45271
 #[cfg(not(windows))]
 async fn find_existing_control_master(
     destination: &str,
@@ -978,7 +978,7 @@ impl SshRemoteConnection {
         let destination = connection_options.ssh_destination();
 
         let temp_dir = tempfile::Builder::new()
-            .prefix("flint-ssh-session")
+            .prefix("dez-ssh-session")
             .tempdir()?;
 
         // On non-Windows, check if the user already has an active ControlMaster
@@ -1183,7 +1183,7 @@ impl SshRemoteConnection {
             _ => version.to_string(),
         };
         let binary_name = format!(
-            "flint-remote-server-{}-{}{}",
+            "dez-remote-server-{}-{}{}",
             release_channel.dev_name(),
             version_str,
             if self.ssh_platform.os.is_windows() {
@@ -1782,7 +1782,7 @@ impl SshSocket {
                 "AMD64" => RemoteArch::X86_64,
                 "ARM64" => RemoteArch::Aarch64,
                 arch => anyhow::bail!(
-                    "Prebuilt remote servers are not yet available for windows-{arch}. See https://github.com/shenghsi/flint/blob/main/docs/src/remote-development.md"
+                    "Prebuilt remote servers are not yet available for windows-{arch}. See https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
                 ),
             },
             libc: None,
@@ -2538,7 +2538,7 @@ mod tests {
     fn test_ssh_command_options_connection_sharing() {
         let socket = SshSocket {
             connection_options: SshConnectionOptions::default(),
-            socket_path: std::path::PathBuf::from("/tmp/flint-ssh-socket"),
+            socket_path: std::path::PathBuf::from("/tmp/dez-ssh-socket"),
             envs: HashMap::default(),
         };
 
@@ -2550,7 +2550,7 @@ mod tests {
                 "-o".to_string(),
                 "ControlMaster=no".to_string(),
                 "-o".to_string(),
-                "ControlPath=/tmp/flint-ssh-socket".to_string(),
+                "ControlPath=/tmp/dez-ssh-socket".to_string(),
             ]
         );
 
@@ -2583,7 +2583,7 @@ mod tests {
                 ]),
                 ..Default::default()
             },
-            socket_path: std::path::PathBuf::from("/tmp/flint-ssh-socket"),
+            socket_path: std::path::PathBuf::from("/tmp/dez-ssh-socket"),
             envs: HashMap::default(),
         };
 
@@ -2597,7 +2597,7 @@ mod tests {
         assert!(
             arguments
                 .windows(2)
-                .any(|arguments| { arguments == ["-o", "ControlPath=/tmp/flint-ssh-socket"] })
+                .any(|arguments| { arguments == ["-o", "ControlPath=/tmp/dez-ssh-socket"] })
         );
         assert!(
             !arguments
@@ -2645,7 +2645,7 @@ mod tests {
                 port: Some(2222),
                 ..Default::default()
             },
-            socket_path: std::path::PathBuf::from("/tmp/flint-ssh-socket"),
+            socket_path: std::path::PathBuf::from("/tmp/dez-ssh-socket"),
             envs: HashMap::default(),
         };
 
@@ -2659,7 +2659,7 @@ mod tests {
         assert!(
             arguments
                 .windows(2)
-                .any(|arguments| { arguments == ["-o", "ControlPath=/tmp/flint-ssh-socket"] })
+                .any(|arguments| { arguments == ["-o", "ControlPath=/tmp/dez-ssh-socket"] })
         );
         assert!(
             !arguments
@@ -2687,7 +2687,7 @@ mod tests {
                 port: Some(2222),
                 ..Default::default()
             },
-            socket_path: std::path::PathBuf::from("/tmp/flint-ssh-socket"),
+            socket_path: std::path::PathBuf::from("/tmp/dez-ssh-socket"),
             envs: HashMap::default(),
         };
 

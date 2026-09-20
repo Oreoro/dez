@@ -70,7 +70,7 @@ pub fn tunneled_route_marker() -> impl IntoElement {
 `IconName::ArrowRightLeft` already exists (`crates/icons/src/icons.rs:37`,
 backed by `assets/icons/arrow_right_left.svg`) and has no other use in the
 codebase, so no new asset and no conflicting established meaning. It is the
-`⇄` form in Flint's own stroke style.
+`⇄` form in dez's own stroke style.
 
 Do **not** edit the SVG's hardcoded `stroke="black"`. GPUI reduces icon SVGs to
 an alpha mask (`crates/gpui/src/svg_renderer.rs:212-216`) and repaints them
@@ -177,7 +177,7 @@ asserting on laid-out geometry would be brittle relative to its value.
 
 ## Manual verification
 
-Against a fresh `/tmp/Flint-Local.app` (`./script/bundle-tmp-app`, checking the
+Against a fresh `/tmp/dez-Local.app` (`./script/bundle-tmp-app`, checking the
 exit code per the repo's build note):
 
 1. A tunneled SSH project shows the marker in the title bar; a direct one shows

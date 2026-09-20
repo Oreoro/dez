@@ -61,11 +61,11 @@ cargo test -p agent_threads --lib
 ```
 
 If the known Dugite download or debug release-tail fails after producing the
-fresh bundle, retain the prior `/tmp/Flint-Local.app`, reuse its identical
+fresh bundle, retain the prior `/tmp/dez-Local.app`, reuse its identical
 pinned Git binary, apply the standard development profile and ad-hoc signature,
 and verify the replacement before installing it.
 
 Reconnect the ParaStor remote so the debug remote server is rebuilt and
-uploaded, then retry `New — Flint-managed Codex`. Success means the staged
+uploaded, then retry `New — dez-managed Codex`. Success means the staged
 directory commits, the absolute-path Codex thread launches once, and a later
 launch reuses the verified installation.

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Return Flint to a two-channel distribution model sourced from `main`:
+Return dez to a two-channel distribution model sourced from `main`:
 
 - Stable releases are tagged and built directly from `main`.
 - Nightly builds use the latest commit on `main`.
@@ -10,14 +10,14 @@ Return Flint to a two-channel distribution model sourced from `main`:
 
 ## Release behavior
 
-`crates/flint/RELEASE_CHANNEL` on `main` is `stable`. Stable releases use plain
+`crates/dez/RELEASE_CHANNEL` on `main` is `stable`. Stable releases use plain
 `vX.Y.Z` tags whose tagged commit is on `main`. The release workflow rejects
 preview tags ending in `-pre` and does not auto-publish preview releases.
 
 The existing `nightly` tag and GitHub release remain moving references. Before
 compiling, every nightly build job changes its checkout's release-channel file
 to `nightly`, ensuring that artifacts built from a stable-channel `main` commit
-identify themselves as Flint Nightly. The nightly workflow moves the `nightly`
+identify themselves as dez Nightly. The nightly workflow moves the `nightly`
 tag to the latest `main` commit and replaces the assets on the existing
 `nightly` release.
 
@@ -54,7 +54,7 @@ Automated coverage verifies:
 - `-pre` tags are rejected;
 - nightly artifacts are compiled with the `nightly` channel;
 - Nightly's update polling interval is six hours;
-- Preview is no longer selectable through Flint's installer.
+- Preview is no longer selectable through dez's installer.
 
 Workflow and shell syntax checks, focused Rust tests, formatting, and scoped
 clippy run before the pull request is opened.

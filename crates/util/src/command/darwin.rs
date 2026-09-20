@@ -584,7 +584,7 @@ mod tests {
         const PARALLEL_TEST_SLACK: usize = 32;
         let before = open_descriptor_count();
         for _ in 0..ATTEMPTS {
-            Command::new("/bin/flint-process-that-does-not-exist")
+            Command::new("/bin/dez-process-that-does-not-exist")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

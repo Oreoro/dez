@@ -22,4 +22,4 @@ system_specs.workspace = true
 urlencoding.workspace = true
 util.workspace = true
 workspace.workspace = true
-flint_actions.workspace = true
+dez_actions.workspace = true

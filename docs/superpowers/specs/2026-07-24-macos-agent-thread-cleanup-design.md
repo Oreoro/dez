@@ -3,7 +3,7 @@
 ## Problem
 
 Remote Agent Thread cleanup verifies a POSIX process by searching the custom
-`ps` command column for `FLINT_AGENT_THREAD_ID`. macOS does not include the
+`ps` command column for `DEZ_AGENT_THREAD_ID`. macOS does not include the
 process environment in that column, so cleanup exits with status 67 and leaves
 the agent process running.
 
@@ -16,7 +16,7 @@ the environment is directly available.
 
 This preserves protection against PID reuse on macOS because a reused PID must
 also match both the recorded process group and the recorded process start time
-before Flint sends a signal.
+before dez sends a signal.
 
 ## Testing
 

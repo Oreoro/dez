@@ -65,14 +65,14 @@
       "labels": ["area:controls/ime", "area:controls/mouse", "area:gpui"]
     },
     {
-      "name": "Auth & Flint.dev",
+      "name": "Auth & dez.dev",
       "labels": [
         "area:auth",
         "area:billing",
         "area:permissions",
-        "area:flint account",
-        "area:flint.dev",
-        "area:flint.dev/theme builder"
+        "area:dez account",
+        "area:dez.dev",
+        "area:dez.dev/theme builder"
       ]
     },
     {

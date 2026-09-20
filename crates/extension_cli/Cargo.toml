@@ -9,7 +9,7 @@ license = "GPL-3.0-or-later"
 workspace = true
 
 [[bin]]
-name = "flint-extension"
+name = "dez-extension"
 path = "src/main.rs"
 
 [dependencies]

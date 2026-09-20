@@ -31,7 +31,7 @@ impl VimTestContext {
             search::init(cx);
             theme_settings::init(theme::LoadThemes::JustBase, cx);
             markdown_preview::init(cx);
-            flint_actions::init();
+            dez_actions::init();
         });
     }
 

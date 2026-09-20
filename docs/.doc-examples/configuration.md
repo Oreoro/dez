@@ -14,25 +14,25 @@
 
 ---
 
-title: Configuring Flint - Settings and Preferences
-description: Configure Flint with the Settings Editor, JSON files, and project-specific overrides. Covers all settings options.
+title: Configuring dez - Settings and Preferences
+description: Configure dez with the Settings Editor, JSON files, and project-specific overrides. Covers all settings options.
 
 ---
 
-# Configuring Flint
+# Configuring dez
 
-This guide explains how Flint's settings system works, including the Settings Editor, JSON configuration files, and project-specific settings.
+This guide explains how dez's settings system works, including the Settings Editor, JSON configuration files, and project-specific settings.
 
 For visual customization (themes, fonts, icons), see [Appearance](./appearance.md).
 
 ## Settings Editor {#settings-editor}
 
-The **Settings Editor** ({#kb flint::OpenSettings}) is the primary way to configure Flint. It provides a searchable interface where you can browse available settings, see their current values, and make changes.
+The **Settings Editor** ({#kb dez::OpenSettings}) is the primary way to configure dez. It provides a searchable interface where you can browse available settings, see their current values, and make changes.
 
 To open it:
 
-- Press {#kb flint::OpenSettings}
-- Or run {#action flint::OpenSettings} from the command palette
+- Press {#kb dez::OpenSettings}
+- Or run {#action dez::OpenSettings} from the command palette
 
 As you type in the search box, matching settings appear with descriptions and controls to modify them. Changes save automatically to your settings file.
 
@@ -42,28 +42,28 @@ As you type in the search box, matching settings appear with descriptions and co
 
 ### User Settings {#user-settings}
 
-Your user settings apply globally across all projects. Open the file with {#kb flint::OpenSettingsFile} or run {#action flint::OpenSettingsFile} from the command palette.
+Your user settings apply globally across all projects. Open the file with {#kb dez::OpenSettingsFile} or run {#action dez::OpenSettingsFile} from the command palette.
 
 The file is located at:
 
-- macOS: `~/.config/flint/settings.json`
-- Linux: `~/.config/flint/settings.json` (or `$XDG_CONFIG_HOME/flint/settings.json`)
-- Windows: `%APPDATA%\Flint\settings.json`
+- macOS: `~/.config/dez/settings.json`
+- Linux: `~/.config/dez/settings.json` (or `$XDG_CONFIG_HOME/dez/settings.json`)
+- Windows: `%APPDATA%\dez\settings.json`
 
 The syntax is JSON with support for `//` comments.
 
 ### Default Settings {#default-settings}
 
-To see all available settings with their default values, run {#action flint::OpenDefaultSettings} from the command palette. This opens a read-only reference you can use when editing your own settings.
+To see all available settings with their default values, run {#action dez::OpenDefaultSettings} from the command palette. This opens a read-only reference you can use when editing your own settings.
 
 ### Project Settings {#project-settings}
 
-Override user settings for a specific project by creating a `.flint/settings.json` file in your project root. Run {#action flint::OpenProjectSettings} to create this file.
+Override user settings for a specific project by creating a `.dez/settings.json` file in your project root. Run {#action dez::OpenProjectSettings} to create this file.
 
 Project settings take precedence over user settings for that project only.
 
 ```json [settings]
-// .flint/settings.json
+// .dez/settings.json
 {
   "tab_size": 2,
   "formatter": "prettier",
@@ -79,7 +79,7 @@ You can also add settings files in subdirectories for more granular control.
 
 Settings are applied in layers:
 
-1. **Default settings** — Flint's built-in defaults
+1. **Default settings** — dez's built-in defaults
 2. **User settings** — Your global preferences
 3. **Project settings** — Project-specific overrides
 
@@ -113,12 +113,12 @@ Changes made in the Settings Editor apply across all channels.
 
 ## Settings Deep Links {#deep-links}
 
-Flint supports deep links that open specific settings directly:
+dez supports deep links that open specific settings directly:
 
 ```
-flint://settings/theme
-flint://settings/vim_mode
-flint://settings/buffer_font_size
+dez://settings/theme
+dez://settings/vim_mode
+dez://settings/buffer_font_size
 ```
 
 These are useful for sharing configuration tips or linking from documentation.

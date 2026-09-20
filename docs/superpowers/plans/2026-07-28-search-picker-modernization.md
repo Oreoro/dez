@@ -4,9 +4,9 @@
 
 **Goal:** Complete Tasks 6.3 through 6.6 with symbol previews, previewable LSP results, reconstructible picker history, and stable multi-selection in one Wave 6 integration PR.
 
-**Architecture:** Extend Flint's existing `Picker` preview contract and add generic stable-ID selection mechanics there. Keep result-domain behavior in its owning crate, add a focused `lsp_locations` crate for normalized LSP result snapshots, and store only typed reconstruction requests plus serializable picker state in Workspace.
+**Architecture:** Extend dez's existing `Picker` preview contract and add generic stable-ID selection mechanics there. Keep result-domain behavior in its owning crate, add a focused `lsp_locations` crate for normalized LSP result snapshots, and store only typed reconstruction requests plus serializable picker state in Workspace.
 
-**Tech Stack:** Rust, GPUI entities/tasks/actions, Flint Picker and Workspace modal APIs, Project/Buffer/MultiBuffer, LSP test servers, settings content and Settings Editor.
+**Tech Stack:** Rust, GPUI entities/tasks/actions, dez Picker and Workspace modal APIs, Project/Buffer/MultiBuffer, LSP test servers, settings content and Settings Editor.
 
 ## Global Constraints
 
@@ -20,7 +20,7 @@
 - Default `editor.lsp_results_location` to `multi_buffer`; existing action payloads remain valid.
 - Run each behavior through red-green-refactor before writing its production implementation.
 - Propagate or visibly log every fallible operation; do not use `unwrap()`, panicking indexing, or `let _ =` to discard errors.
-- Preserve Flint's single-user product boundary and do not add collaboration, account, or cloud behavior.
+- Preserve dez's single-user product boundary and do not add collaboration, account, or cloud behavior.
 - Use GPUI executor timers rather than `smol::Timer` in GPUI tests.
 - Before pushing Rust changes, run `cargo fmt --all -- --check`.
 - Use `./script/clippy`, not `cargo clippy`.
@@ -70,7 +70,7 @@
 - `crates/settings_ui/src/settings_ui.rs`: dropdown renderer registration.
 - `crates/settings_ui/src/page_data.rs`: exact JSON path assertion in its
   existing test module.
-- `crates/flint/Cargo.toml` and `crates/flint/src/flint.rs`: initialize the new picker crate.
+- `crates/dez/Cargo.toml` and `crates/dez/src/dez.rs`: initialize the new picker crate.
 
 ### Reconstructible history
 
@@ -524,8 +524,8 @@ git commit -m "Add multi-select to file and text finders"
 - Modify: `assets/settings/default.json`
 - Modify: `crates/settings_ui/src/page_data.rs`
 - Modify: `crates/settings_ui/src/settings_ui.rs`
-- Modify: `crates/flint/Cargo.toml`
-- Modify: `crates/flint/src/flint.rs`
+- Modify: `crates/dez/Cargo.toml`
+- Modify: `crates/dez/src/dez.rs`
 
 **Interfaces:**
 
@@ -675,7 +675,7 @@ fn present_lsp_locations(
 
 Preserve current direct-open and definition-fallback behavior. For multiple
 usable results, resolve the action override first and global setting second.
-Initialize `lsp_locations` from Flint startup and register its dependency.
+Initialize `lsp_locations` from dez startup and register its dependency.
 
 - [ ] **Step 9: Run LSP and settings suites and commit**
 
@@ -686,13 +686,13 @@ cargo test -p lsp_locations -- --test-threads=1
 cargo test -p editor lsp_results -- --test-threads=1
 cargo test -p settings_content
 cargo test -p settings_ui
-cargo check -p flint
+cargo check -p dez
 ```
 
 Then:
 
 ```bash
-git add Cargo.toml Cargo.lock assets/settings crates/lsp_locations crates/editor crates/settings_content crates/settings_ui crates/flint
+git add Cargo.toml Cargo.lock assets/settings crates/lsp_locations crates/editor crates/settings_content crates/settings_ui crates/dez
 git commit -m "Add previewable LSP result pickers"
 ```
 
@@ -902,7 +902,7 @@ contemporaneous `origin/main` run before classifying it as baseline.
 ```bash
 cargo fmt --all -- --check
 ./script/clippy
-cargo check -p flint
+cargo check -p dez
 ```
 
 Expected: all commands exit zero.
@@ -917,13 +917,13 @@ Run:
 
 If it fails only at the known debug `release/remote_server` signing/gzip step,
 copy the freshly built bundle with `ditto` from
-`target/<target-triple>/debug/bundle/osx/Flint.app` to
-`/tmp/Flint-Local.app`. Verify `/tmp/Flint-Local.app/Contents/MacOS/Flint`
+`target/<target-triple>/debug/bundle/osx/dez.app` to
+`/tmp/dez-Local.app`. Verify `/tmp/dez-Local.app/Contents/MacOS/dez`
 exists and is executable.
 
 - [ ] **Step 4: Perform the manual Wave 6 acceptance pass**
 
-In `/tmp/Flint-Local.app`, verify:
+In `/tmp/dez-Local.app`, verify:
 
 - Project Symbols and Buffer Symbols preview and navigate exact ranges.
 - Moving quickly rejects stale previews.

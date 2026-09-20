@@ -25,7 +25,7 @@ use util::{ResultExt as _, debug_panic, maybe, paths::PathExt, shell::ShellKind}
 /// Path to the program used for askpass
 ///
 /// On Unix and remote servers, this defaults to the current executable
-/// On Windows, this is set to the CLI variant of flint
+/// On Windows, this is set to the CLI variant of dez
 static ASKPASS_PROGRAM: OnceLock<std::path::PathBuf> = OnceLock::new();
 
 #[derive(PartialEq, Eq)]
@@ -209,11 +209,11 @@ impl PasswordProxy {
         >,
         executor: BackgroundExecutor,
     ) -> Result<Self> {
-        let temp_dir = tempfile::Builder::new().prefix("flint-askpass").tempdir()?;
+        let temp_dir = tempfile::Builder::new().prefix("dez-askpass").tempdir()?;
         let askpass_socket = temp_dir.path().join("askpass.sock");
         let askpass_script_path = temp_dir.path().join(ASKPASS_SCRIPT_NAME);
         let current_exec = std::env::current_exe()
-            .context("Failed to determine current flint executable path.")?;
+            .context("Failed to determine current dez executable path.")?;
 
         // TODO: inferred from the use of powershell.exe in askpass_helper_script
         let shell_kind = if cfg!(windows) {
@@ -297,8 +297,8 @@ impl PasswordProxy {
         }
     }
 }
-/// The main function for when Flint is running in netcat mode for use in askpass.
-/// Called from both the remote server binary and the flint binary in their respective main functions.
+/// The main function for when dez is running in netcat mode for use in askpass.
+/// Called from both the remote server binary and the dez binary in their respective main functions.
 pub fn main(socket: &str) {
     use net::UnixStream;
     use std::io::{self, Read, Write};

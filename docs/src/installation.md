@@ -1,73 +1,73 @@
 ---
-title: Install Flint - macOS, Linux, Windows
-description: Download and install Flint on macOS, Linux, or Windows. Includes Homebrew, direct download, and package manager options.
+title: Install dez - macOS, Linux, Windows
+description: Download and install dez on macOS, Linux, or Windows. Includes Homebrew, direct download, and package manager options.
 ---
 
-# Installing Flint
+# Installing dez
 
-## Download Flint
+## Download dez
 
 ### macOS
 
 Get the latest stable build via the
-[download page](https://flint.dev/download). After the first manual
-installation, Flint periodically checks for updates.
+[download page](https://dez.dev/download). After the first manual
+installation, dez periodically checks for updates.
 
-You can also install Flint stable via Homebrew:
+You can also install dez stable via Homebrew:
 
 ```sh
-brew install --cask flint
+brew install --cask dez
 ```
 
 ### Windows
 
 Get the latest stable build via the
-[download page](https://flint.dev/download). After the first manual
-installation, Flint periodically checks for updates.
+[download page](https://dez.dev/download). After the first manual
+installation, dez periodically checks for updates.
 
-Additionally, you can install Flint using winget:
+Additionally, you can install dez using winget:
 
 ```sh
-winget install -e --id FlintIndustries.Flint
+winget install -e --id dezIndustries.dez
 ```
 
 ### Linux
 
-For most Linux users, the easiest way to install Flint is through our installation script:
+For most Linux users, the easiest way to install dez is through our installation script:
 
 ```sh
-curl -f https://flint.dev/install.sh | sh
+curl -f https://dez.dev/install.sh | sh
 ```
 
-You can now optionally specify a **version** of Flint to install using the `ZED_VERSION` environment variable:
+You can now optionally specify a **version** of dez to install using the `ZED_VERSION` environment variable:
 
 ```sh
 # Install the latest stable version (default)
-curl -f https://flint.dev/install.sh | sh
+curl -f https://dez.dev/install.sh | sh
 
 # Install a specific version
-curl -f https://flint.dev/install.sh | ZED_VERSION=0.216.0 sh
+curl -f https://dez.dev/install.sh | ZED_VERSION=0.216.0 sh
 ```
 
 To install the latest Nightly build:
 
 ```sh
-curl -f https://flint.dev/install.sh | ZED_CHANNEL=nightly sh
+curl -f https://dez.dev/install.sh | ZED_CHANNEL=nightly sh
 ```
 
 This script supports `x86_64` and `AArch64`, as well as common Linux distributions: Ubuntu, Arch, Debian, RedHat, CentOS, Fedora, and more.
 
-If Flint is installed using this installation script, it can be uninstalled at any time by running the shell command `flint --uninstall`. The shell will then prompt you whether you'd like to keep your preferences or delete them. After making a choice, you should see a message that Flint was successfully uninstalled.
+If dez is installed using this installation script, it can be uninstalled at any time by running the shell command `dez --uninstall`. The shell will then prompt you whether you'd like to keep your preferences or delete them. After making a choice, you should see a message that dez was successfully uninstalled.
 
-If this script is insufficient for your use case, you run into problems running Flint, or there are errors in uninstalling Flint, please see our [Linux-specific documentation](./linux.md).
+If this script is insufficient for your use case, you run into problems running dez, or there are errors in uninstalling dez, please see our [Linux-specific documentation](./linux.md).
 
 ## System Requirements
 
 ### macOS
 
-Flint supports the following macOS releases:
+dez supports the following macOS releases:
 
-| Version       | Codename | Apple Status   | Flint Status        |
+| Version       | Codename | Apple Status   | dez Status        |
 | ------------- | -------- | -------------- | ------------------- |
 | macOS 26.x    | Tahoe    | Supported      | Supported           |
 | macOS 15.x    | Sequoia  | Supported      | Supported           |
@@ -77,11 +77,11 @@ Flint supports the following macOS releases:
 | macOS 11.x    | Big Sur  | EOL 2023-09-26 | Partially Supported |
 | macOS 10.15.x | Catalina | EOL 2022-09-12 | Partially Supported |
 
-The macOS releases labelled "Partially Supported" (Big Sur and Catalina) do not support screen sharing via Flint Collaboration. These features use the [LiveKit SDK](https://livekit.io) which relies upon [ScreenCaptureKit.framework](https://developer.apple.com/documentation/screencapturekit/) only available on macOS 12 (Monterey) and newer.
+The macOS releases labelled "Partially Supported" (Big Sur and Catalina) do not support screen sharing via dez Collaboration. These features use the [LiveKit SDK](https://livekit.io) which relies upon [ScreenCaptureKit.framework](https://developer.apple.com/documentation/screencapturekit/) only available on macOS 12 (Monterey) and newer.
 
 #### Mac Hardware
 
-Flint supports machines with Intel (x86_64) or Apple (aarch64) processors that meet the above macOS requirements:
+dez supports machines with Intel (x86_64) or Apple (aarch64) processors that meet the above macOS requirements:
 
 - MacBook Pro (Early 2015 and newer)
 - MacBook Air (Early 2015 and newer)
@@ -94,9 +94,9 @@ Flint supports machines with Intel (x86_64) or Apple (aarch64) processors that m
 
 ### Linux
 
-Flint supports 64-bit Intel/AMD (x86_64) and 64-bit Arm (aarch64) processors.
+dez supports 64-bit Intel/AMD (x86_64) and 64-bit Arm (aarch64) processors.
 
-Flint requires a Vulkan 1.3 driver and the following desktop portals:
+dez requires a Vulkan 1.3 driver and the following desktop portals:
 
 - `org.freedesktop.portal.FileChooser`
 - `org.freedesktop.portal.OpenURI`
@@ -104,18 +104,18 @@ Flint requires a Vulkan 1.3 driver and the following desktop portals:
 
 ### Windows
 
-Flint supports the following Windows releases:
+dez supports the following Windows releases:
 
-| Version                            | Flint Status |
+| Version                            | dez Status |
 | ---------------------------------- | ------------ |
 | Windows 11, version 22H2 and later | Supported    |
 | Windows 10, version 1903 and later | Supported    |
 
-A 64-bit operating system is required to run Flint.
+A 64-bit operating system is required to run dez.
 
 #### Windows Hardware
 
-Flint supports machines with x64 (Intel, AMD) or Arm64 (Qualcomm) processors that meet the following requirements:
+dez supports machines with x64 (Intel, AMD) or Arm64 (Qualcomm) processors that meet the following requirements:
 
 - Graphics: A GPU that supports DirectX 11 (most PCs from 2012+).
 - Driver: Current NVIDIA/AMD/Intel/Qualcomm driver (not the Microsoft Basic Display Adapter).
@@ -126,4 +126,4 @@ Not yet available as an official download. Can be built [from source](./developm
 
 ### Web
 
-Not supported at this time. See our [Platform Support issue](https://github.com/zed-industries/flint/issues/5391).
+Not supported at this time. See our [Platform Support issue](https://github.com/zed-industries/dez/issues/5391).

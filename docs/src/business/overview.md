@@ -1,8 +1,8 @@
 ---
-title: Flint Business
+title: dez Business
 description: "Compatibility note for the removed organization service."
 ---
 
-# Flint Business
+# dez Business
 
-Flint does not operate an organization, business plan, or administration service.
+dez does not operate an organization, business plan, or administration service.
