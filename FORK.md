@@ -77,6 +77,15 @@ older API surface.
   entry point. This preserves extension behavior while still gating LSP
   binary operations on user settings.
 
+## Considered and not adopted
+
+| Candidate | Source | Why not |
+|---|---|---|
+| Separate `git_graph` crate and refs chips | Gram (`crates/git_graph`, commits `f7566fde3`, `96f3b0945`) | Flint already ships `crates/git_ui/src/git_graph.rs` (6,604 lines) with `ref_names` support; porting Gram's parallel implementation would duplicate working code and add merge surface |
+| AI/telemetry crate-graph removal | Gram (~108 crates) | Flint already removed Zed's hosted models, collab, accounts, and telemetry; dez inherits that and keeps only what runs the workspace |
+| GPL-only additions / CLA rejection | Gram | dez inherits Flint's Apache/GPL dual license and contribution process; no license change |
+| Full manifest-capability gating of every extension call | Gram `7a6951c46` | Requires a `DapSettings` type absent from dez's base; dez gates LSP calls and resets DAP to permissive. Revisit after the next upstream sync brings `DapSettings` |
+
 ## Deferred (Phase 1, per MERGE.md)
 
 - `TerminalType::Hosted { controller }` variant in `Terminal` — full

@@ -2,31 +2,58 @@
 
 Thank you for helping us make Dez better!
 
-All activity in Dez forums is subject to our [Code of
-Conduct](https://Dez.dev/code-of-conduct). Additionally, contributors must sign
-our [Contributor License Agreement](https://Dez.dev/cla) before their
-contributions can be merged.
+Dez is a fork of [Flint](https://github.com/shenghsi/flint), which is itself a
+fork of [Zed](https://github.com/zed-industries/zed). When contributing, keep
+the fork layers in mind: see `FORK.md` for every intentional divergence from
+Flint, and `docs/dez-mission.md` for what dez is and is not.
+
+## Roadmap
+
+This is the shape of the work, in order. It mirrors the plan in `MERGE.md`
+(kept outside this repository) and the design in
+`docs/dez-workspace-shell.md`.
+
+- [x] Rebase onto Flint v0.11.3 and rebrand the whole tree as dez.
+- [x] Port the durable terminal host (`dez_terminal_host`, `session_host`).
+- [x] Harden extension capabilities (downloads, path lookup, exec) using
+      Gram's approach; keep Zed's extension ABI intact.
+- [ ] Build the workspace shell: the Chrome-like bar and sidebar, with
+      files, diffs, terminals, agent threads, and settings as first-class tabs
+      (`dez_workspace_shell`, `dez_sidebar`).
+- [ ] Re-point the Activity section from ACP types onto `agent_threads`
+      attention state, and add review-ready detection from git changed files.
+- [ ] Session discovery-and-attach for tmux, Herdr, and cmux alongside Flint's
+      managed threads.
+- [ ] Adopt the two-week upstream sync protocol (see `SYNC-LEDGER.md`).
+- [ ] Ship dez 1.0.0.
+
+Deliberately not on the roadmap: hosted models, native chat, accounts, collab,
+telemetry, and subscriptions. Agents own their own configuration.
 
 ## Contribution ideas
 
-Dez is a large project with a number of priorities. We spend most of
-our time working on what we believe the product needs, but we also love working
-with the community to improve the product in ways we haven't thought of (or had time to get to yet!)
+Dez is a large project with a number of priorities. We spend most of our time
+working on what we believe the product needs, but we also love working with the
+community to improve the product in ways we haven't thought of (or had time to
+get to yet!).
 
 In particular we love PRs that are:
 
 - Fixing or extending the docs.
 - Fixing bugs.
-- Small enhancements to existing features to make them work for more people (making things work on more platforms/modes/whatever).
-- Small extra features, like keybindings or actions you miss from other editors or extensions.
-- Part of a Community Program like [Let's Git Together](https://github.com/zed-industries/Dez/issues/41541).
+- Small enhancements to existing features to make them work for more people
+  (making things work on more platforms/modes/whatever).
+- Small extra features, like keybindings or actions you miss from other editors
+  or extensions.
+- Security improvements to the extension trust boundary.
 
-If you're looking for concrete ideas:
+If you're looking for concrete ideas, browse the
+[open issues](https://github.com/Oreoro/dez/issues) or the roadmap above.
 
-- [Triaged bugs with confirmed steps to reproduce](https://github.com/zed-industries/Dez/issues?q=is%3Aissue%20state%3Aopen%20type%3ABug%20label%3Astate%3Areproducible).
-- [Area labels](https://github.com/zed-industries/Dez/labels?q=area%3A*) to browse bugs in a specific part of the product you care about (after clicking on an area label, add type:Bug to the search).
-
-If you're thinking about proposing or building a larger feature, read the [Dez Feature Process](./docs/src/development/feature-process.md) for how we think about feature design — what context to provide, what integration points to consider, and how to put together a strong proposal.
+If you're thinking about proposing or building a larger feature, read the
+[Feature Process](./docs/src/development/feature-process.md) for how we think
+about feature design — what context to provide, what integration points to
+consider, and how to put together a strong proposal.
 
 ## Sending changes
 
@@ -141,7 +168,7 @@ When your changes affect UI, consult this checklist:
 
 Although there are few hard and fast rules, typically we don't merge:
 
-- Anything that can be provided by an extension. For example a new language, or theme. For adding themes or support for a new language to Dez, check out our [docs on developing extensions](https://Dez.dev/docs/extensions/developing-extensions).
+- Anything that can be provided by an extension. For example a new language, or theme. For adding themes or support for a new language to Dez, check out our [docs on developing extensions](https://github.com/Oreoro/dez/docs/extensions/developing-extensions).
 - Changes to the Dez Extension API submitted without prior discussion involving Dez staff.
 - New file icons. Dez's default icon theme consists of icons that are hand-designed to fit together in a cohesive manner, please don't submit PRs with off-the-shelf SVGs.
 - Features where (in our subjective opinion) the extra complexity isn't worth it for the number of people who will benefit.
@@ -167,8 +194,25 @@ Dez is made up of several smaller crates - let's go over those you're most likel
 - [`theme`](/crates/theme) defines the theme system and provides a default theme.
 - [`ui`](/crates/ui) is a collection of UI components and common patterns used throughout Dez.
 - [`cli`](/crates/cli) is the CLI crate which invokes the Dez binary.
-- [`Dez`](/crates/Dez) is where all things come together, and the `main` entry point for Dez.
+- [`dez`](/crates/dez) is where all things come together, and the `main` entry point for Dez.
+
+## Upstream sync and attribution
+
+Dez's upstream is [Flint](https://github.com/shenghsi/flint), which in turn
+tracks [Zed](https://github.com/zed-industries/zed). We keep the fork
+maintainable by following a strict protocol:
+
+- Sync from Flint every two weeks, on a `sync/upstream-YYYY-MM-DD` branch,
+  never directly on `main`. Run `script/dez-identity-check` and `cargo check`
+  before merging.
+- Keep the original reference in the commit message when porting an upstream
+  fix (for example `zed#64034`).
+- Record every adaptation in `SYNC-LEDGER.md` (one line: date, source, what,
+  where).
+- Record every intentional divergence from Flint in `FORK.md`.
+- When porting work from another fork (for example Gram), credit the original
+  author and commit in both the commit message and `FORK.md`.
 
 ## Packaging Dez
 
-Check our [notes for packaging Dez](https://Dez.dev/docs/development/linux#notes-for-packaging-Dez).
+Check our [notes for packaging Dez](https://github.com/Oreoro/dez/docs/development/linux#notes-for-packaging-dez).
