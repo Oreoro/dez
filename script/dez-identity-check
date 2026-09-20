@@ -74,6 +74,18 @@ require_pattern crates/dez/src/dez.rs \
     'dez_sidebar::DezSidebar::new' \
     'the dez binary must register the workspace sidebar'
 
+require_pattern crates/dez/src/dez.rs \
+    'dez_sidebar::init\(cx\)' \
+    'the dez binary must initialize dez sidebar settings'
+
+require_pattern crates/settings_content/src/settings_content.rs \
+    'pub dez_sidebar: Option<DezSidebarSettingsContent>' \
+    'the dez_sidebar settings section must be registered'
+
+require_pattern assets/settings/default.json \
+    '"dez_sidebar"' \
+    'the dez_sidebar settings section must have defaults'
+
 # --- Main crate identity ---
 
 require_pattern crates/dez/Cargo.toml \

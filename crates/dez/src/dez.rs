@@ -409,6 +409,7 @@ fn restore_agent_threads_for_added_workspace(
 
 pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
     agent_threads::init(cx);
+    dez_sidebar::init(cx);
 
     // Each launch snapshots under a fresh session id and only the previous
     // launch's snapshot is ever read again, so older ones are already dead;
@@ -438,6 +439,19 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
         let multi_workspace_weak = cx.weak_entity();
         let sidebar = cx.new(|cx| dez_sidebar::DezSidebar::new(multi_workspace_weak, cx));
         multi_workspace.register_sidebar(sidebar, cx);
+
+        if dez_sidebar::DezSidebarSettings::get_global(cx).starts_open {
+            cx.spawn(async move |multi_workspace, cx| {
+                multi_workspace
+                    .update(cx, |multi_workspace, cx| {
+                        if !multi_workspace.sidebar_open() {
+                            multi_workspace.open_sidebar(cx);
+                        }
+                    })
+                    .ok();
+            })
+            .detach();
+        }
     })
     .detach();
 

@@ -1,5 +1,6 @@
 mod action;
 mod agent_threads;
+mod dez_sidebar;
 mod editor;
 mod extension;
 mod fallible_options;
@@ -15,6 +16,7 @@ mod workspace;
 
 pub use action::{ActionName, ActionWithArguments};
 pub use agent_threads::*;
+pub use dez_sidebar::*;
 pub use editor::*;
 pub use extension::*;
 pub use fallible_options::*;
@@ -179,6 +181,9 @@ pub struct SettingsContent {
     /// Agent thread panel launch commands and display limits for Codex and
     /// Claude.
     pub agent_threads: Option<AgentThreadSettingsContent>,
+
+    /// The dez workspace sidebar.
+    pub dez_sidebar: Option<DezSidebarSettingsContent>,
 
     /// Whether or not to enable Helix mode.
     ///
