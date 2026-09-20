@@ -156,8 +156,21 @@ impl DezSidebar {
                     .size(IconSize::Small)
                     .color(if selected { Color::Default } else { Color::Muted }),
             )
-            .on_click(cx.listener(move |this, _, _window, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
                 this.active_view = view;
+                match view {
+                    DezSidebarView::Files => window.dispatch_action(
+                        Box::new(dez_actions::project_panel::Toggle),
+                        cx,
+                    ),
+                    DezSidebarView::Git => {
+                        window.dispatch_action(Box::new(git_ui::git_panel::Toggle), cx)
+                    }
+                    DezSidebarView::Settings => {
+                        window.dispatch_action(Box::new(dez_actions::OpenSettings), cx)
+                    }
+                    DezSidebarView::Home => {}
+                }
                 cx.notify();
             }))
             .into_any_element()

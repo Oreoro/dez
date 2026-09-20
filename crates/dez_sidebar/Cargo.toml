@@ -14,6 +14,8 @@ doctest = false
 
 [dependencies]
 agent_threads.workspace = true
+dez_actions.workspace = true
+git_ui.workspace = true
 gpui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
