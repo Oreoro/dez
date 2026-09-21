@@ -83,8 +83,10 @@ older API surface.
 |---|---|---|
 | New `dez_sidebar` crate implementing `workspace::Sidebar` | `crates/dez_sidebar/` | dez's flagship workspace navigator; Flint removed the sidebar implementation but kept the workspace-side trait |
 | Browser-like view model (Home/Files/Git/Settings) | `crates/dez_sidebar/src/sidebar.rs` | dez's product identity: every Zed capability reachable as a sidebar surface |
-| Multi-root group headers with joined names + active branch | `crates/dez_sidebar/src/sidebar.rs` | Workspace structure is dez's differentiator |
-| Files/Git/Settings tabs dispatch panel/settings actions | `crates/dez_sidebar/src/sidebar.rs` | Makes the sidebar a launcher for Zed features, not a static view |
+| Multi-root group headers with joined names, active branch, and a changed-file count + status indicator | `crates/dez_sidebar/src/sidebar.rs` | Workspace structure is dez's differentiator; live git state belongs in the chrome |
+| Labeled tab strip + per-view action rows that dispatch panel/settings actions | `crates/dez_sidebar/src/sidebar.rs` | Makes the sidebar a launcher for Zed features, not a static view |
+| Git view surfaces the Git Graph (`git_ui::git_graph::Open`) beside Changes | `crates/dez_sidebar/src/sidebar.rs` | Gram's `git_graph` feature is the same lineage as Flint's `git_ui` graph; this makes it reachable from the chrome |
+| Activity entry point dispatches `dez_actions::agent_threads::ToggleFocus` and mirrors the attention rollup | `crates/dez_sidebar/src/sidebar.rs` | Surfaces agent sessions and attention in the chrome without forking the state machine |
 | `AgentThreadStore::attention_count` public API | `crates/agent_threads/src/store.rs` | Lets chrome outside the agent panel (the sidebar) surface attention; additive, ≤20 lines |
 | `dez_sidebar` settings section (`starts_open`) | `crates/settings_content/src/dez_sidebar.rs`, `assets/settings/default.json` | Configurable default-open behavior |
 | Sidebar registration + default-open on window creation | `crates/dez/src/dez.rs` | Wires the shell into the app; deferred open avoids acting mid-construction |
@@ -93,7 +95,7 @@ older API surface.
 
 | Candidate | Source | Why not |
 |---|---|---|
-| Separate `git_graph` crate and refs chips | Gram (`crates/git_graph`, commits `f7566fde3`, `96f3b0945`) | Flint already ships `crates/git_ui/src/git_graph.rs` (6,604 lines) with `ref_names` support; porting Gram's parallel implementation would duplicate working code and add merge surface |
+| Separate `git_graph` crate and refs chips | Gram (`crates/git_graph`, commits `f7566fde3`, `96f3b0945`) | Flint already ships `crates/git_ui/src/git_graph.rs` (6,604 lines) with `ref_names`/chip support and file-history/search — a superset of Gram's 2,191-line crate (the older upstream graph). Porting Gram's would regress and duplicate. The feature is instead surfaced as a first-class sidebar action (see "Workspace shell") |
 | AI/telemetry crate-graph removal | Gram (~108 crates) | Flint already removed Zed's hosted models, collab, accounts, and telemetry; dez inherits that and keeps only what runs the workspace |
 | GPL-only additions / CLA rejection | Gram | dez inherits Flint's Apache/GPL dual license and contribution process; no license change |
 | Full manifest-capability gating of every extension call | Gram `7a6951c46` | Requires a `DapSettings` type absent from dez's base; dez gates LSP calls and resets DAP to permissive. Revisit after the next upstream sync brings `DapSettings` |

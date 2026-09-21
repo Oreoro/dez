@@ -1,10 +1,12 @@
 use gpui::{
-    AnyElement, App, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, Pixels,
-    Render, SharedString, Styled, Subscription, WeakEntity, Window, div, px,
+    AnyElement, App, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable,
+    IntoElement, Pixels, Render, SharedString, Styled, Subscription, WeakEntity, Window, div, px,
 };
 use serde::{Deserialize, Serialize};
 use ui::prelude::*;
-use workspace::{MultiWorkspace, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent, SidebarSide};
+use workspace::{
+    MultiWorkspace, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent, SidebarSide,
+};
 
 const DEFAULT_SIDEBAR_WIDTH: Pixels = px(240.0);
 const MIN_SIDEBAR_WIDTH: Pixels = px(180.0);
@@ -30,6 +32,111 @@ impl DezSidebarView {
             DezSidebarView::Git => IconName::GitBranch,
             DezSidebarView::Settings => IconName::Settings,
         }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            DezSidebarView::Home => "Home",
+            DezSidebarView::Files => "Files",
+            DezSidebarView::Git => "Git",
+            DezSidebarView::Settings => "Settings",
+        }
+    }
+}
+
+/// A compact read of a workspace's git status, used to pick the icon and color
+/// shown beside the workspace header.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ChangeIndicator {
+    Conflict,
+    Modified,
+    Added,
+    Deleted,
+    Clean,
+}
+
+impl ChangeIndicator {
+    fn from_counts(conflict: usize, modified: usize, added: usize, deleted: usize) -> Self {
+        if conflict > 0 {
+            Self::Conflict
+        } else if modified > 0 {
+            Self::Modified
+        } else if added > 0 {
+            Self::Added
+        } else if deleted > 0 {
+            Self::Deleted
+        } else {
+            Self::Clean
+        }
+    }
+
+    fn icon(self) -> IconName {
+        match self {
+            Self::Conflict => IconName::Warning,
+            Self::Modified => IconName::SquareDot,
+            Self::Added => IconName::SquarePlus,
+            Self::Deleted => IconName::SquareMinus,
+            Self::Clean => IconName::GitBranch,
+        }
+    }
+
+    fn color(self) -> Color {
+        match self {
+            Self::Conflict => Color::VersionControlConflict,
+            Self::Modified => Color::VersionControlModified,
+            Self::Added => Color::VersionControlAdded,
+            Self::Deleted => Color::VersionControlDeleted,
+            Self::Clean => Color::Muted,
+        }
+    }
+}
+
+/// The per-workspace chrome summary: project name, active branch, and the
+/// changed-file count with its indicator.
+struct WorkspaceSummary {
+    name: SharedString,
+    branch: Option<SharedString>,
+    changed: usize,
+    indicator: ChangeIndicator,
+}
+
+fn summarize_workspace(workspace: &Entity<workspace::Workspace>, cx: &App) -> WorkspaceSummary {
+    let project = workspace.read(cx).project().read(cx);
+    let name: SharedString = project
+        .worktree_paths(cx)
+        .main_worktree_path_list()
+        .ordered_paths()
+        .last()
+        .and_then(|path| path.file_name())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Workspace".to_string())
+        .into();
+
+    let (branch, changed, indicator) = match project.active_repository(cx) {
+        Some(repository) => {
+            let repository = repository.read(cx);
+            let branch = repository
+                .branch
+                .as_ref()
+                .map(|branch| SharedString::from(branch.name().to_string()));
+            let summary = repository.status_summary();
+            let tracked = summary.index + summary.worktree;
+            let indicator = ChangeIndicator::from_counts(
+                summary.conflict,
+                tracked.modified,
+                tracked.added,
+                tracked.deleted,
+            );
+            (branch, summary.count, indicator)
+        }
+        None => (None, 0, ChangeIndicator::Clean),
+    };
+
+    WorkspaceSummary {
+        name,
+        branch,
+        changed,
+        indicator,
     }
 }
 
@@ -103,18 +210,34 @@ impl DezSidebar {
             .ok();
     }
 
-    fn render_header(&self, _cx: &mut Context<Self>) -> AnyElement {
+    fn attention_count(&self, cx: &App) -> usize {
+        agent_threads::AgentThreadStore::try_global(cx)
+            .map(|store| store.read(cx).attention_count())
+            .unwrap_or(0)
+    }
+
+    fn render_header(&self, cx: &mut Context<Self>) -> AnyElement {
+        let attention = self.attention_count(cx);
+
         h_flex()
             .w_full()
             .items_center()
+            .justify_between()
             .gap_2()
             .px_3()
             .py_2()
             .child(
-                Label::new("Workspace")
+                Label::new("Workspaces")
                     .size(LabelSize::Small)
                     .color(Color::Muted),
             )
+            .when(attention > 0, |el| {
+                el.child(
+                    Label::new(attention.to_string())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Accent),
+                )
+            })
             .into_any_element()
     }
 
@@ -127,13 +250,13 @@ impl DezSidebar {
             .py_1()
             .children(
                 [
-                    (DezSidebarView::Home, "Home"),
-                    (DezSidebarView::Files, "Files"),
-                    (DezSidebarView::Git, "Git"),
-                    (DezSidebarView::Settings, "Settings"),
+                    DezSidebarView::Home,
+                    DezSidebarView::Files,
+                    DezSidebarView::Git,
+                    DezSidebarView::Settings,
                 ]
                 .into_iter()
-                .map(|(view, _label)| self.render_tab(view, cx)),
+                .map(|view| self.render_tab(view, cx)),
             )
             .into_any_element()
     }
@@ -144,25 +267,36 @@ impl DezSidebar {
             .id(("dez-sidebar-tab", view as usize))
             .flex_1()
             .justify_center()
+            .gap_1()
             .py_1()
             .rounded_sm()
             .cursor_pointer()
-            .when(selected, |el| {
-                el.bg(cx.theme().colors().element_selected)
-            })
+            .when(selected, |el| el.bg(cx.theme().colors().element_selected))
             .hover(|style| style.bg(cx.theme().colors().element_hover))
             .child(
                 Icon::new(view.icon())
                     .size(IconSize::Small)
-                    .color(if selected { Color::Default } else { Color::Muted }),
+                    .color(if selected {
+                        Color::Default
+                    } else {
+                        Color::Muted
+                    }),
+            )
+            .child(
+                Label::new(view.label())
+                    .size(LabelSize::XSmall)
+                    .color(if selected {
+                        Color::Default
+                    } else {
+                        Color::Muted
+                    }),
             )
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.active_view = view;
                 match view {
-                    DezSidebarView::Files => window.dispatch_action(
-                        Box::new(dez_actions::project_panel::Toggle),
-                        cx,
-                    ),
+                    DezSidebarView::Files => {
+                        window.dispatch_action(Box::new(dez_actions::project_panel::Toggle), cx)
+                    }
                     DezSidebarView::Git => {
                         window.dispatch_action(Box::new(git_ui::git_panel::Toggle), cx)
                     }
@@ -179,32 +313,128 @@ impl DezSidebar {
     fn render_body(&self, cx: &mut Context<Self>) -> AnyElement {
         match self.active_view {
             DezSidebarView::Home => self.render_home(cx),
-            DezSidebarView::Files => self.render_hint("Files", "The project panel owns file navigation.", cx),
-            DezSidebarView::Git => self.render_hint("Git", "The git panel owns change review.", cx),
-            DezSidebarView::Settings => {
-                self.render_hint("Settings", "Open settings to configure dez.", cx)
-            }
+            DezSidebarView::Files => self.render_files(cx),
+            DezSidebarView::Git => self.render_git(cx),
+            DezSidebarView::Settings => self.render_settings(cx),
         }
+    }
+
+    fn render_files(&self, cx: &mut Context<Self>) -> AnyElement {
+        v_flex()
+            .flex_1()
+            .w_full()
+            .child(self.render_action_row(
+                "dez-sidebar-files-project-panel",
+                "Project panel",
+                "Browse the files in this workspace",
+                IconName::FileTree,
+                |_, window, cx| {
+                    window.dispatch_action(Box::new(dez_actions::project_panel::Toggle), cx)
+                },
+                cx,
+            ))
+            .into_any_element()
+    }
+
+    fn render_git(&self, cx: &mut Context<Self>) -> AnyElement {
+        v_flex()
+            .flex_1()
+            .w_full()
+            .child(self.render_action_row(
+                "dez-sidebar-git-changes",
+                "Changes",
+                "Review the working tree",
+                IconName::GitBranch,
+                |_, window, cx| window.dispatch_action(Box::new(git_ui::git_panel::Toggle), cx),
+                cx,
+            ))
+            .child(self.render_action_row(
+                "dez-sidebar-git-history",
+                "History",
+                "Browse commits in the Git Graph",
+                IconName::HistoryRerun,
+                |_, window, cx| window.dispatch_action(Box::new(git_ui::git_graph::Open), cx),
+                cx,
+            ))
+            .into_any_element()
+    }
+
+    fn render_settings(&self, cx: &mut Context<Self>) -> AnyElement {
+        v_flex()
+            .flex_1()
+            .w_full()
+            .child(self.render_action_row(
+                "dez-sidebar-settings-open",
+                "Open settings",
+                "Configure dez and its extensions",
+                IconName::Settings,
+                |_, window, cx| window.dispatch_action(Box::new(dez_actions::OpenSettings), cx),
+                cx,
+            ))
+            .into_any_element()
     }
 
     fn render_home(&self, cx: &mut Context<Self>) -> AnyElement {
         let groups = self.project_groups(cx);
         let active_id = self.active_workspace_id(cx);
 
-        if groups.is_empty() {
-            return self.render_hint("No workspaces", "Open a folder to get started.", cx);
-        }
-
-        v_flex()
+        let mut body = v_flex()
             .id("dez-sidebar-home")
             .flex_1()
             .w_full()
             .overflow_y_scroll()
-            .children(
-                groups
-                    .into_iter()
-                    .map(|group| self.render_group(group, active_id, cx)),
+            .child(self.render_activity_row(cx));
+
+        if groups.is_empty() {
+            body =
+                body.child(self.render_hint("No workspaces", "Open a folder to get started.", cx));
+        }
+
+        body.children(
+            groups
+                .into_iter()
+                .map(|group| self.render_group(group, active_id, cx)),
+        )
+        .into_any_element()
+    }
+
+    /// A compact chrome row for agent activity. Clicking it opens the Agent
+    /// Threads panel; the count mirrors the panel's attention rollup.
+    fn render_activity_row(&self, cx: &mut Context<Self>) -> AnyElement {
+        let attention = self.attention_count(cx);
+        let hover_bg = cx.theme().colors().element_hover;
+
+        h_flex()
+            .id("dez-sidebar-activity")
+            .w_full()
+            .items_center()
+            .justify_between()
+            .gap_2()
+            .px_3()
+            .py_1()
+            .cursor_pointer()
+            .hover(move |style| style.bg(hover_bg))
+            .child(
+                h_flex()
+                    .items_center()
+                    .gap_2()
+                    .child(
+                        Icon::new(IconName::Sparkle)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .child(Label::new("Activity").size(LabelSize::Small)),
             )
+            .when(attention > 0, |el| {
+                el.child(
+                    Label::new(attention.to_string())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Accent),
+                )
+            })
+            .on_click(cx.listener(|_this, _, window, cx| {
+                window.dispatch_action(Box::new(dez_actions::agent_threads::ToggleFocus), cx);
+            }))
             .into_any_element()
     }
 
@@ -229,23 +459,21 @@ impl DezSidebar {
     }
 
     fn group_header(&self, group: &ProjectGroup, cx: &App) -> AnyElement {
-        let (name, branch) = group
-            .workspaces
-            .first()
-            .map(|workspace| {
+        let (name, branch, changed, indicator) = match group.workspaces.first() {
+            Some(workspace) => {
                 let project = workspace.read(cx).project().read(cx);
                 let name = ProjectGroupKey::from_project(project, cx)
                     .display_name(&std::collections::HashMap::default());
-                let branch = project
-                    .active_repository(cx)
-                    .and_then(|repository| {
-                        let repository = repository.read(cx);
-                        repository.branch.as_ref().map(|branch| branch.name().to_string())
-                    })
-                    .map(SharedString::from);
-                (name, branch)
-            })
-            .unwrap_or_else(|| ("Empty Workspace".into(), None));
+                let summary = summarize_workspace(workspace, cx);
+                (name, summary.branch, summary.changed, summary.indicator)
+            }
+            None => (
+                SharedString::from("Empty Workspace"),
+                None,
+                0,
+                ChangeIndicator::Clean,
+            ),
+        };
 
         h_flex()
             .w_full()
@@ -255,23 +483,30 @@ impl DezSidebar {
             .px_3()
             .py_1()
             .child(Label::new(name).size(LabelSize::Small))
-            .when_some(branch, |el, branch| {
-                el.child(
-                    h_flex()
-                        .items_center()
-                        .gap_1()
-                        .child(
-                            Icon::new(IconName::GitBranch)
-                                .size(IconSize::XSmall)
-                                .color(Color::Muted),
-                        )
-                        .child(
+            .child(
+                h_flex()
+                    .items_center()
+                    .gap_1()
+                    .when_some(branch, |el, branch| {
+                        el.child(
                             Label::new(branch)
                                 .size(LabelSize::XSmall)
                                 .color(Color::Muted),
-                        ),
-                )
-            })
+                        )
+                    })
+                    .child(
+                        Icon::new(indicator.icon())
+                            .size(IconSize::XSmall)
+                            .color(indicator.color()),
+                    )
+                    .when(changed > 0, |el| {
+                        el.child(
+                            Label::new(changed.to_string())
+                                .size(LabelSize::XSmall)
+                                .color(indicator.color()),
+                        )
+                    }),
+            )
             .into_any_element()
     }
 
@@ -317,6 +552,41 @@ impl DezSidebar {
             .into_any_element()
     }
 
+    fn render_action_row(
+        &self,
+        id: &'static str,
+        title: &'static str,
+        detail: &'static str,
+        icon: IconName,
+        on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let hover_bg = cx.theme().colors().element_hover;
+
+        h_flex()
+            .id(id)
+            .w_full()
+            .items_center()
+            .gap_2()
+            .px_3()
+            .py_1()
+            .cursor_pointer()
+            .hover(move |style| style.bg(hover_bg))
+            .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+            .child(
+                v_flex()
+                    .gap_0p5()
+                    .child(Label::new(title).size(LabelSize::Small))
+                    .child(
+                        Label::new(detail)
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    ),
+            )
+            .on_click(on_click)
+            .into_any_element()
+    }
+
     fn render_hint(&self, title: &str, detail: &str, _cx: &mut Context<Self>) -> AnyElement {
         v_flex()
             .flex_1()
@@ -355,9 +625,7 @@ impl Sidebar for DezSidebar {
     }
 
     fn has_notifications(&self, cx: &App) -> bool {
-        agent_threads::AgentThreadStore::try_global(cx)
-            .map(|store| store.read(cx).attention_count() > 0)
-            .unwrap_or(false)
+        self.attention_count(cx) > 0
     }
 
     fn side(&self, _cx: &App) -> SidebarSide {
@@ -402,7 +670,41 @@ impl Render for DezSidebar {
             .bg(cx.theme().colors().panel_background)
             .child(self.render_header(cx))
             .child(self.render_tabs(cx))
-            .child(div().w_full().border_t_1().border_color(cx.theme().colors().border))
+            .child(
+                div()
+                    .w_full()
+                    .border_t_1()
+                    .border_color(cx.theme().colors().border),
+            )
             .child(self.render_body(cx))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ChangeIndicator;
+
+    #[test]
+    fn change_indicator_prefers_conflict_then_modified_then_added_then_deleted() {
+        assert_eq!(
+            ChangeIndicator::from_counts(1, 2, 3, 4),
+            ChangeIndicator::Conflict
+        );
+        assert_eq!(
+            ChangeIndicator::from_counts(0, 2, 3, 4),
+            ChangeIndicator::Modified
+        );
+        assert_eq!(
+            ChangeIndicator::from_counts(0, 0, 3, 4),
+            ChangeIndicator::Added
+        );
+        assert_eq!(
+            ChangeIndicator::from_counts(0, 0, 0, 4),
+            ChangeIndicator::Deleted
+        );
+        assert_eq!(
+            ChangeIndicator::from_counts(0, 0, 0, 0),
+            ChangeIndicator::Clean
+        );
     }
 }

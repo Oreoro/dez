@@ -79,11 +79,17 @@ crates/dez_sidebar/             # navigator / activity / discovery / headers
 - [x] `dez_sidebar` crate implementing `workspace::Sidebar` (placement,
       resizing, and persistence owned by `MultiWorkspace`)
 - [x] Browser-like view model: Home / Files / Git / Settings
+- [x] Labeled tab strip (icon + label) over the four views
 - [x] Home navigator over project groups with joined names and active branch
 - [x] Workspace rows activate their workspace
-- [x] Files / Git / Settings tabs dispatch the corresponding Zed panel or
-      settings actions
-- [x] Attention notifications from agent threads
+- [x] Workspace headers show the active branch plus a changed-file count with
+      a conflict/modified/added/deleted/clean status indicator
+- [x] Files / Git / Settings views list their workspace actions and dispatch
+      the corresponding Zed panel or settings actions
+- [x] Git view surfaces the Git Graph (`git_ui::git_graph`) next to Changes;
+      this is Flint's graph, the same lineage as Gram's `git_graph`
+- [x] Activity entry point in Home opens the Agent Threads panel and mirrors
+      the panel's attention rollup count
 - [x] Width and active-view persistence; `dez_sidebar.starts_open` setting
 - [ ] Surfaces: draggable/splittable tabs in the main work area
 - [ ] Activity section with per-thread states (Running / Needs Input /
