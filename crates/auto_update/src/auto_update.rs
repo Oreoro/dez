@@ -318,9 +318,7 @@ fn release_notes_url_for(release_channel: ReleaseChannel, current_version: &Vers
             current_version.build = semver::BuildMetadata::EMPTY;
             format!("https://github.com/Oreoro/dez/releases/tag/v{current_version}")
         }
-        ReleaseChannel::Nightly => {
-            "https://github.com/Oreoro/dez/releases/tag/nightly".to_owned()
-        }
+        ReleaseChannel::Nightly => "https://github.com/Oreoro/dez/releases/tag/nightly".to_owned(),
         ReleaseChannel::Dev => "https://github.com/Oreoro/dez/commits/main".to_owned(),
     }
 }
@@ -1367,10 +1365,7 @@ mod tests {
         cx.update(|cx| cx.restart());
         let path = will_restart.await.unwrap().unwrap();
         assert_eq!(path, tmp_dir.path().join("dez"));
-        assert_eq!(
-            std::fs::read_to_string(path).unwrap(),
-            "<fake-dez-update>"
-        );
+        assert_eq!(std::fs::read_to_string(path).unwrap(), "<fake-dez-update>");
     }
 
     #[gpui::test]

@@ -317,9 +317,7 @@ impl<'de> Deserialize<'de> for dezCustomizationsWrapper {
         let value = Value::deserialize(deserializer)?;
         let dez = value
             .get("dez")
-            .map(|dez_value| {
-                serde_json_lenient::from_value::<dezCustomization>(dez_value.clone())
-            })
+            .map(|dez_value| serde_json_lenient::from_value::<dezCustomization>(dez_value.clone()))
             .transpose()
             .map_err(serde::de::Error::custom)?
             .unwrap_or_default();
@@ -629,11 +627,10 @@ mod test {
     use crate::{
         devcontainer_api::DevContainerError,
         devcontainer_json::{
-            ContainerBuild, DevContainer, DevContainerBuildType, FeatureOptions,
-            dezCustomization, dezCustomizationsWrapper, ForwardPort, HostRequirements,
-            LifecycleCommand, LifecycleScript, MountDefinition, OnAutoForward,
+            ContainerBuild, DevContainer, DevContainerBuildType, FeatureOptions, ForwardPort,
+            HostRequirements, LifecycleCommand, LifecycleScript, MountDefinition, OnAutoForward,
             PortAttributeProtocol, PortAttributes, ShutdownAction, UserEnvProbe,
-            deserialize_devcontainer_json,
+            deserialize_devcontainer_json, dezCustomization, dezCustomizationsWrapper,
         },
     };
 

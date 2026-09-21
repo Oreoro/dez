@@ -1,6 +1,7 @@
 mod preview;
 mod repl_menu;
 
+use dez_actions::outline::ToggleOutline;
 use editor::actions::{
     AddSelectionAbove, AddSelectionBelow, CodeActionSource, DuplicateLineDown, GoToDiagnostic,
     GoToHunk, GoToPreviousDiagnostic, GoToPreviousHunk, MoveLineDown, MoveLineUp, SelectAll,
@@ -9,7 +10,6 @@ use editor::actions::{
 };
 use editor::code_context_menus::{CodeContextMenu, ContextMenuOrigin};
 use editor::{Editor, EditorSettings};
-use dez_actions::outline::ToggleOutline;
 use git_ui::solo_diff_view::SoloDiffView;
 use gpui::{
     Action, Anchor, AnchoredPositionMode, ClickEvent, Context, ElementId, Entity, EventEmitter,

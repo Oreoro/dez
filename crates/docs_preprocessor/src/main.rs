@@ -664,9 +664,7 @@ fn handle_postprocessing() -> Result<()> {
         .expect("has output")
         .as_table_mut()
         .expect("output is table");
-    let dez_html = output
-        .remove("dez-html")
-        .expect("dez-html output defined");
+    let dez_html = output.remove("dez-html").expect("dez-html output defined");
     let default_description = dez_html
         .get("default-description")
         .expect("Default description not found")

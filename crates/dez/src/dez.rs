@@ -1870,8 +1870,7 @@ fn notify_settings_errors(result: settings::SettingsParseResult, is_user: bool, 
                         .primary_message("Open Settings File")
                         .primary_icon(IconName::Settings)
                         .primary_on_click(|window, cx| {
-                            window
-                                .dispatch_action(dez_actions::OpenSettingsFile.boxed_clone(), cx);
+                            window.dispatch_action(dez_actions::OpenSettingsFile.boxed_clone(), cx);
                             cx.emit(DismissEvent);
                         })
                     })
@@ -5666,12 +5665,8 @@ mod tests {
         // 5. Critical: Verify .dez is actually excluded from worktree
         let worktree = cx.update(|cx| project.read(cx).worktrees(cx).next().unwrap());
 
-        let has_dez_entry = cx.update(|cx| {
-            worktree
-                .read(cx)
-                .entry_for_path(rel_path(".dez"))
-                .is_some()
-        });
+        let has_dez_entry =
+            cx.update(|cx| worktree.read(cx).entry_for_path(rel_path(".dez")).is_some());
 
         eprintln!(
             "Is .dez directory visible in worktree after exclusion: {}",

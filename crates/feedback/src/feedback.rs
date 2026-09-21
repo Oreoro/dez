@@ -1,5 +1,5 @@
-use extension_host::ExtensionStore;
 use dez_actions::feedback::{Emaildez, FileBugReport, RequestFeature};
+use extension_host::ExtensionStore;
 use gpui::{App, ClipboardItem, PromptButton, PromptLevel, actions};
 use system_specs::{CopySystemSpecsIntoClipboard, SystemSpecs, os_name, os_version};
 use util::ResultExt;
@@ -34,11 +34,7 @@ fn file_bug_report_url(specs: &SystemSpecs) -> String {
 
 fn email_dez_url(specs: &SystemSpecs) -> String {
     format!(
-        concat!(
-            "https://github.com/Oreoro/dez/issues/new",
-            "?",
-            "body={}"
-        ),
+        concat!("https://github.com/Oreoro/dez/issues/new", "?", "body={}"),
         email_body(specs)
     )
 }

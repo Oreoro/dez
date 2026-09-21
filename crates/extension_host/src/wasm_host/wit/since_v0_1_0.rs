@@ -584,7 +584,8 @@ impl ExtensionImports for WasmState {
     }
 
     async fn make_file_executable(&mut self, path: String) -> wasmtime::Result<Result<(), String>> {
-        self.capability_granter.grant_exec("chmod", &["+x", &path])?;
+        self.capability_granter
+            .grant_exec("chmod", &["+x", &path])?;
 
         let path = self
             .host

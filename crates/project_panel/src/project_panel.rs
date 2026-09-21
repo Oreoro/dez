@@ -5,6 +5,10 @@ mod utils;
 use anyhow::{Context as _, Result};
 use collections::{BTreeSet, HashMap, hash_map};
 use command_palette_hooks::CommandPaletteFilter;
+use dez_actions::{
+    project_panel::{Toggle, ToggleFocus},
+    workspace::OpenWithSystem,
+};
 use editor::{
     Editor, EditorEvent, MultiBufferOffset,
     items::{
@@ -14,10 +18,6 @@ use editor::{
 };
 use feature_flags::{FeatureFlagAppExt, ProjectPanelUndoRedoFeatureFlag};
 use file_icons::FileIcons;
-use dez_actions::{
-    project_panel::{Toggle, ToggleFocus},
-    workspace::OpenWithSystem,
-};
 use git;
 use git::status::GitSummary;
 use git_ui;

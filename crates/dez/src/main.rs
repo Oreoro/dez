@@ -358,10 +358,7 @@ fn main() {
 
         #[cfg(target_os = "windows")]
         {
-            !crate::dez::windows_only_instance::handle_single_instance(
-                open_listener.clone(),
-                &args,
-            )
+            !crate::dez::windows_only_instance::handle_single_instance(open_listener.clone(), &args)
         }
 
         #[cfg(target_os = "macos")]
@@ -1855,7 +1852,8 @@ async fn installation_id(db: KeyValueStore) -> Result<String> {
 
     let installation_id = Uuid::new_v4().to_string();
 
-    db.write_kvp("installation_id", installation_id.clone()).await?;
+    db.write_kvp("installation_id", installation_id.clone())
+        .await?;
 
     Ok(installation_id)
 }

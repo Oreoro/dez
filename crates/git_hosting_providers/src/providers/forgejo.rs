@@ -413,10 +413,9 @@ mod tests {
 
     #[test]
     fn test_build_forgejo_self_hosted_permalink_from_https_url() {
-        let forgejo = Forgejo::from_remote_url(
-            "https://forgejo-instance.big-co.com/zed-industries/zed.git",
-        )
-        .unwrap();
+        let forgejo =
+            Forgejo::from_remote_url("https://forgejo-instance.big-co.com/zed-industries/zed.git")
+                .unwrap();
         let permalink = forgejo.build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),

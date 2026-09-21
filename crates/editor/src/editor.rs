@@ -127,13 +127,13 @@ use code_context_menus::{
 use code_lens::CodeLensState;
 use collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use convert_case::{Case, Casing};
+pub use dez_actions::editor::RevealInFileManager;
+use dez_actions::editor::{MoveDown, MoveUp};
 use display_map::*;
 use document_colors::LspColorData;
 use document_links::LspDocumentLinks;
 use editor_settings::{GoToDefinitionFallback, Minimap as MinimapSettings};
 use element::{LineWithInvisibles, PositionMap};
-pub use dez_actions::editor::RevealInFileManager;
-use dez_actions::editor::{MoveDown, MoveUp};
 use futures::{
     FutureExt,
     future::{self, Shared},

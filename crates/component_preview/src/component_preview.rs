@@ -547,10 +547,8 @@ impl ComponentPreview {
     fn test_status_toast(&self, cx: &mut Context<Self>) {
         if let Some(workspace) = self.workspace.upgrade() {
             workspace.update(cx, |workspace, cx| {
-                let status_toast = StatusToast::new(
-                    "`dez/new-notification-system` created!",
-                    cx,
-                    |this, _cx| {
+                let status_toast =
+                    StatusToast::new("`dez/new-notification-system` created!", cx, |this, _cx| {
                         this.icon(
                             Icon::new(IconName::GitBranch)
                                 .size(IconSize::Small)
@@ -559,8 +557,7 @@ impl ComponentPreview {
                         .action("Open Pull Request", |_, cx| {
                             cx.open_url("https://github.com/")
                         })
-                    },
-                );
+                    });
                 workspace.toggle_status_toast(status_toast, cx)
             });
         }

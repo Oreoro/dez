@@ -134,15 +134,10 @@ pub const PROTOCOL_VERSION: ProtocolVersion = ProtocolVersion { major: 1, minor:
 /// crate's whole purpose of keeping that binary small.
 static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
     if cfg!(debug_assertions) {
-        std::env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| {
-            include_str!("../../dez/RELEASE_CHANNEL")
-                .trim()
-                .to_string()
-        })
+        std::env::var("ZED_RELEASE_CHANNEL")
+            .unwrap_or_else(|_| include_str!("../../dez/RELEASE_CHANNEL").trim().to_string())
     } else {
-        include_str!("../../dez/RELEASE_CHANNEL")
-            .trim()
-            .to_string()
+        include_str!("../../dez/RELEASE_CHANNEL").trim().to_string()
     }
 });
 
@@ -1018,10 +1013,7 @@ mod tests {
         let scope = WindowsControlScope::for_session(data_dir.clone(), 42);
         let expected_stem = format!("agent-control-{}-42", *RELEASE_CHANNEL_NAME);
 
-        assert_eq!(
-            scope.pipe_name(),
-            format!(r"\\.\pipe\dez-{expected_stem}")
-        );
+        assert_eq!(scope.pipe_name(), format!(r"\\.\pipe\dez-{expected_stem}"));
         assert_eq!(
             scope.executable_location_path(),
             data_dir.join(format!("{expected_stem}-executable.json"))

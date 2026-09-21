@@ -176,10 +176,7 @@ pub(crate) static JOBS: LazyLock<[Job; 24]> = LazyLock::new(|| {
         // Existing installs from before agent control was introduced do not
         // have this companion yet, so the first update must tolerate its
         // absence while still preserving it for rollback on later updates.
-        Job::move_if_exists(
-            p("dez-agent-control.exe"),
-            p("old\\dez-agent-control.exe"),
-        ),
+        Job::move_if_exists(p("dez-agent-control.exe"), p("old\\dez-agent-control.exe")),
         Job::mkdir(p("old\\bin")),
         Job::move_file(p("bin\\dez.exe"), p("old\\bin\\dez.exe")),
         Job::move_file(p("bin\\dez"), p("old\\bin\\dez")),
@@ -463,10 +460,7 @@ mod test {
             Path::new("dez-agent-control.exe"),
             Path::new("old\\dez-agent-control.exe"),
         );
-        let install_new = Job::move_file(
-            Path::new("install\\dezctl.exe"),
-            Path::new("dezctl.exe"),
-        );
+        let install_new = Job::move_file(Path::new("install\\dezctl.exe"), Path::new("dezctl.exe"));
         (move_old.apply)(app_dir).expect("move old helper");
         (install_new.apply)(app_dir).expect("install new helper");
         assert_eq!(
@@ -495,10 +489,7 @@ mod test {
             Path::new("dez-agent-control.exe"),
             Path::new("old\\dez-agent-control.exe"),
         );
-        let install_new = Job::move_file(
-            Path::new("install\\dezctl.exe"),
-            Path::new("dezctl.exe"),
-        );
+        let install_new = Job::move_file(Path::new("install\\dezctl.exe"), Path::new("dezctl.exe"));
         (move_old.apply)(app_dir).expect("skip absent old helper");
         (install_new.apply)(app_dir).expect("install new helper");
         assert_eq!(

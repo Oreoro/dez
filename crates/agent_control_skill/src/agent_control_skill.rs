@@ -13,15 +13,10 @@ pub const BUNDLED_SKILL_VERSION: u32 = 4;
 
 static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
     if cfg!(debug_assertions) {
-        std::env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| {
-            include_str!("../../dez/RELEASE_CHANNEL")
-                .trim()
-                .to_string()
-        })
+        std::env::var("ZED_RELEASE_CHANNEL")
+            .unwrap_or_else(|_| include_str!("../../dez/RELEASE_CHANNEL").trim().to_string())
     } else {
-        include_str!("../../dez/RELEASE_CHANNEL")
-            .trim()
-            .to_string()
+        include_str!("../../dez/RELEASE_CHANNEL").trim().to_string()
     }
 });
 

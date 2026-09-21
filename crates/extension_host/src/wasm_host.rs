@@ -35,7 +35,7 @@ use std::{
     sync::{Arc, LazyLock, OnceLock},
     time::Duration,
 };
-use task::{DebugRequest, DebugScenario, dezDebugConfig, SpawnInTerminal, TaskTemplate};
+use task::{DebugRequest, DebugScenario, SpawnInTerminal, TaskTemplate, dezDebugConfig};
 use util::paths::SanitizedPath;
 use wasmtime::{
     CacheStore, Engine, Store,
@@ -715,8 +715,7 @@ impl WasmHost {
             // Run wasi-dependent operations on tokio.
             // wasmtime_wasi internally uses tokio for I/O operations.
             let (extension_task, manifest, work_dir, tx, dez_api_version) =
-                gpui_tokio::Tokio::spawn(cx, load_extension(dez_api_version, component))
-                    .await??;
+                gpui_tokio::Tokio::spawn(cx, load_extension(dez_api_version, component)).await??;
 
             // Run the extension message loop on tokio since extension
             // calls may invoke wasi functions that require a tokio runtime.

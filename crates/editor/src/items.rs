@@ -10,10 +10,10 @@ use crate::{
 };
 use anyhow::{Context as _, Result, anyhow};
 use collections::{HashMap, HashSet};
-use file_icons::FileIcons;
 use dez_actions::preview::{
     markdown::OpenPreview as OpenMarkdownPreview, svg::OpenPreview as OpenSvgPreview,
 };
+use file_icons::FileIcons;
 use fs::MTime;
 use futures::channel::oneshot;
 use git::status::GitSummary;

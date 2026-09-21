@@ -1,8 +1,8 @@
 use bitflags::bitflags;
 pub use buffer_search::BufferSearchBar;
+pub use dez_actions::search::ToggleIncludeIgnored;
 pub use editor::HighlightKey;
 use editor::SearchSettings;
-pub use dez_actions::search::ToggleIncludeIgnored;
 use gpui::{Action, App, ClickEvent, FocusHandle, IntoElement, actions};
 use project::search::SearchQuery;
 pub use project_search::ProjectSearchView;

@@ -893,11 +893,8 @@ mod linux {
 
                 // libexec is the standard, lib/dez is for Arch (and other non-libexec distros),
                 // ./dez is for the target directory in development builds.
-                let possible_locations = [
-                    "../libexec/dez-editor",
-                    "../lib/dez/dez-editor",
-                    "./dez",
-                ];
+                let possible_locations =
+                    ["../libexec/dez-editor", "../lib/dez/dez-editor", "./dez"];
                 possible_locations
                     .iter()
                     .find_map(|p| dir.join(p).canonicalize().ok().filter(|path| path != &cli))
@@ -1239,11 +1236,7 @@ mod windows {
 
                 // ../dez.exe is the standard, lib/dez is for MSYS2, ./dez.exe is for the target
                 // directory in development builds.
-                let possible_locations = [
-                    "../dez.exe",
-                    "../lib/dez/dez-editor.exe",
-                    "./dez.exe",
-                ];
+                let possible_locations = ["../dez.exe", "../lib/dez/dez-editor.exe", "./dez.exe"];
                 possible_locations
                     .iter()
                     .find_map(|p| dir.join(p).canonicalize().ok().filter(|path| path != &cli))

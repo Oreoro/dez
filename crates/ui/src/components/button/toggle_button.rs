@@ -454,11 +454,7 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             "single_row_test_icon",
                             [
                                 ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new(
-                                    "Second",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
                             ],
                         )
@@ -489,19 +485,11 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             "multiple_row_test_icons",
                             [
                                 ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new(
-                                    "Second",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
                             ],
                             [
-                                ToggleButtonWithIcon::new(
-                                    "Fourth",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Fourth", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Fifth", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Sixth", IconName::Aidez, |_, _, _| {}),
                             ],
@@ -534,11 +522,7 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             "single_row_test_icon_outlined",
                             [
                                 ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new(
-                                    "Second",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
                             ],
                         )
@@ -571,19 +555,11 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             "multiple_row_test",
                             [
                                 ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new(
-                                    "Second",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
                             ],
                             [
-                                ToggleButtonWithIcon::new(
-                                    "Fourth",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Fourth", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Fifth", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Sixth", IconName::Aidez, |_, _, _| {}),
                             ],
@@ -617,11 +593,7 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             "single_row_test_icon_outlined",
                             [
                                 ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new(
-                                    "Second",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
                             ],
                         )
@@ -655,19 +627,11 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             "multiple_row_test",
                             [
                                 ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new(
-                                    "Second",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
                             ],
                             [
-                                ToggleButtonWithIcon::new(
-                                    "Fourth",
-                                    IconName::Aidez,
-                                    |_, _, _| {},
-                                ),
+                                ToggleButtonWithIcon::new("Fourth", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Fifth", IconName::Aidez, |_, _, _| {}),
                                 ToggleButtonWithIcon::new("Sixth", IconName::Aidez, |_, _, _| {}),
                             ],

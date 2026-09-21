@@ -1,6 +1,6 @@
 use auto_update::{AutoUpdater, release_notes_url};
-use editor::{Editor, MultiBuffer};
 use dez_actions::ShowUpdateNotification;
+use editor::{Editor, MultiBuffer};
 use gpui::{App, DismissEvent, Entity, TaskExt, Window, actions, prelude::*};
 use markdown_preview::markdown_preview_view::{MarkdownPreviewMode, MarkdownPreviewView};
 use release_channel::{AppVersion, ReleaseChannel};

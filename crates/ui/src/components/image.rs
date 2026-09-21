@@ -173,9 +173,6 @@ mod tests {
 
     #[test]
     fn vector_path() {
-        assert_eq!(
-            VectorName::dezLogo.path().as_ref(),
-            "images/dez_logo.svg"
-        );
+        assert_eq!(VectorName::dezLogo.path().as_ref(), "images/dez_logo.svg");
     }
 }

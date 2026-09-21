@@ -1636,8 +1636,7 @@ impl Render for FailedToSpawnTerminal {
                                     .size(LabelSize::Small),
                             )
                             .on_click(|_, window, cx| {
-                                window
-                                    .dispatch_action(dez_actions::OpenSettings.boxed_clone(), cx);
+                                window.dispatch_action(dez_actions::OpenSettings.boxed_clone(), cx);
                             }),
                         popover_menu.into_any_element(),
                     )),

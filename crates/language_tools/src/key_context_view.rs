@@ -197,34 +197,51 @@ impl Render for KeyContextView {
                 }),
             )
             .child(Label::new(localization::text(cx, "key-context-title")).size(LabelSize::Large))
-            .child(Label::new(localization::text(cx, "key-context-description")))
+            .child(Label::new(localization::text(
+                cx,
+                "key-context-description",
+            )))
             .child(
                 h_flex()
                     .mt_4()
                     .gap_4()
                     .child(
-                        Button::new("open_documentation", localization::text(cx, "key-context-open-documentation"))
-                            .style(ButtonStyle::Filled)
-                            .on_click(|_, _, cx| cx.open_url("https://github.com/Oreoro/dez/blob/main/docs/src/key-bindings.md")),
+                        Button::new(
+                            "open_documentation",
+                            localization::text(cx, "key-context-open-documentation"),
+                        )
+                        .style(ButtonStyle::Filled)
+                        .on_click(|_, _, cx| {
+                            cx.open_url(
+                                "https://github.com/Oreoro/dez/blob/main/docs/src/key-bindings.md",
+                            )
+                        }),
                     )
                     .child(
-                        Button::new("view_default_keymap", localization::text(cx, "key-context-view-default-keymap"))
-                            .style(ButtonStyle::Filled)
-                            .key_binding(ui::KeyBinding::for_action(
-                                &dez_actions::OpenDefaultKeymap,
-                                cx
-                            ))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(dez_actions::OpenDefaultKeymap.boxed_clone(), cx);
-                            }),
+                        Button::new(
+                            "view_default_keymap",
+                            localization::text(cx, "key-context-view-default-keymap"),
+                        )
+                        .style(ButtonStyle::Filled)
+                        .key_binding(ui::KeyBinding::for_action(
+                            &dez_actions::OpenDefaultKeymap,
+                            cx,
+                        ))
+                        .on_click(|_, window, cx| {
+                            window
+                                .dispatch_action(dez_actions::OpenDefaultKeymap.boxed_clone(), cx);
+                        }),
                     )
                     .child(
-                        Button::new("edit_your_keymap", localization::text(cx, "key-context-edit-keymap"))
-                            .style(ButtonStyle::Filled)
-                            .key_binding(ui::KeyBinding::for_action(&dez_actions::OpenKeymapFile, cx))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(dez_actions::OpenKeymapFile.boxed_clone(), cx);
-                            }),
+                        Button::new(
+                            "edit_your_keymap",
+                            localization::text(cx, "key-context-edit-keymap"),
+                        )
+                        .style(ButtonStyle::Filled)
+                        .key_binding(ui::KeyBinding::for_action(&dez_actions::OpenKeymapFile, cx))
+                        .on_click(|_, window, cx| {
+                            window.dispatch_action(dez_actions::OpenKeymapFile.boxed_clone(), cx);
+                        }),
                     ),
             )
             .child(
@@ -248,7 +265,11 @@ impl Render for KeyContextView {
                     Label::new(format!("{} {}", primary, secondary)).ml(px(12. * (i + 1) as f32))
                 })
             })
-            .child(Label::new(localization::text(cx, "key-context-last-keystroke")).mt_4().size(LabelSize::Large))
+            .child(
+                Label::new(localization::text(cx, "key-context-last-keystroke"))
+                    .mt_4()
+                    .size(LabelSize::Large),
+            )
             .when_some(self.pending_keystrokes.as_ref(), |el, keystrokes| {
                 el.child(
                     Label::new(localization::tr!(
@@ -268,50 +289,52 @@ impl Render for KeyContextView {
                     ))
                     .ml_4(),
                 )
-                    .children(
-                        self.last_possibilities
-                            .iter()
-                            .map(|(name, predicate, state)| {
-                                let (text, color) = match state {
-                                    Some(true) => (
-                                        localization::text(cx, "key-context-match"),
-                                        ui::Color::Success,
-                                    ),
-                                    Some(false) => (
-                                        localization::text(cx, "key-context-low-precedence"),
-                                        ui::Color::Hint,
-                                    ),
-                                    None => (
-                                        localization::text(cx, "key-context-no-match"),
-                                        ui::Color::Error,
-                                    ),
-                                };
-                                h_flex()
-                                    .gap_2()
-                                    .ml_8()
-                                    .child(div().min_w(px(200.)).child(Label::new(name.clone())))
-                                    .child(Label::new(predicate.clone()))
-                                    .child(Label::new(text).color(color))
-                            }),
-                    )
+                .children(
+                    self.last_possibilities
+                        .iter()
+                        .map(|(name, predicate, state)| {
+                            let (text, color) = match state {
+                                Some(true) => (
+                                    localization::text(cx, "key-context-match"),
+                                    ui::Color::Success,
+                                ),
+                                Some(false) => (
+                                    localization::text(cx, "key-context-low-precedence"),
+                                    ui::Color::Hint,
+                                ),
+                                None => (
+                                    localization::text(cx, "key-context-no-match"),
+                                    ui::Color::Error,
+                                ),
+                            };
+                            h_flex()
+                                .gap_2()
+                                .ml_8()
+                                .child(div().min_w(px(200.)).child(Label::new(name.clone())))
+                                .child(Label::new(predicate.clone()))
+                                .child(Label::new(text).color(color))
+                        }),
+                )
             })
             .when_some(key_equivalents, |el, key_equivalents| {
-                el.child(Label::new(localization::text(cx, "key-context-equivalents")).mt_4().size(LabelSize::Large))
-                    .child(Label::new(localization::text(cx, "key-context-equivalents-description")))
-                    .children(
-                        key_equivalents
-                            .iter()
-                            .sorted()
-                            .map(|(key, equivalent)| {
-                                Label::new(localization::tr!(
-                                    cx,
-                                    "key-context-equivalent-format",
-                                    key = key.to_string(),
-                                    equivalent = equivalent.to_string()
-                                ))
-                                .ml_8()
-                            }),
-                    )
+                el.child(
+                    Label::new(localization::text(cx, "key-context-equivalents"))
+                        .mt_4()
+                        .size(LabelSize::Large),
+                )
+                .child(Label::new(localization::text(
+                    cx,
+                    "key-context-equivalents-description",
+                )))
+                .children(key_equivalents.iter().sorted().map(|(key, equivalent)| {
+                    Label::new(localization::tr!(
+                        cx,
+                        "key-context-equivalent-format",
+                        key = key.to_string(),
+                        equivalent = equivalent.to_string()
+                    ))
+                    .ml_8()
+                }))
             })
     }
 }

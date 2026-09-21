@@ -5,9 +5,9 @@ use futures::future::join_all;
 pub use open_path_prompt::OpenPathDelegate;
 
 use collections::HashMap;
+use dez_actions::search::ToggleIncludeIgnored;
 use editor::Editor;
 use file_icons::FileIcons;
-use dez_actions::search::ToggleIncludeIgnored;
 use fuzzy_nucleo::{PathMatch, PathMatchCandidate};
 use gpui::{
     Action, AnyElement, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,

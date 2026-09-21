@@ -451,10 +451,7 @@ pub fn app_menus(cx: &mut App) -> Vec<Menu> {
                         url: release_channel::docs_url("", cx),
                     },
                 ),
-                MenuItem::action(
-                    menu_text(cx, "menu-dez-repository"),
-                    feedback::OpendezRepo,
-                ),
+                MenuItem::action(menu_text(cx, "menu-dez-repository"), feedback::OpendezRepo),
             ],
         },
     ]

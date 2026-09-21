@@ -6,13 +6,13 @@ use crate::{
 use anyhow::{Context as _, Result, anyhow};
 use buffer_diff::{BufferDiff, DiffHunkSecondaryStatus, DiffHunkStatus};
 use collections::HashMap;
+use dez_actions::git::{ViewStagedChanges, ViewUnstagedChanges};
 use editor::{
     Addon, Editor, EditorEvent, EditorSettings, SelectionEffects, SplittableEditor, ToPoint,
     actions::{GoToHunk, GoToPreviousHunk},
     multibuffer_context_lines,
     scroll::Autoscroll,
 };
-use dez_actions::git::{ViewStagedChanges, ViewUnstagedChanges};
 use futures_lite::future::yield_now;
 
 use git::{

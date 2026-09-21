@@ -710,9 +710,7 @@ mod windows_client {
                 None,
             )
         }
-        .with_context(|| {
-            format!("failed to connect to dez's agent control pipe at {pipe_name}")
-        })?;
+        .with_context(|| format!("failed to connect to dez's agent control pipe at {pipe_name}"))?;
         let handle = PipeHandle(handle);
         let mode = PIPE_READMODE_MESSAGE;
         // SAFETY: handle is a connected named-pipe handle and mode remains valid for the call.
@@ -901,16 +899,10 @@ fn print_response(response: &ControlResponse, wants_json: bool) -> i32 {
         }
         ControlResult::Ok(ControlSuccess::TerminalInputAccepted) => {}
         ControlResult::NotReady => {
-            eprintln!(
-                "dezctl: this process does not appear to be in a controllable dez terminal"
-            );
+            eprintln!("dezctl: this process does not appear to be in a controllable dez terminal");
         }
         ControlResult::Error(error) => {
-            eprintln!(
-                "dezctl: {}: {}",
-                error_code_name(error.code),
-                error.message
-            );
+            eprintln!("dezctl: {}: {}", error_code_name(error.code), error.message);
         }
     }
     exit_code_for(response)
@@ -1050,21 +1042,14 @@ mod tests {
         assert!(Cli::try_parse_from(["dezctl", "skill", "status", "--agent", "codex"]).is_ok());
         assert!(Cli::try_parse_from(["dezctl", "skill", "install", "--agent", "claude"]).is_ok());
         assert!(Cli::try_parse_from(["dezctl", "skill", "update", "--agent", "codex"]).is_ok());
-        assert!(
-            Cli::try_parse_from(["dezctl", "skill", "uninstall", "--agent", "claude"]).is_ok()
-        );
+        assert!(Cli::try_parse_from(["dezctl", "skill", "uninstall", "--agent", "claude"]).is_ok());
     }
 
     #[test]
     fn noun_first_thread_command_builds_current_request() {
-        let cli = Cli::try_parse_from([
-            "dezctl",
-            "thread",
-            "retie",
-            "--worktree",
-            "/repo/worktree",
-        ])
-        .expect("parse thread retie");
+        let cli =
+            Cli::try_parse_from(["dezctl", "thread", "retie", "--worktree", "/repo/worktree"])
+                .expect("parse thread retie");
 
         let (request, wants_json) = cli.into_request().expect("build request");
 
@@ -1235,8 +1220,8 @@ mod tests {
 
     #[test]
     fn terminal_read_without_since_defaults_to_none() {
-        let cli = Cli::try_parse_from(["dezctl", "terminal", "read", "t1"])
-            .expect("parse terminal read");
+        let cli =
+            Cli::try_parse_from(["dezctl", "terminal", "read", "t1"]).expect("parse terminal read");
 
         let (request, _wants_json) = cli.into_request().expect("build request");
         match request.command {
@@ -1247,15 +1232,9 @@ mod tests {
 
     #[test]
     fn terminal_read_source_detection_is_parsed() {
-        let cli = Cli::try_parse_from([
-            "dezctl",
-            "terminal",
-            "read",
-            "t1",
-            "--source",
-            "detection",
-        ])
-        .expect("parse terminal read --source detection");
+        let cli =
+            Cli::try_parse_from(["dezctl", "terminal", "read", "t1", "--source", "detection"])
+                .expect("parse terminal read --source detection");
 
         let (request, _wants_json) = cli.into_request().expect("build request");
         match request.command {

@@ -19,8 +19,8 @@ use std::sync::Arc;
 
 pub use adapter_schema::{AdapterSchema, AdapterSchemas};
 pub use debug_format::{
-    AttachRequest, BuildTaskDefinition, DebugRequest, DebugScenario, DebugTaskFile,
-    dezDebugConfig, LaunchRequest, Request, TcpArgumentsTemplate,
+    AttachRequest, BuildTaskDefinition, DebugRequest, DebugScenario, DebugTaskFile, LaunchRequest,
+    Request, TcpArgumentsTemplate, dezDebugConfig,
 };
 pub use dez_actions::RevealTarget;
 pub use task_template::{

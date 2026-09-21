@@ -23,7 +23,7 @@ use std::{
     str::FromStr,
     sync::{Arc, OnceLock},
 };
-use task::{dezDebugConfig, SpawnInTerminal};
+use task::{SpawnInTerminal, dezDebugConfig};
 use url::Url;
 use util::{
     archive::extract_zip, fs::make_file_executable, maybe, paths::PathStyle, rel_path::RelPath,
@@ -1107,7 +1107,8 @@ impl ExtensionImports for WasmState {
     }
 
     async fn make_file_executable(&mut self, path: String) -> wasmtime::Result<Result<(), String>> {
-        self.capability_granter.grant_exec("chmod", &["+x", &path])?;
+        self.capability_granter
+            .grant_exec("chmod", &["+x", &path])?;
 
         let path = self
             .host

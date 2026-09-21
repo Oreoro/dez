@@ -14,7 +14,7 @@ use async_trait::async_trait;
 use gpui::{App, Task};
 use language::LanguageName;
 use semver::Version;
-use task::{dezDebugConfig, SpawnInTerminal};
+use task::{SpawnInTerminal, dezDebugConfig};
 use util::rel_path::RelPath;
 
 pub use crate::capabilities::*;

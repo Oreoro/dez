@@ -1670,8 +1670,7 @@ mod tests {
             OpenRequest::parse(
                 RawOpenRequest {
                     urls: vec![
-                        "dez://git/clone/?repo=https://github.com/zed-industries/zed.git"
-                            .into(),
+                        "dez://git/clone/?repo=https://github.com/zed-industries/zed.git".into(),
                     ],
                     ..Default::default()
                 },

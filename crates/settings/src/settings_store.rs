@@ -981,11 +981,10 @@ impl SettingsStore {
         }
         self.last_user_settings_content = Some(user_settings_content.to_string());
 
-        let (settings, parse_result) = self
-            .parse_and_migrate_dez_settings::<UserSettingsContent>(
-                user_settings_content,
-                SettingsFile::User,
-            );
+        let (settings, parse_result) = self.parse_and_migrate_dez_settings::<UserSettingsContent>(
+            user_settings_content,
+            SettingsFile::User,
+        );
 
         if let Some(settings) = settings {
             self.user_settings = Some(settings);

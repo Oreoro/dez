@@ -279,115 +279,112 @@ fn get_branch_for_worktree(
 
 pub fn init(cx: &mut App) {
     #[cfg(target_os = "windows")]
-    cx.on_action(
-        |open_wsl: &dez_actions::wsl_actions::OpenFolderInWsl, cx| {
-            let create_new_window = open_wsl.create_new_window;
-            with_active_or_new_workspace(cx, move |workspace, window, cx| {
-                use gpui::PathPromptOptions;
-                use project::DirectoryLister;
+    cx.on_action(|open_wsl: &dez_actions::wsl_actions::OpenFolderInWsl, cx| {
+        let create_new_window = open_wsl.create_new_window;
+        with_active_or_new_workspace(cx, move |workspace, window, cx| {
+            use gpui::PathPromptOptions;
+            use project::DirectoryLister;
 
-                let paths = workspace.prompt_for_open_path(
-                    PathPromptOptions {
-                        files: true,
-                        directories: true,
-                        multiple: false,
-                        prompt: None,
-                    },
-                    DirectoryLister::Local(
-                        workspace.project().clone(),
-                        workspace.app_state().fs.clone(),
-                    ),
-                    window,
-                    cx,
-                );
+            let paths = workspace.prompt_for_open_path(
+                PathPromptOptions {
+                    files: true,
+                    directories: true,
+                    multiple: false,
+                    prompt: None,
+                },
+                DirectoryLister::Local(
+                    workspace.project().clone(),
+                    workspace.app_state().fs.clone(),
+                ),
+                window,
+                cx,
+            );
 
-                let app_state = workspace.app_state().clone();
-                let window_handle = window.window_handle().downcast::<MultiWorkspace>();
+            let app_state = workspace.app_state().clone();
+            let window_handle = window.window_handle().downcast::<MultiWorkspace>();
 
-                cx.spawn_in(window, async move |workspace, cx| {
-                    use util::paths::SanitizedPath;
+            cx.spawn_in(window, async move |workspace, cx| {
+                use util::paths::SanitizedPath;
 
-                    let Some(paths) = paths.await.log_err().flatten() else {
+                let Some(paths) = paths.await.log_err().flatten() else {
+                    return;
+                };
+
+                let wsl_path = paths.iter().find_map(util::paths::WslPath::from_path);
+
+                if let Some(util::paths::WslPath { distro, path }) = wsl_path {
+                    use remote::WslConnectionOptions;
+
+                    let connection_options = RemoteConnectionOptions::Wsl(WslConnectionOptions {
+                        distro_name: distro.to_string(),
+                        user: None,
+                    });
+
+                    let requesting_window = match create_new_window {
+                        false => window_handle,
+                        true => None,
+                    };
+
+                    let open_options = workspace::OpenOptions {
+                        requesting_window,
+                        ..Default::default()
+                    };
+
+                    open_remote_project(
+                        connection_options,
+                        vec![path.into()],
+                        app_state,
+                        open_options,
+                        cx,
+                    )
+                    .await
+                    .log_err();
+                    return;
+                }
+
+                let paths = paths
+                    .into_iter()
+                    .filter_map(|path| SanitizedPath::new(&path).local_to_wsl())
+                    .collect::<Vec<_>>();
+
+                if paths.is_empty() {
+                    let Ok((title, message, ok)) = cx.update(|_, cx| {
+                        (
+                            localization::text(cx, "recent-invalid-path"),
+                            localization::text(cx, "recent-invalid-wsl-detail"),
+                            localization::text(cx, "common-ok"),
+                        )
+                    }) else {
                         return;
                     };
 
-                    let wsl_path = paths.iter().find_map(util::paths::WslPath::from_path);
-
-                    if let Some(util::paths::WslPath { distro, path }) = wsl_path {
-                        use remote::WslConnectionOptions;
-
-                        let connection_options =
-                            RemoteConnectionOptions::Wsl(WslConnectionOptions {
-                                distro_name: distro.to_string(),
-                                user: None,
-                            });
-
-                        let requesting_window = match create_new_window {
-                            false => window_handle,
-                            true => None,
-                        };
-
-                        let open_options = workspace::OpenOptions {
-                            requesting_window,
-                            ..Default::default()
-                        };
-
-                        open_remote_project(
-                            connection_options,
-                            vec![path.into()],
-                            app_state,
-                            open_options,
-                            cx,
+                    let _ = cx
+                        .prompt(
+                            gpui::PromptLevel::Critical,
+                            &title,
+                            Some(&message),
+                            &[PromptButton::ok(ok)],
                         )
-                        .await
-                        .log_err();
-                        return;
-                    }
+                        .await;
+                    return;
+                }
 
-                    let paths = paths
-                        .into_iter()
-                        .filter_map(|path| SanitizedPath::new(&path).local_to_wsl())
-                        .collect::<Vec<_>>();
-
-                    if paths.is_empty() {
-                        let Ok((title, message, ok)) = cx.update(|_, cx| {
-                            (
-                                localization::text(cx, "recent-invalid-path"),
-                                localization::text(cx, "recent-invalid-wsl-detail"),
-                                localization::text(cx, "common-ok"),
+                workspace
+                    .update_in(cx, |workspace, window, cx| {
+                        workspace.toggle_modal(window, cx, |window, cx| {
+                            crate::wsl_picker::WslOpenModal::new(
+                                paths,
+                                create_new_window,
+                                window,
+                                cx,
                             )
-                        }) else {
-                            return;
-                        };
-
-                        let _ = cx
-                            .prompt(
-                                gpui::PromptLevel::Critical,
-                                &title,
-                                Some(&message),
-                                &[PromptButton::ok(ok)],
-                            )
-                            .await;
-                        return;
-                    }
-
-                    workspace
-                        .update_in(cx, |workspace, window, cx| {
-                            workspace.toggle_modal(window, cx, |window, cx| {
-                                crate::wsl_picker::WslOpenModal::new(
-                                    paths,
-                                    create_new_window,
-                                    window,
-                                    cx,
-                                )
-                            });
-                        })
-                        .log_err();
-                })
-                .detach();
-            });
-        },
-    );
+                        });
+                    })
+                    .log_err();
+            })
+            .detach();
+        });
+    });
 
     #[cfg(target_os = "windows")]
     cx.on_action(|open_wsl: &dez_actions::wsl_actions::OpenWsl, cx| {

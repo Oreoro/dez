@@ -284,8 +284,8 @@ fn display_name(profile_name: &Option<String>, cx: &App) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use editor;
     use dez_actions::settings_profile_selector;
+    use editor;
     use gpui::{TestAppContext, UpdateGlobal, VisualTestContext};
     use menu::{Cancel, Confirm, SelectNext, SelectPrevious};
     use project::{FakeFs, Project};

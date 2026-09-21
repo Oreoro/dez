@@ -212,8 +212,8 @@ impl PasswordProxy {
         let temp_dir = tempfile::Builder::new().prefix("dez-askpass").tempdir()?;
         let askpass_socket = temp_dir.path().join("askpass.sock");
         let askpass_script_path = temp_dir.path().join(ASKPASS_SCRIPT_NAME);
-        let current_exec = std::env::current_exe()
-            .context("Failed to determine current dez executable path.")?;
+        let current_exec =
+            std::env::current_exe().context("Failed to determine current dez executable path.")?;
 
         // TODO: inferred from the use of powershell.exe in askpass_helper_script
         let shell_kind = if cfg!(windows) {

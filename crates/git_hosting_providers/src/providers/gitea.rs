@@ -341,8 +341,7 @@ mod tests {
     #[test]
     fn test_build_gitea_self_hosted_permalink_from_ssh_url() {
         let gitea =
-            Gitea::from_remote_url("git@gitea.some-enterprise.com:zed-industries/zed.git")
-                .unwrap();
+            Gitea::from_remote_url("git@gitea.some-enterprise.com:zed-industries/zed.git").unwrap();
         let permalink = gitea.build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),

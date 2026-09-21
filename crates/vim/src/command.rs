@@ -1,12 +1,12 @@
 use anyhow::{Result, anyhow};
 use collections::{HashMap, HashSet};
 use command_palette_hooks::{CommandInterceptItem, CommandInterceptResult};
+use dez_actions::{OpenDocs, RevealTarget};
 use editor::{
     Bias, Editor, EditorSettings, SelectionEffects, ToPoint,
     actions::{SortLinesCaseInsensitive, SortLinesCaseSensitive},
     display_map::ToDisplayPoint,
 };
-use dez_actions::{OpenDocs, RevealTarget};
 use futures::AsyncWriteExt as _;
 use gpui::{
     Action, App, AppContext as _, Context, Global, Keystroke, Task, TaskExt, WeakEntity, Window,
