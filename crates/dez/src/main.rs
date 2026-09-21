@@ -617,11 +617,7 @@ fn main() {
         log::info!("init: project/title_bar");
 
         let session = cx.foreground_executor().block_on(session);
-        let installation_id = cx
-            .foreground_executor()
-            .block_on(installation_id)
-            .ok()
-            .map(|id| id.to_string());
+        let installation_id = cx.foreground_executor().block_on(installation_id).ok();
         log::info!("init: session");
         let app_session = cx.new(|cx| AppSession::new(session, cx));
 
