@@ -5,19 +5,13 @@
 //! color. Lives in its own crate so the divergence from upstream stays in a
 //! `dez_*` crate and only requires the `HighlightKey::SpecialComment` variant.
 
-use std::{
-    ops::Range,
-    sync::OnceLock,
-    time::Duration,
-};
+use std::{ops::Range, sync::OnceLock, time::Duration};
 
 use aho_corasick::{AhoCorasick, MatchKind};
 use editor::{Addon, Editor, HighlightKey, RangeToAnchorExt as _};
-use gpui::{
-    App, AppContext as _, Context, FontWeight, HighlightStyle, Subscription, Task,
-};
+use gpui::{App, AppContext as _, Context, FontWeight, HighlightStyle, Subscription, Task};
 use language::{Anchor, LanguageAwareStyling};
-use multi_buffer::{Event as MultiBufferEvent, MultiBuffer, MultiBufferOffset, MultiBufferSnapshot};
+use multi_buffer::{Event as MultiBufferEvent, MultiBufferOffset, MultiBufferSnapshot};
 use theme::{ActiveTheme, SyntaxTheme};
 
 /// Conventional comment markers worth pulling out of a wall of prose. Order
@@ -79,7 +73,16 @@ pub fn init(cx: &mut App) {
 
 fn refresh(editor: &mut Editor, cx: &mut Context<Editor>) {
     let syntax_theme = cx.theme().syntax().clone();
-    let style = special_comment_style(&syntax_theme, cx);
+    let mut style = syntax_theme
+        .style_for_name("hint")
+        .or_else(|| syntax_theme.style_for_name("emphasis"))
+        .unwrap_or_else(|| HighlightStyle {
+            color: Some(cx.theme().colors().text_accent),
+            ..Default::default()
+        });
+    style.font_weight = Some(FontWeight::BOLD);
+    style.font_style = None;
+    style.background_color = None;
 
     let snapshot = editor.buffer().read(cx).snapshot(cx);
     let task = cx.spawn(async move |editor, cx| {
@@ -105,20 +108,6 @@ fn refresh(editor: &mut Editor, cx: &mut Context<Editor>) {
     if let Some(addon) = editor.addon_mut::<SpecialCommentAddon>() {
         addon._task = task;
     }
-}
-
-fn special_comment_style(syntax_theme: &SyntaxTheme, cx: &App) -> HighlightStyle {
-    let mut style = syntax_theme
-        .style_for_name("hint")
-        .or_else(|| syntax_theme.style_for_name("emphasis"))
-        .unwrap_or_else(|| HighlightStyle {
-            color: Some(cx.theme().colors().text_accent),
-            ..Default::default()
-        });
-    style.font_weight = Some(FontWeight::BOLD);
-    style.font_style = None;
-    style.background_color = None;
-    style
 }
 
 fn find_special_comment_ranges(
@@ -155,8 +144,7 @@ fn find_special_comment_ranges(
                 continue;
             }
             ranges.push(
-                (chunk_start + matched.start()..chunk_start + matched.end())
-                    .to_anchors(snapshot),
+                (chunk_start + matched.start()..chunk_start + matched.end()).to_anchors(snapshot),
             );
         }
     }
