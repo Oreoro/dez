@@ -8,10 +8,10 @@
 use std::{ops::Range, sync::OnceLock, time::Duration};
 
 use aho_corasick::{AhoCorasick, MatchKind};
-use editor::{Addon, Editor, HighlightKey, RangeToAnchorExt as _};
+use editor::{Addon, Editor, HighlightKey};
 use gpui::{App, AppContext as _, Context, FontWeight, HighlightStyle, Subscription, Task};
-use language::{Anchor, LanguageAwareStyling};
-use multi_buffer::{Event as MultiBufferEvent, MultiBufferOffset, MultiBufferSnapshot};
+use language::LanguageAwareStyling;
+use multi_buffer::{Anchor, Event as MultiBufferEvent, MultiBufferOffset, MultiBufferSnapshot};
 use theme::{ActiveTheme, SyntaxTheme};
 
 /// Conventional comment markers worth pulling out of a wall of prose. Order
@@ -50,16 +50,17 @@ impl Addon for SpecialCommentAddon {
 pub fn init(cx: &mut App) {
     cx.observe_new::<Editor>(|editor, _window, cx| {
         let buffer = editor.buffer().clone();
-        let subscription = cx.subscribe(&buffer, |editor, event: &MultiBufferEvent, cx| {
-            if matches!(
-                event,
-                MultiBufferEvent::Edited { .. }
-                    | MultiBufferEvent::BuffersEdited { .. }
-                    | MultiBufferEvent::Reparsed(_)
-            ) {
-                refresh(editor, cx);
-            }
-        });
+        let subscription =
+            cx.subscribe(&buffer, |editor, _buffer, event: &MultiBufferEvent, cx| {
+                if matches!(
+                    event,
+                    MultiBufferEvent::Edited { .. }
+                        | MultiBufferEvent::BuffersEdited { .. }
+                        | MultiBufferEvent::Reparsed(_)
+                ) {
+                    refresh(editor, cx);
+                }
+            });
 
         editor.register_addon(SpecialCommentAddon {
             _subscription: subscription,
@@ -115,7 +116,7 @@ fn find_special_comment_ranges(
     let mut offset = 0usize;
 
     for chunk in snapshot.chunks(
-        MultiBufferOffset::ZERO..snapshot.len(),
+        MultiBufferOffset(0)..snapshot.len(),
         LanguageAwareStyling {
             tree_sitter: true,
             diagnostics: false,
@@ -139,9 +140,9 @@ fn find_special_comment_ranges(
             if !is_word_boundary(text, matched.start(), matched.end()) {
                 continue;
             }
-            ranges.push(
-                (chunk_start + matched.start()..chunk_start + matched.end()).to_anchors(snapshot),
-            );
+            let start = MultiBufferOffset(chunk_start + matched.start());
+            let end = MultiBufferOffset(chunk_start + matched.end());
+            ranges.push(snapshot.anchor_after(start)..snapshot.anchor_before(end));
         }
     }
 
