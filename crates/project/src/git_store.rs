@@ -3223,6 +3223,7 @@ impl GitStore {
             commit_timestamp: commit.commit_timestamp,
             author_email: commit.author_email.into(),
             author_name: commit.author_name.into(),
+            ref_names: commit.ref_names.into_iter().map(Into::into).collect(),
         })
     }
 
@@ -5404,6 +5405,7 @@ impl Repository {
                         commit_timestamp: resp.commit_timestamp,
                         author_email: resp.author_email.into(),
                         author_name: resp.author_name.into(),
+                        ref_names: resp.ref_names.into_iter().map(Into::into).collect(),
                     })
                 }
             }
@@ -9102,6 +9104,7 @@ fn commit_details_to_proto(commit: &CommitDetails) -> proto::GitCommitDetails {
         commit_timestamp: commit.commit_timestamp,
         author_email: commit.author_email.to_string(),
         author_name: commit.author_name.to_string(),
+        ref_names: commit.ref_names.iter().map(|name| name.to_string()).collect(),
     }
 }
 
@@ -9112,6 +9115,7 @@ fn proto_to_commit_details(proto: &proto::GitCommitDetails) -> CommitDetails {
         commit_timestamp: proto.commit_timestamp,
         author_email: proto.author_email.clone().into(),
         author_name: proto.author_name.clone().into(),
+        ref_names: proto.ref_names.iter().map(|name| name.clone().into()).collect(),
     }
 }
 

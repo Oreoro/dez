@@ -8,10 +8,21 @@ license = "GPL-3.0-or-later"
 [lints]
 workspace = true
 
+[features]
+# The host transport is a partial port from dez v0; the binary is only built
+# once that port is finished.
+hosted-terminal = ["terminal/hosted-terminal"]
+
+[lib]
+name = "dez_terminal_host"
+path = "src/lib.rs"
+doctest = false
+
 [[bin]]
 name = "dez-terminal-host"
 path = "src/main.rs"
 doctest = false
+required-features = ["hosted-terminal"]
 
 [dependencies]
 anyhow.workspace = true

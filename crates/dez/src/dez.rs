@@ -409,6 +409,7 @@ fn restore_agent_threads_for_added_workspace(
 
 pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
     agent_threads::init(cx);
+    dez_highlights::init(cx);
     dez_sidebar::init(cx);
 
     // Each launch snapshots under a fresh session id and only the previous

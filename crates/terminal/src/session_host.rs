@@ -10,15 +10,26 @@ use std::{fmt, path::PathBuf, str::FromStr};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+// The transport and host adapters below are a partial port from dez v0 and do
+// not yet compile against this base's `Terminal` process lifecycle, so they
+// stay behind the `hosted-terminal` feature until the port is finished. The
+// protocol types above are always available.
+#[cfg(feature = "hosted-terminal")]
 mod in_process;
+#[cfg(feature = "hosted-terminal")]
 mod local;
+#[cfg(feature = "hosted-terminal")]
 mod pty_process;
+#[cfg(feature = "hosted-terminal")]
 pub mod transport;
 
+#[cfg(feature = "hosted-terminal")]
 pub use in_process::{
     InProcessTerminalHost, TerminalAttachment, TerminalHostError, TerminalReplayChunk,
 };
+#[cfg(feature = "hosted-terminal")]
 pub use local::{AttachedLocalTerminal, LocalTerminalHost};
+#[cfg(feature = "hosted-terminal")]
 pub use pty_process::{TerminalHostPtyEvent, TerminalHostPtyHandle};
 
 /// First version of the terminal host protocol understood by this client.

@@ -14,7 +14,10 @@ This is the shape of the work, in order. It mirrors the plan in
 [`docs/dez-workspace-shell.md`](./docs/dez-workspace-shell.md).
 
 - [x] Rebase onto Flint v0.11.3 and rebrand the whole tree as dez.
-- [x] Port the durable terminal host (`dez_terminal_host`, `session_host`).
+- [ ] Finish the durable terminal host port (`dez_terminal_host`,
+      `session_host`). The protocol types are in place; the transport and host
+      adapters are behind the `hosted-terminal` feature until the `Terminal`
+      process-lifecycle port is complete (see `FORK.md`).
 - [x] Harden extension capabilities (downloads, path lookup, exec) using
       Gram's approach; keep Zed's extension ABI intact.
 - [ ] Build the workspace shell: the Chrome-like bar and sidebar, with

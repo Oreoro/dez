@@ -43,7 +43,20 @@ lists what, where, and why. If a divergence isn't listed here, it's a bug.
 | `Terminal::session_id()`, `exit_code()`, `set_hosted_foreground_command()` | `crates/terminal/src/terminal.rs` | Accessors consumed by session_host |
 | `dez_terminal_host` daemon | `crates/dez_terminal_host/` | Out-of-process PTY owner |
 | `TerminalHostRuntime` wiring | `crates/dez/src/terminal_host_runtime.rs`, `main.rs` | Connects GUI to host daemon; host id derived from stable `installation_id` KVP |
-| `polling`, `net`, `uuid` deps added to `terminal` | `crates/terminal/Cargo.toml` | session_host requirements |
+| `polling`, `net`, `uuid`, `serde_json` deps added to `terminal` | `crates/terminal/Cargo.toml` | session_host requirements |
+
+### Status: transport gated, not yet compiling
+
+The protocol types (`TerminalSessionId`, snapshots, commands, events) are
+always available, but the transport and host adapters (`in_process`, `local`,
+`pty_process`, `transport`) are a partial port that still references a
+`Terminal` process lifecycle this base does not have (`terminate_process`,
+`write_hosted_replay`, `finish_hosted_replay`, `hosted_process_exited`,
+`observed_exit_code`, the `TerminalType::Hosted` variant). They are therefore
+behind the `hosted-terminal` Cargo feature, off by default, in `terminal`,
+`dez`, and `dez_terminal_host`. The `dez-terminal-host` binary has
+`required-features = ["hosted-terminal"]`. Finish the port against this base's
+`Terminal` lifecycle, then enable the feature and wire `TerminalType::Hosted`.
 
 ## Extension security hardening (ported from Gram)
 

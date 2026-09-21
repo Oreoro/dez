@@ -986,6 +986,8 @@ impl TerminalBuilder {
         let terminal = Terminal {
             task: None,
             session_id: session_host::TerminalSessionId::new(),
+            observed_exit_code: None,
+            hosted_foreground_command: None,
             terminal_type: TerminalType::DisplayOnly,
             completion_tx: None,
             term,
@@ -1210,6 +1212,8 @@ impl TerminalBuilder {
             let terminal = Terminal {
                 task,
                 session_id: session_host::TerminalSessionId::new(),
+                observed_exit_code: None,
+                hosted_foreground_command: None,
                 terminal_type: TerminalType::Pty {
                     pty_tx,
                     info: Arc::new(pty_info),
@@ -1394,6 +1398,8 @@ enum TerminalType {
 
 pub struct Terminal {
     session_id: session_host::TerminalSessionId,
+    observed_exit_code: Option<i32>,
+    hosted_foreground_command: Option<String>,
     terminal_type: TerminalType,
     completion_tx: Option<Sender<Option<ExitStatus>>>,
     term: Arc<AlacrittyTermLock>,
@@ -2787,7 +2793,7 @@ impl Terminal {
     }
 
     pub fn exit_code(&self) -> Option<i32> {
-        self.observed_exit_code()
+        self.observed_exit_code
     }
 
     pub fn set_hosted_foreground_command(
@@ -2795,8 +2801,48 @@ impl Terminal {
         foreground_command: Option<String>,
         cx: &mut Context<Self>,
     ) {
+        if self.hosted_foreground_command == foreground_command {
+            return;
+        }
         self.hosted_foreground_command = foreground_command;
         cx.emit(Event::ProcessInfoChanged);
+    }
+
+    /// Terminates the process backing this terminal. Used by the in-process
+    /// terminal host adapter.
+    pub fn terminate_process(&mut self, cx: &mut Context<Self>) {
+        if let TerminalType::Pty { info, .. } = &self.terminal_type {
+            info.kill_current_process();
+            info.kill_child_process();
+        }
+        self.observed_exit_code = None;
+        cx.emit(Event::CloseTerminal);
+    }
+
+    /// Records an exit observed by the owning terminal host and notifies views.
+    pub fn hosted_process_exited(&mut self, exit_code: Option<i32>, cx: &mut Context<Self>) {
+        self.observed_exit_code = exit_code;
+        cx.emit(Event::ProcessExited { exit_code });
+    }
+
+    /// Rebuilds hosted output retained by the terminal host.
+    #[cfg(feature = "hosted-terminal")]
+    pub fn write_hosted_replay(
+        &mut self,
+        chunk: &session_host::TerminalReplayChunk,
+        cx: &mut Context<Self>,
+    ) {
+        self.write_output(&chunk.bytes, cx);
+    }
+
+    /// Marks the end of a hosted replay stream.
+    #[cfg(feature = "hosted-terminal")]
+    pub fn finish_hosted_replay(
+        &mut self,
+        _dimensions: session_host::TerminalDimensions,
+        cx: &mut Context<Self>,
+    ) {
+        cx.emit(Event::Wakeup);
     }
 
     pub fn pid_getter(&self) -> Option<&ProcessIdGetter> {

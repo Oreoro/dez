@@ -509,6 +509,9 @@ pub struct CommitDetails {
     pub commit_timestamp: i64,
     pub author_email: SharedString,
     pub author_name: SharedString,
+    /// Decorated ref names (`%D`): branches, remotes, and tags pointing at this
+    /// commit, e.g. `HEAD -> main`, `origin/main`, `tag: v1.0.0`.
+    pub ref_names: Vec<SharedString>,
 }
 
 #[derive(Debug)]
@@ -1328,14 +1331,14 @@ impl GitRepository for RealGitRepository {
                     .build_command(&[
                         "show",
                         "--no-patch",
-                        "--format=%H%x00%B%x00%at%x00%ae%x00%an%x00",
+                        "--format=%H%x00%B%x00%at%x00%ae%x00%an%x00%D%x00",
                         &commit,
                     ])
                     .output()
                     .await?;
                 let output = std::str::from_utf8(&output.stdout)?;
                 let fields = output.split('\0').collect::<Vec<_>>();
-                if fields.len() != 6 {
+                if fields.len() != 7 {
                     bail!("unexpected git-show output for {commit:?}: {output:?}")
                 }
                 let sha = fields[0].to_string().into();
@@ -1343,12 +1346,14 @@ impl GitRepository for RealGitRepository {
                 let commit_timestamp = fields[2].parse()?;
                 let author_email = fields[3].to_string().into();
                 let author_name = fields[4].to_string().into();
+                let ref_names = parse_decorated_ref_names(fields[5]);
                 Ok(CommitDetails {
                     sha,
                     message,
                     commit_timestamp,
                     author_email,
                     author_name,
+                    ref_names,
                 })
             })
             .boxed()
@@ -3307,6 +3312,24 @@ fn parse_file_history_changed_files_output(
     histories
 }
 
+/// Splits a `%D` decoration string into individual ref names.
+///
+/// `%D` separates entries with `", "` and decorates them as `HEAD -> main`,
+/// `origin/main`, or `tag: v1.0.0`. Git ref names cannot contain spaces, so the
+/// only ambiguity is a literal comma inside a ref name, which the git graph has
+/// always tolerated.
+pub fn parse_decorated_ref_names(decorated: &str) -> Vec<SharedString> {
+    let decorated = decorated.trim();
+    if decorated.is_empty() {
+        return Vec::new();
+    }
+    decorated
+        .split(", ")
+        .filter(|name| !name.is_empty())
+        .map(|name| SharedString::from(name.to_string()))
+        .collect()
+}
+
 fn parse_initial_graph_output<'a>(
     lines: impl Iterator<Item = &'a str>,
 ) -> Vec<Arc<InitialGraphCommitData>> {
@@ -3323,15 +3346,7 @@ fn parse_initial_graph_output<'a>(
                 .filter_map(|p| Oid::from_str(p).ok())
                 .collect();
 
-            let ref_names_str = parts.next().unwrap_or("");
-            let ref_names = if ref_names_str.is_empty() {
-                Vec::new()
-            } else {
-                ref_names_str
-                    .split(", ")
-                    .map(|s| SharedString::from(s.to_string()))
-                    .collect()
-            };
+            let ref_names = parse_decorated_ref_names(parts.next().unwrap_or(""));
 
             Some(Arc::new(InitialGraphCommitData {
                 sha,

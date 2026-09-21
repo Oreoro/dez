@@ -3232,6 +3232,8 @@ dependencies = [
  "dev_container",
  "dez_actions",
  "dez_env_vars",
+ "dez_highlights",
+ "dez_sidebar",
  "diagnostics",
  "editor",
  "encoding_selector",
@@ -3321,6 +3323,7 @@ dependencies = [
  "task",
  "tasks_ui",
  "tempfile",
+ "terminal",
  "terminal_view",
  "theme",
  "theme_extension",
@@ -3390,6 +3393,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dez_highlights"
+version = "0.1.0"
+dependencies = [
+ "aho-corasick",
+ "editor",
+ "gpui",
+ "language",
+ "multi_buffer",
+ "theme",
+]
+
+[[package]]
 name = "dez_html"
 version = "0.3.1"
 dependencies = [
@@ -3401,6 +3416,36 @@ name = "dez_proto"
 version = "0.3.2"
 dependencies = [
  "zed_extension_api 0.7.0",
+]
+
+[[package]]
+name = "dez_sidebar"
+version = "0.1.0"
+dependencies = [
+ "agent_threads",
+ "dez_actions",
+ "git_ui",
+ "gpui",
+ "serde",
+ "serde_json",
+ "settings",
+ "ui",
+ "workspace",
+]
+
+[[package]]
+name = "dez_terminal_host"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "async-channel 2.5.0",
+ "clap",
+ "net",
+ "serde",
+ "serde_json",
+ "smol",
+ "terminal",
+ "util",
 ]
 
 [[package]]
@@ -13938,13 +13983,16 @@ dependencies = [
  "itertools 0.14.0",
  "libc",
  "log",
+ "net",
  "parking_lot",
  "percent-encoding",
+ "polling",
  "rand 0.9.4",
  "regex",
  "release_channel",
  "schemars",
  "serde",
+ "serde_json",
  "settings",
  "sysinfo 0.37.2",
  "task",
@@ -13956,6 +14004,7 @@ dependencies = [
  "urlencoding",
  "util",
  "util_macros",
+ "uuid",
  "vte",
  "windows 0.61.3",
 ]

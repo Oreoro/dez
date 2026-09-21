@@ -3,6 +3,7 @@
 
 mod dez;
 mod reliability;
+#[cfg(feature = "hosted-terminal")]
 mod terminal_host_runtime;
 
 // Ensure the binary name stays in sync with APP_NAME so that the paths used
@@ -796,6 +797,7 @@ fn main() {
         // there would bind a real OS socket under the real data dir on
         // every test run.
         agent_threads::init_control_server(cx);
+        #[cfg(feature = "hosted-terminal")]
         if let Some(installation_id) = &installation_id {
             let terminal_host_id = terminal::session_host::TerminalHostId::from_stable_key(&format!(
                 "dez-local-host:{}:{}",
@@ -817,6 +819,8 @@ fn main() {
                 cx,
             );
         }
+        #[cfg(not(feature = "hosted-terminal"))]
+        let _ = &installation_id;
         log::info!("init: workspace initialized, opening window");
 
         cx.activate(true);

@@ -12,6 +12,9 @@ default-run = "dez"
 workspace = true
 
 [features]
+# Builds the out-of-process terminal host integration. Off by default while
+# the ported transport is completed.
+hosted-terminal = ["terminal/hosted-terminal"]
 tracy = ["ztracing/tracy"]
 # LEAK_BACKTRACE=1 cargo run --features dez/track-project-leak --profile release-fast
 track-project-leak = ["gpui/leak-detection"]
@@ -170,6 +173,7 @@ which_key.workspace = true
 workspace.workspace = true
 dez_actions.workspace = true
 dez_env_vars.workspace = true
+dez_highlights.workspace = true
 dez_sidebar.workspace = true
 zlog.workspace = true
 zlog_settings.workspace = true

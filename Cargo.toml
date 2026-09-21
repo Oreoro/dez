@@ -175,6 +175,7 @@ members = [
     "crates/worktree_benchmarks",
     "crates/dez",
     "crates/dez_actions",
+    "crates/dez_highlights",
     "crates/dez_sidebar",
     "crates/dez_terminal_host",
     "crates/windows_resources",
@@ -384,6 +385,7 @@ workspace = { path = "crates/workspace" }
 worktree = { path = "crates/worktree" }
 dez = { path = "crates/dez" }
 dez_actions = { path = "crates/dez_actions" }
+dez_highlights = { path = "crates/dez_highlights" }
 dez_sidebar = { path = "crates/dez_sidebar" }
 dez_credentials_provider = { path = "crates/dez_credentials_provider" }
 dez_env_vars = { path = "crates/dez_env_vars" }

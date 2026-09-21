@@ -33,7 +33,7 @@ use std::{
     sync::Arc,
 };
 use theme::ActiveTheme;
-use ui::{ContextMenu, DiffStat, Disclosure, Divider, Tooltip, WithScrollbar, prelude::*};
+use ui::{Chip, ContextMenu, DiffStat, Disclosure, Divider, Tooltip, WithScrollbar, prelude::*};
 use util::{ResultExt, paths::PathStyle, rel_path::RelPath, truncate_and_trailoff};
 use workspace::item::TabTooltipContent;
 use workspace::{
@@ -587,6 +587,15 @@ impl CommitView {
             (IconName::Copy, Color::Muted)
         };
 
+        let ref_names = commit.ref_names.clone();
+        let accent_color = cx
+            .theme()
+            .accents()
+            .0
+            .first()
+            .copied()
+            .unwrap_or_else(|| cx.theme().colors().text_accent);
+
         let has_more = self.commit.message.trim().contains('\n');
         let is_expanded = self.message_expanded;
         let expand_tooltip = if is_expanded {
@@ -660,7 +669,39 @@ impl CommitView {
                                                     .color(Color::Muted)
                                                     .size(LabelSize::Small),
                                             ),
-                                    ),
+                                    )
+                                    .when(!ref_names.is_empty(), |this| {
+                                        this.child(
+                                            h_flex().gap_1().flex_wrap().children(
+                                                ref_names.into_iter().map(|name| {
+                                                    let is_head = name.as_ref() == "HEAD"
+                                                        || name.starts_with("HEAD -> ");
+                                                    Chip::new(name)
+                                                        .label_size(LabelSize::Small)
+                                                        .truncate()
+                                                        .map(|chip| {
+                                                            if is_head {
+                                                                chip.icon(IconName::Check)
+                                                                    .bg_color(
+                                                                        accent_color.opacity(0.25),
+                                                                    )
+                                                                    .border_color(
+                                                                        accent_color.opacity(0.5),
+                                                                    )
+                                                            } else {
+                                                                chip.bg_color(
+                                                                    accent_color.opacity(0.08),
+                                                                )
+                                                                .border_color(
+                                                                    accent_color.opacity(0.25),
+                                                                )
+                                                            }
+                                                        })
+                                                        .into_any_element()
+                                                }),
+                                            ),
+                                        )
+                                    }),
                             ),
                     )
                     .when(self.stash.is_none(), |this| {
