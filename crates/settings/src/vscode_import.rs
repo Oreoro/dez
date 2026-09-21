@@ -173,6 +173,7 @@ impl VsCodeSettings {
         SettingsContent {
             auto_update: None,
             base_keymap: Some(BaseKeymapContent::VSCode),
+            dez_sidebar: None,
             diagnostics: None,
             editor: self.editor_settings_content(),
             extension: ExtensionSettingsContent::default(),

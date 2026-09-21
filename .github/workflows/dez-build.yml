@@ -3,7 +3,7 @@ name: Dez build
 on:
   workflow_dispatch:
   push:
-    branches: [dez-v1]
+    branches: [main]
     paths-ignore:
       - "docs/**"
       - "*.md"
@@ -43,5 +43,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.95.0
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: ./script/linux
+      - name: Download WASI SDK
+        if: runner.os == 'Linux'
+        run: ./script/download-wasi-sdk
       - name: Cargo check dez
         run: cargo check -p dez
