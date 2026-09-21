@@ -9,6 +9,7 @@ mod settings;
 mod sidebar;
 
 use gpui::App;
+use settings::Settings as _;
 
 pub use settings::DezSidebarSettings;
 pub use sidebar::{DezSidebar, DezSidebarView};
