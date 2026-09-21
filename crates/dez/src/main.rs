@@ -3,7 +3,9 @@
 
 mod dez;
 mod reliability;
+// Partial port: the runtime's status UI and retry affordance land later.
 #[cfg(feature = "hosted-terminal")]
+#[allow(dead_code)]
 mod terminal_host_runtime;
 
 // Ensure the binary name stays in sync with APP_NAME so that the paths used

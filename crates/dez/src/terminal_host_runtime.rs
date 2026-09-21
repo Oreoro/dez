@@ -94,8 +94,6 @@ impl TerminalHostRuntime {
             .map(|runtime| runtime.0.clone())
     }
 
-    // Wired to the terminal-host status UI once the hosted-terminal port lands.
-    #[allow(dead_code)]
     pub fn retry(cx: &mut App) -> bool {
         let Some(runtime) = Self::try_global(cx) else {
             return false;
