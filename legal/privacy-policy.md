@@ -31,4 +31,4 @@ This policy may change as the project evolves. Changes will be reflected on this
 
 ## Contact
 
-Questions about this policy can be raised as an issue on the [project's GitHub repository](https://github.com/shenghsi/dez).
+Questions about this policy can be raised as an issue on the [project's GitHub repository](https://github.com/Oreoro/dez).

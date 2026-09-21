@@ -2,7 +2,7 @@
 
 const { execFileSync } = require("child_process");
 
-const REPO_URL = "https://github.com/shenghsi/dez";
+const REPO_URL = "https://github.com/Oreoro/dez";
 
 main();
 

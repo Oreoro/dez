@@ -10,7 +10,7 @@ fi
 
 MAX_ATTEMPTS="60"
 SLEEP_SECONDS="10"
-VERCEL_SCOPE="dez-industries"
+VERCEL_SCOPE="Oreoro"
 VERCEL_URL="https://dez.dev"
 
 echo "Checking for in-progress deployments..."

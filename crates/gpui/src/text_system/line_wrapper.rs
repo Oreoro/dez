@@ -994,7 +994,7 @@ mod tests {
 
         // URL case
         assert_word("github.com");
-        assert_not_word("zed-industries/dez");
+        assert_not_word("zed-industries/zed");
         assert_not_word("zed-industries\\dez");
         assert_not_word("a=1&b=2");
         assert_not_word("foo?b=2");
@@ -1007,7 +1007,7 @@ mod tests {
         assert_word("ƀƁƂƃƄƅƆƇƈƉƊƋƌƍƎƏ");
         // Cyrillic
         assert_word("АБВГДЕЖЗИЙКЛМНОП");
-        // Vietnamese (https://github.com/zed-industries/dez/issues/23245)
+        // Vietnamese (https://github.com/zed-industries/zed/issues/23245)
         assert_word("ThậmchíđếnkhithuachạychúngcònnhẫntâmgiếtnốtsốđôngtùchínhtrịởYênBáivàCaoBằng");
         // Bengali
         assert_word("গিয়েছিলেন");

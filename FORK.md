@@ -1,7 +1,7 @@
 # FORK.md — dez divergence ledger
 
 Every intentional divergence of dez from Flint (which itself diverges from
-Zed — see Flint's `docs/terminal-first-fork.md` for that layer). Each entry
+Zed — see `docs/terminal-first-fork.md` for that layer). Each entry
 lists what, where, and why. If a divergence isn't listed here, it's a bug.
 
 ## Identity layer (commit: "Rebrand Flint as Dez across the entire tree")
@@ -104,10 +104,13 @@ older API surface.
   in-GUI hosted terminal rendering. Protocol layer is in place; the
   variant threads through ~14 match sites in old dez's terminal.rs and
   needs compiler feedback to port safely.
-- `dez_sidebar` / `dez_workspace_shell` — the Chrome-like bar + workspace
-  navigator (see `docs/dez-workspace-shell.md`).
+- `dez_workspace_shell` — the Chrome-like bar with draggable/splittable
+  surfaces (see `docs/dez-workspace-shell.md`; the `dez_sidebar` navigator
+  half has landed).
 - Session discovery-and-attach for tmux/Herdr/cmux.
-- Gram-style extension LSP/DAP permission flags.
+- Full DAP gating from Gram's `DapSettings` — LSP calls are already gated
+  (see "Extension security hardening"); DAP calls reset to permissive until
+  the next upstream sync brings `DapSettings`.
 
 ## Sync protocol
 

@@ -34,7 +34,7 @@ impl SourceHut {
         }
 
         // TODO: detecting self hosted instances by checking whether "sourcehut" is in the url or not
-        // is not very reliable. See https://github.com/zed-industries/dez/issues/26393 for more
+        // is not very reliable. See https://github.com/zed-industries/zed/issues/26393 for more
         // information.
         if !host.contains("sourcehut") {
             bail!("not a SourceHut URL");
@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn test_parse_remote_url_given_ssh_url() {
         let parsed_remote = SourceHut::public_instance()
-            .parse_remote_url("git@git.sr.ht:~zed-industries/dez")
+            .parse_remote_url("git@git.sr.ht:~zed-industries/zed")
             .unwrap();
 
         assert_eq!(
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_parse_remote_url_given_ssh_url_with_git_suffix() {
         let parsed_remote = SourceHut::public_instance()
-            .parse_remote_url("git@git.sr.ht:~zed-industries/dez.git")
+            .parse_remote_url("git@git.sr.ht:~zed-industries/zed.git")
             .unwrap();
 
         assert_eq!(
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_parse_remote_url_given_https_url() {
         let parsed_remote = SourceHut::public_instance()
-            .parse_remote_url("https://git.sr.ht/~zed-industries/dez")
+            .parse_remote_url("https://git.sr.ht/~zed-industries/zed")
             .unwrap();
 
         assert_eq!(
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn test_parse_remote_url_given_self_hosted_ssh_url() {
-        let remote_url = "git@sourcehut.org:~zed-industries/dez";
+        let remote_url = "git@sourcehut.org:~zed-industries/zed";
 
         let parsed_remote = SourceHut::from_remote_url(remote_url)
             .unwrap()
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_parse_remote_url_given_self_hosted_ssh_url_with_git_suffix() {
-        let remote_url = "git@sourcehut.org:~zed-industries/dez.git";
+        let remote_url = "git@sourcehut.org:~zed-industries/zed.git";
 
         let parsed_remote = SourceHut::from_remote_url(remote_url)
             .unwrap()
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_parse_remote_url_given_self_hosted_https_url() {
-        let remote_url = "https://sourcehut.org/~zed-industries/dez";
+        let remote_url = "https://sourcehut.org/~zed-industries/zed";
 
         let parsed_remote = SourceHut::from_remote_url(remote_url)
             .unwrap()
@@ -245,7 +245,7 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://git.sr.ht/~zed-industries/zed/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -263,13 +263,13 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/dez.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://git.sr.ht/~zed-industries/zed.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink() {
-        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez")
+        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/zed")
             .unwrap()
             .build_permalink(
                 ParsedGitRemote {
@@ -283,14 +283,14 @@ mod tests {
                 ),
             );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://sourcehut.org/~zed-industries/zed/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink_with_git_suffix() {
         let permalink =
-            SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez.git")
+            SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/zed.git")
                 .unwrap()
                 .build_permalink(
                     ParsedGitRemote {
@@ -304,7 +304,7 @@ mod tests {
                     ),
                 );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/dez.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
+        let expected_url = "https://sourcehut.org/~zed-industries/zed.git/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -322,7 +322,7 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
+        let expected_url = "https://git.sr.ht/~zed-industries/zed/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -340,13 +340,13 @@ mod tests {
             ),
         );
 
-        let expected_url = "https://git.sr.ht/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
+        let expected_url = "https://git.sr.ht/~zed-industries/zed/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink_with_single_line_selection() {
-        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez")
+        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/zed")
             .unwrap()
             .build_permalink(
                 ParsedGitRemote {
@@ -360,13 +360,13 @@ mod tests {
                 ),
             );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
+        let expected_url = "https://sourcehut.org/~zed-industries/zed/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L7";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
     #[test]
     fn test_build_sourcehut_self_hosted_permalink_with_multi_line_selection() {
-        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/dez")
+        let permalink = SourceHut::from_remote_url("https://sourcehut.org/~zed-industries/zed")
             .unwrap()
             .build_permalink(
                 ParsedGitRemote {
@@ -380,7 +380,7 @@ mod tests {
                 ),
             );
 
-        let expected_url = "https://sourcehut.org/~zed-industries/dez/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
+        let expected_url = "https://sourcehut.org/~zed-industries/zed/tree/faa6f979be417239b2e070dbbf6392b909224e0b/item/crates/editor/src/git/permalink.rs#L24-48";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 }

@@ -1098,7 +1098,7 @@ Wave 6 completion gate against their integrated state.
 
 **Integrated branch:** `feature/search-picker-modernization`
 
-**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/Oreoro/dez/pull/120).
 
 **Starting files:**
 
@@ -1124,7 +1124,7 @@ Wave 6 completion gate against their integrated state.
 
 **Integrated branch:** `feature/search-picker-modernization`
 
-**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/Oreoro/dez/pull/120).
 
 **Starting files:**
 
@@ -1149,7 +1149,7 @@ Wave 6 completion gate against their integrated state.
 
 **Integrated branch:** `feature/search-picker-modernization`
 
-**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/Oreoro/dez/pull/120).
 
 **Starting files:**
 
@@ -1175,7 +1175,7 @@ Wave 6 completion gate against their integrated state.
 **Classification:** Reimplementation of two upstream PRs in the integrated
 Wave 6 PR.
 
-**Status:** Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120).
+**Status:** Complete in [dez PR #120](https://github.com/Oreoro/dez/pull/120).
 
 #### Task 6.6a: Add the picker selection model
 
@@ -1196,7 +1196,7 @@ independently on the integrated branch.
 
 ### Wave 6 completion
 
-Complete in [dez PR #120](https://github.com/shenghsi/dez/pull/120),
+Complete in [dez PR #120](https://github.com/Oreoro/dez/pull/120),
 merged as `0373e988f5fde14865e30b802f61261a98e9d430`. Picker, File Finder,
 search, project-symbol, outline, LSP-location, editor, project, workspace,
 settings content, and Settings Editor suites passed locally. CI passed
@@ -1457,7 +1457,7 @@ The P0-P2 program is complete when:
 Completed on 2026-07-29. The stable-only reconciliation classifies all 568
 unique PRs cited by Zed's non-preview v1.6-v1.12 release notes exactly once.
 Wave 8 landed four safety fixes in
-[dez PR #134](https://github.com/shenghsi/dez/pull/134), merged as
+[dez PR #134](https://github.com/Oreoro/dez/pull/134), merged as
 `71afcb5e64645f75e11bc27bd6304bb269ba46b6`.
 
 The exact-head CI run passed formatting, Linux build and clippy, and all 4,695
@@ -1466,6 +1466,6 @@ passed its Ubuntu and Windows util and terminal tests and scoped clippy checks.
 The compatibility matrix also records the macOS bundle smoke, local, Direct,
 Tunneled, Git, Agent Threads, picker, migration, and extension evidence.
 
-Recurring review is owned by `@shenghsi`: review each stable release within
+Recurring review is owned by `@Oreoro`: review each stable release within
 seven days, immediately triage safety fixes, review later-main corrections
 before implementation, deduplicate by PR, and exclude preview tags.

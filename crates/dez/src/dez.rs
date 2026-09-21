@@ -93,7 +93,7 @@ use workspace::{
 };
 use workspace::{Pane, notifications::DetachAndPromptErr};
 
-const STATUS_URL: &str = "https://github.com/shenghsi/dez";
+const STATUS_URL: &str = "https://github.com/Oreoro/dez";
 const AGENT_THREAD_SNAPSHOT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(30);
 
 pub struct CrashHandler(pub Arc<crashes::Client>);
@@ -717,7 +717,7 @@ fn initialize_file_watcher(window: &mut Window, cx: &mut Context<Workspace>) {
         cx.spawn(async move |_, cx| {
             if prompt.await == Ok(0) {
                 cx.update(|cx| {
-                    cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/linux.md#could-not-start-inotify");
+                    cx.open_url("https://github.com/Oreoro/dez/blob/main/docs/src/linux.md#could-not-start-inotify");
                     cx.quit();
                 });
             }
@@ -745,7 +745,7 @@ fn initialize_file_watcher(window: &mut Window, cx: &mut Context<Workspace>) {
         cx.spawn(async move |_, cx| {
             if prompt.await == Ok(0) {
                 cx.update(|cx| {
-                    cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/windows.md");
+                    cx.open_url("https://github.com/Oreoro/dez/blob/main/docs/src/windows.md");
                     cx.quit()
                 });
             }
@@ -763,14 +763,14 @@ fn show_software_emulation_warning_if_needed(
         let (graphics_api, docs_url, open_url) = if cfg!(target_os = "windows") {
             (
                 "DirectX",
-                "https://github.com/shenghsi/dez/blob/main/docs/src/windows.md",
-                "https://github.com/shenghsi/dez/blob/main/docs/src/windows.md",
+                "https://github.com/Oreoro/dez/blob/main/docs/src/windows.md",
+                "https://github.com/Oreoro/dez/blob/main/docs/src/windows.md",
             )
         } else {
             (
                 "Vulkan",
-                "https://github.com/shenghsi/dez/blob/main/docs/src/linux.md",
-                "https://github.com/shenghsi/dez/blob/main/docs/src/linux.md#dez-fails-to-open-windows",
+                "https://github.com/Oreoro/dez/blob/main/docs/src/linux.md",
+                "https://github.com/Oreoro/dez/blob/main/docs/src/linux.md#dez-fails-to-open-windows",
             )
         };
         let mut arguments = localization::FluentArgs::new();

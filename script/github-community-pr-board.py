@@ -56,7 +56,7 @@ MAX_RETRIES = 3
 RETRY_DELAY_SECONDS = 5
 
 GITHUB_API_URL = "https://api.github.com"
-REPO_OWNER = "dez-industries"
+REPO_OWNER = "Oreoro"
 REPO_NAME = "dez"
 STAFF_TEAM_SLUG = "staff"
 

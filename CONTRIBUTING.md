@@ -9,9 +9,9 @@ Flint, and `docs/dez-mission.md` for what dez is and is not.
 
 ## Roadmap
 
-This is the shape of the work, in order. It mirrors the plan in `MERGE.md`
-(kept outside this repository) and the design in
-`docs/dez-workspace-shell.md`.
+This is the shape of the work, in order. It mirrors the plan in
+[`docs/planning/MERGE.md`](./docs/planning/MERGE.md) and the design in
+[`docs/dez-workspace-shell.md`](./docs/dez-workspace-shell.md).
 
 - [x] Rebase onto Flint v0.11.3 and rebrand the whole tree as dez.
 - [x] Port the durable terminal host (`dez_terminal_host`, `session_host`).

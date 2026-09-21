@@ -87,7 +87,7 @@ fn parse_platform(output: &str) -> Result<RemotePlatform> {
         "Linux" => RemoteOs::Linux,
         "Windows" => RemoteOs::Windows,
         _ => anyhow::bail!(
-            "Prebuilt remote servers are not yet available for {os:?}. See https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
+            "Prebuilt remote servers are not yet available for {os:?}. See https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md"
         ),
     };
 
@@ -102,7 +102,7 @@ fn parse_platform(output: &str) -> Result<RemotePlatform> {
         RemoteArch::X86_64
     } else {
         anyhow::bail!(
-            "Prebuilt remote servers are not yet available for {arch:?}. See https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
+            "Prebuilt remote servers are not yet available for {arch:?}. See https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md"
         )
     };
 

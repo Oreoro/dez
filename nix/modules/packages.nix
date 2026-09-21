@@ -8,13 +8,13 @@
       ...
     }:
     let
-      mkFlint = import ../toolchain.nix { inherit inputs; };
-      flint-editor = mkFlint pkgs;
+      mkDez = import ../toolchain.nix { inherit inputs; };
+      dez-editor = mkDez pkgs;
     in
     {
       packages = {
-        default = flint-editor;
-        debug = flint-editor.override { profile = "dev"; };
+        default = dez-editor;
+        debug = dez-editor.override { profile = "dev"; };
       };
     }
     // lib.optionalAttrs (lib.hasSuffix "linux" system) {

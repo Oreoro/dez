@@ -31,7 +31,7 @@ import requests
 
 GITHUB_API = "https://api.github.com"
 GRAPHQL_URL = "https://api.github.com/graphql"
-REPO_OWNER = "dez-industries"
+REPO_OWNER = "Oreoro"
 REPO_NAME = "dez"
 STAFF_TEAM_SLUG = "staff"
 BOT_LOGIN = "dez-community-bot[bot]"

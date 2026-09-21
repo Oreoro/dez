@@ -34,11 +34,11 @@ dez-previous-hunk = Previous Hunk
 dez-inotify-title = Could not start inotify
 dez-inotify-detail = inotify_init returned { $error }
     
-    This may be due to system-wide limits on inotify instances. For troubleshooting, see: https://github.com/shenghsi/dez/blob/main/docs/src/linux.md
+    This may be due to system-wide limits on inotify instances. For troubleshooting, see: https://github.com/Oreoro/dez/blob/main/docs/src/linux.md
 dez-windows-watcher-title = Could not start ReadDirectoryChangesW
 dez-windows-watcher-detail = ReadDirectoryChangesW initialization failed: { $error }
     
-    This may occur on network filesystems and WSL paths. For troubleshooting, see: https://github.com/shenghsi/dez/blob/main/docs/src/windows.md
+    This may occur on network filesystems and WSL paths. For troubleshooting, see: https://github.com/Oreoro/dez/blob/main/docs/src/windows.md
 dez-troubleshoot-and-quit = Troubleshoot and Quit
 dez-unsupported-gpu-title = Unsupported GPU
 dez-unsupported-gpu-detail = dez uses { $graphics_api } for rendering and requires a compatible GPU.

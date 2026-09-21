@@ -245,7 +245,7 @@ impl Render for ReplSessionsPage {
                             .child(Label::new(localization::text(cx, "repl-install-kernels")))
                             .on_click(move |_, _, cx| {
                                 cx.open_url(
-                                    "https://github.com/shenghsi/dez/blob/main/docs/src/repl.md#language-specific-instructions",
+                                    "https://github.com/Oreoro/dez/blob/main/docs/src/repl.md#language-specific-instructions",
                                 )
                             }),
                     ),

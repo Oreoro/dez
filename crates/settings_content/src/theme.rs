@@ -354,7 +354,7 @@ pub enum ThemeAppearanceMode {
 }
 
 /// Specifies the density of the UI.
-/// Note: This setting is still experimental. See [this tracking issue](https://github.com/zed-industries/dez/issues/18078)
+/// Note: This setting is still experimental. See [this tracking issue](https://github.com/zed-industries/zed/issues/18078)
 #[derive(
     Debug,
     Default,

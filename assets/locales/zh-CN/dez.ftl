@@ -34,11 +34,11 @@ dez-previous-hunk = 上一个更改块
 dez-inotify-title = 无法启动 inotify
 dez-inotify-detail = inotify_init 返回 { $error }
     
-    这可能是因为系统范围的 inotify 实例数量限制。故障排除说明请参阅：https://github.com/shenghsi/dez/blob/main/docs/src/linux.md
+    这可能是因为系统范围的 inotify 实例数量限制。故障排除说明请参阅：https://github.com/Oreoro/dez/blob/main/docs/src/linux.md
 dez-windows-watcher-title = 无法启动 ReadDirectoryChangesW
 dez-windows-watcher-detail = ReadDirectoryChangesW 初始化失败：{ $error }
     
-    这可能发生在网络文件系统和 WSL 路径中。故障排除说明请参阅：https://github.com/shenghsi/dez/blob/main/docs/src/windows.md
+    这可能发生在网络文件系统和 WSL 路径中。故障排除说明请参阅：https://github.com/Oreoro/dez/blob/main/docs/src/windows.md
 dez-troubleshoot-and-quit = 故障排除并退出
 dez-unsupported-gpu-title = 不支持的 GPU
 dez-unsupported-gpu-detail = dez 使用 { $graphics_api } 进行渲染，需要兼容的 GPU。

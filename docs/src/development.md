@@ -112,7 +112,7 @@ Recordings automatically save after 60 seconds if not stopped manually.
 
 ## Contributor links
 
-- [CONTRIBUTING.md](https://github.com/zed-industries/dez/blob/main/CONTRIBUTING.md)
+- [CONTRIBUTING.md](https://github.com/zed-industries/zed/blob/main/CONTRIBUTING.md)
 - [Debugging Crashes](./development/debugging-crashes.md)
 - [Code of Conduct](https://dez.dev/code-of-conduct)
 - [dez Contributor License](https://dez.dev/cla)

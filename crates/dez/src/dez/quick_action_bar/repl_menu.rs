@@ -16,7 +16,7 @@ use util::ResultExt;
 
 use super::QuickActionBar;
 
-const ZED_REPL_DOCUMENTATION: &str = "https://github.com/shenghsi/dez/blob/main/docs/src/repl.md";
+const ZED_REPL_DOCUMENTATION: &str = "https://github.com/Oreoro/dez/blob/main/docs/src/repl.md";
 
 struct ReplMenuState {
     tooltip: SharedString,

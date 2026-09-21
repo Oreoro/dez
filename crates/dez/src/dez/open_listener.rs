@@ -1670,7 +1670,7 @@ mod tests {
             OpenRequest::parse(
                 RawOpenRequest {
                     urls: vec![
-                        "dez://git/clone/?repo=https://github.com/zed-industries/dez.git"
+                        "dez://git/clone/?repo=https://github.com/zed-industries/zed.git"
                             .into(),
                     ],
                     ..Default::default()
@@ -1682,7 +1682,7 @@ mod tests {
 
         match request.kind {
             Some(OpenRequestKind::GitClone { repo_url }) => {
-                assert_eq!(repo_url, "https://github.com/zed-industries/dez.git");
+                assert_eq!(repo_url, "https://github.com/zed-industries/zed.git");
             }
             _ => panic!("Expected GitClone kind"),
         }
@@ -1696,7 +1696,7 @@ mod tests {
             OpenRequest::parse(
                 RawOpenRequest {
                     urls: vec![
-                        "dez://git/clone?repo=https://github.com/zed-industries/dez.git".into(),
+                        "dez://git/clone?repo=https://github.com/zed-industries/zed.git".into(),
                     ],
                     ..Default::default()
                 },
@@ -1707,7 +1707,7 @@ mod tests {
 
         match request.kind {
             Some(OpenRequestKind::GitClone { repo_url }) => {
-                assert_eq!(repo_url, "https://github.com/zed-industries/dez.git");
+                assert_eq!(repo_url, "https://github.com/zed-industries/zed.git");
             }
             _ => panic!("Expected GitClone kind"),
         }
@@ -1733,7 +1733,7 @@ mod tests {
 
         match request.kind {
             Some(OpenRequestKind::GitClone { repo_url }) => {
-                assert_eq!(repo_url, "https://github.com/zed-industries/dez.git");
+                assert_eq!(repo_url, "https://github.com/zed-industries/zed.git");
             }
             _ => panic!("Expected GitClone kind"),
         }

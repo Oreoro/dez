@@ -10,14 +10,14 @@ grade: stable
 confinement: classic
 compression: lzo
 website: https://dez.dev/
-source-code: https://github.com/dez-industries/dez
-issues: https://github.com/dez-industries/dez/issues
+source-code: https://github.com/Oreoro/dez
+issues: https://github.com/Oreoro/dez/issues
 contact: https://dez.dev/community-links#support-and-feedback
 
 parts:
   dez:
     plugin: dump
-    source: "https://github.com/dez-industries/dez/releases/download/v$RELEASE_VERSION/dez-linux-x86_64.tar.gz"
+    source: "https://github.com/Oreoro/dez/releases/download/v$RELEASE_VERSION/dez-linux-x86_64.tar.gz"
 
     organize:
       # These renames seem to not be necessary, but it's tidier.

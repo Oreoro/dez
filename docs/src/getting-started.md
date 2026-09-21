@@ -89,8 +89,7 @@ You can also enable familiar keybindings:
 
 ## Join the Community
 
-dez is open source. Join us on GitHub or in Discord to contribute code, report bugs, or suggest features.
+dez is open source. Join us on GitHub to contribute code, report bugs, or suggest features.
 
-- [Discord](https://discord.com/invite/dezindustries)
-- [GitHub Discussions](https://github.com/zed-industries/dez/discussions)
-- [dez Reddit](https://www.reddit.com/r/dezEditor)
+- [GitHub Discussions](https://github.com/Oreoro/dez/discussions)
+- [Issue tracker](https://github.com/Oreoro/dez/issues)

@@ -47,4 +47,4 @@ gh workflow run bump_dez_version.yml \
 
 echo ""
 echo "Workflow triggered. Monitor progress at:"
-echo "  https://github.com/dez-industries/dez/actions/workflows/bump_dez_version.yml"
+echo "  https://github.com/Oreoro/dez/actions/workflows/bump_dez_version.yml"

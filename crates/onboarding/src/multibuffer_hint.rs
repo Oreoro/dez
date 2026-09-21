@@ -169,7 +169,7 @@ impl Render for MultibufferHint {
                                     .color(Color::Muted),
                             )
                             .on_click(move |_event, _, cx| {
-                                cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/multibuffers.md")
+                                cx.open_url("https://github.com/Oreoro/dez/blob/main/docs/src/multibuffers.md")
                             }),
                     ),
             )

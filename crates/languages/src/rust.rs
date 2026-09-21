@@ -1935,7 +1935,7 @@ mod tests {
             "filter range text '{filter_text}' should contain 'ref' for filtering to work",
         );
 
-        // Test for correct range calculation with mixed empty and non-empty tabstops.(See https://github.com/zed-industries/dez/issues/44825)
+        // Test for correct range calculation with mixed empty and non-empty tabstops.(See https://github.com/zed-industries/zed/issues/44825)
         let res = adapter
             .label_for_completion(
                 &lsp::CompletionItem {

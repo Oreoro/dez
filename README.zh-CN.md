@@ -2,11 +2,11 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-Dez 是一个面向终端工作流的 [Zed](https://github.com/zed-industries/zed) 分支，专为通过命令行使用 Codex、Claude Code、Pi 和 OpenCode 等工具的开发者打造。
+Dez 是一个面向终端工作流的 [Flint](https://github.com/shenghsi/flint) 分支（Flint 本身是 [Zed](https://github.com/zed-industries/zed) 的分支），专为通过命令行使用 Codex、Claude Code、Pi 和 OpenCode 等工具的开发者打造。
 
 它保留了 Zed 快速、GPU 加速的编辑器、语言支持、Git 工具和扩展生态，同时以专注于终端编程智能体的工作空间取代了内置 AI 产品。
 
-![Dez 工作空间，其中包含智能体线程面板和 Claude Code 终端会话](assets/screenshots/Dez-workspace.png)
+![Dez 工作空间，其中包含智能体线程面板和 Claude Code 终端会话](assets/screenshots/dez-workspace.png)
 
 ## 为什么选择 Dez？
 
@@ -45,7 +45,7 @@ Dez 不包含 Zed 原生的智能体与聊天界面、托管 AI 模型、模型�
 
 ## 试用 Dez
 
-从 [GitHub Releases](https://github.com/shenghsi/Dez/releases/latest) 下载适用于 macOS、Linux 或 Windows 的最新稳定版本。每日构建版本可从滚动更新的 [`nightly` release](https://github.com/shenghsi/Dez/releases/tag/nightly) 下载。
+从 [GitHub Releases](https://github.com/Oreoro/dez/releases/latest) 下载适用于 macOS、Linux 或 Windows 的最新稳定版本。每日构建版本可从滚动更新的 [`nightly` release](https://github.com/Oreoro/dez/releases/tag/nightly) 下载。
 
 ### macOS
 
@@ -60,13 +60,13 @@ xattr -cr /Applications/Dez.app
 将 Dez 安装到 `~/.local`（无需 root 权限，并支持应用内自动更新）：
 
 ```sh
-curl -f https://raw.githubusercontent.com/shenghsi/Dez/main/script/install.sh | sh
+curl -f https://raw.githubusercontent.com/Oreoro/dez/main/script/install.sh | sh
 ```
 
 若要安装 Nightly 而不是 Stable，请设置 `ZED_CHANNEL=nightly`：
 
 ```sh
-curl -f https://raw.githubusercontent.com/shenghsi/Dez/main/script/install.sh | ZED_CHANNEL=nightly sh
+curl -f https://raw.githubusercontent.com/Oreoro/dez/main/script/install.sh | ZED_CHANNEL=nightly sh
 ```
 
 Nightly 会与 Stable 并存，安装为 `~/.local/Dez-nightly.app`。Nightly 每六小时检查一次滚动更新的 `nightly` release。`~/.local/bin` 中的 `Dez` 命令会指向最近安装的频道。
@@ -107,4 +107,10 @@ Dez 源代码主要采用 GPL-3.0-or-later 许可，标注的组件则采用 Apa
 
 ### 致谢
 
-Dez 构建于 Zed Industries 的 [Zed](https://github.com/zed-industries/zed) 之上。感谢他们对开源社区的贡献。
+Dez 建立在以下三个开源项目的工作之上：
+
+- [Zed](https://github.com/zed-industries/zed)（Zed Industries）——核心编辑器、GPUI 与语言工具。
+- [Flint](https://github.com/shenghsi/flint)（shenghsi）——Dez 直接构建于其上的终端优先分支与 Agent Threads 工作空间。
+- **Gram**——移植到 `extension_host` 的扩展信任边界加固（具体提交见 [`FORK.md`](./FORK.md)）。
+
+[`FORK.md`](./FORK.md) 记录了与 Flint 的每一处有意差异；[`SYNC-LEDGER.md`](./SYNC-LEDGER.md) 记录了每一次上游适配。

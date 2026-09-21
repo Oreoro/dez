@@ -102,7 +102,7 @@ impl Component for ListBulletItem {
                     .child(Label::new("Create a dez account by"))
                     .child(ButtonLink::new(
                         "visiting the website",
-                        "https://github.com/shenghsi/dez",
+                        "https://github.com/Oreoro/dez",
                     ))
                     .into_any_element(),
             ),

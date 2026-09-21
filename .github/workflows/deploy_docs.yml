@@ -37,7 +37,7 @@ on:
         default: ''
 jobs:
   deploy_docs:
-    if: github.repository_owner == 'dez-industries'
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'Oreoro')
     name: Build and Deploy Docs
     runs-on: namespace-profile-16x32-ubuntu-2204
     env:

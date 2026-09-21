@@ -2882,7 +2882,7 @@ impl Project {
                         notification_id: format!("local-tasks-{path:?}").into(),
                         link: Some(ToastLink {
                             label: "Open Tasks Documentation",
-                            url: "https://github.com/shenghsi/dez/blob/main/docs/src/tasks.md",
+                            url: "https://github.com/Oreoro/dez/blob/main/docs/src/tasks.md",
                         }),
                         message,
                     });

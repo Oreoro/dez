@@ -2643,7 +2643,7 @@ impl RemoteServerProjects {
                                             )
                                             .on_click(|_, _, cx| {
                                                 cx.open_url(
-                                                    "https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md",
+                                                    "https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md",
                                                 );
                                             }),
                                     ),

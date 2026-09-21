@@ -5,9 +5,9 @@ version: "$PACKAGE_VERSION"
 section: "devel"
 priority: "optional"
 maintainer: "dez Team <hi@dez.dev>"
-description: "The fast code editor."
+description: "Dez is a terminal-first code editor crafted for speed."
 vendor: "dez"
-homepage: "https://github.com/shenghsi/dez"
+homepage: "https://github.com/Oreoro/dez"
 license: "GPL-3.0-or-later"
 conflicts: [$PACKAGE_CONFLICTS]
 contents:

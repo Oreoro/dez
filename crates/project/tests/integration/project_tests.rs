@@ -1358,7 +1358,7 @@ async fn test_invalid_local_tasks_shows_toast_with_doc_link(cx: &mut gpui::TestA
                 assert!(message.contains("ZED_FOO"));
                 assert_eq!(
                     *url,
-                    "https://github.com/shenghsi/dez/blob/main/docs/src/tasks.md"
+                    "https://github.com/Oreoro/dez/blob/main/docs/src/tasks.md"
                 );
                 *saw_toast.borrow_mut() = true;
             }

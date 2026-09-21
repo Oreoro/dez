@@ -5,14 +5,14 @@
     let
       # NOTE: Duplicated because this is in a separate flake-parts partition
       # than ./packages.nix
-      mkFlint = import ../toolchain.nix { inherit inputs; };
-      flint-editor = mkFlint pkgs;
+      mkDez = import ../toolchain.nix { inherit inputs; };
+      dez-editor = mkDez pkgs;
 
       rustBin = inputs.rust-overlay.lib.mkRustBin { } pkgs;
       rustToolchain = rustBin.fromRustupToolchainFile ../../rust-toolchain.toml;
 
       baseEnv =
-        (flint-editor.overrideAttrs (attrs: {
+        (dez-editor.overrideAttrs (attrs: {
           passthru.env = attrs.env;
         })).env; # exfil `env`; it's not in drvAttrs
 
@@ -33,9 +33,9 @@
       };
     in
     {
-      devShells.default = (pkgs.mkShell.override { inherit (flint-editor) stdenv; }) {
-        name = "flint-editor-dev";
-        inputsFrom = [ flint-editor ];
+      devShells.default = (pkgs.mkShell.override { inherit (dez-editor) stdenv; }) {
+        name = "dez-editor-dev";
+        inputsFrom = [ dez-editor ];
 
         packages =
           with pkgs;
@@ -46,10 +46,10 @@
             cargo-hakari
             cargo-machete
             cargo-zigbuild
-            # TODO: package protobuf-language-server for editing flint.proto
+            # TODO: package protobuf-language-server for editing dez.proto
             # TODO: add other tools used in our scripts
 
-            # `build.nix` adds this to the `flint-editor` wrapper (see `postFixup`)
+            # `build.nix` adds this to the `dez-editor` wrapper (see `postFixup`)
             # we'll just put it on `$PATH`:
             nodejs_22
             zig

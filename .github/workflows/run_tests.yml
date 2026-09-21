@@ -9,7 +9,7 @@ on:
   workflow_dispatch: {}
 jobs:
   orchestrate:
-    if: (github.repository_owner == 'dez-industries' || github.repository_owner == 'dez-extensions')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
     runs-on: namespace-profile-2x4-ubuntu-2404
     steps:
     - name: steps::checkout_repo
@@ -122,7 +122,7 @@ jobs:
       run_tests: ${{ steps.filter.outputs.run_tests }}
       changed_extensions: ${{ steps.filter.outputs.changed_extensions }}
   check_style:
-    if: (github.repository_owner == 'dez-industries' || github.repository_owner == 'dez-extensions')
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
     runs-on: namespace-profile-4x8-ubuntu-2204
     steps:
     - name: steps::checkout_repo
@@ -835,7 +835,7 @@ jobs:
     - check_licenses
     - check_scripts
     - extension_tests
-    if: (github.repository_owner == 'dez-industries' || github.repository_owner == 'dez-extensions') && always()
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && always()
     runs-on: namespace-profile-2x4-ubuntu-2404
     steps:
     - name: run_tests::tests_pass

@@ -205,7 +205,7 @@ impl Render for KeyContextView {
                     .child(
                         Button::new("open_documentation", localization::text(cx, "key-context-open-documentation"))
                             .style(ButtonStyle::Filled)
-                            .on_click(|_, _, cx| cx.open_url("https://github.com/shenghsi/dez/blob/main/docs/src/key-bindings.md")),
+                            .on_click(|_, _, cx| cx.open_url("https://github.com/Oreoro/dez/blob/main/docs/src/key-bindings.md")),
                     )
                     .child(
                         Button::new("view_default_keymap", localization::text(cx, "key-context-view-default-keymap"))

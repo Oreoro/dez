@@ -36,7 +36,7 @@ from datetime import datetime, timedelta
 import requests
 
 GITHUB_API = "https://api.github.com"
-REPO_OWNER = "dez-industries"
+REPO_OWNER = "Oreoro"
 REPO_NAME = "dez"
 TRACKING_ISSUE_NUMBER = 46355
 STAFF_TEAM_SLUG = "staff"
@@ -343,7 +343,7 @@ def parse_duplicate_magnets():
 
     # parse the issue body
     # format: ## area_name
-    #         -   [N dupes] https://github.com/dez-industries/dez/issues/NUMBER
+    #         -   [N dupes] https://github.com/Oreoro/dez/issues/NUMBER
     magnets = {}  # number -> {number, areas, dupe_count}
     current_area = None
 

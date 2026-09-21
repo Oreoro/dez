@@ -110,13 +110,13 @@ Write tests first:
 - Update the existing fake-HTTP auto-update test so initialization accepts
   `Arc<dyn HttpClient>` and no `Client`.
 - Assert stable and preview release discovery requests
-  `repos/shenghsi/dez/releases` and selects the expected prerelease flag.
+  `repos/Oreoro/dez/releases` and selects the expected prerelease flag.
 - Assert nightly uses the `nightly` tag and stable version lookups use a `v`
   tag.
 - Assert app and remote-server asset names remain channel, OS, and architecture
   specific.
 - Add release-note URL tests for stable, preview, nightly, and dev. No expected
-  URL may use the former cloud base URL or `zed-industries/dez`.
+  URL may use the former cloud base URL or `zed-industries/zed`.
 - Add a fake GitHub response test for local release-note rendering. Extend the
   GitHub release model with the fields required for the title and Markdown
   body rather than calling `/api/release_notes/v2`.
@@ -136,7 +136,7 @@ Implement:
 - Store only the HTTP interface in `AutoUpdater`.
 - Build download requests directly through `HttpClient`, preserving redirect
   handling, response status checks, progress, and user-visible errors.
-- Keep release discovery and binary downloads on `shenghsi/dez` GitHub
+- Keep release discovery and binary downloads on `Oreoro/dez` GitHub
   releases.
 - Fetch local release-note Markdown from the GitHub release response. Keep the
   browser fallback for errors.
@@ -761,7 +761,7 @@ Smoke-test `/tmp/dez-Local.app`:
   project, follower, or shared screen.
 - Local editing and SSH remote editing pass their integration tests and manual
   smoke tests.
-- Auto-update and release notes use `shenghsi/dez` GitHub releases through a
+- Auto-update and release notes use `Oreoro/dez` GitHub releases through a
   generic HTTP client.
 - Extensions still use the intentional upstream Zed registry and compatibility
   identifiers through a generic HTTP client.

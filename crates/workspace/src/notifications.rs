@@ -179,7 +179,7 @@ impl Workspace {
             cx.new(|cx| {
                 ErrorMessagePrompt::new(err.to_string(), cx).with_link_button(
                     localization::text(cx, "workspace-see-docs").to_string(),
-                    "https://github.com/shenghsi/dez/blob/main/docs/src/linux.md#i-cant-open-any-files"
+                    "https://github.com/Oreoro/dez/blob/main/docs/src/linux.md#i-cant-open-any-files"
                         .to_string(),
                 )
             })

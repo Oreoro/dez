@@ -32,7 +32,7 @@ GITHUB_API = "https://api.github.com"
 TALLY_API = "https://api.tally.so"
 SLACK_API = "https://slack.com/api"
 
-REPO_OWNER = "dez-industries"
+REPO_OWNER = "Oreoro"
 REPO_NAME = "dez"
 PROJECT_NUMBER = 83
 SLACK_ACTIVITY_CHANNEL_ID = "C0B0JCE8GDC"

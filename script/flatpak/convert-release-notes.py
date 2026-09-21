@@ -54,7 +54,7 @@ def convert_body(body: str) -> str:
     return formatted
 
 def get_release_info(tag: str):
-    url = f"https://api.github.com/repos/dez-industries/dez/releases/tags/{tag}"
+    url = f"https://api.github.com/repos/Oreoro/dez/releases/tags/{tag}"
     response = requests.get(url)
     if response.status_code == 200:
         return response.json()
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     release_info_str += f"    <description>\n"
     release_info_str += textwrap.indent(body, " " * 8)
     release_info_str += f"    </description>\n"
-    release_info_str += f"    <url>https://github.com/dez-industries/dez/releases/tag/{tag}</url>\n"
+    release_info_str += f"    <url>https://github.com/Oreoro/dez/releases/tag/{tag}</url>\n"
     release_info_str += "</release>\n"
 
     channel_releases_file = f"../../crates/dez/resources/flatpak/release-info/{channel}"

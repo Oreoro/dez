@@ -29,8 +29,8 @@ async function main() {
   // Fetch the pull requests from the GitHub API.
   console.log("Merged pull requests:");
   for (const pullRequestNumber of pullRequestNumbers) {
-    const webURL = `https://github.com/dez-industries/dez/pull/${pullRequestNumber}`;
-    const apiURL = `https://api.github.com/repos/dez-industries/dez/pulls/${pullRequestNumber}`;
+    const webURL = `https://github.com/Oreoro/dez/pull/${pullRequestNumber}`;
+    const apiURL = `https://api.github.com/repos/Oreoro/dez/pulls/${pullRequestNumber}`;
 
     const response = await fetch(apiURL, {
       headers: {

@@ -1,4 +1,4 @@
-//! The dez Rust Extension API allows you write extensions for [dez](https://github.com/shenghsi/dez) in Rust.
+//! The dez Rust Extension API allows you write extensions for [dez](https://github.com/Oreoro/dez) in Rust.
 
 pub mod http_client;
 pub mod process;

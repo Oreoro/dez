@@ -29,4 +29,4 @@ These Terms may change as the project evolves. Continuing to use the Software af
 
 ## Contact
 
-Questions about these Terms can be raised as an issue on the [project's GitHub repository](https://github.com/shenghsi/dez).
+Questions about these Terms can be raised as an issue on the [project's GitHub repository](https://github.com/Oreoro/dez).

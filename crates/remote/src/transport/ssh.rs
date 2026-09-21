@@ -892,7 +892,7 @@ impl RemoteConnection for SshRemoteConnection {
 }
 
 /// Check if the user already has an active SSH ControlMaster session for the
-/// given destination. See: https://github.com/zed-industries/dez/issues/45271
+/// given destination. See: https://github.com/zed-industries/zed/issues/45271
 #[cfg(not(windows))]
 async fn find_existing_control_master(
     destination: &str,
@@ -1782,7 +1782,7 @@ impl SshSocket {
                 "AMD64" => RemoteArch::X86_64,
                 "ARM64" => RemoteArch::Aarch64,
                 arch => anyhow::bail!(
-                    "Prebuilt remote servers are not yet available for windows-{arch}. See https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
+                    "Prebuilt remote servers are not yet available for windows-{arch}. See https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md"
                 ),
             },
             libc: None,

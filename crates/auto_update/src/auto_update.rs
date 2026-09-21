@@ -316,12 +316,12 @@ fn release_notes_url_for(release_channel: ReleaseChannel, current_version: &Vers
             let mut current_version = current_version.clone();
             current_version.pre = semver::Prerelease::EMPTY;
             current_version.build = semver::BuildMetadata::EMPTY;
-            format!("https://github.com/shenghsi/dez/releases/tag/v{current_version}")
+            format!("https://github.com/Oreoro/dez/releases/tag/v{current_version}")
         }
         ReleaseChannel::Nightly => {
-            "https://github.com/shenghsi/dez/releases/tag/nightly".to_owned()
+            "https://github.com/Oreoro/dez/releases/tag/nightly".to_owned()
         }
-        ReleaseChannel::Dev => "https://github.com/shenghsi/dez/commits/main".to_owned(),
+        ReleaseChannel::Dev => "https://github.com/Oreoro/dez/commits/main".to_owned(),
     }
 }
 
@@ -844,7 +844,7 @@ async fn get_release_from_github(
     asset_name: &str,
     http_client: Arc<dyn HttpClient>,
 ) -> Result<ReleaseAsset> {
-    const REPO: &str = "shenghsi/dez";
+    const REPO: &str = "Oreoro/dez";
 
     let release = match release_channel {
         ReleaseChannel::Nightly => {
@@ -1266,7 +1266,7 @@ mod tests {
                 let dmg_rx = dmg_rx.clone();
                 let asset_name = asset_name.clone();
                 async move {
-                    if req.uri().path() == "/repos/shenghsi/dez/releases" {
+                    if req.uri().path() == "/repos/Oreoro/dez/releases" {
                         let (tag_name, download_url) = if release_available {
                             ("v0.100.1", "https://test.example/new-download")
                         } else {
@@ -1386,7 +1386,7 @@ mod tests {
             let asset_name = expected_asset_name.clone();
             async move {
                 match request.uri().path() {
-                    "/repos/shenghsi/dez/releases/tags/nightly" => Ok(Response::builder()
+                    "/repos/Oreoro/dez/releases/tags/nightly" => Ok(Response::builder()
                         .status(200)
                         .body(
                             serde_json::json!({
@@ -1438,19 +1438,19 @@ mod tests {
 
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Stable, &version),
-            "https://github.com/shenghsi/dez/releases/tag/v1.2.3"
+            "https://github.com/Oreoro/dez/releases/tag/v1.2.3"
         );
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Preview, &version),
-            "https://github.com/shenghsi/dez/releases/tag/v1.2.3"
+            "https://github.com/Oreoro/dez/releases/tag/v1.2.3"
         );
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Nightly, &version),
-            "https://github.com/shenghsi/dez/releases/tag/nightly"
+            "https://github.com/Oreoro/dez/releases/tag/nightly"
         );
         assert_eq!(
             release_notes_url_for(ReleaseChannel::Dev, &version),
-            "https://github.com/shenghsi/dez/commits/main"
+            "https://github.com/Oreoro/dez/commits/main"
         );
     }
 

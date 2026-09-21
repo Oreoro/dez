@@ -1,4 +1,4 @@
-# CODEOWNERS for dez-industries/dez
+# CODEOWNERS for Oreoro/dez
 #
 # ┌─────────────────────────────────────────────────────────────────────────────┐
 # │ WARNING: This file is auto-generated. DO NOT EDIT MANUALLY.                │
@@ -324,7 +324,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # SUGGESTED: Review needed - based on Joseph T. Lyons (1 commits)
-/crates/open_path_prompt/ @dez-industries/dez-dev-team
+/crates/open_path_prompt/ @Oreoro/dez-dev-team
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # DIRECT OVERRIDES

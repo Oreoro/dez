@@ -7,7 +7,7 @@ description: "Guide to building dez for macOS development."
 
 ## Repository
 
-Clone the [dez repository](https://github.com/shenghsi/dez).
+Clone the [dez repository](https://github.com/Oreoro/dez).
 
 ## Dependencies
 

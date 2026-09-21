@@ -2,7 +2,7 @@
 set -eu
 
 # Downloads a release tarball from GitHub Releases
-# (https://github.com/shenghsi/dez/releases) and unpacks it into ~/.local/.
+# (https://github.com/Oreoro/dez/releases) and unpacks it into ~/.local/.
 # Set ZED_VERSION to a tag (e.g. v0.3.7) to pin a version; it defaults to the
 # latest release for the selected channel.
 # Set ZED_CHANNEL=nightly to install the latest nightly build.
@@ -94,16 +94,16 @@ github_release_url() {
     asset="$1"
     if [ "$ZED_VERSION" = "latest" ]; then
         if [ "$channel" = "nightly" ]; then
-            echo "https://github.com/shenghsi/dez/releases/download/nightly/$asset"
+            echo "https://github.com/Oreoro/dez/releases/download/nightly/$asset"
         else
-            echo "https://github.com/shenghsi/dez/releases/latest/download/$asset"
+            echo "https://github.com/Oreoro/dez/releases/latest/download/$asset"
         fi
     else
         case "$ZED_VERSION" in
             v*) tag="$ZED_VERSION" ;;
             *) tag="v$ZED_VERSION" ;;
         esac
-        echo "https://github.com/shenghsi/dez/releases/download/$tag/$asset"
+        echo "https://github.com/Oreoro/dez/releases/download/$tag/$asset"
     fi
 }
 

@@ -1,5 +1,5 @@
 {
-  description = "Flint is a minimal, local-first code editor crafted for speed.";
+  description = "Dez is a terminal-first code editor crafted for speed.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -27,13 +27,4 @@
         ./nix/modules/partitions.nix
       ];
     };
-
-  nixConfig = {
-    extra-substituters = [
-      "https://flint.cachix.org"
-    ];
-    extra-trusted-public-keys = [
-      "flint.cachix.org-1:/pHQ6dpMsAZk2DiP4WCL0p9YDNKWj2Q5FL20bNmw1cU="
-    ];
-  };
 }

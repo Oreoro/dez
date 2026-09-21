@@ -15,14 +15,14 @@ actions!(
     ]
 );
 
-const ZED_REPO_URL: &str = "https://github.com/shenghsi/dez";
+const ZED_REPO_URL: &str = "https://github.com/Oreoro/dez";
 
-const REQUEST_FEATURE_URL: &str = "https://github.com/shenghsi/dez/discussions/new/choose";
+const REQUEST_FEATURE_URL: &str = "https://github.com/Oreoro/dez/discussions/new/choose";
 
 fn file_bug_report_url(specs: &SystemSpecs) -> String {
     format!(
         concat!(
-            "https://github.com/shenghsi/dez/issues/new",
+            "https://github.com/Oreoro/dez/issues/new",
             "?",
             "template=10_bug_report.yml",
             "&",
@@ -35,7 +35,7 @@ fn file_bug_report_url(specs: &SystemSpecs) -> String {
 fn email_dez_url(specs: &SystemSpecs) -> String {
     format!(
         concat!(
-            "https://github.com/shenghsi/dez/issues/new",
+            "https://github.com/Oreoro/dez/issues/new",
             "?",
             "body={}"
         ),

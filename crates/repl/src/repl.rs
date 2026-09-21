@@ -27,7 +27,7 @@ pub use crate::repl_store::ReplStore;
 pub use crate::session::Session;
 
 pub const KERNEL_DOCS_URL: &str =
-    "https://github.com/shenghsi/dez/blob/main/docs/src/repl.md#changing-kernels";
+    "https://github.com/Oreoro/dez/blob/main/docs/src/repl.md#changing-kernels";
 
 pub fn init(fs: Arc<dyn Fs>, cx: &mut App) {
     set_dispatcher(dez_dispatcher(cx));

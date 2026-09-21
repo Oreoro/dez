@@ -28,7 +28,7 @@ from collections import Counter, defaultdict
 
 import requests
 
-OWNER = "dez-industries"
+OWNER = "Oreoro"
 REPO = "dez"
 
 GRAPHQL_URL = "https://api.github.com/graphql"

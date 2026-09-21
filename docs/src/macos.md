@@ -112,4 +112,4 @@ If dez uses more resources than expected:
 2. Try disabling extensions one by one to identify conflicts
 3. For large projects, consider using [project settings](./reference/all-settings.md#file-scan-exclusions) to exclude unnecessary folders from indexing
 
-For additional help, see the [Troubleshooting guide](./troubleshooting.md) or visit the [dez Discord](https://discord.gg/dez-community).
+For additional help, see the [Troubleshooting guide](./troubleshooting.md) or open an [issue](https://github.com/Oreoro/dez/issues).

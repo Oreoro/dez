@@ -226,7 +226,7 @@ Once the master connection is established, dez will check to see if the remote s
 
 If it is not there or the version mismatches, dez will try to download the latest version. By default, it will download from `https://dez.dev` directly, but if you set: `{"upload_binary_over_ssh":true}` in your settings for that server, it will download the binary to your local machine and then upload it to the remote server.
 
-If you'd like to maintain the server binary yourself you can. You can either download our prebuilt versions from [GitHub](https://github.com/zed-industries/dez/releases), or [build your own](https://dez.dev/docs/development) with `cargo build -p remote_server --release`. If you do this, you must upload it to `~/.dez_server/dez-remote-server-{RELEASE_CHANNEL}-{VERSION}` on the server, for example `~/.dez_server/dez-remote-server-stable-0.217.3+stable.105.80433cb239e868271457ac376673a5f75bc4adb1`. The version must exactly match the version of dez itself you are using.
+If you'd like to maintain the server binary yourself you can. You can either download our prebuilt versions from [GitHub](https://github.com/zed-industries/zed/releases), or [build your own](https://dez.dev/docs/development) with `cargo build -p remote_server --release`. If you do this, you must upload it to `~/.dez_server/dez-remote-server-{RELEASE_CHANNEL}-{VERSION}` on the server, for example `~/.dez_server/dez-remote-server-stable-0.217.3+stable.105.80433cb239e868271457ac376673a5f75bc4adb1`. The version must exactly match the version of dez itself you are using.
 
 ## Maintaining the SSH connection
 
@@ -236,7 +236,7 @@ Each connection tries to run the development server in proxy mode. This mode wil
 
 In the case that reconnecting fails, the daemon will not be re-used. That said, unsaved changes are by default persisted locally, so that you do not lose work. You can always reconnect to the project at a later date and dez will restore unsaved changes.
 
-If you are struggling with connection issues, you should be able to see more information in the dez log `cmd-shift-p Open Log`. If you are seeing things that are unexpected, please file a [GitHub issue](https://github.com/zed-industries/dez/issues/new) or reach out in the #support forums on [Discord](https://dez.dev/community-links).
+If you are struggling with connection issues, you should be able to see more information in the dez log `cmd-shift-p Open Log`. If you are seeing things that are unexpected, please file a [GitHub issue](https://github.com/zed-industries/zed/issues/new) or reach out in the #support forums on [Discord](https://dez.dev/community-links).
 
 ## Supported SSH Options
 

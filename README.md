@@ -2,11 +2,11 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-Dez is a terminal-first fork of [Zed](https://github.com/zed-industries/zed) built for developers who use tools such as Codex, Claude Code, Pi, and OpenCode from the command line.
+Dez is a terminal-first fork of [Flint](https://github.com/shenghsi/flint) — itself a fork of [Zed](https://github.com/zed-industries/zed) — built for developers who use tools such as Codex, Claude Code, Pi, and OpenCode from the command line.
 
-It keeps Zed's fast, GPU-accelerated editor, language support, Git tooling, and extension ecosystem while replacing the built-in AI product with a focused workspace for terminal-based coding agents.
+It keeps Zed's fast, GPU-accelerated editor, language support, Git tooling, and extension ecosystem while replacing the built-in AI product with a focused workspace for terminal-based coding agents. See [`docs/dez-mission.md`](./docs/dez-mission.md) for what Dez is — and what it deliberately is not.
 
-![Dez workspace with an agent thread panel and a Claude Code terminal session](assets/screenshots/Dez-workspace.png)
+![Dez workspace with an agent thread panel and a Claude Code terminal session](assets/screenshots/dez-workspace.png)
 
 ## Why Dez?
 
@@ -46,9 +46,9 @@ Dez does not ship Zed's native agent and chat interface, hosted AI models, model
 ## Try Dez
 
 Download the latest stable build for macOS, Linux, or Windows from
-[GitHub Releases](https://github.com/shenghsi/Dez/releases/latest). Nightly
+[GitHub Releases](https://github.com/Oreoro/dez/releases/latest). Nightly
 builds are available from the moving
-[`nightly` release](https://github.com/shenghsi/Dez/releases/tag/nightly).
+[`nightly` release](https://github.com/Oreoro/dez/releases/tag/nightly).
 
 ### macOS
 
@@ -63,13 +63,13 @@ xattr -cr /Applications/Dez.app
 Install Dez into `~/.local` (no root required, and in-app auto-update works):
 
 ```sh
-curl -f https://raw.githubusercontent.com/shenghsi/Dez/main/script/install.sh | sh
+curl -f https://raw.githubusercontent.com/Oreoro/dez/main/script/install.sh | sh
 ```
 
 To install the Nightly channel instead of Stable, set `ZED_CHANNEL=nightly`:
 
 ```sh
-curl -f https://raw.githubusercontent.com/shenghsi/Dez/main/script/install.sh | ZED_CHANNEL=nightly sh
+curl -f https://raw.githubusercontent.com/Oreoro/dez/main/script/install.sh | ZED_CHANNEL=nightly sh
 ```
 
 This installs the app bundle alongside a Stable install as
@@ -113,4 +113,11 @@ We use [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) to automati
 
 ### Acknowledgements
 
-Dez is built on top of [Zed](https://github.com/zed-industries/zed) by Zed Industries. We are grateful for their open-source contribution.
+Dez stands on the work of three open-source projects:
+
+- [Zed](https://github.com/zed-industries/zed) by Zed Industries — the editor, GPUI, and language tooling at the core.
+- [Flint](https://github.com/shenghsi/flint) by shenghsi — the terminal-first fork and Agent Threads workspace Dez builds directly on.
+- **Gram** — the security-hardened extension trust boundary ported into `extension_host` (see [`FORK.md`](./FORK.md) for the exact commits).
+
+[`FORK.md`](./FORK.md) records every intentional divergence from Flint;
+[`SYNC-LEDGER.md`](./SYNC-LEDGER.md) records every upstream adaptation.

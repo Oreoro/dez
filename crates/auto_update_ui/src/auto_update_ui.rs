@@ -102,7 +102,7 @@ fn view_release_notes_locally(
     cx.spawn_in(window, async move |workspace, cx| {
         let markdown = markdown.await.log_err();
         let release =
-            http_client::github::get_release_by_tag_name("shenghsi/dez", &tag, http_client).await;
+            http_client::github::get_release_by_tag_name("Oreoro/dez", &tag, http_client).await;
         let Some(release) = release.log_err() else {
             workspace
                 .update_in(cx, notify_release_notes_failed_to_show)

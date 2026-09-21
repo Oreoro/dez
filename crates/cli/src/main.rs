@@ -673,7 +673,7 @@ fn run() -> Result<()> {
 
     anyhow::ensure!(
         args.dev_server_token.is_none(),
-        "Dev servers were removed in v0.157.x please upgrade to SSH remoting: https://github.com/shenghsi/dez/blob/main/docs/src/remote-development.md"
+        "Dev servers were removed in v0.157.x please upgrade to SSH remoting: https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md"
     );
 
     rayon::ThreadPoolBuilder::new()

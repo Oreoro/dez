@@ -3,9 +3,9 @@
   flake.overlays.default =
     final: _:
     let
-      mkFlint = import ../toolchain.nix { inherit inputs; };
+      mkDez = import ../toolchain.nix { inherit inputs; };
     in
     {
-      flint-editor = mkFlint final;
+      dez-editor = mkDez final;
     };
 }

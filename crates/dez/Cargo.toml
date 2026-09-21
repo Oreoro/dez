@@ -1,5 +1,5 @@
 [package]
-description = "The fast code editor."
+description = "Dez is a terminal-first code editor crafted for speed."
 edition.workspace = true
 name = "dez"
 version = "0.11.3"
