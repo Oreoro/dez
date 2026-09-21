@@ -94,7 +94,6 @@ impl ChangeIndicator {
 /// The per-workspace chrome summary: project name, active branch, and the
 /// changed-file count with its indicator.
 struct WorkspaceSummary {
-    name: SharedString,
     branch: Option<SharedString>,
     changed: usize,
     indicator: ChangeIndicator,
@@ -102,15 +101,6 @@ struct WorkspaceSummary {
 
 fn summarize_workspace(workspace: &Entity<workspace::Workspace>, cx: &App) -> WorkspaceSummary {
     let project = workspace.read(cx).project().read(cx);
-    let name: SharedString = project
-        .worktree_paths(cx)
-        .main_worktree_path_list()
-        .ordered_paths()
-        .last()
-        .and_then(|path| path.file_name())
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "Workspace".to_string())
-        .into();
 
     let (branch, changed, indicator) = match project.active_repository(cx) {
         Some(repository) => {
@@ -133,7 +123,6 @@ fn summarize_workspace(workspace: &Entity<workspace::Workspace>, cx: &App) -> Wo
     };
 
     WorkspaceSummary {
-        name,
         branch,
         changed,
         indicator,

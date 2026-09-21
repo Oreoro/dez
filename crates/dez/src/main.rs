@@ -1856,7 +1856,7 @@ async fn installation_id(db: KeyValueStore) -> Result<String> {
 
     let installation_id = Uuid::new_v4().to_string();
 
-    db.write_kvp("installation_id", installation_id.clone())
+    db.write_kvp("installation_id".to_string(), installation_id.clone())
         .await?;
 
     Ok(installation_id)
