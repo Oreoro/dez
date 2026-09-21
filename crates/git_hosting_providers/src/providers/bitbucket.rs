@@ -313,7 +313,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
     }
@@ -328,7 +328,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
     }
@@ -343,7 +343,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
     }
@@ -361,7 +361,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
     }
@@ -379,7 +379,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
 
@@ -395,12 +395,12 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
 
         // Test with only "scm" as owner
-        let remote_url = "https://bitbucket.company.com/scm/dez.git";
+        let remote_url = "https://bitbucket.company.com/scm/zed.git";
 
         let parsed_remote = Bitbucket::from_remote_url(remote_url)
             .unwrap()
@@ -411,7 +411,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "scm".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
     }
@@ -429,7 +429,7 @@ mod tests {
             parsed_remote,
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             }
         );
     }
@@ -439,7 +439,7 @@ mod tests {
         let permalink = Bitbucket::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             },
             BuildPermalinkParams::new("f00b4r", &repo_path("main.rs"), None),
         );
@@ -456,12 +456,12 @@ mod tests {
                 .build_permalink(
                     ParsedGitRemote {
                         owner: "zed-industries".into(),
-                        repo: "dez".into(),
+                        repo: "zed".into(),
                     },
                     BuildPermalinkParams::new("f00b4r", &repo_path("main.rs"), None),
                 );
 
-        let expected_url = "https://bitbucket.company.com/projects/zed-industries/repos/dez/browse/main.rs?at=f00b4r";
+        let expected_url = "https://bitbucket.company.com/projects/zed-industries/repos/zed/browse/main.rs?at=f00b4r";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -470,7 +470,7 @@ mod tests {
         let permalink = Bitbucket::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             },
             BuildPermalinkParams::new("f00b4r", &repo_path("main.rs"), Some(6..6)),
         );
@@ -487,12 +487,12 @@ mod tests {
                 .build_permalink(
                     ParsedGitRemote {
                         owner: "zed-industries".into(),
-                        repo: "dez".into(),
+                        repo: "zed".into(),
                     },
                     BuildPermalinkParams::new("f00b4r", &repo_path("main.rs"), Some(6..6)),
                 );
 
-        let expected_url = "https://bitbucket.company.com/projects/zed-industries/repos/dez/browse/main.rs?at=f00b4r#7";
+        let expected_url = "https://bitbucket.company.com/projects/zed-industries/repos/zed/browse/main.rs?at=f00b4r#7";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -501,7 +501,7 @@ mod tests {
         let permalink = Bitbucket::public_instance().build_permalink(
             ParsedGitRemote {
                 owner: "zed-industries".into(),
-                repo: "dez".into(),
+                repo: "zed".into(),
             },
             BuildPermalinkParams::new("f00b4r", &repo_path("main.rs"), Some(23..47)),
         );
@@ -519,12 +519,12 @@ mod tests {
                 .build_permalink(
                     ParsedGitRemote {
                         owner: "zed-industries".into(),
-                        repo: "dez".into(),
+                        repo: "zed".into(),
                     },
                     BuildPermalinkParams::new("f00b4r", &repo_path("main.rs"), Some(23..47)),
                 );
 
-        let expected_url = "https://bitbucket.company.com/projects/zed-industries/repos/dez/browse/main.rs?at=f00b4r#24-48";
+        let expected_url = "https://bitbucket.company.com/projects/zed-industries/repos/zed/browse/main.rs?at=f00b4r#24-48";
         assert_eq!(permalink.to_string(), expected_url.to_string())
     }
 
@@ -534,7 +534,7 @@ mod tests {
 
         let remote = ParsedGitRemote {
             owner: "zed-industries".into(),
-            repo: "dez".into(),
+            repo: "zed".into(),
         };
 
         let bitbucket = Bitbucket::public_instance();
@@ -564,7 +564,7 @@ mod tests {
 
         let remote = ParsedGitRemote {
             owner: "zed-industries".into(),
-            repo: "dez".into(),
+            repo: "zed".into(),
         };
 
         let bitbucket =
@@ -586,7 +586,7 @@ mod tests {
         assert_eq!(pr.number, 123);
         assert_eq!(
             pr.url.as_str(),
-            "https://bitbucket.company.com/projects/zed-industries/repos/dez/pull-requests/123"
+            "https://bitbucket.company.com/projects/zed-industries/repos/zed/pull-requests/123"
         );
     }
 }

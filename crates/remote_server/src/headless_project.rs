@@ -1814,7 +1814,7 @@ mod remote_management_tests {
 
             assert_eq!(
                 digest,
-                "5a7ded008e4ba1559ebe297ff7eda9d31d2096f2bb8a80caaacc40f393b2d000"
+                "c7264418e7a99401803d0a9dacfe81035ca29684ae27dabc84bf68f09ac8ddb3"
             );
         });
     }
