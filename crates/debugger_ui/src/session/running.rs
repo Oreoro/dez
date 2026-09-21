@@ -46,8 +46,8 @@ use serde_json::Value;
 use settings::Settings;
 use stack_frame_list::StackFrameList;
 use task::{
-    BuildTaskDefinition, DebugScenario, SharedTaskContext, Shell, ShellBuilder, SpawnInTerminal,
-    TaskContext, dezDebugConfig, substitute_variables_in_str,
+    BuildTaskDefinition, DebugScenario, DezDebugConfig, SharedTaskContext, Shell, ShellBuilder,
+    SpawnInTerminal, TaskContext, substitute_variables_in_str,
 };
 use terminal_view::TerminalView;
 use ui::{
@@ -605,7 +605,11 @@ pub(crate) fn new_debugger_pane(
                                     move |_window, cx| {
                                         let zoomed_text = localization::text(
                                             cx,
-                                            if zoomed { "debugger-minimize" } else { "debugger-expand" },
+                                            if zoomed {
+                                                "debugger-minimize"
+                                            } else {
+                                                "debugger-expand"
+                                            },
                                         );
                                         Tooltip::for_action_in(
                                             zoomed_text,
@@ -1196,7 +1200,7 @@ impl RunningState {
                     })?
                     .await?;
 
-                let dez_config = dezDebugConfig {
+                let dez_config = DezDebugConfig {
                     label: label.clone(),
                     adapter: adapter.clone(),
                     request,

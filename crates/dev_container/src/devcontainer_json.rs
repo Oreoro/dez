@@ -127,12 +127,12 @@ impl std::fmt::Display for FeatureOptionValue {
 }
 
 #[derive(Clone, Debug, Serialize, Eq, PartialEq, Default)]
-pub(crate) struct dezCustomizationsWrapper {
-    pub(crate) dez: dezCustomization,
+pub(crate) struct DezCustomizationsWrapper {
+    pub(crate) dez: DezCustomization,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, Eq, PartialEq, Default)]
-pub(crate) struct dezCustomization {
+pub(crate) struct DezCustomization {
     #[serde(default)]
     pub(crate) extensions: Vec<String>,
 }
@@ -221,7 +221,7 @@ pub(crate) struct DevContainer {
     pub(crate) mounts: Option<Vec<MountDefinition>>,
     pub(crate) features: Option<HashMap<String, FeatureOptions>>,
     pub(crate) override_feature_install_order: Option<Vec<String>>,
-    pub(crate) customizations: Option<dezCustomizationsWrapper>,
+    pub(crate) customizations: Option<DezCustomizationsWrapper>,
     pub(crate) build: Option<ContainerBuild>,
     #[serde(default, deserialize_with = "deserialize_app_port")]
     pub(crate) app_port: Vec<String>,
@@ -309,7 +309,7 @@ impl DevContainer {
 // serde_json_lenient::Value first, then extracts the "dez" portion.
 // This avoids a bug in serde_json_lenient's `ignore_value` codepath which
 // does not handle trailing commas in skipped values.
-impl<'de> Deserialize<'de> for dezCustomizationsWrapper {
+impl<'de> Deserialize<'de> for DezCustomizationsWrapper {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -317,11 +317,11 @@ impl<'de> Deserialize<'de> for dezCustomizationsWrapper {
         let value = Value::deserialize(deserializer)?;
         let dez = value
             .get("dez")
-            .map(|dez_value| serde_json_lenient::from_value::<dezCustomization>(dez_value.clone()))
+            .map(|dez_value| serde_json_lenient::from_value::<DezCustomization>(dez_value.clone()))
             .transpose()
             .map_err(serde::de::Error::custom)?
             .unwrap_or_default();
-        Ok(dezCustomizationsWrapper { dez })
+        Ok(DezCustomizationsWrapper { dez })
     }
 }
 
@@ -627,10 +627,11 @@ mod test {
     use crate::{
         devcontainer_api::DevContainerError,
         devcontainer_json::{
-            ContainerBuild, DevContainer, DevContainerBuildType, FeatureOptions, ForwardPort,
-            HostRequirements, LifecycleCommand, LifecycleScript, MountDefinition, OnAutoForward,
+            ContainerBuild, DevContainer, DevContainerBuildType, DezCustomization,
+            DezCustomizationsWrapper, FeatureOptions, ForwardPort, HostRequirements,
+            LifecycleCommand, LifecycleScript, MountDefinition, OnAutoForward,
             PortAttributeProtocol, PortAttributes, ShutdownAction, UserEnvProbe,
-            deserialize_devcontainer_json, dezCustomization, dezCustomizationsWrapper,
+            deserialize_devcontainer_json,
         },
     };
 
@@ -673,8 +674,8 @@ mod test {
         let devcontainer = result.expect("ok");
         assert_eq!(
             devcontainer.customizations,
-            Some(dezCustomizationsWrapper {
-                dez: dezCustomization {
+            Some(DezCustomizationsWrapper {
+                dez: DezCustomization {
                     extensions: vec!["vue".to_string(), "ruby".to_string()]
                 }
             })
@@ -704,8 +705,8 @@ mod test {
         let devcontainer = result.expect("ok");
         assert_eq!(
             devcontainer.customizations,
-            Some(dezCustomizationsWrapper {
-                dez: dezCustomization { extensions: vec![] }
+            Some(DezCustomizationsWrapper {
+                dez: DezCustomization { extensions: vec![] }
             })
         );
     }
@@ -947,8 +948,8 @@ mod test {
                     target: "/workspaces/app".to_string(),
                     mount_type: Some("bind".to_string())
                 }),
-                customizations: Some(dezCustomizationsWrapper {
-                    dez: dezCustomization {
+                customizations: Some(DezCustomizationsWrapper {
+                    dez: DezCustomization {
                         extensions: vec!["html".to_string()]
                     }
                 }),

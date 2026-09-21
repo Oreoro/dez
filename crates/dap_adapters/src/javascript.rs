@@ -187,7 +187,7 @@ impl DebugAdapter for JsDebugAdapter {
         DebugAdapterName(Self::ADAPTER_NAME.into())
     }
 
-    async fn config_from_dez_format(&self, dez_scenario: dezDebugConfig) -> Result<DebugScenario> {
+    async fn config_from_dez_format(&self, dez_scenario: DezDebugConfig) -> Result<DebugScenario> {
         let mut args = json!({
             "type": "pwa-node",
             "request": match dez_scenario.request {

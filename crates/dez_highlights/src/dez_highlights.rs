@@ -88,11 +88,7 @@ fn refresh(editor: &mut Editor, cx: &mut Context<Editor>) {
     let task = cx.spawn(async move |editor, cx| {
         cx.background_executor().timer(REFRESH_DEBOUNCE).await;
         let ranges = cx
-            .background_spawn({
-                let snapshot = snapshot.clone();
-                let syntax_theme = syntax_theme.clone();
-                async move { find_special_comment_ranges(&snapshot, &syntax_theme) }
-            })
+            .background_spawn(async move { find_special_comment_ranges(&snapshot, &syntax_theme) })
             .await;
 
         editor

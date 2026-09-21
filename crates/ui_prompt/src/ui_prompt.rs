@@ -37,7 +37,7 @@ pub fn dez_prompt_renderer(
     cx: &mut App,
 ) -> RenderablePromptHandle {
     let renderer = cx.new({
-        |cx| dezPromptRenderer {
+        |cx| DezPromptRenderer {
             _level: level,
             message: cx.new(|cx| Markdown::new(SharedString::new(message), None, None, cx)),
             actions: actions.to_vec(),
@@ -54,7 +54,7 @@ pub fn dez_prompt_renderer(
     handle.with_view(renderer, window, cx)
 }
 
-pub struct dezPromptRenderer {
+pub struct DezPromptRenderer {
     _level: PromptLevel,
     message: Entity<Markdown>,
     actions: Vec<PromptButton>,
@@ -65,7 +65,7 @@ pub struct dezPromptRenderer {
     has_long_detail: bool,
 }
 
-impl dezPromptRenderer {
+impl DezPromptRenderer {
     fn confirm(&mut self, _: &menu::Confirm, _window: &mut Window, cx: &mut Context<Self>) {
         cx.emit(PromptResponse(self.active_action_id));
     }
@@ -111,7 +111,7 @@ impl dezPromptRenderer {
     }
 }
 
-impl Render for dezPromptRenderer {
+impl Render for DezPromptRenderer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let settings = ThemeSettings::get_global(cx);
 
@@ -218,9 +218,9 @@ fn markdown_style(main_message: bool, window: &Window, cx: &App) -> MarkdownStyl
     }
 }
 
-impl EventEmitter<PromptResponse> for dezPromptRenderer {}
+impl EventEmitter<PromptResponse> for DezPromptRenderer {}
 
-impl Focusable for dezPromptRenderer {
+impl Focusable for DezPromptRenderer {
     fn focus_handle(&self, _: &crate::App) -> FocusHandle {
         self.focus.clone()
     }

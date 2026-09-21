@@ -417,7 +417,7 @@ impl Render for WelcomePage {
                             .justify_center()
                             .mb_4()
                             .gap_4()
-                            .child(Vector::square(VectorName::dezLogo, rems_from_px(45.)))
+                            .child(Vector::square(VectorName::DezLogo, rems_from_px(45.)))
                             .child(
                                 v_flex().child(Headline::new(welcome_label)).child(
                                     Label::new(localization::text(cx, "workspace-welcome-tagline"))

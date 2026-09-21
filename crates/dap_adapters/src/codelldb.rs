@@ -7,7 +7,7 @@ use dap::adapters::{DebugTaskDefinition, latest_github_release};
 use futures::StreamExt;
 use gpui::AsyncApp;
 use serde_json::Value;
-use task::{DebugRequest, DebugScenario, dezDebugConfig};
+use task::{DebugRequest, DebugScenario, DezDebugConfig};
 use util::fs::remove_matching;
 
 use crate::*;
@@ -89,7 +89,7 @@ impl DebugAdapter for CodeLldbDebugAdapter {
         DebugAdapterName(Self::ADAPTER_NAME.into())
     }
 
-    async fn config_from_dez_format(&self, dez_scenario: dezDebugConfig) -> Result<DebugScenario> {
+    async fn config_from_dez_format(&self, dez_scenario: DezDebugConfig) -> Result<DebugScenario> {
         let mut configuration = json!({
             "request": match dez_scenario.request {
                 DebugRequest::Launch(_) => "launch",

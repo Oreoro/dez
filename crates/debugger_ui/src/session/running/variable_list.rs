@@ -709,27 +709,29 @@ impl VariableList {
                             localization::text(cx, "debugger-copy-name"),
                             CopyVariableName.boxed_clone(),
                         )
-                            .action(
-                                localization::text(cx, "debugger-copy-value"),
-                                CopyVariableValue.boxed_clone(),
+                        .action(
+                            localization::text(cx, "debugger-copy-value"),
+                            CopyVariableValue.boxed_clone(),
+                        )
+                        .when(supports_set_variable, |menu| {
+                            menu.action(
+                                localization::text(cx, "debugger-edit-value"),
+                                EditVariable.boxed_clone(),
                             )
-                            .when(supports_set_variable, |menu| {
-                                menu.action(
-                                    localization::text(cx, "debugger-edit-value"),
-                                    EditVariable.boxed_clone(),
-                                )
-                            })
-                            .when(supports_go_to_memory, |menu| {
-                                menu.action(
-                                    localization::text(cx, "debugger-go-to-memory"),
-                                    GoToMemory.boxed_clone(),
-                                )
-                            })
-                            .action(
-                                localization::text(cx, "debugger-watch-variable"),
-                                AddWatch.boxed_clone(),
+                        })
+                        .when(supports_go_to_memory, |menu| {
+                            menu.action(
+                                localization::text(cx, "debugger-go-to-memory"),
+                                GoToMemory.boxed_clone(),
                             )
-                            .when_some(can_toggle_data_breakpoint, |mut menu, data_info| {
+                        })
+                        .action(
+                            localization::text(cx, "debugger-watch-variable"),
+                            AddWatch.boxed_clone(),
+                        )
+                        .when_some(
+                            can_toggle_data_breakpoint,
+                            |mut menu, data_info| {
                                 menu = menu.separator();
                                 if let Some(access_types) = data_info.access_types {
                                     for access_type in access_types {
@@ -774,27 +776,28 @@ impl VariableList {
                                             .boxed_clone(),
                                     )
                                 }
-                            })
+                            },
+                        )
                     })
                     .when(entry.as_watcher().is_some(), |menu| {
                         menu.action(
                             localization::text(cx, "debugger-copy-name"),
                             CopyVariableName.boxed_clone(),
                         )
-                            .action(
-                                localization::text(cx, "debugger-copy-value"),
-                                CopyVariableValue.boxed_clone(),
+                        .action(
+                            localization::text(cx, "debugger-copy-value"),
+                            CopyVariableValue.boxed_clone(),
+                        )
+                        .when(supports_set_variable, |menu| {
+                            menu.action(
+                                localization::text(cx, "debugger-edit-value"),
+                                EditVariable.boxed_clone(),
                             )
-                            .when(supports_set_variable, |menu| {
-                                menu.action(
-                                    localization::text(cx, "debugger-edit-value"),
-                                    EditVariable.boxed_clone(),
-                                )
-                            })
-                            .action(
-                                localization::text(cx, "debugger-remove-watch"),
-                                RemoveWatch.boxed_clone(),
-                            )
+                        })
+                        .action(
+                            localization::text(cx, "debugger-remove-watch"),
+                            RemoveWatch.boxed_clone(),
+                        )
                     })
                     .context(focus_handle.clone())
                 });
@@ -1387,7 +1390,12 @@ impl VariableList {
                         }
                     })
                     .tooltip(move |_window, cx| {
-                        Tooltip::for_action_in(localization::text(cx, "debugger-remove-watch"), &RemoveWatch, &focus_handle, cx)
+                        Tooltip::for_action_in(
+                            localization::text(cx, "debugger-remove-watch"),
+                            &RemoveWatch,
+                            &focus_handle,
+                            cx,
+                        )
                     })
                     .icon_size(ui::IconSize::Indicator),
                 ),
