@@ -23,9 +23,9 @@ static ZED_DEVELOPMENT_USE_KEYCHAIN: LazyLock<bool> = LazyLock::new(|| {
     std::env::var("ZED_DEVELOPMENT_USE_KEYCHAIN").is_ok_and(|value| !value.is_empty())
 });
 
-pub struct dezCredentialsProvider(pub Arc<dyn CredentialsProvider>);
+pub struct DezCredentialsProvider(pub Arc<dyn CredentialsProvider>);
 
-impl Global for dezCredentialsProvider {}
+impl Global for DezCredentialsProvider {}
 
 /// Returns the global [`CredentialsProvider`].
 pub fn init_global(cx: &mut App) {
@@ -33,11 +33,11 @@ pub fn init_global(cx: &mut App) {
     // seems like this is a false positive from Clippy.
     #[allow(clippy::arc_with_non_send_sync)]
     let provider = new(cx);
-    cx.set_global(dezCredentialsProvider(provider));
+    cx.set_global(DezCredentialsProvider(provider));
 }
 
 pub fn global(cx: &App) -> Arc<dyn CredentialsProvider> {
-    cx.try_global::<dezCredentialsProvider>()
+    cx.try_global::<DezCredentialsProvider>()
         .map(|provider| provider.0.clone())
         .unwrap_or_else(|| new(cx))
 }

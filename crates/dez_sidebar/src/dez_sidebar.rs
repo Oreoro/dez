@@ -8,6 +8,7 @@
 mod settings;
 mod sidebar;
 
+use ::settings::Settings as _;
 use gpui::App;
 
 pub use settings::DezSidebarSettings;

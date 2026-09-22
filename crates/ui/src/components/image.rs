@@ -18,8 +18,8 @@ pub enum VectorName {
     ProTrialStamp,
     ProUserStamp,
     StudentStamp,
-    dezLogo,
-    dezXCopilot,
+    DezLogo,
+    DezXCopilot,
 }
 
 impl VectorName {
@@ -121,7 +121,7 @@ impl Component for Vector {
                     vec![
                         single_example(
                             "Default",
-                            Vector::square(VectorName::dezLogo, size).into_any_element(),
+                            Vector::square(VectorName::DezLogo, size).into_any_element(),
                         ),
                         single_example(
                             "Custom Size",
@@ -129,7 +129,7 @@ impl Component for Vector {
                                 .h(rems_from_px(120.))
                                 .justify_center()
                                 .child(Vector::new(
-                                    VectorName::dezLogo,
+                                    VectorName::DezLogo,
                                     rems_from_px(120.),
                                     rems_from_px(200.),
                                 ))
@@ -142,13 +142,13 @@ impl Component for Vector {
                     vec![
                         single_example(
                             "Accent Color",
-                            Vector::square(VectorName::dezLogo, size)
+                            Vector::square(VectorName::DezLogo, size)
                                 .color(Color::Accent)
                                 .into_any_element(),
                         ),
                         single_example(
                             "Error Color",
-                            Vector::square(VectorName::dezLogo, size)
+                            Vector::square(VectorName::DezLogo, size)
                                 .color(Color::Error)
                                 .into_any_element(),
                         ),
@@ -158,7 +158,7 @@ impl Component for Vector {
                     "Different Vectors",
                     vec![single_example(
                         "dez X Copilot",
-                        Vector::square(VectorName::dezXCopilot, rems_from_px(100.))
+                        Vector::square(VectorName::DezXCopilot, rems_from_px(100.))
                             .into_any_element(),
                     )],
                 ),
@@ -173,6 +173,6 @@ mod tests {
 
     #[test]
     fn vector_path() {
-        assert_eq!(VectorName::dezLogo.path().as_ref(), "images/dez_logo.svg");
+        assert_eq!(VectorName::DezLogo.path().as_ref(), "images/dez_logo.svg");
     }
 }

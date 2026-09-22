@@ -36,7 +36,7 @@ pub fn init(fs: Arc<dyn Fs>, cx: &mut App) {
 }
 
 fn dez_dispatcher(cx: &mut App) -> impl Dispatcher {
-    struct dezDispatcher {
+    struct DezDispatcher {
         dispatcher: Arc<dyn PlatformDispatcher>,
     }
 
@@ -44,7 +44,7 @@ fn dez_dispatcher(cx: &mut App) -> impl Dispatcher {
     // async-dispatcher, except for the task label in dispatch. Later we should
     // just make that consistent so we have this dispatcher ready to go for
     // other crates in dez.
-    impl Dispatcher for dezDispatcher {
+    impl Dispatcher for DezDispatcher {
         #[track_caller]
         fn dispatch(&self, runnable: Runnable) {
             let (wrapper, task) = async_task::Builder::new()
@@ -70,7 +70,7 @@ fn dez_dispatcher(cx: &mut App) -> impl Dispatcher {
         }
     }
 
-    dezDispatcher {
+    DezDispatcher {
         dispatcher: cx.background_executor().dispatcher().clone(),
     }
 }

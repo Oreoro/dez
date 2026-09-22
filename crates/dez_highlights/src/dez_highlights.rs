@@ -5,19 +5,13 @@
 //! color. Lives in its own crate so the divergence from upstream stays in a
 //! `dez_*` crate and only requires the `HighlightKey::SpecialComment` variant.
 
-use std::{
-    ops::Range,
-    sync::OnceLock,
-    time::Duration,
-};
+use std::{ops::Range, sync::OnceLock, time::Duration};
 
 use aho_corasick::{AhoCorasick, MatchKind};
-use editor::{Addon, Editor, HighlightKey, RangeToAnchorExt as _};
-use gpui::{
-    App, AppContext as _, Context, FontWeight, HighlightStyle, Subscription, Task,
-};
-use language::{Anchor, LanguageAwareStyling};
-use multi_buffer::{Event as MultiBufferEvent, MultiBuffer, MultiBufferOffset, MultiBufferSnapshot};
+use editor::{Addon, Editor, HighlightKey};
+use gpui::{App, AppContext as _, Context, FontWeight, HighlightStyle, Subscription, Task};
+use language::LanguageAwareStyling;
+use multi_buffer::{Anchor, Event as MultiBufferEvent, MultiBufferOffset, MultiBufferSnapshot};
 use theme::{ActiveTheme, SyntaxTheme};
 
 /// Conventional comment markers worth pulling out of a wall of prose. Order
@@ -56,16 +50,17 @@ impl Addon for SpecialCommentAddon {
 pub fn init(cx: &mut App) {
     cx.observe_new::<Editor>(|editor, _window, cx| {
         let buffer = editor.buffer().clone();
-        let subscription = cx.subscribe(&buffer, |editor, event: &MultiBufferEvent, cx| {
-            if matches!(
-                event,
-                MultiBufferEvent::Edited { .. }
-                    | MultiBufferEvent::BuffersEdited { .. }
-                    | MultiBufferEvent::Reparsed(_)
-            ) {
-                refresh(editor, cx);
-            }
-        });
+        let subscription =
+            cx.subscribe(&buffer, |editor, _buffer, event: &MultiBufferEvent, cx| {
+                if matches!(
+                    event,
+                    MultiBufferEvent::Edited { .. }
+                        | MultiBufferEvent::BuffersEdited { .. }
+                        | MultiBufferEvent::Reparsed(_)
+                ) {
+                    refresh(editor, cx);
+                }
+            });
 
         editor.register_addon(SpecialCommentAddon {
             _subscription: subscription,
@@ -79,17 +74,22 @@ pub fn init(cx: &mut App) {
 
 fn refresh(editor: &mut Editor, cx: &mut Context<Editor>) {
     let syntax_theme = cx.theme().syntax().clone();
-    let style = special_comment_style(&syntax_theme, cx);
+    let mut style = syntax_theme
+        .style_for_name("hint")
+        .or_else(|| syntax_theme.style_for_name("emphasis"))
+        .unwrap_or_else(|| HighlightStyle {
+            color: Some(cx.theme().colors().text_accent),
+            ..Default::default()
+        });
+    style.font_weight = Some(FontWeight::BOLD);
+    style.font_style = None;
+    style.background_color = None;
 
     let snapshot = editor.buffer().read(cx).snapshot(cx);
     let task = cx.spawn(async move |editor, cx| {
         cx.background_executor().timer(REFRESH_DEBOUNCE).await;
         let ranges = cx
-            .background_spawn({
-                let snapshot = snapshot.clone();
-                let syntax_theme = syntax_theme.clone();
-                async move { find_special_comment_ranges(&snapshot, &syntax_theme) }
-            })
+            .background_spawn(async move { find_special_comment_ranges(&snapshot, &syntax_theme) })
             .await;
 
         editor
@@ -107,20 +107,6 @@ fn refresh(editor: &mut Editor, cx: &mut Context<Editor>) {
     }
 }
 
-fn special_comment_style(syntax_theme: &SyntaxTheme, cx: &App) -> HighlightStyle {
-    let mut style = syntax_theme
-        .style_for_name("hint")
-        .or_else(|| syntax_theme.style_for_name("emphasis"))
-        .unwrap_or_else(|| HighlightStyle {
-            color: Some(cx.theme().colors().text_accent),
-            ..Default::default()
-        });
-    style.font_weight = Some(FontWeight::BOLD);
-    style.font_style = None;
-    style.background_color = None;
-    style
-}
-
 fn find_special_comment_ranges(
     snapshot: &MultiBufferSnapshot,
     syntax_theme: &SyntaxTheme,
@@ -130,7 +116,7 @@ fn find_special_comment_ranges(
     let mut offset = 0usize;
 
     for chunk in snapshot.chunks(
-        MultiBufferOffset::ZERO..snapshot.len(),
+        MultiBufferOffset(0)..snapshot.len(),
         LanguageAwareStyling {
             tree_sitter: true,
             diagnostics: false,
@@ -154,10 +140,9 @@ fn find_special_comment_ranges(
             if !is_word_boundary(text, matched.start(), matched.end()) {
                 continue;
             }
-            ranges.push(
-                (chunk_start + matched.start()..chunk_start + matched.end())
-                    .to_anchors(snapshot),
-            );
+            let start = MultiBufferOffset(chunk_start + matched.start());
+            let end = MultiBufferOffset(chunk_start + matched.end());
+            ranges.push(snapshot.anchor_after(start)..snapshot.anchor_before(end));
         }
     }
 

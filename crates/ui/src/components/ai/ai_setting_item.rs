@@ -52,8 +52,8 @@ pub enum AiSettingItemSource {
 impl AiSettingItemSource {
     fn icon_name(&self) -> IconName {
         match self {
-            Self::Extension => IconName::dezSrcExtension,
-            Self::Custom => IconName::dezSrcCustom,
+            Self::Extension => IconName::DezSrcExtension,
+            Self::Custom => IconName::DezSrcCustom,
             Self::Registry => IconName::AcpRegistry,
         }
     }
@@ -374,7 +374,7 @@ impl Component for AiSettingItem {
                             AiSettingItemSource::Registry,
                         )
                         .icon(
-                            Icon::new(IconName::dezAssistant)
+                            Icon::new(IconName::DezAssistant)
                                 .size(IconSize::Small)
                                 .color(Color::Muted),
                         ),

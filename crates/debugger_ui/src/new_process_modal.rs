@@ -9,9 +9,7 @@ use std::{
 };
 use tasks_ui::{TaskOverrides, TasksModal};
 
-use dap::{
-    DapRegistry, DebugRequest, adapters::DebugAdapterName,
-};
+use dap::{DapRegistry, DebugRequest, adapters::DebugAdapterName};
 use editor::Editor;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
@@ -21,7 +19,7 @@ use gpui::{
 use itertools::Itertools as _;
 use picker::{Picker, PickerDelegate, highlighted_match_with_paths::HighlightedMatch};
 use project::{DebugScenarioContext, Project, TaskContexts, TaskSourceKind, task_store::TaskStore};
-use task::{DebugScenario, RevealTarget, SharedTaskContext, VariableName, dezDebugConfig};
+use task::{DebugScenario, DezDebugConfig, RevealTarget, SharedTaskContext, VariableName};
 use ui::{
     ContextMenu, DropdownMenu, IconWithIndicator, Indicator, KeyBinding, ListItem, ListItemSpacing,
     Switch, SwitchLabelPosition, ToggleButtonGroup, ToggleButtonSimple, ToggleState, Tooltip,
@@ -330,7 +328,7 @@ impl NewProcessModal {
             None
         };
 
-        let session_scenario = dezDebugConfig {
+        let session_scenario = DezDebugConfig {
             adapter: debugger.to_owned().into(),
             label,
             request,
@@ -730,27 +728,14 @@ impl Render for NewProcessModal {
                         container
                             .child(
                                 h_flex().child(
-                                    Button::new("edit-custom-debug", localization::text(cx, "debugger-edit-json-full"))
-                                        .on_click(cx.listener(|this, _, window, cx| {
-                                            this.save_debug_scenario(window, cx);
-                                        }))
-                                        .key_binding(KeyBinding::for_action(&*secondary_action, cx))
-                                        .disabled(
-                                            self.debugger.is_none()
-                                                || self
-                                                    .configure_mode
-                                                    .read(cx)
-                                                    .program
-                                                    .read(cx)
-                                                    .is_empty(cx),
-                                        ),
-                                ),
-                            )
-                            .child(
-                                Button::new("debugger-spawn", localization::text(cx, "debugger-start"))
+                                    Button::new(
+                                        "edit-custom-debug",
+                                        localization::text(cx, "debugger-edit-json-full"),
+                                    )
                                     .on_click(cx.listener(|this, _, window, cx| {
-                                        this.start_new_session(window, cx)
+                                        this.save_debug_scenario(window, cx);
                                     }))
+                                    .key_binding(KeyBinding::for_action(&*secondary_action, cx))
                                     .disabled(
                                         self.debugger.is_none()
                                             || self
@@ -760,6 +745,25 @@ impl Render for NewProcessModal {
                                                 .read(cx)
                                                 .is_empty(cx),
                                     ),
+                                ),
+                            )
+                            .child(
+                                Button::new(
+                                    "debugger-spawn",
+                                    localization::text(cx, "debugger-start"),
+                                )
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.start_new_session(window, cx)
+                                }))
+                                .disabled(
+                                    self.debugger.is_none()
+                                        || self
+                                            .configure_mode
+                                            .read(cx)
+                                            .program
+                                            .read(cx)
+                                            .is_empty(cx),
+                                ),
                             ),
                     ),
                     NewProcessMode::Attach => el.child({
@@ -777,12 +781,15 @@ impl Render for NewProcessModal {
                         let secondary_action = menu::SecondaryConfirm.boxed_clone();
                         container
                             .child(div().child({
-                                Button::new("edit-attach-task", localization::text(cx, "debugger-edit-json-full"))
-                                    .key_binding(KeyBinding::for_action(&*secondary_action, cx))
-                                    .on_click(move |_, window, cx| {
-                                        window.dispatch_action(secondary_action.boxed_clone(), cx)
-                                    })
-                                    .disabled(disabled)
+                                Button::new(
+                                    "edit-attach-task",
+                                    localization::text(cx, "debugger-edit-json-full"),
+                                )
+                                .key_binding(KeyBinding::for_action(&*secondary_action, cx))
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(secondary_action.boxed_clone(), cx)
+                                })
+                                .disabled(disabled)
                             }))
                             .child(
                                 h_flex()
@@ -956,7 +963,7 @@ impl ConfigureMode {
 
 #[derive(Clone)]
 pub(super) struct AttachMode {
-    pub(super) definition: dezDebugConfig,
+    pub(super) definition: DezDebugConfig,
     pub(super) attach_picker: Entity<AttachModal>,
 }
 
@@ -968,7 +975,7 @@ impl AttachMode {
         window: &mut Window,
         cx: &mut Context<NewProcessModal>,
     ) -> Entity<Self> {
-        let definition = dezDebugConfig {
+        let definition = DezDebugConfig {
             adapter: debugger.unwrap_or(DebugAdapterName("".into())).0,
             label: "Attach New Session Setup".into(),
             request: dap::DebugRequest::Attach(task::AttachRequest { process_id: None }),
@@ -1480,32 +1487,36 @@ impl PickerDelegate for DebugDelegate {
             .child({
                 let action = menu::SecondaryConfirm.boxed_clone();
                 if self.matches.is_empty() {
-                    Button::new("edit-debug-json", localization::text(cx, "debugger-edit-json")).on_click(cx.listener(
-                        |_picker, _, window, cx| {
-                            window.dispatch_action(
-                                dez_actions::OpenProjectDebugTasks.boxed_clone(),
-                                cx,
-                            );
-                            cx.emit(DismissEvent);
-                        },
-                    ))
+                    Button::new(
+                        "edit-debug-json",
+                        localization::text(cx, "debugger-edit-json"),
+                    )
+                    .on_click(cx.listener(|_picker, _, window, cx| {
+                        window
+                            .dispatch_action(dez_actions::OpenProjectDebugTasks.boxed_clone(), cx);
+                        cx.emit(DismissEvent);
+                    }))
                 } else {
-                    Button::new("edit-debug-task", localization::text(cx, "debugger-edit-json-full"))
-                        .key_binding(KeyBinding::for_action(&*action, cx))
-                        .on_click(move |_, window, cx| {
-                            window.dispatch_action(action.boxed_clone(), cx)
-                        })
+                    Button::new(
+                        "edit-debug-task",
+                        localization::text(cx, "debugger-edit-json-full"),
+                    )
+                    .key_binding(KeyBinding::for_action(&*action, cx))
+                    .on_click(move |_, window, cx| window.dispatch_action(action.boxed_clone(), cx))
                 }
             })
             .map(|this| {
                 if (current_modifiers.alt || self.matches.is_empty()) && !self.prompt.is_empty() {
                     let action = picker::ConfirmInput { secondary: false }.boxed_clone();
                     this.child({
-                        Button::new("launch-custom", localization::text(cx, "debugger-launch-custom"))
-                            .key_binding(KeyBinding::for_action(&*action, cx))
-                            .on_click(move |_, window, cx| {
-                                window.dispatch_action(action.boxed_clone(), cx)
-                            })
+                        Button::new(
+                            "launch-custom",
+                            localization::text(cx, "debugger-launch-custom"),
+                        )
+                        .key_binding(KeyBinding::for_action(&*action, cx))
+                        .on_click(move |_, window, cx| {
+                            window.dispatch_action(action.boxed_clone(), cx)
+                        })
                     })
                 } else {
                     this.child({

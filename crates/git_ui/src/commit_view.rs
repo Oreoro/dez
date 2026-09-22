@@ -671,36 +671,34 @@ impl CommitView {
                                             ),
                                     )
                                     .when(!ref_names.is_empty(), |this| {
-                                        this.child(
-                                            h_flex().gap_1().flex_wrap().children(
-                                                ref_names.into_iter().map(|name| {
-                                                    let is_head = name.as_ref() == "HEAD"
-                                                        || name.starts_with("HEAD -> ");
-                                                    Chip::new(name)
-                                                        .label_size(LabelSize::Small)
-                                                        .truncate()
-                                                        .map(|chip| {
-                                                            if is_head {
-                                                                chip.icon(IconName::Check)
-                                                                    .bg_color(
-                                                                        accent_color.opacity(0.25),
-                                                                    )
-                                                                    .border_color(
-                                                                        accent_color.opacity(0.5),
-                                                                    )
-                                                            } else {
-                                                                chip.bg_color(
-                                                                    accent_color.opacity(0.08),
-                                                                )
-                                                                .border_color(
+                                        this.child(h_flex().gap_1().flex_wrap().children(
+                                            ref_names.into_iter().map(|name| {
+                                                let is_head = name.as_ref() == "HEAD"
+                                                    || name.starts_with("HEAD -> ");
+                                                Chip::new(name)
+                                                    .label_size(LabelSize::Small)
+                                                    .truncate()
+                                                    .map(|chip| {
+                                                        if is_head {
+                                                            chip.icon(IconName::Check)
+                                                                .bg_color(
                                                                     accent_color.opacity(0.25),
                                                                 )
-                                                            }
-                                                        })
-                                                        .into_any_element()
-                                                }),
-                                            ),
-                                        )
+                                                                .border_color(
+                                                                    accent_color.opacity(0.5),
+                                                                )
+                                                        } else {
+                                                            chip.bg_color(
+                                                                accent_color.opacity(0.08),
+                                                            )
+                                                            .border_color(
+                                                                accent_color.opacity(0.25),
+                                                            )
+                                                        }
+                                                    })
+                                                    .into_any_element()
+                                            }),
+                                        ))
                                     }),
                             ),
                     )

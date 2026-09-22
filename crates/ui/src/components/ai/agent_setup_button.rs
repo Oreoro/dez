@@ -67,7 +67,7 @@ impl Component for AgentSetupButton {
         single_example(
             "Default",
             AgentSetupButton::new("preview")
-                .icon(Icon::new(IconName::dezAgent))
+                .icon(Icon::new(IconName::DezAgent))
                 .name("dez Agent")
                 .into_any_element(),
         )

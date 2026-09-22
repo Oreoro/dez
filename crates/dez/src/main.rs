@@ -3,7 +3,9 @@
 
 mod dez;
 mod reliability;
+// Partial port: the runtime's status UI and retry affordance land later.
 #[cfg(feature = "hosted-terminal")]
+#[allow(dead_code)]
 mod terminal_host_runtime;
 
 // Ensure the binary name stays in sync with APP_NAME so that the paths used
@@ -617,11 +619,7 @@ fn main() {
         log::info!("init: project/title_bar");
 
         let session = cx.foreground_executor().block_on(session);
-        let installation_id = cx
-            .foreground_executor()
-            .block_on(installation_id)
-            .ok()
-            .map(|id| id.to_string());
+        let installation_id = cx.foreground_executor().block_on(installation_id).ok();
         log::info!("init: session");
         let app_session = cx.new(|cx| AppSession::new(session, cx));
 
@@ -1856,7 +1854,7 @@ async fn installation_id(db: KeyValueStore) -> Result<String> {
 
     let installation_id = Uuid::new_v4().to_string();
 
-    db.write_kvp("installation_id", installation_id.clone())
+    db.write_kvp("installation_id".to_string(), installation_id.clone())
         .await?;
 
     Ok(installation_id)

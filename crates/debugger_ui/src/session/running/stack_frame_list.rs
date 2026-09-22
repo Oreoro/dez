@@ -655,7 +655,9 @@ impl StackFrameList {
                                     }
                                 }))
                                 .tooltip(move |window, cx| {
-                                    Tooltip::text(localization::text(cx, "debugger-restart-frame"))(window, cx)
+                                    Tooltip::text(localization::text(cx, "debugger-restart-frame"))(
+                                        window, cx,
+                                    )
                                 }),
                             ),
                     )
@@ -700,13 +702,7 @@ impl StackFrameList {
             .as_ref()
             .and_then(|source| source.origin.as_ref())
             .map_or_else(
-                || {
-                    localization::tr!(
-                        cx,
-                        "debugger-show-more-frames",
-                        count = stack_frames.len(),
-                    )
-                },
+                || localization::tr!(cx, "debugger-show-more-frames", count = stack_frames.len(),),
                 |origin| {
                     localization::tr!(
                         cx,

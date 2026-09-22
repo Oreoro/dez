@@ -6,7 +6,7 @@ use gpui::{Subscription, WeakEntity};
 use picker::{Picker, PickerDelegate};
 use project::Project;
 use rpc::proto;
-use task::dezDebugConfig;
+use task::DezDebugConfig;
 use util::debug_panic;
 
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub(super) struct Candidate {
 
 pub(crate) enum ModalIntent {
     ResolveProcessId(Option<oneshot::Sender<Option<i32>>>),
-    AttachToProcess(dezDebugConfig),
+    AttachToProcess(DezDebugConfig),
 }
 
 pub(crate) struct AttachModalDelegate {

@@ -104,6 +104,22 @@ older API surface.
 | `dez_sidebar` settings section (`starts_open`) | `crates/settings_content/src/dez_sidebar.rs`, `assets/settings/default.json` | Configurable default-open behavior |
 | Sidebar registration + default-open on window creation | `crates/dez/src/dez.rs` | Wires the shell into the app; deferred open avoids acting mid-construction |
 
+## Editor opinionation (special comments, commit refs)
+
+Two small, high-visibility affordances dez adds on top of Flint's editor and
+git surfaces.
+
+| Divergence | Location | Why |
+|---|---|---|
+| `HighlightKey::SpecialComment` variant | `crates/editor/src/display_map.rs` | Single additive enum variant so dez can paint extra text highlights without touching the syntax/theme pipeline |
+| New `dez_highlights` crate: scan comment chunks for `TODO`/`FIXME`/`HACK`/`XXX`/`NOTE`/`WIP`/`BUG`/`OPTIMIZE`/`REVIEW` and render them bold in the theme's `hint` color | `crates/dez_highlights/` | Opinionated attention markers; isolated in a `dez_*` crate and computed off-thread from the multibuffer's existing syntax chunks, so it works in editors, diff views, and multibuffers alike |
+| `dez_highlights::init` wiring | `crates/dez/src/dez.rs` | Registers the per-editor addon at startup |
+| `CommitDetails::ref_names` (`%D` decoration parsed from `git show`) | `crates/git/src/repository.rs`, `crates/proto/proto/git.proto`, `crates/project/src/git_store.rs` | The commit *view* previously showed no refs; the graph already had chips, so this extends the same `%D` data to the detail header over the existing remote proto |
+| Ref chips in the commit header | `crates/git_ui/src/commit_view.rs` | Small UX win: see which branches/tags/remotes point at the commit you are reviewing, matching the git graph's chip language |
+
+`parse_decorated_ref_names` is shared by the git graph's `%D` parser and the
+commit view so both surfaces agree on how decorated refs are split.
+
 ## Considered and not adopted
 
 | Candidate | Source | Why not |

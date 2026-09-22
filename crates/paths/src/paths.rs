@@ -65,6 +65,26 @@ static CURRENT_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 /// On Windows, this is `%APPDATA%\dez`.
 static CONFIG_DIR: OnceLock<PathBuf> = OnceLock::new();
 
+/// The release channel this build was compiled for, read directly from the
+/// binary crate's `RELEASE_CHANNEL` file so `paths` does not depend on
+/// `release_channel`.
+const BUILD_CHANNEL: &str = include_str!("../../dez/RELEASE_CHANNEL");
+
+/// Returns the storage-directory suffix for this build's release channel.
+///
+/// The channel comes from `ZED_RELEASE_CHANNEL` when set, mirroring the release
+/// tooling, and otherwise from the compiled-in `RELEASE_CHANNEL`. Stable builds
+/// keep the unsuffixed directory; other channels append their name so parallel
+/// installations can be told apart.
+pub fn storage_channel_suffix() -> Option<String> {
+    let channel =
+        env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| BUILD_CHANNEL.trim().to_string());
+    match channel.as_str() {
+        "stable" | "" => None,
+        _ => Some(channel),
+    }
+}
+
 /// Returns the relative path to the dez_server directory on the ssh host.
 ///
 /// Deliberately diverges from upstream Zed's `.zed_server` so that a host used by both

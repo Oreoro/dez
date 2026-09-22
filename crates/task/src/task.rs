@@ -19,8 +19,8 @@ use std::sync::Arc;
 
 pub use adapter_schema::{AdapterSchema, AdapterSchemas};
 pub use debug_format::{
-    AttachRequest, BuildTaskDefinition, DebugRequest, DebugScenario, DebugTaskFile, LaunchRequest,
-    Request, TcpArgumentsTemplate, dezDebugConfig,
+    AttachRequest, BuildTaskDefinition, DebugRequest, DebugScenario, DebugTaskFile, DezDebugConfig,
+    LaunchRequest, Request, TcpArgumentsTemplate,
 };
 pub use dez_actions::RevealTarget;
 pub use task_template::{
@@ -398,15 +398,15 @@ pub fn shell_to_proto(shell: Shell) -> proto::Shell {
 
 type VsCodeEnvVariable = String;
 type VsCodeCommand = String;
-type dezEnvVariable = String;
+type DezEnvVariable = String;
 
 struct EnvVariableReplacer {
-    variables: HashMap<VsCodeEnvVariable, dezEnvVariable>,
-    commands: HashMap<VsCodeCommand, dezEnvVariable>,
+    variables: HashMap<VsCodeEnvVariable, DezEnvVariable>,
+    commands: HashMap<VsCodeCommand, DezEnvVariable>,
 }
 
 impl EnvVariableReplacer {
-    fn new(variables: HashMap<VsCodeEnvVariable, dezEnvVariable>) -> Self {
+    fn new(variables: HashMap<VsCodeEnvVariable, DezEnvVariable>) -> Self {
         Self {
             variables,
             commands: HashMap::default(),
@@ -415,7 +415,7 @@ impl EnvVariableReplacer {
 
     fn with_commands(
         mut self,
-        commands: impl IntoIterator<Item = (VsCodeCommand, dezEnvVariable)>,
+        commands: impl IntoIterator<Item = (VsCodeCommand, DezEnvVariable)>,
     ) -> Self {
         self.commands = commands.into_iter().collect();
         self

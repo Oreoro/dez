@@ -323,7 +323,7 @@ mod tests {
     fn test_parse_backtick_spans_single_span() {
         let (text, ranges) = parse_backtick_spans("use `dez` to open").unwrap();
         assert_eq!(text.as_ref(), "use dez to open");
-        assert_eq!(ranges, vec![4..9]);
+        assert_eq!(ranges, vec![4..7]);
     }
 
     #[test]

@@ -394,7 +394,7 @@ impl DebugAdapter for GoDebugAdapter {
         })
     }
 
-    async fn config_from_dez_format(&self, dez_scenario: dezDebugConfig) -> Result<DebugScenario> {
+    async fn config_from_dez_format(&self, dez_scenario: DezDebugConfig) -> Result<DebugScenario> {
         let mut args = match &dez_scenario.request {
             dap::DebugRequest::Attach(attach_config) => {
                 json!({

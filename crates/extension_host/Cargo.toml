@@ -37,6 +37,7 @@ paths.workspace = true
 project.workspace = true
 remote.workspace = true
 rpc.workspace = true
+parking_lot.workspace = true
 release_channel.workspace = true
 semver.workspace = true
 serde.workspace = true
