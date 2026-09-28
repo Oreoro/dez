@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use agent_control_protocol::{RemoteTerminalRegistrationId, TerminalControlId, TerminalMetadata};
 use anyhow::{Result, anyhow};
 use gpui::{
-    App, AppContext as _, Entity, EntityId, Global, Subscription, WeakEntity, Window, WindowHandle,
+    App, AppContext as _, Context, Entity, EntityId, Global, SharedString, Subscription,
+    WeakEntity, Window, WindowHandle,
 };
 use terminal::Terminal;
 use terminal_view::TerminalView;
@@ -278,11 +279,95 @@ pub(crate) fn registry(cx: &App) -> Entity<TerminalControlRegistry> {
     cx.global::<GlobalTerminalControlRegistry>().0.clone()
 }
 
-#[derive(Clone, Copy)]
+pub(crate) fn has_registry(cx: &App) -> bool {
+    cx.has_global::<GlobalTerminalControlRegistry>()
+}
+
+/// Observes plain-terminal activity on behalf of `T`'s context, returning the
+/// `Subscription` that keeps the observation alive (drop it to stop). Terminal
+/// `Wakeup`/`Bell`/`CloseTerminal` events only call `notify()` on the registry,
+/// so chrome that renders terminal state has to observe it to stay honest; the
+/// Agent Threads panel and the dez rail both do.
+pub(crate) fn observe_activity<T: 'static>(cx: &mut Context<T>) -> Subscription {
+    let registry = registry(cx);
+    cx.observe(&registry, |_this, _registry, cx| cx.notify())
+}
+
+#[derive(Clone)]
 pub(crate) struct RegularTerminalSummary {
     pub status: crate::store::ProjectAttentionStatus,
     pub terminal_item_id: EntityId,
     pub creation_sequence: u64,
+    /// The terminal's display title: its OSC title when the program inside
+    /// set one, otherwise the title the terminal derives from its foreground
+    /// process. Never empty, so callers need no fallback of their own.
+    pub title: SharedString,
+}
+
+/// One plain terminal's attention status and display title, classified live
+/// from its screen tail. The single classifier for regular terminals: every
+/// consumer (`regular_terminal_summaries`, its read-only sibling below) goes
+/// through it, so the surfaces that render terminal state can't disagree.
+/// Returns `None` for agent-thread views, dead records, and terminals whose
+/// state is still `Unknown`.
+fn classify_record(record: &TerminalControlRecord, cx: &App) -> Option<RegularTerminalSummary> {
+    let view = record.view.upgrade()?;
+    if view.read(cx).is_agent_thread() {
+        return None;
+    }
+    let terminal = record.terminal.upgrade()?;
+    let terminal = terminal.read(cx);
+    let screen_tail = terminal
+        .last_n_non_empty_lines(crate::attention_detection::SCREEN_TAIL_LINE_COUNT)
+        .join("\n");
+    let status = match crate::attention_detection::classify_any(
+        crate::attention_detection::DetectionInput {
+            screen_tail: &screen_tail,
+            osc_title: &terminal.breadcrumb_text,
+        },
+    ) {
+        crate::attention_detection::AttentionState::Working => {
+            crate::store::ProjectAttentionStatus::Working
+        }
+        crate::attention_detection::AttentionState::Idle => {
+            crate::store::ProjectAttentionStatus::Idle
+        }
+        crate::attention_detection::AttentionState::Blocked => {
+            crate::store::ProjectAttentionStatus::Blocked
+        }
+        crate::attention_detection::AttentionState::Unknown => return None,
+    };
+    // The OSC title when the program set one; otherwise the terminal's own
+    // derived display title (foreground process, cwd), so a shell that never
+    // sets an OSC title is still legible. `title` never returns empty.
+    let title = if terminal.breadcrumb_text.is_empty() {
+        terminal.title(false).into()
+    } else {
+        terminal.breadcrumb_text.clone().into()
+    };
+    Some(RegularTerminalSummary {
+        status,
+        terminal_item_id: view.entity_id(),
+        creation_sequence: record.creation_sequence,
+        title,
+    })
+}
+
+fn summarize_records(
+    records: Vec<TerminalControlRecord>,
+    cx: &App,
+) -> HashMap<EntityId, Vec<RegularTerminalSummary>> {
+    let mut summaries: HashMap<EntityId, Vec<RegularTerminalSummary>> = HashMap::default();
+    for record in records {
+        let Some(workspace_id) = workspace_id(&record, cx) else {
+            continue;
+        };
+        let Some(summary) = classify_record(&record, cx) else {
+            continue;
+        };
+        summaries.entry(workspace_id).or_default().push(summary);
+    }
+    summaries
 }
 
 pub(crate) fn regular_terminal_summaries(
@@ -291,51 +376,21 @@ pub(crate) fn regular_terminal_summaries(
     if !cx.has_global::<GlobalTerminalControlRegistry>() {
         return HashMap::default();
     }
-    let mut summaries: HashMap<EntityId, Vec<RegularTerminalSummary>> = HashMap::default();
-    for record in records(cx) {
-        let Some(view) = record.view.upgrade() else {
-            continue;
-        };
-        if view.read(cx).is_agent_thread() {
-            continue;
-        }
-        let Some(workspace_id) = workspace_id(&record, cx) else {
-            continue;
-        };
-        let Some(terminal) = record.terminal.upgrade() else {
-            continue;
-        };
-        let terminal = terminal.read(cx);
-        let screen_tail = terminal
-            .last_n_non_empty_lines(crate::attention_detection::SCREEN_TAIL_LINE_COUNT)
-            .join("\n");
-        let state =
-            crate::attention_detection::classify_any(crate::attention_detection::DetectionInput {
-                screen_tail: &screen_tail,
-                osc_title: &terminal.breadcrumb_text,
-            });
-        let status = match state {
-            crate::attention_detection::AttentionState::Working => {
-                crate::store::ProjectAttentionStatus::Working
-            }
-            crate::attention_detection::AttentionState::Idle => {
-                crate::store::ProjectAttentionStatus::Idle
-            }
-            crate::attention_detection::AttentionState::Blocked => {
-                crate::store::ProjectAttentionStatus::Blocked
-            }
-            crate::attention_detection::AttentionState::Unknown => continue,
-        };
-        summaries
-            .entry(workspace_id)
-            .or_default()
-            .push(RegularTerminalSummary {
-                status,
-                terminal_item_id: view.entity_id(),
-                creation_sequence: record.creation_sequence,
-            });
+    summarize_records(records(cx), cx)
+}
+
+/// `regular_terminal_summaries` for read-only (`&App`) contexts, such as the
+/// status bar asking the sidebar whether anything needs attention. Classifies
+/// the same records through the same classifier as the mutable variant; it
+/// only skips that variant's registry pruning, because it never mutates.
+pub(crate) fn regular_terminal_summaries_readonly(
+    cx: &App,
+) -> HashMap<EntityId, Vec<RegularTerminalSummary>> {
+    if !cx.has_global::<GlobalTerminalControlRegistry>() {
+        return HashMap::default();
     }
-    summaries
+    let registry = cx.global::<GlobalTerminalControlRegistry>().0.clone();
+    summarize_records(registry.read(cx).records.values().cloned().collect(), cx)
 }
 
 pub(crate) fn focus_terminal(
@@ -377,6 +432,9 @@ pub(crate) fn focus_terminal(
 }
 
 pub(crate) fn records(cx: &mut App) -> Vec<TerminalControlRecord> {
+    if !cx.has_global::<GlobalTerminalControlRegistry>() {
+        return Vec::new();
+    }
     let registry = cx.global::<GlobalTerminalControlRegistry>().0.clone();
     registry.update(cx, |registry, cx| registry.live_records(cx))
 }
@@ -425,6 +483,9 @@ pub(crate) fn invalidate_remote_connection(remote_connection_id: RemoteConnectio
 }
 
 pub fn invalidate_remote_client(client_entity_id: u64, cx: &mut App) {
+    if !cx.has_global::<GlobalTerminalControlRegistry>() {
+        return;
+    }
     registry(cx).update(cx, |registry, cx| {
         registry.invalidate_remote_client(client_entity_id);
         cx.notify();
@@ -449,7 +510,10 @@ pub(crate) fn observe_output(
     cx: &mut App,
 ) -> Option<(async_channel::Receiver<()>, Subscription)> {
     let terminal = record.terminal.upgrade()?;
-    let registry = cx.global::<GlobalTerminalControlRegistry>().0.clone();
+    let Some(registry) = cx.try_global::<GlobalTerminalControlRegistry>() else {
+        return None;
+    };
+    let registry = registry.0.clone();
     let (sender, receiver) = async_channel::bounded(1);
     let subscription = registry.update(cx, |_registry, cx| {
         cx.subscribe(&terminal, move |_registry, _terminal, event, _cx| {

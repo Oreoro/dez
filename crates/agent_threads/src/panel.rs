@@ -4696,6 +4696,7 @@ mod tests {
                 status: ProjectAttentionStatus::Blocked,
                 terminal_item_id: regular_terminal_item_id,
                 creation_sequence: 1,
+                title: SharedString::from("blocked shell"),
             }],
         );
 
@@ -4719,6 +4720,7 @@ mod tests {
                 status: ProjectAttentionStatus::Working,
                 terminal_item_id: regular_terminal_item_id,
                 creation_sequence: 1,
+                title: SharedString::from("working shell"),
             }],
         );
         let (status, _, target) = merge_regular_terminal_activity(

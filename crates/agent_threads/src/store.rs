@@ -1,3 +1,4 @@
+use std::cmp::Reverse;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -580,6 +581,87 @@ pub(crate) struct ProjectLiveSummary {
     pub(crate) most_urgent_launched_at: Option<SystemTime>,
 }
 
+/// A live agent thread as the dez workspace sidebar (a separate crate) needs
+/// to render it: identity, title, and presentation status. See
+/// `AgentThreadStore::sidebar_threads_for_workspace`.
+#[derive(Clone, Debug)]
+pub struct SidebarThread {
+    pub terminal_item_id: EntityId,
+    /// The agent kind's id (`codex`, `claude`, ...), used as the rail's actor
+    /// label.
+    pub kind_id: &'static str,
+    pub title: SharedString,
+    pub status: SidebarThreadStatus,
+    /// The worktree this thread is tied to, so the rail can nest the thread
+    /// under the same workspace chrome it already labels with a branch and
+    /// changed-file count.
+    pub worktree_root: PathBuf,
+    pub launched_at: SystemTime,
+}
+
+/// The workspace sidebar's presentation of a live thread's state.
+///
+/// This is a presentation-layer mapping over `ThreadDisplayStatus` (see
+/// `docs/dez-workspace-shell.md`): dez keeps the 3-state machine and only
+/// renames its states for the rail, rather than forking the machine. The
+/// design doc's "Waiting for permission" is folded into `NeedsInput` until
+/// manifest evidence can split prompt-permission from question-permission.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SidebarThreadStatus {
+    /// The agent finished and the user has already looked at it.
+    Idle,
+    /// The agent is working normally.
+    Running,
+    /// The agent finished and the user has not looked at it yet.
+    Finished,
+    /// The agent is stopped on a prompt and needs the user to answer it.
+    NeedsInput,
+}
+
+impl SidebarThreadStatus {
+    /// The rail's human-readable state label, matching dez v0's vocabulary
+    /// (`Running` / `Needs input`) rather than the internal enum names.
+    pub fn state_label(self) -> &'static str {
+        match self {
+            Self::Idle => "Idle",
+            Self::Running => "Running",
+            Self::Finished => "Finished",
+            Self::NeedsInput => "Needs input",
+        }
+    }
+
+    /// Whether this state asks for the user's attention, so the rail's rollup
+    /// and the workspace group's badge count the same rows.
+    pub fn needs_attention(self) -> bool {
+        matches!(self, Self::NeedsInput | Self::Finished)
+    }
+}
+
+fn sidebar_status_for_display_status(status: Option<ThreadDisplayStatus>) -> SidebarThreadStatus {
+    match status {
+        None | Some(ThreadDisplayStatus::Busy) => SidebarThreadStatus::Running,
+        Some(ThreadDisplayStatus::Blocked) => SidebarThreadStatus::NeedsInput,
+        Some(ThreadDisplayStatus::Finished) => SidebarThreadStatus::Finished,
+        Some(ThreadDisplayStatus::Idle) => SidebarThreadStatus::Idle,
+    }
+}
+
+/// The same presentation mapping for a plain terminal's classified state.
+/// `ProjectAttentionStatus` carries the same four states ("finished" there
+/// also means finished-and-not-looked-at), so this is a rename for the rail,
+/// not a second classifier -- the terminal path keeps classifying exactly once
+/// in `terminal_control::regular_terminal_summaries`.
+pub(crate) fn sidebar_status_for_project_attention(
+    status: ProjectAttentionStatus,
+) -> SidebarThreadStatus {
+    match status {
+        ProjectAttentionStatus::Working => SidebarThreadStatus::Running,
+        ProjectAttentionStatus::Blocked => SidebarThreadStatus::NeedsInput,
+        ProjectAttentionStatus::Finished => SidebarThreadStatus::Finished,
+        ProjectAttentionStatus::Idle => SidebarThreadStatus::Idle,
+    }
+}
+
 /// See `AgentThreadStore::live_terminal_worktree_roots`.
 #[cfg(any(unix, windows))]
 pub(crate) struct LiveTerminalWorktree {
@@ -820,6 +902,46 @@ impl AgentThreadStore {
                 None => false,
             })
             .count()
+    }
+
+    /// The live agent threads belonging to `workspace`, most urgent first, as
+    /// the dez workspace sidebar renders them.
+    ///
+    /// Scoped strictly to `workspace`'s own threads, so two open workspaces
+    /// never see each other's sessions in the rail. That per-workspace
+    /// isolation is the reason this lives here as a projection rather than as
+    /// a second copy of the thread list in `dez_sidebar`: the store already
+    /// owns which workspace each thread belongs to, so the rail only has to
+    /// render what it is handed.
+    pub fn sidebar_threads_for_workspace(
+        &self,
+        workspace: &Entity<Workspace>,
+    ) -> Vec<SidebarThread> {
+        let workspace_id = workspace.entity_id();
+        let mut threads: Vec<SidebarThread> = self
+            .threads
+            .values()
+            .filter(|entry| {
+                entry
+                    .workspace
+                    .upgrade()
+                    .is_some_and(|entry_workspace| entry_workspace.entity_id() == workspace_id)
+            })
+            .map(|entry| SidebarThread {
+                terminal_item_id: entry.metadata.terminal_item_id,
+                kind_id: entry.metadata.kind_id,
+                title: entry.metadata.title.clone(),
+                status: sidebar_status_for_display_status(
+                    self.thread_display_status(entry.metadata.terminal_item_id),
+                ),
+                worktree_root: entry.metadata.tied_worktree_root.clone(),
+                launched_at: entry.metadata.launched_at,
+            })
+            .collect();
+        // Attention first, then most recently launched, so the rail's top rows
+        // are always the ones that need the user.
+        threads.sort_by_key(|thread| (Reverse(thread.status), Reverse(thread.launched_at)));
+        threads
     }
 
     /// Live threads' worktree roots, summarized for a cross-project rollup:
@@ -3373,6 +3495,44 @@ mod tests {
         fn drop(&mut self) {
             self.0.store(true, Ordering::SeqCst);
         }
+    }
+
+    #[test]
+    fn sidebar_status_maps_the_display_machine_without_forking_it() {
+        assert_eq!(
+            sidebar_status_for_display_status(None),
+            SidebarThreadStatus::Running
+        );
+        assert_eq!(
+            sidebar_status_for_display_status(Some(ThreadDisplayStatus::Busy)),
+            SidebarThreadStatus::Running
+        );
+        assert_eq!(
+            sidebar_status_for_display_status(Some(ThreadDisplayStatus::Blocked)),
+            SidebarThreadStatus::NeedsInput
+        );
+        assert_eq!(
+            sidebar_status_for_display_status(Some(ThreadDisplayStatus::Finished)),
+            SidebarThreadStatus::Finished
+        );
+        assert_eq!(
+            sidebar_status_for_display_status(Some(ThreadDisplayStatus::Idle)),
+            SidebarThreadStatus::Idle
+        );
+    }
+
+    /// The rail header's rollup and each workspace group's badge must count the
+    /// same rows, so "needs attention" is defined once, on the presentation
+    /// status, rather than computed twice.
+    #[test]
+    fn sidebar_status_needs_attention_matches_the_rail_vocabulary() {
+        assert!(SidebarThreadStatus::NeedsInput.needs_attention());
+        assert!(SidebarThreadStatus::Finished.needs_attention());
+        assert!(!SidebarThreadStatus::Running.needs_attention());
+        assert!(!SidebarThreadStatus::Idle.needs_attention());
+
+        assert_eq!(SidebarThreadStatus::Running.state_label(), "Running");
+        assert_eq!(SidebarThreadStatus::NeedsInput.state_label(), "Needs input");
     }
 
     fn at(seconds: u64) -> SystemTime {

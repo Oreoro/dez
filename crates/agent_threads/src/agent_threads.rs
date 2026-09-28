@@ -29,8 +29,8 @@ use std::sync::Arc;
 
 use collections::HashMap;
 use gpui::{
-    App, Context, Entity, EntityId, PromptButton, PromptLevel, SharedString, TaskExt, Window,
-    actions,
+    App, Context, Entity, EntityId, PromptButton, PromptLevel, SharedString, Subscription, TaskExt,
+    Window, actions,
 };
 use settings::{ExtendingVec, RegisterSetting, Settings};
 use ui::IconName;
@@ -48,9 +48,9 @@ use opencode_history::OpenCodeHistoryProvider;
 pub use panel::AgentThreadsPanel;
 use pi_history::PiHistoryProvider;
 pub use store::{
-    AgentThreadStore, AgentThreadStoreEvent, checkpoint_live_agent_threads,
-    prune_stale_session_restore_snapshots, restore_threads_for_workspace,
-    snapshot_live_agent_threads,
+    AgentThreadStore, AgentThreadStoreEvent, SidebarThread, SidebarThreadStatus,
+    checkpoint_live_agent_threads, prune_stale_session_restore_snapshots,
+    restore_threads_for_workspace, snapshot_live_agent_threads,
 };
 
 actions!(
@@ -945,6 +945,109 @@ pub fn focus_priority_terminal(
         {
             anyhow::bail!("Terminal no longer exists")
         }
+    }
+}
+
+/// A plain terminal session -- an ordinary shell, not an agent thread -- as the
+/// dez workspace rail renders it.
+#[derive(Clone, Debug)]
+pub struct SidebarTerminal {
+    pub terminal_item_id: EntityId,
+    /// The terminal's display title: its OSC title when the program inside
+    /// set one, otherwise the title the terminal derives from its foreground
+    /// process. Never empty, so the rail needs no fallback of its own.
+    pub title: SharedString,
+    pub status: SidebarThreadStatus,
+}
+
+/// The plain terminals belonging to `workspace`, most urgent first, as the dez
+/// workspace rail renders them.
+///
+/// Same scoping rule as `AgentThreadStore::sidebar_threads_for_workspace`: a
+/// terminal belongs to exactly one workspace, so two open workspaces never see
+/// each other's shells. Terminals are only tracked on hosts with terminal
+/// control, so this returns an empty list elsewhere rather than making every
+/// caller `cfg`-gate itself.
+///
+/// Status comes from the same `attention_detection::classify_any` call the
+/// Agent Threads panel's rollup uses, so the rail and the panel can't disagree
+/// about whether a shell needs the user.
+pub fn sidebar_terminals_for_workspace(
+    workspace: &Entity<Workspace>,
+    cx: &mut App,
+) -> Vec<SidebarTerminal> {
+    #[cfg(any(unix, windows))]
+    {
+        let mut terminals: Vec<SidebarTerminal> =
+            match terminal_control::regular_terminal_summaries(cx).remove(&workspace.entity_id()) {
+                Some(summaries) => summaries
+                    .into_iter()
+                    .map(|summary| SidebarTerminal {
+                        terminal_item_id: summary.terminal_item_id,
+                        title: summary.title,
+                        status: store::sidebar_status_for_project_attention(summary.status),
+                    })
+                    .collect(),
+                None => Vec::new(),
+            };
+        terminals.sort_by_key(|terminal| std::cmp::Reverse(terminal.status));
+        terminals
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (workspace, cx);
+        Vec::new()
+    }
+}
+
+/// `sidebar_terminals_for_workspace` for read-only (`&App`) contexts, such as
+/// the status bar consulting the sidebar. Classifies the same terminals
+/// through the same classifier as the mutable variant; see
+/// `terminal_control::regular_terminal_summaries_readonly`.
+pub fn sidebar_terminals_for_workspace_readonly(
+    workspace: &Entity<Workspace>,
+    cx: &App,
+) -> Vec<SidebarTerminal> {
+    #[cfg(any(unix, windows))]
+    {
+        let mut terminals: Vec<SidebarTerminal> =
+            match terminal_control::regular_terminal_summaries_readonly(cx)
+                .get(&workspace.entity_id())
+            {
+                Some(summaries) => summaries
+                    .iter()
+                    .map(|summary| SidebarTerminal {
+                        terminal_item_id: summary.terminal_item_id,
+                        title: summary.title.clone(),
+                        status: store::sidebar_status_for_project_attention(summary.status),
+                    })
+                    .collect(),
+                None => Vec::new(),
+            };
+        terminals.sort_by_key(|terminal| std::cmp::Reverse(terminal.status));
+        terminals
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = (workspace, cx);
+        Vec::new()
+    }
+}
+///
+/// Exists so `dez_sidebar` doesn't have to name the terminal control registry,
+/// which is `cfg`-gated to the hosts that have one.
+pub fn observe_terminal_activity<T: 'static>(cx: &mut Context<T>) -> Option<Subscription> {
+    #[cfg(any(unix, windows))]
+    {
+        if !terminal_control::has_registry(cx) {
+            return None;
+        }
+        Some(terminal_control::observe_activity(cx))
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        let _ = cx;
+        None
     }
 }
 
