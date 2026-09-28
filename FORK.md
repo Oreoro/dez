@@ -112,6 +112,7 @@ older API surface.
 | `terminal_control::classify_record` maps an unmatched plain terminal to `Idle` instead of dropping it | `crates/agent_threads/src/terminal_control.rs` | A shell at an ordinary prompt matches no agent manifest, but the rail promises to list plain shells |
 | Rail group headers carry a disclosure chevron and collapse their rows | `crates/dez_sidebar/src/sidebar.rs` | Collapsible groups are the standard sidebar affordance once a workspace holds several roots or sessions |
 | `MultiWorkspace::toggle_project_group_expanded` public method | `crates/workspace/src/multi_workspace.rs` | The rail owns group disclosure, but the group state already lives (and is persisted) in `MultiWorkspace`; the rail calls through instead of keeping a second copy of "which groups are collapsed" |
+| `AgentThreadStore::focus_thread` and `terminal_control::focus_terminal` activate the session's workspace before focusing its pane | `crates/agent_threads/src/{store.rs,terminal_control.rs}` | The rail lists sessions from every open workspace, so focusing one in a background workspace has to bring that workspace forward; this matches the panel, which already activates a cross-project target before focusing it |
 
 ## Editor opinionation (special comments, commit refs)
 

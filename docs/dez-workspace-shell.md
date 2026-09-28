@@ -47,7 +47,9 @@ competed to answer "what is running" — the navigator, the Agent Threads panel,
 and the terminal tabs — so the rule now is:
 
 - The **rail supervises live sessions**: status, title, actor, and a click that
-  focuses the session through the store's own focus path.
+  focuses the session through the store's own focus path, which brings the
+  session's workspace forward first so a session in a background workspace is
+  actually shown.
 - The **Agent Threads panel** keeps only what the rail doesn't do: resuming and
   archiving *historical* sessions. It is reachable from a single quiet
   `Agent thread history` row at the foot of the rail, never as the default way
@@ -163,6 +165,8 @@ crates/dez_sidebar/             # navigator / activity / discovery / headers
       indicator); single-root groups don't repeat the header as a row
 - [x] Group headers carry a disclosure chevron; a collapsed group keeps its
       attention rollup and folds its rows
+- [x] Focusing a session from the rail brings its workspace forward, so a
+      session in a background workspace is shown rather than silently focused
 - [ ] Surfaces: draggable/splittable tabs in the main work area
 - [ ] "Waiting for permission" split out of `Needs input` via manifest evidence
 - [ ] Session discovery-and-attach for tmux, Herdr, cmux

@@ -1172,6 +1172,19 @@ impl AgentThreadStore {
             .upgrade()
             .ok_or_else(|| anyhow!("agent thread terminal closed"))?;
 
+        // Bring the thread's workspace forward first. The rail lists sessions
+        // from every open workspace, so activating an item in a background
+        // workspace without switching to it looks like a no-op. Matches the
+        // Agent Threads panel, which activates a cross-project target before
+        // focusing its terminal.
+        if let Some(multi_workspace) = workspace.read(cx).multi_workspace().cloned() {
+            multi_workspace
+                .update(cx, |multi_workspace, cx| {
+                    multi_workspace.activate(workspace.clone(), None, window, cx);
+                })
+                .ok();
+        }
+
         workspace.update(cx, |workspace, cx| {
             let pane = workspace
                 .pane_for_item_id(terminal_view.entity_id())

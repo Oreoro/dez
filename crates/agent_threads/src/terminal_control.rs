@@ -421,6 +421,17 @@ pub(crate) fn focus_terminal(
         .view
         .upgrade()
         .ok_or_else(|| anyhow!("terminal closed"))?;
+    // Bring the terminal's workspace forward before focusing it, for the same
+    // reason `AgentThreadStore::focus_thread` does: the rail lists shells from
+    // every open workspace, so focusing one in a background workspace without
+    // switching to it looks like a no-op.
+    if let Some(multi_workspace) = workspace.read(cx).multi_workspace().cloned() {
+        multi_workspace
+            .update(cx, |multi_workspace, cx| {
+                multi_workspace.activate(workspace.clone(), None, window, cx);
+            })
+            .ok();
+    }
     workspace.update(cx, |workspace, cx| {
         let pane = workspace
             .pane_for_item_id(terminal_item_id)
