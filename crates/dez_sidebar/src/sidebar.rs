@@ -2,11 +2,11 @@ use std::cmp::Reverse;
 
 use agent_threads::{SidebarTerminal, SidebarThread, SidebarThreadStatus};
 use gpui::{
-    AnyElement, App, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable,
+    AnyElement, App, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
     IntoElement, Pixels, Render, SharedString, Styled, Subscription, WeakEntity, Window, div, px,
 };
 use serde::{Deserialize, Serialize};
-use ui::{IconButton, IconButtonShape, Indicator, Tooltip, prelude::*};
+use ui::{Disclosure, IconButton, IconButtonShape, Indicator, Tooltip, prelude::*};
 use workspace::{
     MultiWorkspace, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent, SidebarSide,
 };
@@ -14,6 +14,11 @@ use workspace::{
 const DEFAULT_SIDEBAR_WIDTH: Pixels = px(240.0);
 const MIN_SIDEBAR_WIDTH: Pixels = px(180.0);
 const MAX_SIDEBAR_WIDTH: Pixels = px(420.0);
+
+/// Every interactive row in the rail is the same height, so a long title, a
+/// status label, or a missing actor label can't make the list jitter.
+const ROW_HEIGHT: Pixels = px(26.0);
+const GROUP_HEADER_HEIGHT: Pixels = px(28.0);
 
 /// A compact read of a workspace's git status, used to pick the icon and color
 /// shown beside the workspace header.
@@ -60,6 +65,26 @@ impl ChangeIndicator {
             Self::Clean => Color::Muted,
         }
     }
+
+    /// Higher means more urgent. Used to fold several roots' indicators into
+    /// one group-level indicator without inventing a new ordering.
+    fn rank(self) -> u8 {
+        match self {
+            Self::Conflict => 4,
+            Self::Modified => 3,
+            Self::Added => 2,
+            Self::Deleted => 1,
+            Self::Clean => 0,
+        }
+    }
+
+    fn worst(self, other: Self) -> Self {
+        if other.rank() > self.rank() {
+            other
+        } else {
+            self
+        }
+    }
 }
 
 /// The per-workspace chrome summary: project name, active branch, and the
@@ -100,6 +125,27 @@ fn summarize_workspace(workspace: &Entity<workspace::Workspace>, cx: &App) -> Wo
     }
 }
 
+/// A group-level summary. A multi-root group shows the branch and changed
+/// count across every root it holds, so the header describes the group rather
+/// than only its first workspace. The branch comes from the first root that
+/// has one; the indicator is the most urgent across roots.
+fn summarize_group(group: &ProjectGroup, cx: &App) -> WorkspaceSummary {
+    let mut summary = WorkspaceSummary {
+        branch: None,
+        changed: 0,
+        indicator: ChangeIndicator::Clean,
+    };
+    for workspace in &group.workspaces {
+        let workspace_summary = summarize_workspace(workspace, cx);
+        if summary.branch.is_none() {
+            summary.branch = workspace_summary.branch;
+        }
+        summary.changed += workspace_summary.changed;
+        summary.indicator = summary.indicator.worst(workspace_summary.indicator);
+    }
+    summary
+}
+
 /// The rail's status color for a live session. Shares the Agent Threads
 /// panel's palette so the two surfaces agree on what each state looks like:
 /// blocked is the alarm, finished-and-unchecked is worth a look, and
@@ -110,6 +156,18 @@ fn status_color(status: SidebarThreadStatus) -> Color {
         SidebarThreadStatus::NeedsInput => Color::Error,
         SidebarThreadStatus::Finished => Color::Warning,
         SidebarThreadStatus::Idle => Color::Muted,
+    }
+}
+
+/// The trailing state label, present only for the two states that ask for the
+/// user. `Running` and `Idle` are carried by the status dot alone, which is
+/// what keeps a busy rail quiet; every row still spells out its full state in
+/// a tooltip.
+fn status_label(status: SidebarThreadStatus) -> Option<(&'static str, Color)> {
+    match status {
+        SidebarThreadStatus::NeedsInput => Some(("Needs input", Color::Error)),
+        SidebarThreadStatus::Finished => Some(("Finished", Color::Muted)),
+        SidebarThreadStatus::Running | SidebarThreadStatus::Idle => None,
     }
 }
 
@@ -396,15 +454,17 @@ impl DezSidebar {
         h_flex()
             .id("dez-sidebar-thread-history")
             .w_full()
+            .h(ROW_HEIGHT)
+            .mx_1()
             .items_center()
             .gap_2()
-            .px_3()
-            .py_1()
+            .px_2()
+            .rounded_md()
             .cursor_pointer()
             .hover(move |style| style.bg(hover_bg))
             .child(
                 Icon::new(IconName::HistoryRerun)
-                    .size(IconSize::Small)
+                    .size(IconSize::XSmall)
                     .color(Color::Muted),
             )
             .child(
@@ -433,41 +493,63 @@ impl DezSidebar {
             threads.iter().map(|thread| thread.status),
             terminals.iter().map(|terminal| terminal.status),
         );
-        let header = self.group_header(&group, attention, cx);
+        let header = self.group_header(&group, active_id, attention, cx);
 
-        // Each row list is collected before the next one is built: every
-        // `render_*_row` needs `&mut Context`, so two row closures alive at the
-        // same time wouldn't borrow-check.
-        let mut sessions: Vec<AnyElement> = threads
-            .into_iter()
-            .map(|thread| self.render_thread_row(thread, cx))
-            .collect();
-        sessions.extend(
-            terminals
+        // A collapsed group still shows its header (and its attention rollup)
+        // but builds no rows at all, so folding a busy group away is cheap.
+        let (workspaces, sessions) = if group.expanded {
+            // Each row list is collected before the next one is built: every
+            // `render_*_row` needs `&mut Context`, so two row closures alive at
+            // the same time wouldn't borrow-check.
+            let mut sessions: Vec<AnyElement> = threads
                 .into_iter()
-                .map(|terminal| self.render_terminal_row(terminal, cx)),
-        );
-        let workspaces: Vec<AnyElement> = group
-            .workspaces
-            .into_iter()
-            .map(|workspace| self.render_workspace_row(workspace, active_id, cx))
-            .collect();
+                .map(|thread| self.render_thread_row(thread, cx))
+                .collect();
+            sessions.extend(
+                terminals
+                    .into_iter()
+                    .map(|terminal| self.render_terminal_row(terminal, cx)),
+            );
+            // A single-root group is already named by its header, so the
+            // per-root row would only repeat it. Multi-root groups need the
+            // rows to tell their roots apart.
+            let workspaces: Vec<AnyElement> = if group.workspaces.len() > 1 {
+                group
+                    .workspaces
+                    .iter()
+                    .cloned()
+                    .map(|workspace| self.render_workspace_row(workspace, active_id, cx))
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            (workspaces, sessions)
+        } else {
+            (Vec::new(), Vec::new())
+        };
 
         v_flex()
             .w_full()
+            .pt_2()
             .child(header)
-            .children(sessions)
             .children(workspaces)
+            .children(sessions)
             .into_any_element()
     }
 
-    fn group_header(&self, group: &ProjectGroup, attention: usize, cx: &App) -> AnyElement {
+    fn group_header(
+        &self,
+        group: &ProjectGroup,
+        active_id: Option<gpui::EntityId>,
+        attention: usize,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let (name, branch, changed, indicator) = match group.workspaces.first() {
             Some(workspace) => {
                 let project = workspace.read(cx).project().read(cx);
                 let name = ProjectGroupKey::from_project(project, cx)
                     .display_name(&std::collections::HashMap::default());
-                let summary = summarize_workspace(workspace, cx);
+                let summary = summarize_group(group, cx);
                 (name, summary.branch, summary.changed, summary.indicator)
             }
             None => (
@@ -478,24 +560,85 @@ impl DezSidebar {
             ),
         };
 
+        // Clicking a header selects the workspace already active in the group,
+        // or the first root otherwise, so it never silently switches roots.
+        let target = group
+            .workspaces
+            .iter()
+            .find(|workspace| Some(workspace.entity_id()) == active_id)
+            .or_else(|| group.workspaces.first())
+            .cloned();
+        let header_id = group
+            .workspaces
+            .first()
+            .map(|workspace| workspace.entity_id().as_u64())
+            .unwrap_or(0);
+        let hover_bg = cx.theme().colors().element_hover;
+
         h_flex()
+            .id(("dez-sidebar-group", header_id))
             .w_full()
+            .h(GROUP_HEADER_HEIGHT)
             .items_center()
             .justify_between()
             .gap_2()
             .px_3()
-            .py_1()
-            .child(Label::new(name).size(LabelSize::Small))
+            .when(target.is_some(), |el| {
+                el.cursor_pointer()
+                    .hover(move |style| style.bg(hover_bg))
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        if let Some(workspace) = target.clone() {
+                            this.activate_workspace(workspace, window, cx);
+                        }
+                    }))
+            })
             .child(
                 h_flex()
+                    .min_w_0()
+                    .flex_1()
+                    .items_center()
+                    .gap_1()
+                    .child(
+                        Disclosure::new(
+                            ("dez-sidebar-group-disclosure", header_id),
+                            group.expanded,
+                        )
+                        .on_click({
+                            let multi_workspace = self.multi_workspace.clone();
+                            let key = group.key.clone();
+                            move |_, _, cx| {
+                                // The header itself activates the group's
+                                // workspace; folding must not also do that.
+                                cx.stop_propagation();
+                                multi_workspace
+                                    .update(cx, |multi_workspace, cx| {
+                                        multi_workspace.toggle_project_group_expanded(&key, cx);
+                                    })
+                                    .ok();
+                            }
+                        }),
+                    )
+                    .child(
+                        div().min_w_0().flex_1().overflow_hidden().child(
+                            Label::new(name)
+                                .size(LabelSize::Small)
+                                .weight(FontWeight::MEDIUM)
+                                .truncate(),
+                        ),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .flex_shrink_0()
                     .items_center()
                     .gap_1()
                     .when(attention > 0, |el| {
-                        el.child(
-                            Label::new(attention.to_string())
-                                .size(LabelSize::XSmall)
-                                .color(Color::Error),
-                        )
+                        el.child(Indicator::dot().color(Color::Error).into_any_element())
+                            .child(
+                                Label::new(attention.to_string())
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Error),
+                            )
                     })
                     .when_some(branch, |el, branch| {
                         el.child(
@@ -543,19 +686,28 @@ impl DezSidebar {
         h_flex()
             .id(("dez-sidebar-workspace", workspace.entity_id()))
             .w_full()
+            .h(ROW_HEIGHT)
+            .mx_1()
             .items_center()
             .gap_2()
-            .px_3()
-            .py_1()
+            .pl_5()
+            .pr_2()
+            .rounded_md()
             .cursor_pointer()
             .when(is_active, |el| el.bg(cx.theme().colors().element_selected))
             .hover(|style| style.bg(cx.theme().colors().element_hover))
             .child(
                 Icon::new(IconName::Folder)
-                    .size(IconSize::Small)
+                    .size(IconSize::XSmall)
                     .color(Color::Muted),
             )
-            .child(Label::new(label).size(LabelSize::Small))
+            .child(
+                div()
+                    .min_w_0()
+                    .flex_1()
+                    .overflow_hidden()
+                    .child(Label::new(label).size(LabelSize::Small).truncate()),
+            )
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.activate_workspace(workspace.clone(), window, cx);
             }))
@@ -568,6 +720,7 @@ impl DezSidebar {
     fn render_thread_row(&self, thread: SidebarThread, cx: &mut Context<Self>) -> AnyElement {
         let status = thread.status;
         let terminal_item_id = thread.terminal_item_id;
+        let tooltip: SharedString = format!("{} · {}", thread.kind_id, status.state_label()).into();
         let on_click = cx.listener(move |this, _, window, cx| {
             this.focus_thread(terminal_item_id, window, cx);
         });
@@ -580,6 +733,7 @@ impl DezSidebar {
             thread.title,
             Some(thread.kind_id),
             status,
+            tooltip,
             on_click,
             cx,
         )
@@ -591,6 +745,7 @@ impl DezSidebar {
     fn render_terminal_row(&self, terminal: SidebarTerminal, cx: &mut Context<Self>) -> AnyElement {
         let status = terminal.status;
         let terminal_item_id = terminal.terminal_item_id;
+        let tooltip: SharedString = format!("Terminal · {}", status.state_label()).into();
         let on_click = cx.listener(move |_this, _, window, cx| {
             let _ = agent_threads::focus_priority_terminal(terminal_item_id, window, cx);
         });
@@ -598,12 +753,13 @@ impl DezSidebar {
         self.render_session_row(
             ("dez-sidebar-terminal", terminal_item_id.as_u64()),
             Icon::new(IconName::Terminal)
-                .size(IconSize::Indicator)
+                .size(IconSize::XSmall)
                 .color(status_color(status))
                 .into_any_element(),
             terminal.title,
             None,
             status,
+            tooltip,
             on_click,
             cx,
         )
@@ -611,7 +767,9 @@ impl DezSidebar {
 
     /// One live session row, shared by agent sessions and plain terminals so
     /// the two kinds can't drift apart visually. `leading` is the kind marker:
-    /// a status dot for an agent thread, a terminal glyph for a shell.
+    /// a status dot for an agent thread, a terminal glyph for a shell. The
+    /// title stays in the default text color -- only the marker and the
+    /// attention label carry status, which is what keeps a busy rail calm.
     fn render_session_row(
         &self,
         id: (&'static str, u64),
@@ -619,19 +777,20 @@ impl DezSidebar {
         title: SharedString,
         kind: Option<&'static str>,
         status: SidebarThreadStatus,
+        tooltip: SharedString,
         on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let color = status_color(status);
-
         h_flex()
             .id(id)
             .w_full()
+            .h(ROW_HEIGHT)
+            .mx_1()
             .items_center()
             .gap_2()
-            .pl_6()
-            .pr_3()
-            .py_1()
+            .pl_5()
+            .pr_2()
+            .rounded_md()
             .cursor_pointer()
             .hover(|style| style.bg(cx.theme().colors().element_hover))
             .child(leading)
@@ -644,12 +803,7 @@ impl DezSidebar {
                     .min_w_0()
                     .flex_1()
                     .overflow_hidden()
-                    .child(
-                        Label::new(title)
-                            .size(LabelSize::Small)
-                            .color(color)
-                            .truncate(),
-                    ),
+                    .child(Label::new(title).size(LabelSize::Small).truncate()),
             )
             .children(kind.map(|kind| {
                 Label::new(kind)
@@ -657,12 +811,13 @@ impl DezSidebar {
                     .color(Color::Muted)
                     .flex_shrink_0()
             }))
-            .child(
-                Label::new(status.state_label())
+            .children(status_label(status).map(|(text, color)| {
+                Label::new(text)
                     .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .flex_shrink_0(),
-            )
+                    .color(color)
+                    .flex_shrink_0()
+            }))
+            .tooltip(Tooltip::text(tooltip))
             .on_click(on_click)
             .into_any_element()
     }

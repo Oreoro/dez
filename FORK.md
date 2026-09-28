@@ -107,6 +107,11 @@ older API surface.
 | `RegularTerminalSummary::title`, `has_registry`, `observe_activity` | `crates/agent_threads/src/terminal_control.rs` | The terminal's display title (OSC title, or the foreground process the terminal itself derives when none was set) is what makes a shell row legible; the model hands over a never-empty title and the rail owns nothing but rendering. Additive, and the summary is no longer `Copy` (it now holds a `SharedString`) |
 | `dez_sidebar` settings section (`starts_open`) | `crates/settings_content/src/dez_sidebar.rs`, `assets/settings/default.json` | Configurable default-open behavior |
 | Sidebar registration + default-open on window creation | `crates/dez/src/dez.rs` | Wires the shell into the app; deferred open avoids acting mid-construction |
+| Rail status is a marker (dot/glyph) plus a label only for `Needs input` / `Finished`; titles use the default text color | `crates/dez_sidebar/src/sidebar.rs` | A busy workspace should read as a list, not a traffic light; `Running`/`Idle` are the calm default |
+| Group header aggregates every root (branch from the first, summed changed count, worst indicator) and is clickable; single-root groups skip the per-root row | `crates/dez_sidebar/src/sidebar.rs` | Multi-root headers must describe the group, and a single-root header already names its root |
+| `terminal_control::classify_record` maps an unmatched plain terminal to `Idle` instead of dropping it | `crates/agent_threads/src/terminal_control.rs` | A shell at an ordinary prompt matches no agent manifest, but the rail promises to list plain shells |
+| Rail group headers carry a disclosure chevron and collapse their rows | `crates/dez_sidebar/src/sidebar.rs` | Collapsible groups are the standard sidebar affordance once a workspace holds several roots or sessions |
+| `MultiWorkspace::toggle_project_group_expanded` public method | `crates/workspace/src/multi_workspace.rs` | The rail owns group disclosure, but the group state already lives (and is persisted) in `MultiWorkspace`; the rail calls through instead of keeping a second copy of "which groups are collapsed" |
 
 ## Editor opinionation (special comments, commit refs)
 

@@ -308,8 +308,7 @@ pub(crate) struct RegularTerminalSummary {
 /// from its screen tail. The single classifier for regular terminals: every
 /// consumer (`regular_terminal_summaries`, its read-only sibling below) goes
 /// through it, so the surfaces that render terminal state can't disagree.
-/// Returns `None` for agent-thread views, dead records, and terminals whose
-/// state is still `Unknown`.
+/// Returns `None` for agent-thread views and dead records.
 fn classify_record(record: &TerminalControlRecord, cx: &App) -> Option<RegularTerminalSummary> {
     let view = record.view.upgrade()?;
     if view.read(cx).is_agent_thread() {
@@ -320,23 +319,28 @@ fn classify_record(record: &TerminalControlRecord, cx: &App) -> Option<RegularTe
     let screen_tail = terminal
         .last_n_non_empty_lines(crate::attention_detection::SCREEN_TAIL_LINE_COUNT)
         .join("\n");
-    let status = match crate::attention_detection::classify_any(
-        crate::attention_detection::DetectionInput {
+    let status =
+        match crate::attention_detection::classify_any(crate::attention_detection::DetectionInput {
             screen_tail: &screen_tail,
             osc_title: &terminal.breadcrumb_text,
-        },
-    ) {
-        crate::attention_detection::AttentionState::Working => {
-            crate::store::ProjectAttentionStatus::Working
-        }
-        crate::attention_detection::AttentionState::Idle => {
-            crate::store::ProjectAttentionStatus::Idle
-        }
-        crate::attention_detection::AttentionState::Blocked => {
-            crate::store::ProjectAttentionStatus::Blocked
-        }
-        crate::attention_detection::AttentionState::Unknown => return None,
-    };
+        }) {
+            crate::attention_detection::AttentionState::Working => {
+                crate::store::ProjectAttentionStatus::Working
+            }
+            crate::attention_detection::AttentionState::Idle => {
+                crate::store::ProjectAttentionStatus::Idle
+            }
+            crate::attention_detection::AttentionState::Blocked => {
+                crate::store::ProjectAttentionStatus::Blocked
+            }
+            // A plain shell rarely matches an agent manifest, so `Unknown` is the
+            // common case for a shell sitting at a prompt (or freshly opened). A
+            // shell that isn't clearly working or blocked is present and calm, not
+            // absent -- otherwise the rail could never list the shells it promises.
+            crate::attention_detection::AttentionState::Unknown => {
+                crate::store::ProjectAttentionStatus::Idle
+            }
+        };
     // The OSC title when the program set one; otherwise the terminal's own
     // derived display title (foreground process, cwd), so a shell that never
     // sets an OSC title is still legible. `title` never returns empty.

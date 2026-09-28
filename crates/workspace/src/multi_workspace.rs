@@ -814,6 +814,29 @@ impl MultiWorkspace {
         }
     }
 
+    /// Toggles one project group's expanded state. The workspace sidebar is the
+    /// only surface that renders group disclosure, and the group state already
+    /// lives here (and is persisted), so the sidebar calls through rather than
+    /// keeping a second copy of "which groups are collapsed".
+    pub fn toggle_project_group_expanded(
+        &mut self,
+        key: &ProjectGroupKey,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(group) = self
+            .project_groups
+            .iter_mut()
+            .find(|group| group.key == *key)
+        else {
+            return false;
+        };
+        group.expanded = !group.expanded;
+        cx.emit(MultiWorkspaceEvent::ProjectGroupsChanged);
+        self.serialize(cx);
+        cx.notify();
+        true
+    }
+
     pub fn move_project_group_up(&mut self, key: &ProjectGroupKey, cx: &mut Context<Self>) -> bool {
         let Some(index) = self
             .project_groups
