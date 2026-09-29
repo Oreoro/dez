@@ -8,7 +8,8 @@ use gpui::{
 use serde::{Deserialize, Serialize};
 use ui::{Disclosure, IconButton, IconButtonShape, Indicator, Tooltip, prelude::*};
 use workspace::{
-    MultiWorkspace, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent, SidebarSide,
+    MultiWorkspace, MultiWorkspaceEvent, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent,
+    SidebarSide,
 };
 
 const DEFAULT_SIDEBAR_WIDTH: Pixels = px(240.0);
@@ -220,6 +221,16 @@ impl DezSidebar {
         // changes.
         if let Some(subscription) = agent_threads::observe_terminal_activity(cx) {
             subscriptions.push(subscription);
+        }
+        // The rail's active-workspace highlight, group order, and collapsed
+        // state all come from the MultiWorkspace. Repaint on any of its
+        // changes: switching workspaces (including by focusing a session from
+        // the rail), adding or removing a workspace, and folding a group.
+        if let Some(multi_workspace) = multi_workspace.upgrade() {
+            subscriptions.push(cx.subscribe(
+                &multi_workspace,
+                |_this, _multi_workspace, _event: &MultiWorkspaceEvent, cx| cx.notify(),
+            ));
         }
 
         Self {
