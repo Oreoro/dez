@@ -45,10 +45,21 @@ Dez does not ship Zed's native agent and chat interface, hosted AI models, model
 
 ## Try Dez
 
-Download the latest stable build for macOS, Linux, or Windows from
-[GitHub Releases](https://github.com/Oreoro/dez/releases/latest). Nightly
-builds are available from the moving
-[`nightly` release](https://github.com/Oreoro/dez/releases/tag/nightly).
+Dez is pre-1.0, so no stable tag is published yet. The current build is the
+moving [`nightly` release](https://github.com/Oreoro/dez/releases/tag/nightly),
+rebuilt from `main` daily, with artifacts for macOS, Linux, and Windows. Watch
+[Releases](https://github.com/Oreoro/dez/releases) for the first stable tag.
+
+Direct downloads from the current nightly:
+
+| Platform | Artifact |
+| --- | --- |
+| macOS (Apple silicon) | [`dez-aarch64.dmg`](https://github.com/Oreoro/dez/releases/download/nightly/dez-aarch64.dmg) |
+| macOS (Intel) | [`dez-x86_64.dmg`](https://github.com/Oreoro/dez/releases/download/nightly/dez-x86_64.dmg) |
+| Linux (x86_64) | [`dez-linux-x86_64.tar.gz`](https://github.com/Oreoro/dez/releases/download/nightly/dez-linux-x86_64.tar.gz) |
+| Linux (arm64) | [`dez-linux-aarch64.tar.gz`](https://github.com/Oreoro/dez/releases/download/nightly/dez-linux-aarch64.tar.gz) |
+| Windows (x86_64) | [`dez-x86_64.exe`](https://github.com/Oreoro/dez/releases/download/nightly/dez-x86_64.exe) |
+| Windows (arm64) | [`dez-aarch64.exe`](https://github.com/Oreoro/dez/releases/download/nightly/dez-aarch64.exe) |
 
 ### macOS
 

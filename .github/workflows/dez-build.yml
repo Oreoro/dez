@@ -1,12 +1,9 @@
 name: Dez build
 
+# Artifacts are built on demand only. Merging to `main` no longer starts a
+# build; dispatch this workflow when you actually want binaries.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "*.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

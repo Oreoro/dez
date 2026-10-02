@@ -47,7 +47,9 @@ competed to answer "what is running" — the navigator, the Agent Threads panel,
 and the terminal tabs — so the rule now is:
 
 - The **rail supervises live sessions**: status, title, actor, and a click that
-  focuses the session through the store's own focus path.
+  focuses the session through the store's own focus path, which brings the
+  session's workspace forward first so a session in a background workspace is
+  actually shown.
 - The **Agent Threads panel** keeps only what the rail doesn't do: resuming and
   archiving *historical* sessions. It is reachable from a single quiet
   `Agent thread history` row at the foot of the rail, never as the default way
@@ -73,7 +75,23 @@ Shell state is the same `attention_detection::classify_any` call the Agent
 Threads panel's cross-project rollup already makes against a terminal's screen
 tail, so the rail and the panel can't disagree about whether a shell needs the
 user. The rail observes terminal activity separately from the agent store,
-because a shell's state is derived live rather than stored.
+because a shell's state is derived live rather than stored. A shell that
+matches no agent manifest -- the common case for an ordinary prompt -- is
+classified `Idle` rather than dropped, so plain shells stay listed instead of
+only appearing once they happen to look like an agent.
+
+The rail stays quiet by showing status in exactly two places: the colored
+marker (a dot for an agent thread, the terminal glyph for a shell) and a
+trailing label that appears only for the two states that ask for the user
+(`Needs input`, `Finished`). `Running` and `Idle` carry no text; every row
+still spells out its full state in a tooltip. Titles render in the default
+text color so a busy workspace reads as a list rather than a traffic light.
+
+Each group's header summarizes the whole group: the branch from its first
+root, the changed-file count summed across roots, and the most urgent change
+indicator. Clicking a header selects the root already active in that group
+(or the first root). A single-root group is named by its header alone, so the
+redundant per-root row is only rendered when a group holds more than one root.
 
 Remaining revisions to land:
 
@@ -139,6 +157,16 @@ crates/dez_sidebar/             # navigator / activity / discovery / headers
       from `agent_threads` at the presentation layer
 - [x] Plain shells listed alongside agent threads, from the panel's own
       terminal summaries, so the rail and the panel agree on what is running
+- [x] Shells that match no agent manifest classify as `Idle` instead of
+      vanishing, so an ordinary prompt is listed
+- [x] Status shown as a marker plus an attention-only label; titles stay in
+      the default text color
+- [x] Group headers summarize every root (branch, summed changes, worst
+      indicator); single-root groups don't repeat the header as a row
+- [x] Group headers carry a disclosure chevron; a collapsed group keeps its
+      attention rollup and folds its rows
+- [x] Focusing a session from the rail brings its workspace forward, so a
+      session in a background workspace is shown rather than silently focused
 - [ ] Surfaces: draggable/splittable tabs in the main work area
 - [ ] "Waiting for permission" split out of `Needs input` via manifest evidence
 - [ ] Session discovery-and-attach for tmux, Herdr, cmux

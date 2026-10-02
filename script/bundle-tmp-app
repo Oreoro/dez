@@ -5,8 +5,26 @@ set -euo pipefail
 script/bundle-mac -d
 
 target_triple=$(rustc --version --verbose | sed -n 's/^host: //p')
-source_app="target/${target_triple}/debug/bundle/osx/dez.app"
-target_app="/tmp/dez-Local.app"
+
+# cargo-bundle names the .app after `package.metadata.bundle-<channel>.name`,
+# not after the crate, so derive it instead of assuming `dez.app`.
+channel=$(<crates/dez/RELEASE_CHANNEL)
+case ${channel} in
+stable) bundle_name="Dez";;
+nightly) bundle_name="Dez Nightly";;
+dev) bundle_name="Dez Dev";;
+*)
+    echo "Unsupported release channel ${channel}"
+    exit 1;;
+esac
+
+source_app="target/${target_triple}/debug/bundle/osx/${bundle_name}.app"
+target_app="/tmp/Dez-Local.app"
+
+if [ ! -d "${source_app}" ]; then
+    echo "Error: ${source_app} not found; bundle-mac did not produce a bundle"
+    exit 1
+fi
 
 rm -rf "${target_app}"
 cp -R "${source_app}" "${target_app}"

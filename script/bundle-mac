@@ -327,5 +327,9 @@ cp target/${target_triple}/${target_dir}/cli "${app_path}/Contents/MacOS/cli"
 cp target/${target_triple}/${target_dir}/dezctl "${app_path}/Contents/MacOS/dezctl"
 sign_app_binaries
 
-sign_binary "target/$target_triple/release/remote_server"
-gzip -f --stdout --best target/$target_triple/release/remote_server > target/dez-remote-server-macos-$arch_suffix.gz
+if [ "$target_dir" = "debug" ]; then
+    echo "Debug build detected - skipping remote server artifact"
+else
+    sign_binary "target/$target_triple/release/remote_server"
+    gzip -f --stdout --best target/$target_triple/release/remote_server > target/dez-remote-server-macos-$arch_suffix.gz
+fi
