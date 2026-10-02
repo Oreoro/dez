@@ -1177,7 +1177,16 @@ impl AgentThreadStore {
         // workspace without switching to it looks like a no-op. Matches the
         // Agent Threads panel, which activates a cross-project target before
         // focusing its terminal.
-        if let Some(multi_workspace) = workspace.read(cx).multi_workspace().cloned() {
+        //
+        // Only switch when the thread's workspace is actually in the
+        // background. Leasing `MultiWorkspace` panics when the caller already
+        // holds that lease, and focusing a session from inside a
+        // `MultiWorkspace` update is a supported call shape. Activating the
+        // workspace we are already in is redundant anyway, since the pane
+        // activation below focuses it regardless.
+        if let Some(multi_workspace) = workspace.read(cx).multi_workspace().cloned()
+            && multi_workspace.read(cx).workspace() != &workspace
+        {
             multi_workspace
                 .update(cx, |multi_workspace, cx| {
                     multi_workspace.activate(workspace.clone(), None, window, cx);
