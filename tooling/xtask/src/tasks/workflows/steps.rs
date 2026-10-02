@@ -111,11 +111,6 @@ impl CheckoutStep {
         self.ref_ = Some(ref_.to_string());
         self
     }
-
-    pub fn with_fetch_tags(mut self) -> Self {
-        self.fetch_tags = true;
-        self
-    }
 }
 
 impl From<CheckoutStep> for Step<Use> {
@@ -948,13 +943,6 @@ impl GitRef {
         }
     }
 
-    fn update_ref_path(&self) -> String {
-        match self {
-            Self::Tag(name) => format!("tags/{name}"),
-            Self::Branch(name) => format!("heads/{name}"),
-        }
-    }
-
     fn kind(&self) -> &'static str {
         match self {
             Self::Tag(_) => "tag",
@@ -965,7 +953,6 @@ impl GitRef {
 
 enum RefOperation {
     Create,
-    Update { force: bool },
 }
 
 pub(crate) enum RefSha {
@@ -990,15 +977,9 @@ impl From<RefOp> for Step<Use> {
     fn from(op: RefOp) -> Self {
         let (api_method, ref_path, force_line) = match &op.operation {
             RefOperation::Create => ("createRef", op.git_ref.create_ref_path(), String::new()),
-            RefOperation::Update { force } => (
-                "updateRef",
-                op.git_ref.update_ref_path(),
-                format!(",\n    force: {force}"),
-            ),
         };
         let step_name = match &op.operation {
             RefOperation::Create => format!("steps::create_{}", op.git_ref.kind()),
-            RefOperation::Update { .. } => format!("steps::update_{}", op.git_ref.kind()),
         };
         let script = indoc::formatdoc! {r#"
             github.rest.git.{api_method}({{
@@ -1028,20 +1009,6 @@ pub(crate) fn create_ref(
     RefOp {
         git_ref,
         operation: RefOperation::Create,
-        sha: sha.into(),
-        token: token.to_string(),
-    }
-}
-
-pub(crate) fn update_ref(
-    git_ref: GitRef,
-    sha: impl Into<RefSha>,
-    token: &StepOutput,
-    force: bool,
-) -> impl Into<Step<Use>> {
-    RefOp {
-        git_ref,
-        operation: RefOperation::Update { force },
         sha: sha.into(),
         token: token.to_string(),
     }

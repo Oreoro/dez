@@ -30,32 +30,20 @@ pub(crate) fn release() -> Workflow {
     let bundle = ReleaseBundleJobs {
         linux_aarch64: bundle_linux(
             Arch::AARCH64,
-            None,
             &[&linux_tests, &linux_clippy, &check_scripts],
         ),
-        linux_x86_64: bundle_linux(
-            Arch::X86_64,
-            None,
-            &[&linux_tests, &linux_clippy, &check_scripts],
-        ),
+        linux_x86_64: bundle_linux(Arch::X86_64, &[&linux_tests, &linux_clippy, &check_scripts]),
         mac_aarch64: bundle_mac(
             Arch::AARCH64,
-            None,
             &[&macos_tests, &macos_clippy, &check_scripts],
         ),
-        mac_x86_64: bundle_mac(
-            Arch::X86_64,
-            None,
-            &[&macos_tests, &macos_clippy, &check_scripts],
-        ),
+        mac_x86_64: bundle_mac(Arch::X86_64, &[&macos_tests, &macos_clippy, &check_scripts]),
         windows_aarch64: bundle_windows(
             Arch::AARCH64,
-            None,
             &[&windows_tests, &windows_clippy, &check_scripts],
         ),
         windows_x86_64: bundle_windows(
             Arch::X86_64,
-            None,
             &[&windows_tests, &windows_clippy, &check_scripts],
         ),
     };
