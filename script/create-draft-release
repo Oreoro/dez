@@ -1,10 +1,48 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 release_tag=${RELEASE_TAG:-$GITHUB_REF_NAME}
-preview=""
-if [[ "$release_tag" == *"-pre" ]]; then
-    preview="-p"
-fi
+notes_file=$1
+
+# Every release body is prefixed with a marking block. The artifacts are built
+# from the dez 1.0 consolidation of dez, Flint and Gram, so somebody landing on
+# the release needs to know that up front rather than inferring it from the
+# asset names. Kept here rather than in the workflow so both the checked-in
+# release.yml and the xtask-generated one get the same marking.
+marked_notes=$(mktemp)
+trap 'rm -f "$marked_notes"' EXIT
+
+{
+    cat <<'MARKER'
+> [!WARNING]
+> **Prerelease — not a stable channel build.** These artifacts come from the
+> dez 1.0 consolidation of dez, Flint and Gram (session rail, agent threads,
+> terminal host). They are published for evaluation, are unsigned, and may be
+> rebuilt or replaced without notice.
+
+MARKER
+
+    cat <<'MARKER'
+### Artifacts
+
+| Platform | Asset |
+| --- | --- |
+| macOS (Apple silicon) | `dez-aarch64.dmg` |
+| macOS (Intel) | `dez-x86_64.dmg` |
+| Linux (arm64) | `dez-linux-aarch64.tar.gz` |
+| Linux (x86_64) | `dez-linux-x86_64.tar.gz` |
+| Windows (x86_64) | `dez-x86_64.exe` |
+| Windows (arm64) | `dez-aarch64.exe` |
+
+Each platform also ships a `dez-remote-server-*` build.
+
+---
+
+MARKER
+
+    cat "$notes_file"
+} >"$marked_notes"
 
 gh release view "$release_tag" ||\
-    gh release create -t "$release_tag" -d "$release_tag" -F "$1" $preview
+    gh release create -t "$release_tag" -d "$release_tag" -F "$marked_notes" -p
