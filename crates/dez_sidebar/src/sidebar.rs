@@ -192,14 +192,15 @@ fn status_label(status: SidebarThreadStatus) -> Option<(&'static str, Color)> {
 ///
 /// Every label carries the byte offsets the rail's search query matched inside
 /// it, so a row that survived the filter can highlight what let it through.
-/// `None` means the search is off; `Some(Vec::new())` means the row matched
-/// only on a field it does not display, such as an agent kind.
+/// An empty list means there is nothing to highlight: either the search is off,
+/// or the row matched only on a field it does not display, such as an agent
+/// kind. Both draw identically, so they are deliberately not distinguished.
 struct RailGroup {
     group: ProjectGroup,
     /// The group's display name, resolved once here rather than per render so
     /// the filter can match it against the same string the header will draw.
     name: SharedString,
-    name_match: Option<Vec<usize>>,
+    name_match: Vec<usize>,
     /// Present only for a multi-root group, which is the only case where the
     /// rail spells a root out separately from the header.
     roots: Vec<FilteredRoot>,
@@ -212,21 +213,21 @@ struct RailGroup {
 struct FilteredRoot {
     workspace: Entity<workspace::Workspace>,
     label: SharedString,
-    label_match: Option<Vec<usize>>,
+    label_match: Vec<usize>,
 }
 
 /// One live agent session and the byte offsets the search query matched in its
 /// title.
 struct FilteredThread {
     thread: SidebarThread,
-    title_match: Option<Vec<usize>>,
+    title_match: Vec<usize>,
 }
 
 /// One live plain shell and the byte offsets the search query matched in its
 /// title.
 struct FilteredTerminal {
     terminal: SidebarTerminal,
-    title_match: Option<Vec<usize>>,
+    title_match: Vec<usize>,
 }
 
 /// The label a workspace root is listed under in a multi-root group: the last
@@ -267,25 +268,16 @@ impl TitleStyle {
     };
 }
 
-/// A title that highlights `positions` inside it, or an ordinary label when the
-/// search matched nothing there.
-fn session_title(
-    title: SharedString,
-    positions: Option<&[usize]>,
-    style: TitleStyle,
-) -> AnyElement {
-    match positions {
-        Some(positions) => HighlightedLabel::new(title, positions.to_vec())
-            .size(style.size)
-            .weight(style.weight)
-            .truncate()
-            .into_any_element(),
-        None => Label::new(title)
-            .size(style.size)
-            .weight(style.weight)
-            .truncate()
-            .into_any_element(),
-    }
+/// A title with the bytes at `positions` highlighted. An empty `positions`
+/// draws exactly what a plain label would, so the rail needs only this one
+/// shape and a filtered rail cannot restyle its rows the moment a query
+/// appears.
+fn session_title(title: SharedString, positions: &[usize], style: TitleStyle) -> AnyElement {
+    HighlightedLabel::new(title, positions.to_vec())
+        .size(style.size)
+        .weight(style.weight)
+        .truncate()
+        .into_any_element()
 }
 
 /// Sidebar-specific state persisted alongside the workspace.
@@ -508,9 +500,13 @@ impl DezSidebar {
                     }
                     None => "Empty Workspace".into(),
                 };
-                let name_match = query
+                // `None` here means the group's own name did not match, which
+                // is what decides whether its rows are filtered individually
+                // and whether the group survives at all.
+                let name_matched = query
                     .as_deref()
                     .and_then(|query| filter::match_positions(query, &name));
+                let name_match = name_matched.clone().unwrap_or_default();
 
                 let mut threads: Vec<SidebarThread> = store
                     .as_ref()
@@ -538,7 +534,7 @@ impl DezSidebar {
                 // for that workspace, and hiding its sessions would answer with
                 // less than they asked for. Otherwise each row has to survive the
                 // filter on its own.
-                let row_query = if name_match.is_some() {
+                let row_query = if name_matched.is_some() {
                     None
                 } else {
                     query.as_deref()
@@ -559,8 +555,8 @@ impl DezSidebar {
                                 &[thread.kind_id, &working_directory],
                             ),
                             None => Some(Vec::new()),
-                        };
-                        title_match.map(|title_match| FilteredThread {
+                        }?;
+                        Some(FilteredThread {
                             thread,
                             title_match,
                         })
@@ -572,8 +568,8 @@ impl DezSidebar {
                         let title_match = match row_query {
                             Some(query) => filter::match_title(query, &terminal.title, &[]),
                             None => Some(Vec::new()),
-                        };
-                        title_match.map(|title_match| FilteredTerminal {
+                        }?;
+                        Some(FilteredTerminal {
                             terminal,
                             title_match,
                         })
@@ -593,8 +589,8 @@ impl DezSidebar {
                             let label_match = match row_query {
                                 Some(query) => filter::match_positions(query, &label),
                                 None => Some(Vec::new()),
-                            };
-                            label_match.map(|label_match| FilteredRoot {
+                            }?;
+                            Some(FilteredRoot {
                                 workspace: workspace.clone(),
                                 label,
                                 label_match,
@@ -605,7 +601,7 @@ impl DezSidebar {
                     Vec::new()
                 };
 
-                if name_match.is_none() && threads.is_empty() && terminals.is_empty() {
+                if name_matched.is_none() && threads.is_empty() && terminals.is_empty() {
                     return None;
                 }
 
@@ -722,7 +718,6 @@ impl DezSidebar {
                         .shape(IconButtonShape::Square)
                         .icon_size(IconSize::XSmall)
                         .tooltip(Tooltip::text("Clear search"))
-                        .aria_label("Clear search")
                         .on_click(cx.listener(|this, _, window, cx| this.clear_search(window, cx))),
                 )
             })
@@ -749,7 +744,7 @@ impl DezSidebar {
                     "No matches",
                     format!("Nothing in the rail matches \"{query}\"."),
                 ),
-                None => ("No workspaces", "Open a folder to get started."),
+                None => ("No workspaces", "Open a folder to get started.".to_string()),
             };
             return v_flex()
                 .id("dez-sidebar-rail")
@@ -829,7 +824,7 @@ impl DezSidebar {
             threads.iter().map(|thread| thread.thread.status),
             terminals.iter().map(|terminal| terminal.terminal.status),
         );
-        let header = self.group_header(&group, name, &name_match, active_id, attention, cx);
+        let header = self.group_header(&group, &name, &name_match, active_id, attention, cx);
 
         // A collapsed group still shows its header (and its attention rollup)
         // but builds no rows at all, so folding a busy group away is cheap.
@@ -944,11 +939,7 @@ impl DezSidebar {
                             .min_w_0()
                             .flex_1()
                             .overflow_hidden()
-                            .child(session_title(
-                                name.into(),
-                                Some(name_match),
-                                TitleStyle::GROUP,
-                            )),
+                            .child(session_title(name.into(), name_match, TitleStyle::GROUP)),
                     ),
             )
             .child(
@@ -1023,7 +1014,7 @@ impl DezSidebar {
                     .min_w_0()
                     .flex_1()
                     .overflow_hidden()
-                    .child(session_title(label, Some(&label_match), TitleStyle::ROW)),
+                    .child(session_title(label, &label_match, TitleStyle::ROW)),
             )
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.activate_workspace(workspace.clone(), window, cx);
@@ -1135,7 +1126,7 @@ impl DezSidebar {
                     .min_w_0()
                     .flex_1()
                     .overflow_hidden()
-                    .child(session_title(title, Some(title_match), TitleStyle::ROW)),
+                    .child(session_title(title, title_match, TitleStyle::ROW)),
             )
             .children(kind.map(|kind| {
                 Label::new(kind)
