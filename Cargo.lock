@@ -3424,6 +3424,7 @@ version = "0.1.0"
 dependencies = [
  "agent_threads",
  "dez_actions",
+ "editor",
  "gpui",
  "serde",
  "serde_json",

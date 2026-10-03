@@ -438,7 +438,7 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
             return;
         };
         let multi_workspace_weak = cx.weak_entity();
-        let sidebar = cx.new(|cx| dez_sidebar::DezSidebar::new(multi_workspace_weak, cx));
+        let sidebar = cx.new(|cx| dez_sidebar::DezSidebar::new(multi_workspace_weak, window, cx));
         multi_workspace.register_sidebar(sidebar, cx);
 
         if dez_sidebar::DezSidebarSettings::get_global(cx).starts_open {
