@@ -5485,21 +5485,29 @@ impl Workspace {
         self.update_window_title(window, cx);
     }
 
-    /// Whether this workspace may write the platform window's title and edited
-    /// indicator.
+    /// Whether this workspace is the active one in its window.
     ///
     /// In a multi-workspace window several workspaces share one platform
-    /// window, so only the active one is allowed to write that chrome —
-    /// otherwise a background workspace's project/item events would clobber the
-    /// active workspace's title. `MultiWorkspace` publishes the active
-    /// workspace's id into the shared `active_workspace_id` cell, which we
-    /// simply compare against our own id. A workspace with no shared cell (e.g.
-    /// a plain test window) owns its window unconditionally.
-    fn owns_window_chrome(&self) -> bool {
+    /// window, so only the active one may act on that window — otherwise a
+    /// background workspace's project/item events would clobber the active
+    /// workspace's title. `MultiWorkspace` publishes the active workspace's id
+    /// into the shared `active_workspace_id` cell, which we compare against our
+    /// own id. A workspace with no shared cell (e.g. a plain test window) is
+    /// the only one in its window, so it counts as active.
+    ///
+    /// This deliberately does not lease `MultiWorkspace`, so callers can ask
+    /// the question while a `MultiWorkspace` update is already in progress.
+    pub fn is_active_workspace(&self) -> bool {
         match &self.active_workspace_id {
             Some(active_workspace_id) => active_workspace_id.get() == self.weak_self.entity_id(),
             None => true,
         }
+    }
+
+    /// Whether this workspace may write the platform window's title and edited
+    /// indicator.
+    fn owns_window_chrome(&self) -> bool {
+        self.is_active_workspace()
     }
 
     fn update_window_title(&mut self, window: &mut Window, cx: &mut App) {

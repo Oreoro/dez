@@ -1179,17 +1179,16 @@ impl AgentThreadStore {
         // focusing its terminal.
         //
         // Only switch when the thread's workspace is actually in the
-        // background. Leasing `MultiWorkspace` panics when the caller already
-        // holds that lease, and focusing a session from inside a
-        // `MultiWorkspace` update is a supported call shape. Activating the
-        // workspace we are already in is redundant anyway, since the pane
+        // background. Any lease of `MultiWorkspace` — read or update — panics
+        // while the caller already holds one, and focusing a session from
+        // inside a `MultiWorkspace` update is a supported call shape. So the
+        // "is it already active?" question is answered through the workspace's
+        // shared cell rather than by leasing `MultiWorkspace`, and activating
+        // the workspace we are already in was redundant anyway, since the pane
         // activation below focuses it regardless.
-        if let Some(multi_workspace) = workspace.read(cx).multi_workspace().cloned()
-            && multi_workspace
-                .read_with(cx, |multi_workspace, _| {
-                    multi_workspace.workspace() != &workspace
-                })
-                .unwrap_or(true)
+        let multi_workspace = workspace.read(cx).multi_workspace().cloned();
+        if let Some(multi_workspace) = multi_workspace
+            && !workspace.read(cx).is_active_workspace()
         {
             multi_workspace
                 .update(cx, |multi_workspace, cx| {
