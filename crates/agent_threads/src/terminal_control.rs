@@ -225,10 +225,15 @@ pub(crate) fn init(cx: &mut App) {
                 );
                 if let Some(terminal) = terminal.upgrade() {
                     let subscription = cx.subscribe(&terminal, |_registry, _, event, cx| {
+                        // `ProcessExited` matters as much as output: a shell's
+                        // status is re-derived from its screen tail on every
+                        // read, so a process exiting changes the answer without
+                        // necessarily producing any further output.
                         if matches!(
                             event,
                             terminal::Event::Wakeup
                                 | terminal::Event::Bell
+                                | terminal::Event::ProcessExited { .. }
                                 | terminal::Event::CloseTerminal
                         ) {
                             cx.notify();

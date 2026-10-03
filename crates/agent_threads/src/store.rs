@@ -545,6 +545,12 @@ enum AttentionTrigger {
     /// classification here is unremarkable mid-turn output, not a signal,
     /// so it leaves the thread's attention state exactly as it was.
     Wakeup,
+    /// The agent's process exited. Nothing about the screen tail can say what
+    /// the agent was doing when it died, so an inconclusive classification here
+    /// falls back to `ThreadAttention::Idle`: the session is definitionally no
+    /// longer working, and leaving the last live classification in place is how
+    /// a dead session keeps a "Running" dot forever.
+    ProcessExited,
 }
 
 /// Aggregate live-thread status for one worktree, for the cross-project
@@ -1372,6 +1378,19 @@ impl AgentThreadStore {
                 terminal::Event::Wakeup => {
                     store.schedule_wakeup_reclassify(terminal_item_id, cx);
                 }
+                // Not a wakeup: there is no more output coming, so reclassify
+                // now rather than behind the output debounce. Agent terminals
+                // are spawned with `HideStrategy::Never`, so an exiting agent
+                // leaves its tab -- and this store entry -- alive, and without
+                // this the rail would keep showing the classification the
+                // session had while it was still alive.
+                terminal::Event::ProcessExited { .. } => {
+                    store.reclassify_attention(
+                        terminal_item_id,
+                        AttentionTrigger::ProcessExited,
+                        cx,
+                    );
+                }
                 _ => {}
             },
         );
@@ -1445,6 +1464,7 @@ impl AgentThreadStore {
             crate::attention_detection::AttentionState::Unknown => match trigger {
                 AttentionTrigger::Bell => Some(ThreadAttention::Blocked),
                 AttentionTrigger::Wakeup => return,
+                AttentionTrigger::ProcessExited => Some(ThreadAttention::Idle),
             },
         };
 
