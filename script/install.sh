@@ -87,8 +87,25 @@ main() {
     fi
 }
 
+# Resolves the newest published release tag, prereleases included. Every dez
+# release is flagged as a prerelease, and GitHub's `releases/latest` redirect
+# deliberately skips prereleases, so that redirect cannot be used to find the
+# current build.
+latest_release_tag() {
+    if [ -z "${resolved_latest_tag:-}" ]; then
+        resolved_latest_tag=$(curl -fsSL https://api.github.com/repos/Oreoro/dez/releases 2>/dev/null |
+            sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
+            head -n 1 || true)
+        if [ -z "$resolved_latest_tag" ]; then
+            echo "Could not determine the latest dez release; pin one with ZED_VERSION=<tag>." >&2
+            exit 1
+        fi
+    fi
+    echo "$resolved_latest_tag"
+}
+
 # Builds the GitHub Releases download URL for a given asset filename. Uses the
-# "latest" redirect unless ZED_VERSION pins a specific tag (with or without the
+# newest release unless ZED_VERSION pins a specific tag (with or without the
 # leading "v"). Nightly uses its moving tag.
 github_release_url() {
     asset="$1"
@@ -96,7 +113,8 @@ github_release_url() {
         if [ "$channel" = "nightly" ]; then
             echo "https://github.com/Oreoro/dez/releases/download/nightly/$asset"
         else
-            echo "https://github.com/Oreoro/dez/releases/latest/download/$asset"
+            tag=$(latest_release_tag) || exit 1
+            echo "https://github.com/Oreoro/dez/releases/download/$tag/$asset"
         fi
     else
         case "$ZED_VERSION" in
