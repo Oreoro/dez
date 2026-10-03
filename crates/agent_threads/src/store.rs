@@ -1185,7 +1185,11 @@ impl AgentThreadStore {
         // workspace we are already in is redundant anyway, since the pane
         // activation below focuses it regardless.
         if let Some(multi_workspace) = workspace.read(cx).multi_workspace().cloned()
-            && multi_workspace.read(cx).workspace() != &workspace
+            && multi_workspace
+                .read_with(cx, |multi_workspace, _| {
+                    multi_workspace.workspace() != &workspace
+                })
+                .unwrap_or(true)
         {
             multi_workspace
                 .update(cx, |multi_workspace, cx| {
