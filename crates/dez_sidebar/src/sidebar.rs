@@ -496,7 +496,6 @@ impl DezSidebar {
                         let project = workspace.read(cx).project().read(cx);
                         ProjectGroupKey::from_project(project, cx)
                             .display_name(&std::collections::HashMap::default())
-                            .into()
                     }
                     None => "Empty Workspace".into(),
                 };
@@ -862,7 +861,7 @@ impl DezSidebar {
     fn group_header(
         &self,
         group: &ProjectGroup,
-        name: &str,
+        name: &SharedString,
         name_match: &[usize],
         active_id: Option<gpui::EntityId>,
         attention: usize,
@@ -939,7 +938,7 @@ impl DezSidebar {
                             .min_w_0()
                             .flex_1()
                             .overflow_hidden()
-                            .child(session_title(name.into(), name_match, TitleStyle::GROUP)),
+                            .child(session_title(name.clone(), name_match, TitleStyle::GROUP)),
                     ),
             )
             .child(
