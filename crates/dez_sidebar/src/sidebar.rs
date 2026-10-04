@@ -7,6 +7,7 @@ use gpui::{
 };
 use serde::{Deserialize, Serialize};
 use ui::{Disclosure, IconButton, IconButtonShape, Indicator, Tooltip, prelude::*};
+use util::ResultExt as _;
 use workspace::{
     MultiWorkspace, MultiWorkspaceEvent, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent,
     SidebarSide,
@@ -215,6 +216,15 @@ impl DezSidebar {
             // changes that aren't emitted events, and the rail wants all of
             // them rather than just the ones the panel happens to care about.
             subscriptions.push(cx.observe(&store, |_this, _store, cx| cx.notify()));
+            // `observe` covers `notify()` only. Opening and closing a session
+            // are *emits* (`ThreadOpened` / `ThreadClosed`), and the store does
+            // not also notify, so without this the rail keeps showing a row for
+            // a session that has been closed -- and a row the user can click
+            // into nothing -- until some unrelated change repaints it.
+            subscriptions.push(cx.subscribe(
+                &store,
+                |_this, _store, _event: &agent_threads::AgentThreadStoreEvent, cx| cx.notify(),
+            ));
         }
         // Plain shells are classified live from their own screen tail, so the
         // rail has to repaint on terminal activity too, not only on store
@@ -361,8 +371,12 @@ impl DezSidebar {
         let Some(store) = agent_threads::AgentThreadStore::try_global(cx) else {
             return;
         };
+        // Not discarded: these are the failures that make a rail row look
+        // inert. A stale `terminal_item_id` (the session's pane was closed and
+        // the row has not repainted yet) surfaces here, and swallowing it makes
+        // a click indistinguishable from a click that was ignored.
         store.update(cx, |store, cx| {
-            let _ = store.focus_thread(terminal_item_id, window, cx);
+            store.focus_thread(terminal_item_id, window, cx).log_err();
         });
         cx.notify();
     }
@@ -758,7 +772,7 @@ impl DezSidebar {
         let terminal_item_id = terminal.terminal_item_id;
         let tooltip: SharedString = format!("Terminal · {}", status.state_label()).into();
         let on_click = cx.listener(move |_this, _, window, cx| {
-            let _ = agent_threads::focus_priority_terminal(terminal_item_id, window, cx);
+            agent_threads::focus_priority_terminal(terminal_item_id, window, cx).log_err();
         });
 
         self.render_session_row(

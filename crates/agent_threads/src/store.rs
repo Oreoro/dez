@@ -1372,6 +1372,15 @@ impl AgentThreadStore {
                 terminal::Event::Wakeup => {
                     store.schedule_wakeup_reclassify(terminal_item_id, cx);
                 }
+                // Not a wakeup: there is no more output coming, so reclassify
+                // now rather than behind the output debounce. Agent terminals
+                // are spawned with `HideStrategy::Never`, so an exiting agent
+                // leaves its tab -- and this store entry -- alive, and without
+                // this the rail would keep showing the classification the
+                // session had while it was still alive.
+                terminal::Event::ProcessExited { .. } => {
+                    store.mark_exited(terminal_item_id, cx);
+                }
                 _ => {}
             },
         );
@@ -1488,6 +1497,33 @@ impl AgentThreadStore {
                 project = project_name,
             )),
         );
+    }
+
+    /// Settles a thread whose process has exited, so a session that is no longer
+    /// running stops presenting the classification it had while it was alive --
+    /// typically a green "Running" dot that outlives the process, because
+    /// agent terminals are spawned with `HideStrategy::Never` and so leave their
+    /// tab, their `TerminalView`, and this store entry behind.
+    ///
+    /// Deliberately *not* `reclassify_attention`: a desktop notification is
+    /// correct when an agent rings the bell mid-turn, but the process exiting is
+    /// not a fresh "look at me" signal, and notifying here would double-notify
+    /// a thread that had already been flagged as blocked. The rail and the
+    /// rollup pick the change up through the emitted event instead.
+    fn mark_exited(&mut self, terminal_item_id: EntityId, cx: &mut Context<Self>) {
+        let Some(entry) = self.threads.get_mut(&terminal_item_id) else {
+            return;
+        };
+        if entry.attention == Some(ThreadAttention::Idle) {
+            return;
+        }
+        entry.attention = Some(ThreadAttention::Idle);
+        // A fresh completion, so the rail reports it as finished-and-unseen
+        // rather than already-looked-at. See `ThreadEntry::finished_seen`.
+        entry.finished_seen = false;
+        let kind_id = entry.metadata.kind_id;
+        cx.emit(AgentThreadStoreEvent::ThreadUpdated { kind_id });
+        cx.notify();
     }
 
     fn begin_shutdown(
