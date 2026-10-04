@@ -162,8 +162,24 @@ mod tests {
     }
 
     #[test]
-    fn a_word_start_is_preferred_over_a_later_word_start() {
-        assert_eq!(match_positions("at", "atlas data"), Some(vec![0, 6]));
+    fn a_word_start_is_preferred_over_an_earlier_match_inside_a_word() {
+        // "axb b": the `b` inside "axb" comes first but is mid-word, so the
+        // word-start preference skips it for the `b` that opens a word. Without
+        // that preference this would be [0, 2].
+        assert_eq!(match_positions("ab", "axb b"), Some(vec![0, 4]));
+    }
+
+    #[test]
+    fn a_run_is_preferred_over_the_word_start_preference() {
+        // "at" is the front of "atlas", so continuing the run wins outright and
+        // the later word-start `a` in "afar" is never considered.
+        assert_eq!(match_positions("at", "atlas afar"), Some(vec![0, 1]));
+    }
+
+    #[test]
+    fn a_separator_breaks_a_run() {
+        // `-` is not alphanumeric, so it both ends a run and opens a word.
+        assert_eq!(match_positions("ab", "a-b"), Some(vec![0, 2]));
     }
 
     #[test]
@@ -182,10 +198,9 @@ mod tests {
     fn offsets_land_on_character_boundaries_for_non_ascii_titles() {
         let title = "Reparer café";
         let positions = match_positions("café", title).expect("query should match");
-        assert_eq!(
-            positions.len(),
-            'c'.len_utf8() + 'a'.len_utf8() + 'f'.len_utf8() + 'é'.len_utf8()
-        );
+        // One offset per query character, so a two-byte character contributes
+        // one offset and the byte span it covers is two wide.
+        assert_eq!(positions.len(), "café".chars().count());
         assert!(
             positions.iter().all(|&index| title.is_char_boundary(index)),
             "every offset must be a character boundary: {positions:?}"
