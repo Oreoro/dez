@@ -4444,11 +4444,17 @@ mod tests {
         cx.executor().timer(Duration::from_millis(500)).await;
         cx.run_until_parked();
 
-        assert_eq!(
+        // `Blocked` specifically, not `None`: the echo agent this test spawns
+        // exits during the 500ms debounce window, and a thread whose process is
+        // gone is legitimately settled to `Idle` (see `mark_exited`) -- that is
+        // a separate transition from the one under test here. What this test
+        // exists to catch is Wakeup raising the thread the way a Bell does, and
+        // only `Blocked` is the flagging it guards against.
+        assert_ne!(
             cx.update(|cx| AgentThreadStore::global(cx)
                 .read(cx)
                 .thread_attention(terminal_item_id)),
-            None,
+            Some(ThreadAttention::Blocked),
             "unclassifiable content reached via Wakeup (not Bell) should not flag the thread"
         );
     }
