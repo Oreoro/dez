@@ -9,6 +9,7 @@
 //! rather than in the Agent Threads panel, and Files / Git / Settings stay in
 //! Zed's own docked panels instead of being re-hosted as rail tabs.
 
+pub mod filter;
 mod settings;
 mod sidebar;
 

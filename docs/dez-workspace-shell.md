@@ -167,6 +167,10 @@ crates/dez_sidebar/             # navigator / activity / discovery / headers
       attention rollup and folds its rows
 - [x] Focusing a session from the rail brings its workspace forward, so a
       session in a background workspace is shown rather than silently focused
+- [x] A search field under the rail header filters the rail by workspace name,
+      session title, agent kind, and working directory, highlights the matched
+      characters in place, and keeps attention-first ordering; `cmd-f` /
+      `ctrl-f` focuses it from the Workspace key context
 - [ ] Surfaces: draggable/splittable tabs in the main work area
 - [ ] "Waiting for permission" split out of `Needs input` via manifest evidence
 - [ ] Session discovery-and-attach for tmux, Herdr, cmux
