@@ -15,6 +15,7 @@ doctest = false
 [dependencies]
 agent_threads.workspace = true
 dez_actions.workspace = true
+editor.workspace = true
 gpui.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -24,4 +25,5 @@ util.workspace = true
 workspace.workspace = true
 
 [dev-dependencies]
+editor = { workspace = true, features = ["test-support"] }
 gpui = { workspace = true, features = ["test-support"] }

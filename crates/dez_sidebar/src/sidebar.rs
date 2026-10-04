@@ -1,17 +1,23 @@
 use std::cmp::Reverse;
 
 use agent_threads::{SidebarTerminal, SidebarThread, SidebarThreadStatus};
+use editor::{Editor, EditorEvent};
 use gpui::{
     AnyElement, App, ClickEvent, Context, Entity, EventEmitter, FocusHandle, Focusable, FontWeight,
-    IntoElement, Pixels, Render, SharedString, Styled, Subscription, WeakEntity, Window, div, px,
+    IntoElement, Pixels, Render, SharedString, Styled, Subscription, TextStyleRefinement,
+    WeakEntity, Window, div, px,
 };
 use serde::{Deserialize, Serialize};
-use ui::{Disclosure, IconButton, IconButtonShape, Indicator, Tooltip, prelude::*};
+use ui::{
+    Disclosure, HighlightedLabel, IconButton, IconButtonShape, Indicator, Tooltip, prelude::*,
+};
 use util::ResultExt as _;
 use workspace::{
-    MultiWorkspace, MultiWorkspaceEvent, ProjectGroup, ProjectGroupKey, Sidebar, SidebarEvent,
-    SidebarSide,
+    FocusWorkspaceSidebarSearch, MultiWorkspace, MultiWorkspaceEvent, ProjectGroup,
+    ProjectGroupKey, Sidebar, SidebarEvent, SidebarSide,
 };
+
+use crate::filter;
 
 const DEFAULT_SIDEBAR_WIDTH: Pixels = px(240.0);
 const MIN_SIDEBAR_WIDTH: Pixels = px(180.0);
@@ -21,6 +27,11 @@ const MAX_SIDEBAR_WIDTH: Pixels = px(420.0);
 /// status label, or a missing actor label can't make the list jitter.
 const ROW_HEIGHT: Pixels = px(26.0);
 const GROUP_HEADER_HEIGHT: Pixels = px(28.0);
+
+/// The rail's session search field. Tall enough for the editor's own line
+/// height at the font size set below, short enough that the search row does
+/// not push the first workspace group off a short window.
+const SEARCH_FIELD_HEIGHT: Pixels = px(28.0);
 
 /// A compact read of a workspace's git status, used to pick the icon and color
 /// shown beside the workspace header.
@@ -179,10 +190,95 @@ fn status_label(status: SidebarThreadStatus) -> Option<(&'static str, Color)> {
 /// Sessions are collected per workspace and never pooled across groups, so a
 /// session running in one workspace can never appear under another
 /// workspace's header -- that isolation is dez's product guarantee.
+///
+/// Every label carries the byte offsets the rail's search query matched inside
+/// it, so a row that survived the filter can highlight what let it through.
+/// An empty list means there is nothing to highlight: either the search is off,
+/// or the row matched only on a field it does not display, such as an agent
+/// kind. Both draw identically, so they are deliberately not distinguished.
 struct RailGroup {
     group: ProjectGroup,
-    threads: Vec<SidebarThread>,
-    terminals: Vec<SidebarTerminal>,
+    /// The group's display name, resolved once here rather than per render so
+    /// the filter can match it against the same string the header will draw.
+    name: SharedString,
+    name_match: Vec<usize>,
+    /// Present only for a multi-root group, which is the only case where the
+    /// rail spells a root out separately from the header.
+    roots: Vec<FilteredRoot>,
+    threads: Vec<FilteredThread>,
+    terminals: Vec<FilteredTerminal>,
+}
+
+/// A workspace root row and the byte offsets the search query matched in its
+/// label.
+struct FilteredRoot {
+    workspace: Entity<workspace::Workspace>,
+    label: SharedString,
+    label_match: Vec<usize>,
+}
+
+/// One live agent session and the byte offsets the search query matched in its
+/// title.
+struct FilteredThread {
+    thread: SidebarThread,
+    title_match: Vec<usize>,
+}
+
+/// One live plain shell and the byte offsets the search query matched in its
+/// title.
+struct FilteredTerminal {
+    terminal: SidebarTerminal,
+    title_match: Vec<usize>,
+}
+
+/// The label a workspace root is listed under in a multi-root group: the last
+/// segment of its main worktree path, which is the only name the root has that
+/// the group's own header does not already carry.
+fn workspace_root_label(workspace: &Entity<workspace::Workspace>, cx: &App) -> SharedString {
+    workspace
+        .read(cx)
+        .project()
+        .read(cx)
+        .worktree_paths(cx)
+        .main_worktree_path_list()
+        .ordered_paths()
+        .last()
+        .and_then(|path| path.file_name())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "Workspace".to_string())
+        .into()
+}
+
+/// How a rail label is drawn. Spelled out once so the highlighted and plain
+/// shapes cannot drift apart: same size, same weight, same truncation, or a
+/// filtered rail would visibly restyle every row the moment a query appeared.
+#[derive(Clone, Copy)]
+struct TitleStyle {
+    size: LabelSize,
+    weight: FontWeight,
+}
+
+impl TitleStyle {
+    const GROUP: Self = Self {
+        size: LabelSize::Small,
+        weight: FontWeight::MEDIUM,
+    };
+    const ROW: Self = Self {
+        size: LabelSize::Small,
+        weight: FontWeight::NORMAL,
+    };
+}
+
+/// A title with the bytes at `positions` highlighted. An empty `positions`
+/// draws exactly what a plain label would, so the rail needs only this one
+/// shape and a filtered rail cannot restyle its rows the moment a query
+/// appears.
+fn session_title(title: SharedString, positions: &[usize], style: TitleStyle) -> AnyElement {
+    HighlightedLabel::new(title, positions.to_vec())
+        .size(style.size)
+        .weight(style.weight)
+        .truncate()
+        .into_any_element()
 }
 
 /// Sidebar-specific state persisted alongside the workspace.
@@ -204,12 +300,20 @@ struct SerializedDezSidebar {
 pub struct DezSidebar {
     multi_workspace: WeakEntity<MultiWorkspace>,
     focus_handle: FocusHandle,
+    /// The rail's session search. Built here rather than per render because an
+    /// `Editor` needs the window it was created for, and rebuilding it would
+    /// throw away the query and the cursor on every keystroke.
+    search_editor: Entity<Editor>,
     width: Option<Pixels>,
     _subscriptions: Vec<Subscription>,
 }
 
 impl DezSidebar {
-    pub fn new(multi_workspace: WeakEntity<MultiWorkspace>, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        multi_workspace: WeakEntity<MultiWorkspace>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let mut subscriptions = Vec::new();
         if let Some(store) = agent_threads::AgentThreadStore::try_global(cx) {
             // `observe` rather than `subscribe`: the store calls `notify()` for
@@ -243,12 +347,73 @@ impl DezSidebar {
             ));
         }
 
+        let search_editor = cx.new(|cx| {
+            let mut editor = Editor::single_line(window, cx);
+            editor.set_placeholder_text("Search sessions", window, cx);
+            // The default single-line editor is sized for a document, which in
+            // a 240px rail would either clip the query or push the first
+            // workspace group off a short window. `TextSize::Small` is what
+            // `LabelSize::Small` resolves to, so the query matches the rows
+            // around it.
+            editor.set_text_style_refinement(TextStyleRefinement {
+                font_size: Some(
+                    ui::TextSize::Small
+                        .rems(cx)
+                        .to_pixels(window.rem_size())
+                        .into(),
+                ),
+                ..Default::default()
+            });
+            editor.set_show_gutter(false, cx);
+            editor.set_show_indent_guides(false, cx);
+            editor.set_show_wrap_guides(false, cx);
+            editor.set_use_autoclose(false);
+            editor
+        });
+        // The rail rebuilds its rows during render, so a keystroke has nothing
+        // to invalidate except the notification itself.
+        subscriptions.push(cx.subscribe_in(
+            &search_editor,
+            window,
+            |_this, _editor, event: &EditorEvent, _window, cx| {
+                if matches!(event, EditorEvent::BufferEdited) {
+                    cx.notify();
+                }
+            },
+        ));
+
         Self {
             multi_workspace,
             focus_handle: cx.focus_handle(),
+            search_editor,
             width: None,
             _subscriptions: subscriptions,
         }
+    }
+
+    /// The rail's search query, or `None` when the search is not narrowing
+    /// anything. Blank and whitespace-only both read as "no filter", so a
+    /// trailing space never empties the rail mid-word.
+    fn search_query(&self, cx: &App) -> Option<String> {
+        filter::normalize_query(&self.search_editor.read(cx).text(cx)).map(str::to_string)
+    }
+
+    fn has_search_query(&self, cx: &App) -> bool {
+        self.search_query(cx).is_some()
+    }
+
+    fn focus_search_field(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.search_editor
+            .read(cx)
+            .focus_handle(cx)
+            .focus(window, cx);
+    }
+
+    fn clear_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.search_editor.update(cx, |editor, cx| {
+            editor.set_text("", window, cx);
+        });
+        cx.notify();
     }
 
     fn effective_width(&self) -> Pixels {
@@ -323,11 +488,35 @@ impl DezSidebar {
     /// The rail's contents: every open workspace group paired with the live
     /// sessions tied to its workspaces -- agent threads and plain shells both,
     /// each list most urgent first.
+    ///
+    /// With a search query active, this also does the filtering: a group stays
+    /// when its own name matched or when any of its rows did, and each row
+    /// carries the offsets that let it through. Filtering happens here, once,
+    /// rather than in the row renderers, so the header's attention rollup counts
+    /// exactly the rows the user can see.
     fn rail_groups(&self, cx: &mut App) -> Vec<RailGroup> {
         let store = agent_threads::AgentThreadStore::try_global(cx);
+        let query = self.search_query(cx);
+
         self.project_groups(cx)
             .into_iter()
-            .map(|group| {
+            .filter_map(|group| {
+                let name: SharedString = match group.workspaces.first() {
+                    Some(workspace) => {
+                        let project = workspace.read(cx).project().read(cx);
+                        ProjectGroupKey::from_project(project, cx)
+                            .display_name(&std::collections::HashMap::default())
+                    }
+                    None => "Empty Workspace".into(),
+                };
+                // `None` here means the group's own name did not match, which
+                // is what decides whether its rows are filtered individually
+                // and whether the group survives at all.
+                let name_matched = query
+                    .as_deref()
+                    .and_then(|query| filter::match_positions(query, &name));
+                let name_match = name_matched.clone().unwrap_or_default();
+
                 let mut threads: Vec<SidebarThread> = store
                     .as_ref()
                     .map(|store| {
@@ -350,11 +539,89 @@ impl DezSidebar {
                     .collect();
                 terminals.sort_by_key(|terminal| Reverse(terminal.status));
 
-                RailGroup {
+                // A group whose own name matched keeps every row: the user asked
+                // for that workspace, and hiding its sessions would answer with
+                // less than they asked for. Otherwise each row has to survive the
+                // filter on its own.
+                let row_query = if name_matched.is_some() {
+                    None
+                } else {
+                    query.as_deref()
+                };
+
+                // A session is searched by what its row shows plus the two
+                // things it does not: the agent kind behind the row's actor
+                // label, and the directory it was started in. Both are how a
+                // user remembers a session they cannot see the name of.
+                let threads: Vec<FilteredThread> = threads
+                    .into_iter()
+                    .filter_map(|thread| {
+                        let working_directory = thread.worktree_root.to_string_lossy();
+                        let title_match = match row_query {
+                            Some(query) => filter::match_title(
+                                query,
+                                &thread.title,
+                                &[thread.kind_id, &working_directory],
+                            ),
+                            None => Some(Vec::new()),
+                        }?;
+                        Some(FilteredThread {
+                            thread,
+                            title_match,
+                        })
+                    })
+                    .collect();
+                let terminals: Vec<FilteredTerminal> = terminals
+                    .into_iter()
+                    .filter_map(|terminal| {
+                        let title_match = match row_query {
+                            Some(query) => filter::match_title(query, &terminal.title, &[]),
+                            None => Some(Vec::new()),
+                        }?;
+                        Some(FilteredTerminal {
+                            terminal,
+                            title_match,
+                        })
+                    })
+                    .collect();
+
+                // A single-root group is already named by its header, so the
+                // per-root row would only repeat it. Multi-root groups need the
+                // rows to tell their roots apart, and each one has to survive
+                // the filter on its own label rather than inherit its group's.
+                let roots: Vec<FilteredRoot> = if group.workspaces.len() > 1 {
+                    group
+                        .workspaces
+                        .iter()
+                        .filter_map(|workspace| {
+                            let label = workspace_root_label(workspace, cx);
+                            let label_match = match row_query {
+                                Some(query) => filter::match_positions(query, &label),
+                                None => Some(Vec::new()),
+                            }?;
+                            Some(FilteredRoot {
+                                workspace: workspace.clone(),
+                                label,
+                                label_match,
+                            })
+                        })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+
+                if name_matched.is_none() && threads.is_empty() && terminals.is_empty() {
+                    return None;
+                }
+
+                Some(RailGroup {
                     group,
+                    name,
+                    name_match,
+                    roots,
                     threads,
                     terminals,
-                }
+                })
             })
             .collect()
     }
@@ -431,6 +698,45 @@ impl DezSidebar {
             .into_any_element()
     }
 
+    /// The rail's session search field: type to narrow the rail to the
+    /// workspaces and live sessions whose names match, with the matched
+    /// characters highlighted where they sit.
+    ///
+    /// It sits under the rollup header rather than inside it, because the
+    /// header's own controls are two fixed-width items and a field between
+    /// them would leave nothing for the query.
+    fn render_search(&self, cx: &mut Context<Self>) -> AnyElement {
+        let has_query = self.has_search_query(cx);
+
+        h_flex()
+            .id("dez-sidebar-search")
+            .aria_label("Search sessions")
+            .flex_none()
+            .h(SEARCH_FIELD_HEIGHT)
+            .px_2()
+            .gap_1()
+            .child(
+                Icon::new(IconName::MagnifyingGlass)
+                    .size(IconSize::XSmall)
+                    .color(Color::Muted),
+            )
+            // The editor owns the shrinking, so a long query ellipsizes
+            // instead of pushing the clear button out of the row.
+            .child(div().min_w_0().flex_1().child(self.search_editor.clone()))
+            // The clear button only exists while there is something to clear,
+            // so an idle rail does not carry a permanent affordance.
+            .when(has_query, |el| {
+                el.child(
+                    IconButton::new("dez-sidebar-search-clear", IconName::Close)
+                        .shape(IconButtonShape::Square)
+                        .icon_size(IconSize::XSmall)
+                        .tooltip(Tooltip::text("Clear search"))
+                        .on_click(cx.listener(|this, _, window, cx| this.clear_search(window, cx))),
+                )
+            })
+            .into_any_element()
+    }
+
     /// The rail: one scrollable list of workspace groups, each followed by the
     /// live agent sessions tied to it. This is dez's single sidebar -- sessions
     /// are supervised here instead of in a separate panel, so the shell has
@@ -443,11 +749,21 @@ impl DezSidebar {
         let active_id = self.active_workspace_id(cx);
 
         if groups.is_empty() {
+            // "Nothing here" and "nothing matched" are different answers: the
+            // first is fixed by opening a folder, the second by typing a
+            // different query, so they get different copy.
+            let (title, detail) = match self.search_query(cx) {
+                Some(query) => (
+                    "No matches",
+                    format!("Nothing in the rail matches \"{query}\"."),
+                ),
+                None => ("No workspaces", "Open a folder to get started.".to_string()),
+            };
             return v_flex()
                 .id("dez-sidebar-rail")
                 .flex_1()
                 .w_full()
-                .child(self.render_hint("No workspaces", "Open a folder to get started.", cx))
+                .child(self.render_hint(title, &detail, cx))
                 .into_any_element();
         }
 
@@ -511,14 +827,17 @@ impl DezSidebar {
     ) -> AnyElement {
         let RailGroup {
             group,
+            name,
+            name_match,
+            roots,
             threads,
             terminals,
         } = group;
         let attention = Self::attention_from_rows(
-            threads.iter().map(|thread| thread.status),
-            terminals.iter().map(|terminal| terminal.status),
+            threads.iter().map(|thread| thread.thread.status),
+            terminals.iter().map(|terminal| terminal.terminal.status),
         );
-        let header = self.group_header(&group, active_id, attention, cx);
+        let header = self.group_header(&group, &name, &name_match, active_id, attention, cx);
 
         // A collapsed group still shows its header (and its attention rollup)
         // but builds no rows at all, so folding a busy group away is cheap.
@@ -535,19 +854,10 @@ impl DezSidebar {
                     .into_iter()
                     .map(|terminal| self.render_terminal_row(terminal, cx)),
             );
-            // A single-root group is already named by its header, so the
-            // per-root row would only repeat it. Multi-root groups need the
-            // rows to tell their roots apart.
-            let workspaces: Vec<AnyElement> = if group.workspaces.len() > 1 {
-                group
-                    .workspaces
-                    .iter()
-                    .cloned()
-                    .map(|workspace| self.render_workspace_row(workspace, active_id, cx))
-                    .collect()
-            } else {
-                Vec::new()
-            };
+            let workspaces: Vec<AnyElement> = roots
+                .into_iter()
+                .map(|root| self.render_workspace_row(root, active_id, cx))
+                .collect();
             (workspaces, sessions)
         } else {
             (Vec::new(), Vec::new())
@@ -565,24 +875,18 @@ impl DezSidebar {
     fn group_header(
         &self,
         group: &ProjectGroup,
+        name: &SharedString,
+        name_match: &[usize],
         active_id: Option<gpui::EntityId>,
         attention: usize,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let (name, branch, changed, indicator) = match group.workspaces.first() {
-            Some(workspace) => {
-                let project = workspace.read(cx).project().read(cx);
-                let name = ProjectGroupKey::from_project(project, cx)
-                    .display_name(&std::collections::HashMap::default());
+        let (branch, changed, indicator) = match group.workspaces.first() {
+            Some(_) => {
                 let summary = summarize_group(group, cx);
-                (name, summary.branch, summary.changed, summary.indicator)
+                (summary.branch, summary.changed, summary.indicator)
             }
-            None => (
-                SharedString::from("Empty Workspace"),
-                None,
-                0,
-                ChangeIndicator::Clean,
-            ),
+            None => (None, 0, ChangeIndicator::Clean),
         };
 
         // Clicking a header selects the workspace already active in the group,
@@ -644,12 +948,11 @@ impl DezSidebar {
                         }),
                     )
                     .child(
-                        div().min_w_0().flex_1().overflow_hidden().child(
-                            Label::new(name)
-                                .size(LabelSize::Small)
-                                .weight(FontWeight::MEDIUM)
-                                .truncate(),
-                        ),
+                        div()
+                            .min_w_0()
+                            .flex_1()
+                            .overflow_hidden()
+                            .child(session_title(name.clone(), name_match, TitleStyle::GROUP)),
                     ),
             )
             .child(
@@ -690,23 +993,16 @@ impl DezSidebar {
 
     fn render_workspace_row(
         &self,
-        workspace: Entity<workspace::Workspace>,
+        root: FilteredRoot,
         active_id: Option<gpui::EntityId>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let FilteredRoot {
+            workspace,
+            label,
+            label_match,
+        } = root;
         let is_active = active_id == Some(workspace.entity_id());
-        let label: SharedString = workspace
-            .read(cx)
-            .project()
-            .read(cx)
-            .worktree_paths(cx)
-            .main_worktree_path_list()
-            .ordered_paths()
-            .last()
-            .and_then(|path| path.file_name())
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "Workspace".to_string())
-            .into();
 
         h_flex()
             .id(("dez-sidebar-workspace", workspace.entity_id()))
@@ -731,7 +1027,7 @@ impl DezSidebar {
                     .min_w_0()
                     .flex_1()
                     .overflow_hidden()
-                    .child(Label::new(label).size(LabelSize::Small).truncate()),
+                    .child(session_title(label, &label_match, TitleStyle::ROW)),
             )
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.activate_workspace(workspace.clone(), window, cx);
@@ -742,7 +1038,11 @@ impl DezSidebar {
     /// One live agent session in the rail. Rendered directly under its
     /// workspace group's header, which is what lets the rail answer "what is
     /// running, and where" without a second panel.
-    fn render_thread_row(&self, thread: SidebarThread, cx: &mut Context<Self>) -> AnyElement {
+    fn render_thread_row(&self, filtered: FilteredThread, cx: &mut Context<Self>) -> AnyElement {
+        let FilteredThread {
+            thread,
+            title_match,
+        } = filtered;
         let status = thread.status;
         let terminal_item_id = thread.terminal_item_id;
         let tooltip: SharedString = format!("{} · {}", thread.kind_id, status.state_label()).into();
@@ -756,6 +1056,7 @@ impl DezSidebar {
                 .color(status_color(status))
                 .into_any_element(),
             thread.title,
+            &title_match,
             Some(thread.kind_id),
             status,
             tooltip,
@@ -767,7 +1068,15 @@ impl DezSidebar {
     /// One live plain terminal in the rail. A shell has no agent kind, so it
     /// carries the terminal glyph instead of an actor label; otherwise its row
     /// is identical to an agent session's.
-    fn render_terminal_row(&self, terminal: SidebarTerminal, cx: &mut Context<Self>) -> AnyElement {
+    fn render_terminal_row(
+        &self,
+        filtered: FilteredTerminal,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let FilteredTerminal {
+            terminal,
+            title_match,
+        } = filtered;
         let status = terminal.status;
         let terminal_item_id = terminal.terminal_item_id;
         let tooltip: SharedString = format!("Terminal · {}", status.state_label()).into();
@@ -782,6 +1091,7 @@ impl DezSidebar {
                 .color(status_color(status))
                 .into_any_element(),
             terminal.title,
+            &title_match,
             None,
             status,
             tooltip,
@@ -800,6 +1110,7 @@ impl DezSidebar {
         id: (&'static str, u64),
         leading: AnyElement,
         title: SharedString,
+        title_match: &[usize],
         kind: Option<&'static str>,
         status: SidebarThreadStatus,
         tooltip: SharedString,
@@ -828,7 +1139,7 @@ impl DezSidebar {
                     .min_w_0()
                     .flex_1()
                     .overflow_hidden()
-                    .child(Label::new(title).size(LabelSize::Small).truncate()),
+                    .child(session_title(title, title_match, TitleStyle::ROW)),
             )
             .children(kind.map(|kind| {
                 Label::new(kind)
@@ -903,6 +1214,19 @@ impl Sidebar for DezSidebar {
         true
     }
 
+    /// Opening the rail from outside lands on the search field whenever there
+    /// is already a query: the user who closed the rail mid-search and came
+    /// back wants to keep typing, not to start over from an unfiltered list.
+    fn prepare_for_focus(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.has_search_query(cx) {
+            self.focus_search_field(window, cx);
+        }
+    }
+
+    fn focus_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.focus_search_field(window, cx);
+    }
+
     fn serialized_state(&self, _cx: &App) -> Option<String> {
         let state = SerializedDezSidebar {
             width: self.width.map(|width| f32::from(width)),
@@ -932,12 +1256,16 @@ impl Render for DezSidebar {
         let attention = Self::attention_from_rows(
             rail_groups
                 .iter()
-                .flat_map(|group| group.threads.iter().map(|thread| thread.status)),
-            rail_groups
-                .iter()
-                .flat_map(|group| group.terminals.iter().map(|terminal| terminal.status)),
+                .flat_map(|group| group.threads.iter().map(|thread| thread.thread.status)),
+            rail_groups.iter().flat_map(|group| {
+                group
+                    .terminals
+                    .iter()
+                    .map(|terminal| terminal.terminal.status)
+            }),
         );
         let header = self.render_header(attention, cx);
+        let search = self.render_search(cx);
         let rail = self.render_rail(rail_groups, cx);
 
         v_flex()
@@ -945,7 +1273,16 @@ impl Render for DezSidebar {
             .track_focus(&self.focus_handle)
             .size_full()
             .bg(cx.theme().colors().panel_background)
+            // Handled here rather than on the search row so the binding works
+            // wherever focus happens to be inside the rail, including on a
+            // session row.
+            .on_action(cx.listener(
+                |this: &mut Self, _: &FocusWorkspaceSidebarSearch, window, cx| {
+                    this.focus_search_field(window, cx);
+                },
+            ))
             .child(header)
+            .child(search)
             .child(
                 div()
                     .w_full()
