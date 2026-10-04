@@ -42,6 +42,9 @@ actions!(
         CloseWorkspaceSidebar,
         /// Moves focus to or from the workspace sidebar without closing it.
         FocusWorkspaceSidebar,
+        /// Moves focus to the workspace sidebar's session search field, opening
+        /// the sidebar first if it is closed.
+        FocusWorkspaceSidebarSearch,
         /// Activates the next project in the sidebar.
         NextProject,
         /// Activates the previous project in the sidebar.
@@ -87,6 +90,13 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     }
     /// Makes focus reset back to the search editor upon toggling the sidebar from outside
     fn prepare_for_focus(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {}
+    /// Moves focus to the sidebar's own search field, if it has one. Called
+    /// when the sidebar is opened from outside and the user asked for search
+    /// rather than for the sidebar itself. Defaults to plain focus for a
+    /// sidebar that has no search field of its own.
+    fn focus_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.prepare_for_focus(window, cx);
+    }
     /// Opens or cycles the thread switcher popup.
     fn toggle_thread_switcher(
         &mut self,
@@ -123,6 +133,7 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn focus_handle(&self, cx: &App) -> FocusHandle;
     fn focus(&self, window: &mut Window, cx: &mut App);
     fn prepare_for_focus(&self, window: &mut Window, cx: &mut App);
+    fn focus_search(&self, window: &mut Window, cx: &mut App);
     fn has_notifications(&self, cx: &App) -> bool;
     fn to_any(&self) -> AnyView;
     fn entity_id(&self) -> EntityId;
@@ -166,6 +177,13 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
 
     fn prepare_for_focus(&self, window: &mut Window, cx: &mut App) {
         self.update(cx, |this, cx| this.prepare_for_focus(window, cx));
+    }
+
+    fn focus_search(&self, window: &mut Window, cx: &mut App) {
+        let entity = self.clone();
+        window.defer(cx, move |window, cx| {
+            entity.update(cx, |this, cx| this.focus_search(window, cx));
+        });
     }
 
     fn has_notifications(&self, cx: &App) -> bool {
@@ -418,6 +436,24 @@ impl MultiWorkspace {
 
     pub fn open_sidebar(&mut self, cx: &mut Context<Self>) {
         self.apply_open_sidebar(cx);
+    }
+
+    /// Brings focus to the sidebar's own search field, opening the sidebar
+    /// first when it is closed. Unlike `focus_sidebar`, this never treats a
+    /// second press as "give the focus back": the user asked to search, and
+    /// toggling away from under them would drop the query they are typing.
+    pub fn focus_sidebar_search(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.multi_workspace_enabled(cx) {
+            return;
+        }
+
+        if !self.sidebar_open() {
+            self.previous_focus_handle = window.focused(cx);
+            self.open_sidebar(cx);
+        }
+        if let Some(sidebar) = &self.sidebar {
+            sidebar.focus_search(window, cx);
+        }
     }
 
     /// Restores the sidebar to open state from persisted session data.
@@ -2254,6 +2290,11 @@ impl Render for MultiWorkspace {
                     .on_action(cx.listener(
                         |this: &mut Self, _: &FocusWorkspaceSidebar, window, cx| {
                             this.focus_sidebar(window, cx);
+                        },
+                    ))
+                    .on_action(cx.listener(
+                        |this: &mut Self, _: &FocusWorkspaceSidebarSearch, window, cx| {
+                            this.focus_sidebar_search(window, cx);
                         },
                     ))
                     .on_action(cx.listener(|this: &mut Self, _: &NextProject, window, cx| {
