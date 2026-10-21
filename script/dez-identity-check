@@ -1064,7 +1064,7 @@ reject_pattern crates/zed/src/zed.rs \
     'Zed uses \{\} for rendering|awful performance' \
     'the unsupported-GPU dialog regressed to stale Zed or placeholder copy'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
-    'fn product_hidden_action_namespaces.*?"acp".*?"agent".*?"assistant".*?"assistant2".*?"collab".*?"copilot".*?"copilot_edit_predictions".*?"edit_prediction".*?"feedback".*?"inline_assistant".*?"language_model".*?"terminal_panel".*?"web_search".*?"zeta"' \
+    'fn product_hidden_action_namespaces.*?"acp".*?"agent".*?"assistant".*?"assistant2".*?"collab".*?"collab_panel".*?"copilot".*?"copilot_edit_predictions".*?"edit_prediction".*?"feedback".*?"inline_assistant".*?"language_model".*?"skill_creator".*?"terminal_panel".*?"web_search".*?"zeta"' \
     'the Dez Command Palette exposes AI, inherited collaboration, upstream feedback, or the compatibility Terminal Panel'
 require_multiline_pattern crates/command_palette/src/command_palette.rs \
     'fn product_hidden_action_names.*?sidebar::NewThreadInGroup' \
