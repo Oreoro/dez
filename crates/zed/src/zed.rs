@@ -126,7 +126,7 @@ pub struct CrashHandler(pub Arc<crashes::Client>);
 impl gpui::Global for CrashHandler {}
 
 pub(crate) fn should_seed_empty_workspace_with_blank_file(app_name: &str) -> bool {
-    app_name == "Zed"
+    matches!(app_name, "Zed" | "Dez")
 }
 
 pub(crate) fn should_seed_empty_workspace_with_home(app_name: &str) -> bool {
@@ -3435,8 +3435,8 @@ mod tests {
     }
 
     #[test]
-    fn dez_empty_workspace_preserves_the_actionable_launch_surface() {
-        assert!(!should_seed_empty_workspace_with_blank_file("Dez"));
+    fn dez_empty_workspace_starts_with_a_blank_buffer() {
+        assert!(should_seed_empty_workspace_with_blank_file("Dez"));
         assert!(should_seed_empty_workspace_with_blank_file("Zed"));
         assert!(should_seed_empty_workspace_with_home("Dez"));
         assert!(!should_seed_empty_workspace_with_home("Zed"));
