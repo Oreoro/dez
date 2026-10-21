@@ -588,6 +588,7 @@ impl Section {
         focus: &FocusHandle,
         emphasize_first: bool,
         show_meta: bool,
+        show_header: bool,
         first_entry_label_override: Option<SharedString>,
         first_entry_meta_override: Option<SharedString>,
         first_entry_icon_override: Option<IconName>,
@@ -597,7 +598,9 @@ impl Section {
             .w_full()
             .min_w_0()
             .gap_0p5()
-            .child(SectionHeader::new(self.title))
+            .when(show_header, |this| {
+                this.child(SectionHeader::new(self.title))
+            })
             .children(
                 self.visible_entries(local_workspace)
                     .enumerate()
@@ -1034,6 +1037,7 @@ impl Render for WelcomePage {
                             &self.focus_handle,
                             false,
                             true,
+                            true,
                             None,
                             None,
                             None,
@@ -1127,6 +1131,7 @@ impl Render for WelcomePage {
         let content_welcome_label = welcome_label.clone();
         let page_title = welcome_title(APP_NAME, has_workspace);
         let page_summary = welcome_summary(APP_NAME, has_workspace);
+        let show_first_section_header = !(is_dez && !has_workspace);
 
         h_flex()
             .id("welcome-page")
@@ -1172,6 +1177,7 @@ impl Render for WelcomePage {
                                     &section_focus_handle,
                                     welcome_emphasizes_first_action(APP_NAME),
                                     true,
+                                    show_first_section_header,
                                     first_entry_label_override.clone(),
                                     first_entry_meta_override.clone(),
                                     first_entry_icon_override,
@@ -1204,6 +1210,7 @@ impl Render for WelcomePage {
                             &section_focus_handle,
                             welcome_emphasizes_first_action(APP_NAME),
                             !compact_spacing,
+                            show_first_section_header,
                             first_entry_label_override.clone(),
                             first_entry_meta_override.clone(),
                             first_entry_icon_override,
@@ -1295,13 +1302,6 @@ impl Render for WelcomePage {
                                 .when(installation_required, |this| {
                                     this.child(
                                         Label::new("Install Dez to continue")
-                                            .size(welcome_primary_label_size(APP_NAME))
-                                            .color(Color::Muted),
-                                    )
-                                })
-                                .when(!installation_required, |this| {
-                                    this.child(
-                                        Label::new(page_summary)
                                             .size(welcome_primary_label_size(APP_NAME))
                                             .color(Color::Muted),
                                     )
