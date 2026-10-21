@@ -4344,6 +4344,10 @@ impl GitPanel {
 
         let output = match output {
             Ok(output) => output,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => anyhow::bail!(
+                "commit message generator command `{}` was not found: {error}",
+                settings.command
+            ),
             Err(error) => anyhow::bail!(
                 "could not run commit message generator `{}`: {error}",
                 settings.command
