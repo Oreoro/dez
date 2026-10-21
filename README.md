@@ -3,8 +3,8 @@
 
 # Dez
 
-**A native IDE for developers and AI-native builders who edit directly, run
-terminal agents, and review what ships in one focused Workspace.**
+**A terminal-first native IDE for developers who run coding agents in real
+terminals, edit directly, and review what ships in one focused Workspace.**
 
 Dez is a source-available preview built on
 [Zed](https://github.com/zed-industries/zed). It keeps Zed's fast native

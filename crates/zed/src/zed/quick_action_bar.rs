@@ -131,7 +131,8 @@ impl Render for QuickActionBar {
         let show_git_blame_gutter = editor_value.show_git_blame_gutter();
         let auto_signature_help_enabled = editor_value.auto_signature_help_enabled(cx);
         let show_line_numbers = editor_value.line_numbers_enabled(cx);
-        let has_edit_prediction_provider = editor_value.edit_prediction_provider().is_some();
+        let has_edit_prediction_provider =
+            paths::APP_NAME == "Zed" && editor_value.edit_prediction_provider().is_some();
         let show_edit_predictions = editor_value.edit_predictions_enabled();
         let edit_predictions_enabled_at_cursor =
             editor_value.edit_predictions_enabled_at_cursor(cx);
@@ -290,7 +291,7 @@ impl Render for QuickActionBar {
                                     skip_soft_wrap: true,
                                 }),
                             )
-                            .when(!disable_ai, |this| {
+                            .when(!disable_ai && paths::APP_NAME == "Zed", |this| {
                                 this.separator().action_disabled_when(
                                     !has_selection,
                                     "Add to Agent Thread",
@@ -710,7 +711,9 @@ impl Render for QuickActionBar {
             .children(self.render_preview_button(cx))
             .children(search_button)
             .when(
-                AgentSettings::get_global(cx).enabled(cx) && AgentSettings::get_global(cx).button,
+                paths::APP_NAME == "Zed"
+                    && AgentSettings::get_global(cx).enabled(cx)
+                    && AgentSettings::get_global(cx).button,
                 |bar| bar.child(assistant_button),
             )
             .children(code_actions_dropdown)

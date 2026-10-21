@@ -10468,7 +10468,6 @@ impl Sidebar {
                         let new_agent_key = project_group_key.clone();
                         let new_agent_sidebar = this_for_menu.clone();
                         let new_agent_menu = weak_menu.clone();
-                        let configure_agent_menu = weak_menu.clone();
                         let built_in_agent_ready = built_in_agent_is_ready(menu_cx);
                         let (built_in_agent_label, built_in_agent_icon) =
                             workspace_built_in_agent_action_presentation(
@@ -10678,61 +10677,6 @@ impl Sidebar {
                                 },
                             )
                             .separator();
-                            let menu = if built_in_agent_ready {
-                                menu.item(
-                                    ContextMenuEntry::new(built_in_agent_label)
-                                        .icon(built_in_agent_icon)
-                                        .action(Box::new(NewThreadInGroup))
-                                        .handler(move |window, cx| {
-                                            new_agent_sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar
-                                                        .set_group_expanded(&new_agent_key, true, cx);
-                                                    sidebar.selection = None;
-                                                    if let Some(workspace) = sidebar
-                                                        .workspace_for_group(&new_agent_key, cx)
-                                                    {
-                                                        sidebar.create_new_thread(
-                                                            &workspace, window, cx,
-                                                        );
-                                                    } else {
-                                                        sidebar.open_workspace_and_create_entry(
-                                                            &new_agent_key,
-                                                            NewEntryTarget::AgentThread,
-                                                            window,
-                                                            cx,
-                                                        );
-                                                    }
-                                                })
-                                                .log_err();
-                                            new_agent_menu
-                                                .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                .log_err();
-                                        }),
-                                )
-                            } else {
-                                menu.item(
-                                    ContextMenuEntry::new(built_in_agent_label)
-                                        .icon(built_in_agent_icon)
-                                        .action(Box::new(zed_actions::OpenSettingsAt {
-                                            path: "llm_providers".to_owned(),
-                                            target: None,
-                                        }))
-                                        .handler(move |window, cx| {
-                                            window.dispatch_action(
-                                                zed_actions::OpenSettingsAt {
-                                                    path: "llm_providers".to_owned(),
-                                                    target: None,
-                                                }
-                                                .boxed_clone(),
-                                                cx,
-                                            );
-                                            configure_agent_menu
-                                                .update(cx, |_, cx| cx.emit(DismissEvent))
-                                                .log_err();
-                                        }),
-                                )
-                            };
                             menu
                         };
 
@@ -13251,6 +13195,10 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut App,
     ) {
+        if APP_NAME != "Zed" {
+            return;
+        }
+
         let restore_terminal = |agent_panel: Entity<AgentPanel>,
                                 metadata: &TerminalThreadMetadata,
                                 focus: bool,
@@ -16821,6 +16769,10 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if APP_NAME != "Zed" {
+            return;
+        }
+
         if let Some(key) = self.selected_group_key() {
             self.set_group_expanded(&key, true, cx);
             self.selection = None;
@@ -17217,14 +17169,7 @@ impl Sidebar {
             return;
         }
 
-        if APP_NAME != "Zed" && !built_in_agent_is_ready(cx) {
-            window.dispatch_action(
-                Box::new(zed_actions::OpenSettingsAt {
-                    path: "llm_providers".to_string(),
-                    target: None,
-                }),
-                cx,
-            );
+        if APP_NAME != "Zed" {
             return;
         }
 
@@ -20594,8 +20539,10 @@ impl Sidebar {
                 }
                 ThreadsArchiveViewEvent::NewThread => {
                     this.show_thread_list(window, cx);
-                    if let Some(workspace) = this.active_workspace(cx) {
-                        this.create_new_thread(&workspace, window, cx);
+                    if APP_NAME == "Zed" {
+                        if let Some(workspace) = this.active_workspace(cx) {
+                            this.create_new_thread(&workspace, window, cx);
+                        }
                     }
                 }
             },

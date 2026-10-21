@@ -18,6 +18,7 @@ pub fn init(cx: &mut App) {
 #[derive(Default)]
 pub struct CommandPaletteFilter {
     hidden_namespaces: HashSet<&'static str>,
+    hidden_action_names: HashSet<&'static str>,
     hidden_action_types: TypeIdHashSet,
     /// Actions that have explicitly been shown. These should be shown even if
     /// they are in a hidden namespace.
@@ -62,12 +63,18 @@ impl CommandPaletteFilter {
         }
 
         self.hidden_namespaces.contains(namespace)
+            || self.hidden_action_names.contains(name)
             || self.hidden_action_types.contains(&action.type_id())
     }
 
     /// Hides all actions in the given namespace.
     pub fn hide_namespace(&mut self, namespace: &'static str) {
         self.hidden_namespaces.insert(namespace);
+    }
+
+    /// Hides a single action by its fully qualified name.
+    pub fn hide_action_name(&mut self, name: &'static str) {
+        self.hidden_action_names.insert(name);
     }
 
     /// Shows all actions in the given namespace.

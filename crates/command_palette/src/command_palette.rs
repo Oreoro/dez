@@ -28,9 +28,7 @@ use postage::{sink::Sink, stream::Stream};
 use settings::Settings;
 use ui::{HighlightedLabel, KeyBinding, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
-use workspace::{
-    DesignSystemSettings, ModalView, NewCenterTerminal, NewTerminal, Workspace, WorkspaceSettings,
-};
+use workspace::{DesignSystemSettings, ModalView, NewCenterTerminal, Workspace, WorkspaceSettings};
 use zed_actions::{
     GetMerch, OpenAccountSettings, OpenDocs, OpenStatusPage, OpenZedUrl, command_palette::Toggle,
 };
@@ -39,6 +37,9 @@ pub fn init(cx: &mut App) {
     command_palette_hooks::init(cx);
     for &namespace in product_hidden_action_namespaces(paths::APP_NAME) {
         CommandPaletteFilter::global_mut(cx).hide_namespace(namespace);
+    }
+    for &action_name in product_hidden_action_names(paths::APP_NAME) {
+        CommandPaletteFilter::global_mut(cx).hide_action_name(action_name);
     }
     let hidden_action_types = product_hidden_action_types(paths::APP_NAME);
     CommandPaletteFilter::global_mut(cx).hide_action_types(&hidden_action_types);
@@ -49,7 +50,30 @@ fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
     if app_name == "Zed" {
         &[]
     } else {
-        &["collab", "feedback", "terminal_panel"]
+        &[
+            "acp",
+            "agent",
+            "assistant",
+            "assistant2",
+            "collab",
+            "copilot",
+            "copilot_edit_predictions",
+            "edit_prediction",
+            "feedback",
+            "inline_assistant",
+            "language_model",
+            "terminal_panel",
+            "web_search",
+            "zeta",
+        ]
+    }
+}
+
+fn product_hidden_action_names(app_name: &str) -> &'static [&'static str] {
+    if app_name == "Zed" {
+        &[]
+    } else {
+        &["sidebar::NewThreadInGroup"]
     }
 }
 
@@ -78,7 +102,6 @@ fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
             TypeId::of::<NewCenterTerminal>(),
-            TypeId::of::<NewTerminal>(),
             TypeId::of::<editor::actions::ToggleTabBar>(),
         ]
     }
@@ -1452,9 +1475,29 @@ mod tests {
     fn each_product_hides_commands_that_do_not_belong_to_it() {
         assert_eq!(
             product_hidden_action_namespaces("Dez"),
-            &["feedback", "terminal_panel"]
+            &[
+                "acp",
+                "agent",
+                "assistant",
+                "assistant2",
+                "collab",
+                "copilot",
+                "copilot_edit_predictions",
+                "edit_prediction",
+                "feedback",
+                "inline_assistant",
+                "language_model",
+                "terminal_panel",
+                "web_search",
+                "zeta",
+            ]
         );
         assert!(product_hidden_action_namespaces("Zed").is_empty());
+        assert_eq!(
+            product_hidden_action_names("Dez"),
+            &["sidebar::NewThreadInGroup"]
+        );
+        assert!(product_hidden_action_names("Zed").is_empty());
 
         let hidden_types = product_hidden_action_types("Dez");
         for action_type in [
@@ -1462,12 +1505,15 @@ mod tests {
             TypeId::of::<OpenDocs>(),
             TypeId::of::<OpenStatusPage>(),
             TypeId::of::<GetMerch>(),
-            TypeId::of::<NewCenterTerminal>(),
-            TypeId::of::<NewTerminal>(),
+            TypeId::of::<workspace::NewCenterTerminal>(),
             TypeId::of::<editor::actions::ToggleTabBar>(),
         ] {
             assert!(hidden_types.contains(&action_type));
         }
+        assert!(
+            !hidden_types.contains(&TypeId::of::<workspace::NewTerminal>()),
+            "New Terminal must stay available in the terminal-first Dez command palette"
+        );
         assert!(
             !product_hidden_action_types("Zed")
                 .contains(&TypeId::of::<editor::actions::ToggleTabBar>())

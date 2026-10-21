@@ -8,6 +8,7 @@ use crate::{
 };
 use gpui::prelude::FluentBuilder;
 use gpui::{Context, DismissEvent, Entity, Focusable as _, Pixels, Point, Subscription, Window};
+use paths::APP_NAME;
 use project::DisableAiSettings;
 use std::ops::Range;
 use text::PointUtf16;
@@ -291,7 +292,7 @@ pub fn deploy_context_menu(
                         quick_launch: false,
                     }),
                 )
-                .when(!disable_ai && has_selections, |this| {
+                .when(!disable_ai && APP_NAME == "Zed" && has_selections, |this| {
                     this.action("Add to Agent Thread", Box::new(AddSelectionToThread))
                 })
                 .separator()

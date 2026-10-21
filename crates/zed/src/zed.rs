@@ -16,7 +16,7 @@ pub mod visual_tests;
 pub(crate) mod windows_only_instance;
 
 use agent_settings::{UserAgentsMdState, init_user_agents_md};
-use agent_ui::{AgentDiffToolbar, AgentPanel};
+use agent_ui::AgentDiffToolbar;
 use anyhow::Context as _;
 pub use app_menus::*;
 use assets::Assets;
@@ -686,7 +686,9 @@ pub fn initialize_workspace(app_state: Arc<AppState>, cx: &mut App) {
             status_bar.add_left_item(git_blame_status, window, cx);
             status_bar.add_left_item(merge_conflict_indicator, window, cx);
             status_bar.add_left_item(activity_indicator, window, cx);
-            status_bar.add_right_item(edit_prediction_ui, window, cx);
+            if APP_NAME == "Zed" {
+                status_bar.add_right_item(edit_prediction_ui, window, cx);
+            }
             status_bar.add_right_item(active_buffer_encoding, window, cx);
             status_bar.add_right_item(active_buffer_language, window, cx);
             status_bar.add_right_item(active_toolchain_language, window, cx);
@@ -897,22 +899,15 @@ async fn initialize_agent_panel(
     workspace_handle: WeakEntity<Workspace>,
     mut cx: AsyncWindowContext,
 ) -> anyhow::Result<()> {
+    if APP_NAME != "Zed" {
+        return anyhow::Ok(());
+    }
+
     workspace_handle.update_in(&mut cx, |workspace, _window, _cx| {
         if !cfg!(test) {
             workspace.register_action(agent_ui::InlineAssistant::inline_assist);
         }
     })?;
-
-    if APP_NAME != "Zed" {
-        let panel = AgentPanel::load(workspace_handle.clone(), cx.clone())
-            .await
-            .context("failed to load built-in Agent panel")?;
-        workspace_handle.update_in(&mut cx, |workspace, window, cx| {
-            if workspace.panel::<AgentPanel>(cx).is_none() {
-                workspace.add_panel(panel, window, cx);
-            }
-        })?;
-    }
 
     anyhow::Ok(())
 }
@@ -1942,8 +1937,10 @@ fn initialize_pane(
             toolbar.add_item(solo_diff_git_toolbar, window, cx);
             let commit_view_toolbar = cx.new(|_| CommitViewToolbar::new());
             toolbar.add_item(commit_view_toolbar, window, cx);
-            let agent_diff_toolbar = cx.new(AgentDiffToolbar::new);
-            toolbar.add_item(agent_diff_toolbar, window, cx);
+            if APP_NAME == "Zed" {
+                let agent_diff_toolbar = cx.new(AgentDiffToolbar::new);
+                toolbar.add_item(agent_diff_toolbar, window, cx);
+            }
             let basedpyright_banner = cx.new(|cx| BasedPyrightBanner::new(workspace, cx));
             toolbar.add_item(basedpyright_banner, window, cx);
             let image_view_toolbar = cx.new(|_| image_viewer::ImageViewToolbarControls::new());
@@ -2869,16 +2866,15 @@ const AI_ACTION_NAMESPACES: &[&str] = &[
     "acp::",
     "agent::",
     "assistant::",
+    "assistant2::",
+    "copilot::",
+    "copilot_edit_predictions::",
     "edit_prediction::",
     "inline_assistant::",
     "zeta::",
 ];
 
-const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &[
-    "channel_modal::",
-    "collab::",
-    "terminal_panel::",
-];
+const DEZ_HIDDEN_ACTION_NAMESPACES: &[&str] = &["channel_modal::", "collab::", "terminal_panel::"];
 const DEZ_HIDDEN_ACTIONS: &[&str] = &["workspace::FollowNextCollaborator"];
 
 fn is_ai_keybinding(binding: &KeyBinding) -> bool {
@@ -2893,6 +2889,9 @@ fn is_dez_hidden_keybinding_name(action_name: &str, app_name: &str) -> bool {
         && (DEZ_HIDDEN_ACTION_NAMESPACES
             .iter()
             .any(|namespace| action_name.starts_with(namespace))
+            || AI_ACTION_NAMESPACES
+                .iter()
+                .any(|namespace| action_name.starts_with(namespace))
             || DEZ_HIDDEN_ACTIONS.contains(&action_name))
 }
 
@@ -7113,11 +7112,21 @@ mod tests {
     #[test]
     fn dez_drops_inherited_collaboration_keybindings() {
         for action_name in [
+            "acp::OpenRegistry",
+            "agent::Toggle",
+            "assistant::ToggleFocus",
+            "assistant::InlineAssist",
+            "assistant2::Toggle",
             "collab::ShareProject",
             "channel_modal::ToggleMode",
+            "copilot::SignIn",
+            "copilot_edit_predictions::Toggle",
+            "edit_prediction::ToggleEditPrediction",
+            "inline_assistant::InlineAssist",
             "terminal_panel::Toggle",
             "terminal_panel::ToggleFocus",
             "workspace::FollowNextCollaborator",
+            "zeta::Toggle",
         ] {
             assert!(is_dez_hidden_keybinding_name(action_name, "Dez"));
             assert!(!is_dez_hidden_keybinding_name(action_name, "Zed"));

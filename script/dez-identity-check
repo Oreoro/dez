@@ -790,8 +790,11 @@ require_multiline_pattern crates/workspace/src/workspace.rs \
     'fn dez_resolved_single_work_area_recipe.*?destination_available.*?requested_recipe.*?CanvasLayoutRecipe::EditorFocus.*?fn apply_dez_single_work_area_destination.*?let destination_available =.*?select_dez_essential_canvas_recipe_panel.*?dez_resolved_single_work_area_recipe\([[:space:]]*layout_recipe,[[:space:]]*destination_available.*?fn select_dez_essential_canvas_recipe_panel.*?for panel_pane_kind in \[PanelPaneKind::Project, PanelPaneKind::Agent\].*?set_canvas_panel_pane_visible\(panel_pane_kind, false.*?an unavailable native destination must preserve and name the focused Main Work Area' \
     'an unavailable native Workspace destination can regress to a false active layout label'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'use agent_ui::\{AgentDiffToolbar, AgentPanel\}.*?async fn initialize_agent_panel.*?AgentPanel::load\(workspace_handle\.clone\(\), cx\.clone\(\)\).*?failed to load built-in Agent panel.*?workspace\.panel::<AgentPanel>\(cx\)\.is_none\(\).*?workspace\.add_panel\(panel, window, cx\)' \
-    'the explicit Built-in Agent Workspace layout can regress to a named destination without a registered native owner'
+    'async fn initialize_agent_panel.*?if APP_NAME != "Zed".*?return anyhow::Ok\(\(\)\).*?workspace\.register_action\(agent_ui::InlineAssistant::inline_assist\)' \
+    'terminal-first Dez can regress to initializing the Built-in Agent panel'
+reject_pattern crates/zed/src/zed.rs \
+    'AgentPanel::load' \
+    'the Zed Built-in Agent panel can leak back into terminal-first Dez'
 require_multiline_pattern crates/workspace/src/workspace.rs \
     'pub trait DebuggerProvider.*?fn open_panel.*?self\.set_active_pane\(&destination, window, cx\).*?recipe == CanvasLayoutRecipe::Debug.*?self\.debugger_provider\.clone\(\).*?debugger_provider\.open_panel\(self, window, cx\).*?return true' \
     'Debug Workspace startup can regress to a named layout without opening its native Debug owner in the Main Work Area'
@@ -1060,9 +1063,12 @@ require_pattern crates/zed/src/zed.rs \
 reject_pattern crates/zed/src/zed.rs \
     'Zed uses \{\} for rendering|awful performance' \
     'the unsupported-GPU dialog regressed to stale Zed or placeholder copy'
-require_pattern crates/command_palette/src/command_palette.rs \
-    '&\["collab", "feedback", "terminal_panel"\]' \
-    'the Dez Command Palette exposes inherited collaboration, upstream feedback, or the compatibility Terminal Panel'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    'fn product_hidden_action_namespaces.*?"acp".*?"agent".*?"assistant".*?"assistant2".*?"collab".*?"copilot".*?"copilot_edit_predictions".*?"edit_prediction".*?"feedback".*?"inline_assistant".*?"language_model".*?"terminal_panel".*?"web_search".*?"zeta"' \
+    'the Dez Command Palette exposes AI, inherited collaboration, upstream feedback, or the compatibility Terminal Panel'
+require_multiline_pattern crates/command_palette/src/command_palette.rs \
+    'fn product_hidden_action_names.*?sidebar::NewThreadInGroup' \
+    'the Dez Command Palette exposes the Built-in Agent thread command'
 require_pattern crates/command_palette/src/command_palette.rs \
     'TypeId::of::<OpenAccountSettings>\(\)' \
     'the Dez Command Palette exposes the upstream account action'
@@ -1987,14 +1993,17 @@ require_pattern crates/sidebar/src/sidebar.rs \
     'menu = menu\.header\(terminal_launch_menu_header\(APP_NAME\)\)' \
     'the Workspace creation picker has regressed to an ambiguous thread action'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn workspace_built_in_agent_action_presentation.*?"New Agent Thread".*?built_in_agent_ready.*?"New Built-in Agent Session…".*?"Configure Built-in Agent…".*?IconName::Settings.*?IconName::DezAgent.*?workspace_built_in_agent_action_presentation\("Dez", true\).*?New Built-in Agent Session….*?IconName::DezAgent.*?workspace_built_in_agent_action_presentation\("Dez", false\).*?Configure Built-in Agent….*?IconName::Settings.*?let built_in_agent_ready = built_in_agent_is_ready\(menu_cx\).*?let \(built_in_agent_label, built_in_agent_icon\) =[[:space:]]*workspace_built_in_agent_action_presentation.*?let menu = if APP_NAME == "Zed".*?built_in_agent_label.*?else.*?submenu_with_icon\([[:space:]]*terminal_launch_label\(APP_NAME\),[[:space:]]*configured_icon.*?Native Shell.*?Codex.*?IconName::AiOpenAi.*?Claude Code.*?IconName::AiClaude.*?OpenCode.*?IconName::AiOpenCode.*?More Agent CLIs.*?Gemini CLI.*?IconName::AiGemini.*?Aider.*?IconName::AiEdit.*?Herdr.*?IconName::Inception.*?submenu_with_icon\([[:space:]]*"Resume Existing Agent",[[:space:]]*IconName::HistoryRerun.*?let menu = if built_in_agent_ready.*?ContextMenuEntry::new\(built_in_agent_label\).*?icon\(built_in_agent_icon\).*?NewThreadInGroup.*?NewEntryTarget::AgentThread.*?else.*?ContextMenuEntry::new\(built_in_agent_label\).*?icon\(built_in_agent_icon\).*?OpenSettingsAt.*?llm_providers.*?window\.dispatch_action.*?DismissEvent.*?submenu_with_icon\([[:space:]]*"Sessions and Multiplexers",[[:space:]]*IconName::ListTree.*?ContextMenuEntry::new\("Open Workspace in cmux"\).*?IconName::Screen.*?WORKSPACE_TMUX_LAUNCHER_LABEL.*?IconName::SplitAlt' \
-    'Workspace options can regress from native-first terminal, Continue, Built-in Agent, or grouped multiplexer actions'
+    'let menu = if APP_NAME == "Zed".*?else.*?submenu_with_icon\([[:space:]]*terminal_launch_label\(APP_NAME\),[[:space:]]*configured_icon.*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?More Agent CLIs.*?Resume Existing Agent.*?Sessions and Multiplexers.*?Open Workspace in cmux.*?WORKSPACE_TMUX_LAUNCHER_LABEL' \
+    'Workspace options can regress from native-first terminal, resumed agent sessions, or grouped multiplexer actions'
+reject_pattern crates/sidebar/src/sidebar.rs \
+    'ContextMenuEntry::new\(built_in_agent_label\)' \
+    'the Built-in Agent creation action can return to the terminal-first Dez Workspace menu'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn cmux_integration_action_link.*?"cmux Workspace Handoff".*?cmux owns its tabs, splits, browser, agent hooks, and action registry.*?Open Workspace in cmux works without live sharing.*?cross-app API access.*?cmux Workspace, port, and notification rows in Dez.*?never changes cmux permissions or hooks.*?"Open API & Access Guide".*?icon: IconName::ArrowUpRight.*?https://cmux\.com/docs/api.*?fn terminal_page.*?SectionHeader\("Terminal Launch"\).*?terminal_session_init_setting_item\(\).*?cmux_integration_action_link\(\)' \
     'Dez settings can regress to implying ownership of cmux agent actions or hiding the official workflow configuration route'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'fn create_new_thread.*?APP_NAME != "Zed" && !built_in_agent_is_ready\(cx\).*?OpenSettingsAt.*?path: "llm_providers".*?return;.*?create_agent_thread_in_workspace' \
-    'Session Rail creation can regress to opening a dead Built-in Agent draft'
+    'fn create_new_thread.*?if APP_NAME != "Zed".*?return;.*?create_agent_thread_in_workspace' \
+    'the Built-in Agent thread path can run in terminal-first Dez'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn replace_archived_panel_thread.*?is_archived && \(APP_NAME == "Zed" \|\| built_in_agent_is_ready\(cx\)\).*?self\.create_new_thread' \
     'passive Agent restoration can regress to interrupting the user with provider settings'
@@ -2494,8 +2503,8 @@ require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn workspace_new_terminal_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_options_action_persistent.*?is_active \|\| is_focused \|\| is_menu_open.*?fn workspace_new_terminal_control_label.*?workspace_name.*?configured_command.*?active_workspace_terminal_action_label\(app_name, configured_command\).*?fn workspace_options_control_label.*?"Workspace Options for \{workspace_name\}".*?render_new_session_button.*?workspace_name.*?workspace_new_terminal_control_label\([[:space:]]*APP_NAME,[[:space:]]*workspace_name,[[:space:]]*configured_terminal_command\.as_deref\(\).*?tab_index\(0isize\).*?aria_label\(new_terminal_label\).*?!workspace_new_terminal_action_persistent\(is_active, is_focused, is_menu_open\).*?if open_workspaces\.is_empty\(\).*?let button = button\.aria_expanded\(is_menu_open\).*?render_project_header_ellipsis_menu.*?workspace_name.*?tab_index\(0isize\).*?aria_label\(workspace_options_label\).*?aria_expanded\(is_menu_open\).*?!workspace_options_action_persistent\(is_active, is_focused, is_menu_open\)' \
     'Workspace header controls can regress to internal IDs, ambiguous labels, hidden menu state, or hover-only access'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
-    'render_project_header_ellipsis_menu.*?workspace_built_in_agent_action_presentation\([[:space:]]*APP_NAME,[[:space:]]*built_in_agent_ready.*?terminal_launch_label\(APP_NAME\).*?let menu = if built_in_agent_ready.*?NewThreadInGroup.*?else.*?OpenSettingsAt.*?llm_providers' \
-    'Workspace Options can regress to hiding project-scoped terminal or Built-in Agent creation'
+    'render_project_header_ellipsis_menu.*?terminal_launch_label\(APP_NAME\).*?Native Shell.*?Codex.*?Claude Code.*?OpenCode.*?Resume Existing Agent.*?Sessions and Multiplexers' \
+    'Workspace Options can regress to hiding project-scoped terminal or terminal agent creation'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'let project_group_keys = multi_workspace.*?project_group_keys\(\)\.to_vec\(\).*?let attachable_sessions.*?external_multiplexer_project_group\(session, &project_group_keys\).*?== Some\(&project_group_key\).*?submenu_with_icon\([[:space:]]*"Open Running Session…",[[:space:]]*IconName::ListTree.*?open_external_multiplexer_session' \
     'a Project can regress to hiding or mis-scoping its external Workspaces and sessions'
@@ -3367,6 +3376,12 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/terminal_view/src/terminal_view.rs \
     'session_unavailable_reason: Option<String>.*?set_session_unavailable_reason.*?self\.session_unavailable = reason\.is_some\(\).*?self\.session_unavailable_reason = reason.*?let \(terminal, session_unavailable_reason\) = match stored_session_ref.*?The terminal host no longer owns this saved session.*?The saved terminal process is no longer available on this Dez host.*?The saved terminal session reference is incomplete or invalid.*?if custom_title\.is_some\(\) \{[[:space:]]*view\.custom_title = custom_title;.*?view\.session_unavailable_reason = session_unavailable_reason.*?fn session_unavailable_terminal.*?\.with_display_text\("Terminal unavailable", &\[\]\)' \
     'unavailable Terminal Sessions can regress to losing their title, reason, or rendering duplicate fake terminal output'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn new_thread_in_group.*?if APP_NAME != "Zed".*?return;' \
+    'the Built-in Agent thread command can run in terminal-first Dez'
+require_multiline_pattern crates/sidebar/src/sidebar.rs \
+    'fn load_agent_terminal_in_workspace.*?if APP_NAME != "Zed".*?return;' \
+    'the Built-in Agent panel can lazily load in terminal-first Dez'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn terminal_panel_surface_visible.*?app_name == "Zed".*?if terminal_panel_surface_visible\(APP_NAME\).*?terminal_panel::Toggle' \
     'the compatibility Terminal Panel can leak back into the Dez View menu'
@@ -3377,7 +3392,7 @@ require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'fn view_zoom_targets_interface.*?app_name != "Zed".*?if view_zoom_targets_interface\(APP_NAME\).*?"Zoom In".*?IncreaseUiFontSize.*?"Zoom Out".*?DecreaseUiFontSize.*?"Reset Zoom".*?ResetUiFontSize.*?else.*?"Zoom In".*?IncreaseBufferFontSize.*?"Zoom Out".*?DecreaseBufferFontSize.*?"Reset Zoom".*?ResetBufferFontSize.*?fn dez_view_zoom_targets_the_whole_interface_without_changing_zed.*?view_zoom_targets_interface\("Dez"\).*?!view_zoom_targets_interface\("Zed"\)' \
     'Dez View zoom can regress to resizing only editor buffers or leak interface zoom into official Zed'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
-    'developer_surface_menu_label\([[:space:]]*APP_NAME,[[:space:]]*panels_as_pane_tabs,[[:space:]]*"Built-in Agent".*?if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Workspaces", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?MenuItem::action\(project_surface_label.*?MenuItem::action\(outline_surface_label.*?MenuItem::action\(git_surface_label.*?MenuItem::action\(debugger_surface_label.*?MenuItem::action\(agent_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
+    'developer_surface_menu_label\([[:space:]]*APP_NAME,[[:space:]]*panels_as_pane_tabs,[[:space:]]*"Built-in Agent".*?if workspace_tools_are_grouped\(APP_NAME\).*?MenuItem::action\("Workspaces", workspace::ToggleSidebar\).*?Menu::new\("Workspace Tools"\).*?MenuItem::action\(project_surface_label.*?MenuItem::action\(outline_surface_label.*?MenuItem::action\(git_surface_label.*?MenuItem::action\(debugger_surface_label.*?editor_layout_menu\(\).*?Diagnostics' \
     'the Dez View menu can regress to splitting contextual Workspace Tools into unrelated top-level panels'
 require_multiline_pattern crates/zed/src/zed/app_menus.rs \
     'Menu::new\("Language Tools"\).*?"Workspace Symbols…".*?workspace::ToggleProjectSymbols.*?"Workspace Diagnostics".*?diagnostics::Deploy.*?"Language Servers".*?language_tools::lsp_button::ToggleMenu.*?"Restart Language Server for Current File".*?editor::actions::RestartLanguageServer.*?"Language Server Logs".*?language_tools::lsp_log_view::OpenLanguageServerLogs' \
@@ -3419,8 +3434,11 @@ require_multiline_pattern crates/zed/src/zed.rs \
     'const DEZ_DOCS_URL: &str = "https://github\.com/Oreoro/dez/blob/main/docs/src/dez\.md".*?fn product_docs_url\(app_name: &str\).*?if app_name == "Zed" \{[[:space:]]*ZED_DOCS_URL[[:space:]]*\} else \{[[:space:]]*DEZ_DOCS_URL.*?register_action\(\|_, _: &OpenDocs, _, cx\| cx\.open_url\(product_docs_url\(APP_NAME\)\)\).*?fn documentation_routes_follow_the_product_identity' \
     'Help can regress to routing Dez Documentation through the upstream Zed site'
 require_pattern crates/zed/src/zed.rs \
-    '"terminal_panel::",' \
+    '"terminal_panel::"' \
     'inherited Terminal Panel keybindings can reintroduce the removed Dez surface'
+require_multiline_pattern crates/zed/src/zed.rs \
+    'const AI_ACTION_NAMESPACES.*?"acp::".*?"agent::".*?"assistant::".*?"assistant2::".*?"copilot::".*?"copilot_edit_predictions::".*?"edit_prediction::".*?"inline_assistant::".*?"zeta::".*?fn is_dez_hidden_keybinding_name.*?AI_ACTION_NAMESPACES' \
+    'AI keybindings can reappear in terminal-first Dez'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn dez_terminal_panel_setting_visible.*?"terminal\.button" \| "terminal\.default_width" \| "terminal\.default_height"' \
     'Dez Settings exposes controls for the removed compatibility Terminal Panel'
