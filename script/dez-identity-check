@@ -3445,6 +3445,9 @@ require_pattern crates/zed/src/zed.rs \
 require_multiline_pattern crates/zed/src/zed.rs \
     'const AI_ACTION_NAMESPACES.*?"acp::".*?"agent::".*?"assistant::".*?"assistant2::".*?"copilot::".*?"copilot_edit_predictions::".*?"edit_prediction::".*?"inline_assistant::".*?"zeta::".*?fn is_dez_hidden_keybinding_name.*?AI_ACTION_NAMESPACES' \
     'AI keybindings can reappear in terminal-first Dez'
+require_multiline_pattern crates/zed/src/main.rs \
+    'fn handle_open_request.*?if paths::APP_NAME != "Zed".*?OpenRequestKind::AgentPanel.*?OpenRequestKind::InstallSkill.*?ignoring AI-only open request' \
+    'Zed AI deep links can open a skill creator or Agent panel in Dez'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn dez_terminal_panel_setting_visible.*?"terminal\.button" \| "terminal\.default_width" \| "terminal\.default_height"' \
     'Dez Settings exposes controls for the removed compatibility Terminal Panel'

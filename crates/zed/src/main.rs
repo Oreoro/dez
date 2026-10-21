@@ -75,9 +75,8 @@ use workspace::{
 
 use zed::{
     OpenListener, OpenRequest, RawOpenRequest, app_menus, build_window_options,
-    derive_paths_with_position, edit_prediction_registry,
-    handle_cli_connection, handle_keymap_file_changes, initialize_workspace,
-    open_paths_with_positions,
+    derive_paths_with_position, edit_prediction_registry, handle_cli_connection,
+    handle_keymap_file_changes, initialize_workspace, open_paths_with_positions,
 };
 
 use crate::zed::{CrashHandler, OpenRequestKind, eager_load_active_theme_and_icon_theme};
@@ -1106,6 +1105,16 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
     }
 
     if let Some(kind) = request.kind {
+        if paths::APP_NAME != "Zed"
+            && matches!(
+                &kind,
+                OpenRequestKind::AgentPanel { .. } | OpenRequestKind::InstallSkill { .. }
+            )
+        {
+            log::info!("ignoring AI-only open request in Dez");
+            return;
+        }
+
         match kind {
             OpenRequestKind::CliConnection(connection) => {
                 cx.spawn(async move |cx| handle_cli_connection(connection, app_state, cx).await)
