@@ -20927,13 +20927,14 @@ impl Render for Sidebar {
             self.session_search_open,
         );
         let show_start_state = installation_required
-            || session_start_state_visible(
-                self.contents.has_open_projects,
-                self.contents.session_count,
-                has_query,
-                self.attention_only,
-                self.workspace_restore_status_is_visible(cx),
-            );
+            || (APP_NAME == "Zed"
+                && session_start_state_visible(
+                    self.contents.has_open_projects,
+                    self.contents.session_count,
+                    has_query,
+                    self.attention_only,
+                    self.workspace_restore_status_is_visible(cx),
+                ));
         let external_terminal_section = if installation_required {
             None
         } else {
