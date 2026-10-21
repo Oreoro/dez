@@ -4,16 +4,15 @@ use std::process::Stdio;
 /// A wrapper around `smol::process::Child` that ensures all subprocesses
 /// are killed when the process is terminated: on Unix by using process
 /// groups, and on Windows by using job objects.
+///
+/// On Windows, dropping this struct closes the job object handle, which
+/// terminates all processes in the job. This also applies when the Zed
+/// process exits for any reason (including crashes), since the OS closes
+/// its handles, so spawned process trees can never outlive Zed.
 pub struct Child {
     process: smol::process::Child,
     #[cfg(windows)]
-    job: Option<WindowsProcessJob>,
-}
-
-impl std::fmt::Debug for Child {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.process.fmt(formatter)
-    }
+    job: Option<windows_job::JobObject>,
 }
 
 impl std::ops::Deref for Child {
@@ -74,30 +73,42 @@ impl Child {
                 )
             })?;
 
-        Ok(Self::from_process(process, true))
+        // Assign the child to a job object configured to kill the entire
+        // process tree when the last job handle is closed, so descendants
+        // (e.g. node workers and MCP servers spawned by agent servers) are
+        // reaped even if the direct child doesn't clean them up. Any process
+        // the child spawns after this assignment is automatically part of the
+        // job.
+        //
+        // There is a small race: descendants the child spawns between the
+        // `spawn()` call returning and the assignment below escape the job.
+        // Closing it fully would require creating the process suspended
+        // (`CREATE_SUSPENDED`), assigning it, then resuming it, which the
+        // std/smol process APIs don't support without reimplementing process
+        // creation. The window is microseconds, and the children we care
+        // about (`npx`, `node`, etc.) take far longer to load their runtime
+        // and spawn anything, so in practice nothing escapes.
+        let job = windows_job::JobObject::new()
+            .and_then(|job| {
+                job.assign_process(process.id())?;
+                Ok(job)
+            })
+            .map_err(|error| {
+                log::error!("failed to assign spawned process to a job object: {error:#}");
+            })
+            .ok();
+
+        Ok(Self { process, job })
     }
 
-    #[cfg(windows)]
-    pub(crate) fn from_process(process: smol::process::Child, own_process_tree: bool) -> Self {
-        let job = if own_process_tree {
-            match WindowsProcessJob::assign(process.id()) {
-                Ok(job) => Some(job),
-                Err(error) => {
-                    log::error!("failed to assign spawned process to a job object: {error:#}");
-                    None
-                }
-            }
-        } else {
-            None
-        };
-        Self { process, job }
-    }
-
-    /// Consumes the child, drains its output, and waits for it to exit.
-    pub async fn output(self) -> std::io::Result<std::process::Output> {
-        // Keep the Windows job handle alive until the child has exited and its
-        // output has been collected.
-        self.process.output().await
+    /// Consumes the child, draining its stdout/stderr and waiting for it to
+    /// exit, then returns the collected output.
+    pub async fn output(self) -> Result<std::process::Output> {
+        // NOTE: Keep `self` alive across this await, do not destructure it to
+        // pull `process` out first. On Windows that drops the job object early,
+        // which triggers `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` and kills the
+        // child before `output()` finishes collecting its stdout/stderr.
+        Ok(self.process.output().await?)
     }
 
     #[cfg(not(windows))]
@@ -121,81 +132,71 @@ impl Child {
 }
 
 #[cfg(windows)]
-pub struct WindowsProcessJob(windows::Win32::Foundation::HANDLE);
-
-#[cfg(windows)]
-// SAFETY: Windows job object handles may be used from any thread.
-unsafe impl Send for WindowsProcessJob {}
-
-#[cfg(windows)]
-// SAFETY: Windows job object handles may be used from any thread.
-unsafe impl Sync for WindowsProcessJob {}
-
-#[cfg(windows)]
-impl WindowsProcessJob {
-    pub fn assign(process_id: u32) -> Result<Self> {
-        let job = Self::new()?;
-        job.assign_process(process_id)?;
-        Ok(job)
-    }
-
-    fn new() -> Result<Self> {
-        use windows::Win32::System::JobObjects::{
-            CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
-            JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
-            SetInformationJobObject,
-        };
-
-        unsafe {
-            let job = Self(CreateJobObjectW(None, None).context("failed to create job object")?);
-            let mut information = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
-            information.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-            SetInformationJobObject(
-                job.0,
-                JobObjectExtendedLimitInformation,
-                &information as *const _ as *const _,
-                size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
-            )
-            .context("failed to set job object limits")?;
-            Ok(job)
-        }
-    }
-
-    fn assign_process(&self, process_id: u32) -> Result<()> {
-        use crate::ResultExt as _;
-        use windows::Win32::{
-            Foundation::CloseHandle,
-            System::{
-                JobObjects::AssignProcessToJobObject,
-                Threading::{OpenProcess, PROCESS_SET_QUOTA, PROCESS_TERMINATE},
+mod windows_job {
+    use crate::ResultExt as _;
+    use anyhow::{Context as _, Result};
+    use windows::Win32::{
+        Foundation::{CloseHandle, HANDLE},
+        System::{
+            JobObjects::{
+                AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
+                SetInformationJobObject, TerminateJobObject,
             },
-        };
+            Threading::{OpenProcess, PROCESS_SET_QUOTA, PROCESS_TERMINATE},
+        },
+    };
 
-        unsafe {
-            let process = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, false, process_id)
-                .context("failed to open process")?;
-            let result = AssignProcessToJobObject(self.0, process)
-                .context("failed to assign process to job object");
-            CloseHandle(process).log_err();
-            result
+    /// A Win32 job object configured with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`:
+    /// all processes assigned to the job (and their descendants) are terminated
+    /// when the last handle to the job is closed, which happens when this struct
+    /// is dropped, or when the OS closes the owning process's handles after it
+    /// exits for any reason.
+    pub(crate) struct JobObject(HANDLE);
+
+    // SAFETY: Job object handles can be used from any thread.
+    unsafe impl Send for JobObject {}
+    unsafe impl Sync for JobObject {}
+
+    impl JobObject {
+        pub(crate) fn new() -> Result<Self> {
+            unsafe {
+                let job =
+                    Self(CreateJobObjectW(None, None).context("failed to create job object")?);
+                let mut info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+                info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+                SetInformationJobObject(
+                    job.0,
+                    JobObjectExtendedLimitInformation,
+                    &info as *const _ as *const _,
+                    size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+                )
+                .context("failed to set job object limits")?;
+                Ok(job)
+            }
+        }
+
+        pub(crate) fn assign_process(&self, pid: u32) -> Result<()> {
+            unsafe {
+                let process = OpenProcess(PROCESS_SET_QUOTA | PROCESS_TERMINATE, false, pid)
+                    .context("failed to open process")?;
+                let result = AssignProcessToJobObject(self.0, process)
+                    .context("failed to assign process to job object");
+                CloseHandle(process).log_err();
+                result
+            }
+        }
+
+        pub(crate) fn terminate(&self) -> Result<()> {
+            unsafe { TerminateJobObject(self.0, 1).context("failed to terminate job object") }
         }
     }
 
-    pub fn terminate(&self) -> Result<()> {
-        use windows::Win32::System::JobObjects::TerminateJobObject;
-
-        unsafe { TerminateJobObject(self.0, 1).context("failed to terminate job object") }
-    }
-}
-
-#[cfg(windows)]
-impl Drop for WindowsProcessJob {
-    fn drop(&mut self) {
-        use crate::ResultExt as _;
-        use windows::Win32::Foundation::CloseHandle;
-
-        unsafe {
-            CloseHandle(self.0).log_err();
+    impl Drop for JobObject {
+        fn drop(&mut self) {
+            unsafe {
+                CloseHandle(self.0).log_err();
+            }
         }
     }
 }
@@ -205,72 +206,21 @@ mod windows_tests {
     use super::*;
     use std::time::{Duration, Instant};
 
-    struct ProcessCleanup(u32);
-
-    impl Drop for ProcessCleanup {
-        fn drop(&mut self) {
-            if !process_is_alive(self.0) {
-                return;
-            }
-
-            use windows::Win32::{
-                Foundation::CloseHandle,
-                System::Threading::{OpenProcess, PROCESS_TERMINATE, TerminateProcess},
-            };
-
-            unsafe {
-                match OpenProcess(PROCESS_TERMINATE, false, self.0) {
-                    Ok(handle) => {
-                        if let Err(error) = TerminateProcess(handle, 1) {
-                            eprintln!("failed to clean up test process {}: {error}", self.0);
-                        }
-                        if let Err(error) = CloseHandle(handle) {
-                            eprintln!("failed to close test process handle: {error}");
-                        }
-                    }
-                    Err(error) => {
-                        eprintln!(
-                            "failed to open test process {} for cleanup: {error}",
-                            self.0
-                        );
-                    }
-                }
-            }
-        }
-    }
-
-    fn configure_process_tree(command: &mut impl ProcessTreeCommand, temp_dir: &std::path::Path) {
+    /// Spawns a process tree `powershell -> ping` via `Child::spawn` and
+    /// returns the `Child` along with the pid of the grandchild (`ping`).
+    fn spawn_process_tree(temp_dir: &std::path::Path) -> (Child, u32) {
         let pid_file = temp_dir.join("grandchild_pid");
-        let escaped_pid_file = pid_file.display().to_string().replace('\'', "''");
-        command.configure(
-            ["-NoProfile", "-Command"],
-            format!(
-                "$p = Start-Process -FilePath ping.exe -ArgumentList @('-n','60','127.0.0.1') -PassThru -WindowStyle Hidden; \
-                 Set-Content -LiteralPath '{escaped_pid_file}' -Value $p.Id; \
-                 Wait-Process -Id $p.Id"
-            ),
-        );
-    }
+        let mut command = std::process::Command::new("powershell.exe");
+        command.args(["-NoProfile", "-Command"]).arg(format!(
+            "$p = Start-Process -FilePath ping.exe -ArgumentList @('-n','60','127.0.0.1') -PassThru -WindowStyle Hidden; \
+             Set-Content -LiteralPath '{}' -Value $p.Id; \
+             Wait-Process -Id $p.Id",
+            pid_file.display()
+        ));
+        let child = Child::spawn(command, Stdio::null(), Stdio::null(), Stdio::null())
+            .expect("failed to spawn powershell");
 
-    trait ProcessTreeCommand {
-        fn configure(&mut self, arguments: [&str; 2], script: String);
-    }
-
-    impl ProcessTreeCommand for std::process::Command {
-        fn configure(&mut self, arguments: [&str; 2], script: String) {
-            self.args(arguments).arg(script);
-        }
-    }
-
-    impl ProcessTreeCommand for crate::command::Command {
-        fn configure(&mut self, arguments: [&str; 2], script: String) {
-            self.args(arguments).arg(script);
-        }
-    }
-
-    fn wait_for_grandchild(temp_dir: &std::path::Path) -> (u32, ProcessCleanup) {
-        let pid_file = temp_dir.join("grandchild_pid");
-        let deadline = Instant::now() + Duration::from_secs(15);
+        let deadline = Instant::now() + Duration::from_secs(5);
         let grandchild_pid = loop {
             if let Ok(contents) = std::fs::read_to_string(&pid_file)
                 && let Ok(pid) = contents.trim().parse::<u32>()
@@ -287,16 +237,7 @@ mod windows_tests {
             process_is_alive(grandchild_pid),
             "grandchild should be alive after spawning"
         );
-        (grandchild_pid, ProcessCleanup(grandchild_pid))
-    }
-
-    fn spawn_process_tree(temp_dir: &std::path::Path) -> (Child, u32, ProcessCleanup) {
-        let mut command = std::process::Command::new("powershell.exe");
-        configure_process_tree(&mut command, temp_dir);
-        let child = Child::spawn(command, Stdio::null(), Stdio::null(), Stdio::null())
-            .expect("failed to spawn powershell");
-        let (grandchild_pid, cleanup) = wait_for_grandchild(temp_dir);
-        (child, grandchild_pid, cleanup)
+        (child, grandchild_pid)
     }
 
     fn process_is_alive(pid: u32) -> bool {
@@ -314,9 +255,7 @@ mod windows_tests {
             let mut exit_code = 0u32;
             let alive = GetExitCodeProcess(handle, &mut exit_code).is_ok()
                 && exit_code == STILL_ACTIVE.0 as u32;
-            if let Err(error) = CloseHandle(handle) {
-                eprintln!("failed to close process handle: {error}");
-            }
+            CloseHandle(handle).expect("failed to close process handle");
             alive
         }
     }
@@ -330,9 +269,9 @@ mod windows_tests {
     }
 
     #[test]
-    fn kill_terminates_grandchildren() {
-        let temp_dir = tempfile::tempdir().expect("failed to create temporary directory");
-        let (mut child, grandchild_pid, _cleanup) = spawn_process_tree(temp_dir.path());
+    fn test_kill_terminates_grandchildren() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let (mut child, grandchild_pid) = spawn_process_tree(temp_dir.path());
 
         child.kill().expect("failed to kill child");
 
@@ -343,56 +282,15 @@ mod windows_tests {
     }
 
     #[test]
-    fn drop_terminates_grandchildren() {
-        let temp_dir = tempfile::tempdir().expect("failed to create temporary directory");
-        let (child, grandchild_pid, _cleanup) = spawn_process_tree(temp_dir.path());
+    fn test_drop_terminates_grandchildren() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let (child, grandchild_pid) = spawn_process_tree(temp_dir.path());
 
         drop(child);
 
         assert_process_exits(
             grandchild_pid,
             "grandchild should be terminated after dropping the child",
-        );
-    }
-
-    #[test]
-    fn command_kill_on_drop_terminates_grandchildren() {
-        let temp_dir = tempfile::tempdir().expect("failed to create temporary directory");
-        let mut command = crate::command::new_command("powershell.exe");
-        configure_process_tree(&mut command, temp_dir.path());
-        command
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .kill_on_drop(true);
-        let child = command.spawn().expect("failed to spawn powershell");
-        let (grandchild_pid, _cleanup) = wait_for_grandchild(temp_dir.path());
-
-        drop(child);
-
-        assert_process_exits(
-            grandchild_pid,
-            "grandchild should be terminated when a kill-on-drop command is dropped",
-        );
-    }
-
-    #[test]
-    fn command_without_kill_on_drop_remains_detached() {
-        let temp_dir = tempfile::tempdir().expect("failed to create temporary directory");
-        let mut command = crate::command::new_command("powershell.exe");
-        configure_process_tree(&mut command, temp_dir.path());
-        command
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
-        let child = command.spawn().expect("failed to spawn powershell");
-        let (grandchild_pid, _cleanup) = wait_for_grandchild(temp_dir.path());
-
-        drop(child);
-
-        assert!(
-            process_is_alive(grandchild_pid),
-            "a detached command should outlive its dropped process handle"
         );
     }
 }

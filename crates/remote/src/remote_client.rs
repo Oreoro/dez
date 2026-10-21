@@ -52,7 +52,7 @@ use util::{
     paths::{PathStyle, RemotePathBuf},
 };
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RemoteOs {
     Linux,
     MacOs,
@@ -71,6 +71,16 @@ impl RemoteOs {
     pub fn is_windows(&self) -> bool {
         matches!(self, RemoteOs::Windows)
     }
+
+    /// A human-readable OS name for telemetry. Matches `client::telemetry::os_name`
+    /// ignoring the compositor (as we run headless on remotes).
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            RemoteOs::Linux => "Linux",
+            RemoteOs::MacOs => "macOS",
+            RemoteOs::Windows => "Windows",
+        }
+    }
 }
 
 impl std::fmt::Display for RemoteOs {
@@ -79,7 +89,7 @@ impl std::fmt::Display for RemoteOs {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RemoteArch {
     X86_64,
     Aarch64,
@@ -100,18 +110,10 @@ impl std::fmt::Display for RemoteArch {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub enum RemoteLibc {
-    Glibc,
-    Musl,
-    Unknown,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug)]
 pub struct RemotePlatform {
     pub os: RemoteOs,
     pub arch: RemoteArch,
-    pub libc: Option<RemoteLibc>,
 }
 
 #[derive(Clone, Debug)]
@@ -119,95 +121,6 @@ pub struct CommandTemplate {
     pub program: String,
     pub args: Vec<String>,
     pub env: HashMap<String, String>,
-}
-
-type RemotePortForwardCloser =
-    Box<dyn FnOnce() -> BoxFuture<'static, Result<()>> + Send + Sync + 'static>;
-
-pub struct RemotePortForward {
-    remote_port: u16,
-    closer: Option<RemotePortForwardCloser>,
-    executor: BackgroundExecutor,
-}
-
-impl RemotePortForward {
-    pub fn new(
-        remote_port: u16,
-        process: util::command::Child,
-        executor: BackgroundExecutor,
-    ) -> Self {
-        Self::with_closer(remote_port, executor, move || {
-            async move {
-                let mut process = process;
-                process.kill()?;
-                process.status().await?;
-                Ok(())
-            }
-            .boxed()
-        })
-    }
-
-    pub(crate) fn with_closer(
-        remote_port: u16,
-        executor: BackgroundExecutor,
-        closer: impl FnOnce() -> BoxFuture<'static, Result<()>> + Send + Sync + 'static,
-    ) -> Self {
-        Self {
-            remote_port,
-            closer: Some(Box::new(closer)),
-            executor,
-        }
-    }
-
-    pub fn remote_port(&self) -> u16 {
-        self.remote_port
-    }
-
-    pub async fn close(mut self) -> Result<()> {
-        let Some(closer) = self.closer.take() else {
-            return Ok(());
-        };
-        closer().await
-    }
-}
-
-impl Drop for RemotePortForward {
-    fn drop(&mut self) {
-        let Some(closer) = self.closer.take() else {
-            return;
-        };
-        self.executor
-            .spawn(async move {
-                if let Err(error) = closer().await {
-                    log::error!("failed to close remote port forward: {error}");
-                }
-            })
-            .detach();
-    }
-}
-
-pub struct LocalPortForward {
-    local_port: u16,
-    process: util::command::Child,
-}
-
-impl LocalPortForward {
-    pub fn new(local_port: u16, process: util::command::Child) -> Self {
-        Self {
-            local_port,
-            process,
-        }
-    }
-
-    pub fn local_port(&self) -> u16 {
-        self.local_port
-    }
-
-    pub async fn close(mut self) -> Result<()> {
-        self.process.kill()?;
-        self.process.status().await?;
-        Ok(())
-    }
 }
 
 /// Whether a command should be run with TTY allocation for interactive use.
@@ -219,28 +132,12 @@ pub enum Interactive {
     No,
 }
 
-/// Whether an SSH-based command should ride on the shared multiplexed
-/// ControlMaster connection or open its own dedicated connection.
-///
-/// Reusing the shared connection (the default) avoids re-authentication, but
-/// multiplexes every channel over a single TCP stream. Bulk project traffic
-/// (file sync, LSP, agent I/O) can then head-of-line-block interactive
-/// keystrokes and their echoes. Opting into a dedicated connection trades an
-/// extra connection/auth for input latency that no longer depends on what the
-/// rest of the project is doing over the wire. No-op for non-SSH connections.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ConnectionSharing {
-    /// Reuse the shared ControlMaster connection.
-    Shared,
-    /// Open a dedicated connection, bypassing connection multiplexing.
-    Dedicated,
-}
-
 pub trait RemoteClientDelegate: Send + Sync {
     fn ask_password(
         &self,
         prompt: String,
         tx: oneshot::Sender<EncryptedPassword>,
+        cancellation: oneshot::Receiver<()>,
         cx: &mut AsyncApp,
     );
     fn get_download_url(
@@ -265,8 +162,6 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const HEARTBEAT_TIMEOUT: Duration = Duration::from_secs(5);
 const INITIAL_CONNECTION_TIMEOUT: Duration =
     Duration::from_secs(if cfg!(debug_assertions) { 5 } else { 60 });
-
-pub const REMOTE_TERMINAL_CONTROL_CAPABILITY: &str = "remote-terminal-control-v1";
 
 pub const MAX_RECONNECT_ATTEMPTS: usize = 3;
 
@@ -435,16 +330,16 @@ pub struct RemoteClient {
     client: Arc<ChannelClient>,
     unique_identifier: String,
     connection_options: RemoteConnectionOptions,
-    platform: Option<RemotePlatform>,
     path_style: PathStyle,
-    control_connection_generation: u64,
+    platform: RemotePlatform,
+    os_version: Option<String>,
     state: Option<State>,
 }
 
 #[derive(Debug)]
 pub enum RemoteClientEvent {
-    ControlConnectionReset,
     Disconnected { server_not_running: bool },
+    Reconnected,
 }
 
 impl EventEmitter<RemoteClientEvent> for RemoteClient {}
@@ -465,7 +360,7 @@ impl ConnectionIdentifier {
 
     // This string gets used in a socket name, and so must be relatively short.
     // The total length of:
-    //   /home/{username}/.local/share/dez/server_state/{name}/stdout.sock
+    //   /home/{username}/.local/share/zed/server_state/{name}/stdout.sock
     // Must be less than about 100 characters
     //   https://unix.stackexchange.com/questions/367008/why-is-socket-path-length-limited-to-a-hundred-chars
     // So our strings should be at most 20 characters or so.
@@ -533,19 +428,21 @@ impl RemoteClient {
                         cx,
                         "client",
                         remote_connection.has_wsl_interop(),
-                        Vec::new(),
                     )
                 });
 
                 let path_style = remote_connection.path_style();
-                let platform = remote_connection.platform();
+                let platform = remote_connection.remote_platform();
+                let os_version = remote_connection.remote_os_version();
+                let connection_options = remote_connection.connection_options();
+                let connection_type = connection_options.connection_type();
                 let this = cx.new(|_| Self {
                     client: client.clone(),
                     unique_identifier: unique_identifier.clone(),
-                    connection_options: remote_connection.connection_options(),
-                    platform,
+                    connection_options,
                     path_style,
-                    control_connection_generation: 0,
+                    platform,
+                    os_version: os_version.clone(),
                     state: Some(State::Connecting),
                 });
 
@@ -614,6 +511,18 @@ impl RemoteClient {
                     });
                 });
 
+                // Use the same `remote_*` property schema as the forwarded
+                // remote events (see `client::telemetry::report_remote_event`)
+                // so all remote-origin telemetry can be queried uniformly.
+                telemetry::event!(
+                    "Remote Connection Established",
+                    remote = true,
+                    remote_connection_type = connection_type,
+                    remote_os_name = platform.os.display_name(),
+                    remote_os_version = os_version,
+                    remote_architecture = platform.arch.as_str(),
+                );
+
                 Ok(Some(this))
             });
 
@@ -632,17 +541,8 @@ impl RemoteClient {
         cx: &App,
         name: &'static str,
         has_wsl_interop: bool,
-        advertised_capabilities: Vec<String>,
     ) -> AnyProtoClient {
-        ChannelClient::new(
-            incoming_rx,
-            outgoing_tx,
-            cx,
-            name,
-            has_wsl_interop,
-            advertised_capabilities,
-        )
-        .into()
+        ChannelClient::new(incoming_rx, outgoing_tx, cx, name, has_wsl_interop).into()
     }
 
     pub fn shutdown_processes<T: RequestMessage>(
@@ -704,11 +604,7 @@ impl RemoteClient {
             );
         }
 
-        let state = self.state.take().context("remote client has no state")?;
-        let starts_new_connection = matches!(
-            &state,
-            State::Connected { .. } | State::HeartbeatMissed { .. }
-        );
+        let state = self.state.take().unwrap();
         let (attempts, remote_connection, delegate) = match state {
             State::Connected {
                 remote_connection,
@@ -740,13 +636,6 @@ impl RemoteClient {
         };
 
         let attempts = attempts + 1;
-        if starts_new_connection {
-            self.control_connection_generation = self
-                .control_connection_generation
-                .checked_add(1)
-                .context("remote control connection generation exhausted")?;
-            cx.emit(RemoteClientEvent::ControlConnectionReset);
-        }
         if attempts > MAX_RECONNECT_ATTEMPTS {
             log::error!(
                 "Failed to reconnect to after {} attempts, giving up",
@@ -837,6 +726,8 @@ impl RemoteClient {
         cx.spawn(async move |this, cx| {
             let new_state = reconnect_task.await;
             this.update(cx, |this, cx| {
+                let reconnected = this.state_is(State::is_reconnecting)
+                    && matches!(&new_state, State::Connected { .. });
                 this.try_set_state(cx, |old_state| {
                     if old_state.is_reconnecting() {
                         match &new_state {
@@ -865,6 +756,10 @@ impl RemoteClient {
                         None
                     }
                 });
+
+                if reconnected {
+                    cx.emit(RemoteClientEvent::Reconnected);
+                }
 
                 if this.state_is(State::is_reconnect_failed) {
                     this.reconnect(cx)
@@ -1034,7 +929,7 @@ impl RemoteClient {
     }
 
     fn set_state(&mut self, state: State, cx: &mut Context<Self>) {
-        log::info!("setting state to '{}'", &state);
+        log::info!("setting state to '{state}'");
 
         let is_reconnect_exhausted = state.is_reconnect_exhausted();
         let is_server_not_running = state.is_server_not_running();
@@ -1052,10 +947,6 @@ impl RemoteClient {
         Some(self.remote_connection()?.shell())
     }
 
-    pub fn control_connection_generation(&self) -> u64 {
-        self.control_connection_generation
-    }
-
     pub fn default_system_shell(&self) -> Option<String> {
         Some(self.remote_connection()?.default_system_shell())
     }
@@ -1070,10 +961,6 @@ impl RemoteClient {
             .map_or(false, |connection| connection.has_wsl_interop())
     }
 
-    pub fn remote_server_executable(&self) -> Option<String> {
-        self.remote_connection()?.remote_server_executable()
-    }
-
     pub fn build_command(
         &self,
         program: Option<String>,
@@ -1081,40 +968,12 @@ impl RemoteClient {
         env: &HashMap<String, String>,
         working_dir: Option<String>,
         port_forward: Option<(u16, String, u16)>,
-    ) -> Result<CommandTemplate> {
-        self.build_command_with_options(
-            program,
-            args,
-            env,
-            working_dir,
-            port_forward,
-            Interactive::Yes,
-            ConnectionSharing::Shared,
-        )
-    }
-
-    pub fn build_command_with_options(
-        &self,
-        program: Option<String>,
-        args: &[String],
-        env: &HashMap<String, String>,
-        working_dir: Option<String>,
-        port_forward: Option<(u16, String, u16)>,
         interactive: Interactive,
-        connection_sharing: ConnectionSharing,
     ) -> Result<CommandTemplate> {
         let Some(connection) = self.remote_connection() else {
             return Err(anyhow!("no remote connection"));
         };
-        connection.build_command(
-            program,
-            args,
-            env,
-            working_dir,
-            port_forward,
-            interactive,
-            connection_sharing,
-        )
+        connection.build_command(program, args, env, working_dir, port_forward, interactive)
     }
 
     pub fn build_forward_ports_command(
@@ -1139,120 +998,12 @@ impl RemoteClient {
         connection.upload_directory(src_path, dest_path, cx)
     }
 
-    pub fn upload_file(
-        &self,
-        src_path: PathBuf,
-        dest_path: RemotePathBuf,
-        cx: &App,
-    ) -> Task<Result<()>> {
-        let Some(connection) = self.remote_connection() else {
-            return Task::ready(Err(anyhow!("no remote connection")));
-        };
-        connection.upload_file(src_path, dest_path, cx)
-    }
-
     pub fn proto_client(&self) -> AnyProtoClient {
         self.client.clone().into()
     }
 
-    /// Whether the connected server advertised `capability` in its
-    /// `RemoteStarted` message. Used to negotiate optional features (e.g. the
-    /// host-owned agent thread history index) with a fallback for older servers.
-    pub fn has_server_capability(&self, capability: &str) -> bool {
-        self.client
-            .peer_capabilities()
-            .iter()
-            .any(|advertised| advertised == capability)
-    }
-
-    pub fn remote_app_data_directory(&self, cx: &App) -> Task<Result<PathBuf>> {
-        let request = self
-            .proto_client()
-            .request(proto::GetRemoteAppDataDirectory {});
-        cx.background_spawn(async move {
-            let response = request.await?;
-            if response.path.is_empty() {
-                anyhow::bail!("remote server returned an empty application data directory");
-            }
-            Ok(PathBuf::from(response.path))
-        })
-    }
-
-    pub fn compute_remote_file_sha256(&self, path: PathBuf, cx: &App) -> Task<Result<String>> {
-        let request = self.proto_client().request(proto::ComputeRemoteFileSha256 {
-            path: path.to_string_lossy().into_owned(),
-        });
-        cx.background_spawn(async move {
-            let response = request.await?;
-            if response.sha256.len() != 64 {
-                anyhow::bail!("remote server returned an invalid SHA-256 digest");
-            }
-            Ok(response.sha256)
-        })
-    }
-
-    pub fn create_private_remote_directory(&self, path: PathBuf, cx: &App) -> Task<Result<()>> {
-        let request = self
-            .proto_client()
-            .request(proto::CreatePrivateRemoteDirectory {
-                path: path.to_string_lossy().into_owned(),
-            });
-        cx.background_spawn(async move {
-            request.await?;
-            Ok(())
-        })
-    }
-
-    pub fn set_remote_file_executable(&self, path: PathBuf, cx: &App) -> Task<Result<()>> {
-        let request = self.proto_client().request(proto::SetRemoteFileExecutable {
-            path: path.to_string_lossy().into_owned(),
-        });
-        cx.background_spawn(async move {
-            request.await?;
-            Ok(())
-        })
-    }
-
-    pub fn rename_remote_path(
-        &self,
-        source: PathBuf,
-        destination: PathBuf,
-        cx: &App,
-    ) -> Task<Result<()>> {
-        let request = self.proto_client().request(proto::RenameRemotePath {
-            source: source.to_string_lossy().into_owned(),
-            destination: destination.to_string_lossy().into_owned(),
-        });
-        cx.background_spawn(async move {
-            request.await?;
-            Ok(())
-        })
-    }
-
-    pub fn remove_remote_path(
-        &self,
-        path: PathBuf,
-        recursive: bool,
-        ignore_if_missing: bool,
-        cx: &App,
-    ) -> Task<Result<()>> {
-        let request = self.proto_client().request(proto::RemoveRemotePath {
-            path: path.to_string_lossy().into_owned(),
-            recursive,
-            ignore_if_missing,
-        });
-        cx.background_spawn(async move {
-            request.await?;
-            Ok(())
-        })
-    }
-
     pub fn connection_options(&self) -> RemoteConnectionOptions {
         self.connection_options.clone()
-    }
-
-    pub fn platform(&self) -> Option<RemotePlatform> {
-        self.platform
     }
 
     pub fn connection(&self) -> Option<Arc<dyn RemoteConnection>> {
@@ -1279,6 +1030,24 @@ impl RemoteClient {
 
     pub fn path_style(&self) -> PathStyle {
         self.path_style
+    }
+
+    /// The platform (OS and architecture) of the remote host, detected during
+    /// connection setup.
+    pub fn remote_platform(&self) -> RemotePlatform {
+        self.platform
+    }
+
+    /// The OS version of the remote host (e.g. `"ubuntu 24.04"`), detected
+    /// during connection setup. `None` if it could not be determined.
+    pub fn remote_os_version(&self) -> Option<String> {
+        self.os_version.clone()
+    }
+
+    /// A stable identifier for the kind of remote connection (e.g. `"ssh"`,
+    /// `"wsl"`, `"docker"`, `"podman"`).
+    pub fn connection_type(&self) -> &'static str {
+        self.connection_options.connection_type()
     }
 
     /// Forcibly disconnects from the remote server by killing the underlying connection.
@@ -1585,6 +1354,34 @@ impl RemoteConnectionOptions {
             RemoteConnectionOptions::Mock(opts) => format!("mock-{}", opts.id),
         }
     }
+
+    /// A stable identifier for the kind of remote connection, suitable for
+    /// telemetry (e.g. `"ssh"`, `"wsl"`, `"docker"`, `"podman"`).
+    pub fn connection_type(&self) -> &'static str {
+        match self {
+            RemoteConnectionOptions::Ssh(_) => "ssh",
+            RemoteConnectionOptions::Wsl(_) => "wsl",
+            RemoteConnectionOptions::Docker(opts) => {
+                if opts.use_podman {
+                    "podman"
+                } else {
+                    "docker"
+                }
+            }
+            #[cfg(any(test, feature = "test-support"))]
+            RemoteConnectionOptions::Mock(_) => "mock",
+        }
+    }
+
+    pub fn host(&self) -> String {
+        match self {
+            RemoteConnectionOptions::Ssh(opts) => opts.host.to_string(),
+            RemoteConnectionOptions::Wsl(opts) => opts.distro_name.clone(),
+            RemoteConnectionOptions::Docker(opts) => opts.name.clone(),
+            #[cfg(any(test, feature = "test-support"))]
+            RemoteConnectionOptions::Mock(opts) => format!("mock-{}", opts.id),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1592,65 +1389,6 @@ mod tests {
     use super::*;
     use gpui::TestAppContext;
     use rpc::{ErrorCodeExt, proto::ErrorCode};
-    use std::sync::atomic::AtomicUsize;
-
-    #[test]
-    fn remote_port_forward_is_send_and_sync() {
-        fn assert_send_and_sync<T: Send + Sync>() {}
-
-        assert_send_and_sync::<RemotePortForward>();
-    }
-
-    #[gpui::test]
-    async fn remote_port_forward_close_runs_closer_once(cx: &mut TestAppContext) {
-        let close_count = Arc::new(AtomicUsize::new(0));
-        let forward = RemotePortForward::with_closer(43123, cx.background_executor.clone(), {
-            let close_count = close_count.clone();
-            move || {
-                async move {
-                    close_count.fetch_add(1, SeqCst);
-                    Ok(())
-                }
-                .boxed()
-            }
-        });
-
-        forward.close().await.expect("close should succeed");
-        cx.run_until_parked();
-
-        assert_eq!(close_count.load(SeqCst), 1);
-    }
-
-    #[gpui::test]
-    async fn dropping_remote_port_forward_schedules_closer_once(cx: &mut TestAppContext) {
-        let close_count = Arc::new(AtomicUsize::new(0));
-        let forward = RemotePortForward::with_closer(43123, cx.background_executor.clone(), {
-            let close_count = close_count.clone();
-            move || {
-                async move {
-                    close_count.fetch_add(1, SeqCst);
-                    Ok(())
-                }
-                .boxed()
-            }
-        });
-
-        drop(forward);
-        cx.run_until_parked();
-
-        assert_eq!(close_count.load(SeqCst), 1);
-    }
-
-    #[gpui::test]
-    async fn remote_port_forward_close_propagates_failure(cx: &mut TestAppContext) {
-        let forward = RemotePortForward::with_closer(43123, cx.background_executor.clone(), || {
-            async { Err(anyhow!("cancel failed")) }.boxed()
-        });
-
-        let error = forward.close().await.expect_err("close should fail");
-
-        assert_eq!(error.to_string(), "cancel failed");
-    }
 
     #[test]
     fn test_ssh_display_name_prefers_nickname() {
@@ -1673,21 +1411,45 @@ mod tests {
         assert_eq!(options.display_name(), "1.2.3.4");
     }
 
+    #[test]
+    fn test_connection_type() {
+        assert_eq!(
+            RemoteConnectionOptions::Ssh(SshConnectionOptions::default()).connection_type(),
+            "ssh"
+        );
+        assert_eq!(
+            RemoteConnectionOptions::Wsl(WslConnectionOptions {
+                distro_name: "Ubuntu".to_string(),
+                user: None,
+            })
+            .connection_type(),
+            "wsl"
+        );
+        assert_eq!(
+            RemoteConnectionOptions::Docker(DockerConnectionOptions {
+                use_podman: false,
+                ..Default::default()
+            })
+            .connection_type(),
+            "docker"
+        );
+        assert_eq!(
+            RemoteConnectionOptions::Docker(DockerConnectionOptions {
+                use_podman: true,
+                ..Default::default()
+            })
+            .connection_type(),
+            "podman"
+        );
+    }
+
     #[gpui::test]
     async fn test_channel_client_request_stream_terminates_on_error(cx: &mut TestAppContext) {
         let (incoming_tx, incoming_rx) = mpsc::unbounded::<Envelope>();
         let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded::<Envelope>();
 
-        let client = cx.update(|cx| {
-            ChannelClient::new(
-                incoming_rx,
-                outgoing_tx,
-                cx,
-                "test-client",
-                false,
-                Vec::new(),
-            )
-        });
+        let client =
+            cx.update(|cx| ChannelClient::new(incoming_rx, outgoing_tx, cx, "test-client", false));
 
         // The client sends RemoteStarted on startup; drain the outgoing channel
         // so it doesn't block.
@@ -1741,16 +1503,8 @@ mod tests {
         let (_incoming_tx, incoming_rx) = mpsc::unbounded::<Envelope>();
         let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded::<Envelope>();
 
-        let client = cx.update(|cx| {
-            ChannelClient::new(
-                incoming_rx,
-                outgoing_tx,
-                cx,
-                "test-client",
-                false,
-                Vec::new(),
-            )
-        });
+        let client =
+            cx.update(|cx| ChannelClient::new(incoming_rx, outgoing_tx, cx, "test-client", false));
 
         let _drain_outgoing = cx
             .executor()
@@ -1780,16 +1534,8 @@ mod tests {
         let (incoming_tx, incoming_rx) = mpsc::unbounded::<Envelope>();
         let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded::<Envelope>();
 
-        let client = cx.update(|cx| {
-            ChannelClient::new(
-                incoming_rx,
-                outgoing_tx,
-                cx,
-                "test-client",
-                false,
-                Vec::new(),
-            )
-        });
+        let client =
+            cx.update(|cx| ChannelClient::new(incoming_rx, outgoing_tx, cx, "test-client", false));
 
         let _drain_outgoing = cx
             .executor()
@@ -1827,6 +1573,17 @@ mod tests {
             "stream channel should be removed once the consumer has dropped the stream"
         );
     }
+
+    #[test]
+    fn test_ssh_host_ignores_nickname() {
+        let options = RemoteConnectionOptions::Ssh(SshConnectionOptions {
+            host: "1.2.3.4".into(),
+            nickname: Some("My Cool Project".to_string()),
+            ..Default::default()
+        });
+
+        assert_eq!(options.host(), "1.2.3.4");
+    }
 }
 
 impl From<SshConnectionOptions> for RemoteConnectionOptions {
@@ -1859,8 +1616,6 @@ pub struct OpenWslPath {
 
 #[async_trait(?Send)]
 pub trait RemoteConnection: Send + Sync {
-    fn platform(&self) -> Option<RemotePlatform>;
-
     fn start_proxy(
         &self,
         unique_identifier: String,
@@ -1877,24 +1632,6 @@ pub trait RemoteConnection: Send + Sync {
         dest_path: RemotePathBuf,
         cx: &App,
     ) -> Task<Result<()>>;
-    fn upload_file(
-        &self,
-        src_path: PathBuf,
-        dest_path: RemotePathBuf,
-        cx: &App,
-    ) -> Task<Result<()>>;
-    async fn upload_file_now(&self, src_path: PathBuf, dest_path: RemotePathBuf) -> Result<()>;
-    async fn open_reverse_port_forward(
-        &self,
-        local_port: u16,
-        executor: &BackgroundExecutor,
-    ) -> Result<RemotePortForward>;
-    async fn open_local_port_forward(
-        &self,
-        local_port: u16,
-        remote_port: u16,
-        executor: &BackgroundExecutor,
-    ) -> Result<LocalPortForward>;
     async fn kill(&self) -> Result<()>;
     fn has_been_killed(&self) -> bool;
     fn shares_network_interface(&self) -> bool {
@@ -1908,7 +1645,6 @@ pub trait RemoteConnection: Send + Sync {
         working_dir: Option<String>,
         port_forward: Option<(u16, String, u16)>,
         interactive: Interactive,
-        connection_sharing: ConnectionSharing,
     ) -> Result<CommandTemplate>;
     fn build_forward_ports_command(
         &self,
@@ -1916,12 +1652,14 @@ pub trait RemoteConnection: Send + Sync {
     ) -> Result<CommandTemplate>;
     fn connection_options(&self) -> RemoteConnectionOptions;
     fn path_style(&self) -> PathStyle;
+    /// The remote platform (OS and architecture), detected during connection setup.
+    fn remote_platform(&self) -> RemotePlatform;
+    /// The remote host's OS version (e.g. `"ubuntu 24.04"` or `"15.6.1"`),
+    /// detected during connection setup. `None` if it could not be determined.
+    fn remote_os_version(&self) -> Option<String>;
     fn shell(&self) -> String;
     fn default_system_shell(&self) -> String;
     fn has_wsl_interop(&self) -> bool;
-    fn remote_server_executable(&self) -> Option<String> {
-        None
-    }
 
     #[cfg(any(test, feature = "test-support"))]
     fn simulate_disconnect(&self, _: &AsyncApp) {}
@@ -1975,12 +1713,6 @@ pub(crate) struct ChannelClient {
     remote_started: Signal<()>,
     has_wsl_interop: bool,
     executor: BackgroundExecutor,
-    /// Capabilities this peer advertises in its `RemoteStarted` message. Only
-    /// the server side advertises; the client leaves this empty.
-    advertised_capabilities: Vec<String>,
-    /// Capabilities received in the peer's `RemoteStarted` message. Read by the
-    /// client to negotiate optional features (e.g. the host history index).
-    peer_capabilities: Mutex<Vec<String>>,
 }
 
 impl ChannelClient {
@@ -1990,7 +1722,6 @@ impl ChannelClient {
         cx: &App,
         name: &'static str,
         has_wsl_interop: bool,
-        advertised_capabilities: Vec<String>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|this| Self {
             outgoing_tx: Mutex::new(outgoing_tx),
@@ -2009,19 +1740,11 @@ impl ChannelClient {
             )),
             remote_started: Signal::new(cx),
             has_wsl_interop,
-            advertised_capabilities,
-            peer_capabilities: Mutex::new(Vec::new()),
         })
     }
 
     fn wait_for_remote_started(&self) -> Shared<Task<Option<()>>> {
         self.remote_started.wait()
-    }
-
-    /// The capabilities advertised by the peer in its `RemoteStarted` message.
-    /// Empty until `RemoteStarted` has been received.
-    pub(crate) fn peer_capabilities(&self) -> Vec<String> {
-        self.peer_capabilities.lock().clone()
     }
 
     fn start_handling_messages(
@@ -2031,10 +1754,7 @@ impl ChannelClient {
     ) -> Task<Result<()>> {
         cx.spawn(async move |cx| {
             if let Some(this) = this.upgrade() {
-                let envelope = proto::RemoteStarted {
-                    capabilities: this.advertised_capabilities.clone(),
-                }
-                .into_envelope(0, None, None);
+                let envelope = proto::RemoteStarted {}.into_envelope(0, None, None);
                 this.outgoing_tx.lock().unbounded_send(envelope).ok();
             };
 
@@ -2070,10 +1790,7 @@ impl ChannelClient {
                     continue;
                 }
 
-                if let Some(proto::envelope::Payload::RemoteStarted(remote_started)) =
-                    &incoming.payload
-                {
-                    *this.peer_capabilities.lock() = remote_started.capabilities.clone();
+                if let Some(proto::envelope::Payload::RemoteStarted(_)) = &incoming.payload {
                     this.remote_started.set(());
                     let mut envelope = proto::Ack {}.into_envelope(0, Some(incoming.id), None);
                     envelope.id = this.next_message_id.fetch_add(1, SeqCst);

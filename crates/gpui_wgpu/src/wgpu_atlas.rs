@@ -130,15 +130,17 @@ impl PlatformAtlas for WgpuAtlas {
     fn remove(&self, key: &AtlasKey) {
         let mut lock = self.0.lock();
 
-        let Some(id) = lock.tiles_by_key.remove(key).map(|tile| tile.texture_id) else {
+        let Some(tile) = lock.tiles_by_key.remove(key) else {
             return;
         };
+        let id = tile.texture_id;
 
         let Some(texture_slot) = lock.storage[id.kind].textures.get_mut(id.index as usize) else {
             return;
         };
 
         if let Some(mut texture) = texture_slot.take() {
+            texture.allocator.deallocate(tile.tile_id.into());
             texture.decrement_ref_count();
             if texture.is_unreferenced() {
                 lock.pending_uploads
@@ -403,10 +405,7 @@ mod tests {
     use gpui::{ImageId, RenderImageParams};
     use std::sync::Arc;
 
-    // Returns `None` when the environment has no usable GPU backend (e.g. a
-    // headless CI runner without Vulkan/Metal/GL drivers) rather than failing,
-    // since that's a property of the machine, not of this code.
-    fn test_device_and_queue() -> anyhow::Result<Option<(Arc<wgpu::Device>, Arc<wgpu::Queue>)>> {
+    fn test_device_and_queue() -> anyhow::Result<(Arc<wgpu::Device>, Arc<wgpu::Queue>)> {
         block_on(async {
             let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::all(),
@@ -415,18 +414,14 @@ mod tests {
                 memory_budget_thresholds: wgpu::MemoryBudgetThresholds::default(),
                 display: None,
             });
-            let adapter = match instance
+            let adapter = instance
                 .request_adapter(&wgpu::RequestAdapterOptions {
                     power_preference: wgpu::PowerPreference::LowPower,
                     compatible_surface: None,
                     force_fallback_adapter: false,
                 })
                 .await
-            {
-                Ok(adapter) => adapter,
-                Err(wgpu::RequestAdapterError::NotFound { .. }) => return Ok(None),
-                Err(error) => return Err(anyhow::anyhow!("failed to request adapter: {error}")),
-            };
+                .map_err(|error| anyhow::anyhow!("failed to request adapter: {error}"))?;
             let (device, queue) = adapter
                 .request_device(&wgpu::DeviceDescriptor {
                     label: Some("wgpu_atlas_test_device"),
@@ -440,18 +435,13 @@ mod tests {
                 })
                 .await
                 .map_err(|error| anyhow::anyhow!("failed to request device: {error}"))?;
-            Ok(Some((Arc::new(device), Arc::new(queue))))
+            Ok((Arc::new(device), Arc::new(queue)))
         })
     }
 
     #[test]
     fn before_frame_skips_uploads_for_removed_texture() -> anyhow::Result<()> {
-        let Some((device, queue)) = test_device_and_queue()? else {
-            eprintln!(
-                "skipping before_frame_skips_uploads_for_removed_texture: no GPU adapter available"
-            );
-            return Ok(());
-        };
+        let (device, queue) = test_device_and_queue()?;
 
         let atlas = WgpuAtlas::new(device, queue, wgpu::TextureFormat::Bgra8Unorm);
         let key = AtlasKey::Image(RenderImageParams {
@@ -470,6 +460,50 @@ mod tests {
             .expect("tile should be created");
         atlas.remove(&key);
         atlas.before_frame();
+        Ok(())
+    }
+
+    #[test]
+    fn remove_deallocates_tile_space_for_reuse() -> anyhow::Result<()> {
+        let (device, queue) = test_device_and_queue()?;
+        let atlas = WgpuAtlas::new(device, queue, wgpu::TextureFormat::Bgra8Unorm);
+
+        let small = Size {
+            width: DevicePixels(64),
+            height: DevicePixels(64),
+        };
+        let big = Size {
+            width: DevicePixels(700),
+            height: DevicePixels(700),
+        };
+
+        let make_key = |image_id: usize| {
+            AtlasKey::Image(RenderImageParams {
+                image_id: ImageId(image_id),
+                frame_index: 0,
+            })
+        };
+        let insert = |key: &AtlasKey, size: Size<DevicePixels>| {
+            let byte_count = (size.width.0 as usize) * (size.height.0 as usize) * 4;
+            atlas
+                .get_or_insert_with(key, &mut || {
+                    Ok(Some((size, Cow::Owned(vec![0u8; byte_count]))))
+                })
+                .expect("allocation should succeed")
+                .expect("callback returns Some")
+        };
+
+        let keeper_key = make_key(1);
+        let big_key_a = make_key(2);
+        let big_key_b = make_key(3);
+
+        let keeper_tile = insert(&keeper_key, small);
+        let tile_a = insert(&big_key_a, big);
+        assert_eq!(keeper_tile.texture_id, tile_a.texture_id);
+
+        atlas.remove(&big_key_a);
+        let tile_b = insert(&big_key_b, big);
+        assert_eq!(tile_b.texture_id, keeper_tile.texture_id);
         Ok(())
     }
 

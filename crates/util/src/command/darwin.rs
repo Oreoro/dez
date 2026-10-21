@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::ffi::{CString, OsStr, OsString};
 use std::io;
 use std::os::fd::AsRawFd;
-use std::os::unix::ffi::OsStrExt;
+use std::os::unix::ffi::{OsStrExt, OsStringExt};
 use std::os::unix::io::FromRawFd;
 use std::path::{Path, PathBuf};
 use std::process::{ExitStatus, Output};
@@ -300,12 +300,30 @@ fn spawn_posix_spawn(
     stderr_cfg: Stdio,
     kill_on_drop: bool,
 ) -> io::Result<Child> {
-    let program_cstr = CString::new(program.as_bytes()).map_err(|_| invalid_input_error())?;
+    // posix_spawnp resolves programs against the parent's cwd/PATH, not the child's.
+    let resolved_program = if program.as_bytes().contains(&b'/') {
+        std::path::absolute(current_dir.join(program)).map_or_else(
+            |_| program.as_bytes().to_vec(),
+            |p| p.into_os_string().into_vec(),
+        )
+    } else {
+        envs.and_then(|e| {
+            e.iter()
+                .find(|(k, _)| k.as_os_str() == OsStr::new("PATH"))
+                .and_then(|(_, v)| which::which_in(program, Some(v.as_os_str()), current_dir).ok())
+        })
+        .map_or_else(
+            || program.as_bytes().to_vec(),
+            |path| path.into_os_string().into_vec(),
+        )
+    };
+    let program_cstr = CString::new(resolved_program).map_err(|_| invalid_input_error())?;
+    let argv0_cstr = CString::new(program.as_bytes()).map_err(|_| invalid_input_error())?;
 
     let current_dir_cstr =
         CString::new(current_dir.as_os_str().as_bytes()).map_err(|_| invalid_input_error())?;
 
-    let mut argv_cstrs = vec![program_cstr.clone()];
+    let mut argv_cstrs = vec![argv0_cstr];
     for arg in args {
         let cstr = CString::new(arg.as_bytes()).map_err(|_| invalid_input_error())?;
         argv_cstrs.push(cstr);
@@ -378,9 +396,23 @@ fn spawn_posix_spawn(
         cvt_nz(libc::posix_spawnattr_init(&mut attr))?;
         cvt_nz(libc::posix_spawn_file_actions_init(&mut file_actions))?;
 
+        // The Rust runtime sets SIGPIPE to SIG_IGN before `main`, and ignored
+        // dispositions survive exec, so without this children would never die
+        // from writing to a closed pipe. Reset it to SIG_DFL, like std does
+        // (rust-lang/rust#101077). Like std, we don't touch the signal mask,
+        // so deliberately blocked signals (e.g. via `nohup`) stay blocked.
+        let mut default_set: libc::sigset_t = std::mem::zeroed();
+        if libc::sigemptyset(&mut default_set) == -1 {
+            return Err(io::Error::last_os_error());
+        }
+        if libc::sigaddset(&mut default_set, libc::SIGPIPE) == -1 {
+            return Err(io::Error::last_os_error());
+        }
+        cvt_nz(libc::posix_spawnattr_setsigdefault(&mut attr, &default_set))?;
+
         cvt_nz(libc::posix_spawnattr_setflags(
             &mut attr,
-            libc::POSIX_SPAWN_CLOEXEC_DEFAULT as libc::c_short,
+            (libc::POSIX_SPAWN_CLOEXEC_DEFAULT | libc::POSIX_SPAWN_SETSIGDEF) as libc::c_short,
         ))?;
 
         cvt_nz(posix_spawnattr_setexceptionports_np(
@@ -396,12 +428,18 @@ fn spawn_posix_spawn(
             current_dir_cstr.as_ptr(),
         ))?;
 
+        // With POSIX_SPAWN_CLOEXEC_DEFAULT, any fd without a file action is
+        // closed in the child, so inheriting a stdio fd requires an explicit
+        // addinherit_np action; without one the child's fd 0/1/2 would start
+        // out closed and could be silently reused by its first open().
         if let Some(fd) = &stdin_read {
             cvt_nz(libc::posix_spawn_file_actions_adddup2(
                 &mut file_actions,
                 fd.as_raw_fd(),
                 libc::STDIN_FILENO,
             ))?;
+        }
+        if stdin_read.is_some() || stdin_cfg == Stdio::Inherit {
             cvt_nz(posix_spawn_file_actions_addinherit_np(
                 &mut file_actions,
                 libc::STDIN_FILENO,
@@ -414,6 +452,8 @@ fn spawn_posix_spawn(
                 fd.as_raw_fd(),
                 libc::STDOUT_FILENO,
             ))?;
+        }
+        if stdout_write.is_some() || stdout_cfg == Stdio::Inherit {
             cvt_nz(posix_spawn_file_actions_addinherit_np(
                 &mut file_actions,
                 libc::STDOUT_FILENO,
@@ -426,6 +466,8 @@ fn spawn_posix_spawn(
                 fd.as_raw_fd(),
                 libc::STDERR_FILENO,
             ))?;
+        }
+        if stderr_write.is_some() || stderr_cfg == Stdio::Inherit {
             cvt_nz(posix_spawn_file_actions_addinherit_np(
                 &mut file_actions,
                 libc::STDERR_FILENO,
@@ -529,6 +571,8 @@ fn invalid_input_error() -> io::Error {
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::process::ExitStatusExt as _;
+
     use super::*;
     use futures_lite::AsyncWriteExt;
 
@@ -572,70 +616,45 @@ mod tests {
         );
     }
 
-    #[test]
-    fn failed_spawns_release_their_stdio_descriptors() {
-        fn open_descriptor_count() -> usize {
-            std::fs::read_dir("/dev/fd")
-                .expect("read process descriptors")
-                .count()
-        }
-
-        const ATTEMPTS: usize = 32;
-        const PARALLEL_TEST_SLACK: usize = 32;
-        let before = open_descriptor_count();
-        for _ in 0..ATTEMPTS {
-            Command::new("/bin/dez-process-that-does-not-exist")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
-                .expect_err("spawn should fail");
-        }
-        let after = open_descriptor_count();
-
-        assert!(
-            after <= before + PARALLEL_TEST_SLACK,
-            "{ATTEMPTS} failed spawns retained {} descriptors",
-            after.saturating_sub(before)
-        );
-    }
-
-    #[test]
-    #[allow(
-        clippy::disallowed_methods,
-        reason = "the test must wait for the OS child reaper"
-    )]
-    fn dropping_short_lived_children_reaps_every_process() {
-        const ATTEMPTS: usize = 32;
-        let mut child_process_ids = Vec::with_capacity(ATTEMPTS);
-
-        for _ in 0..ATTEMPTS {
-            let child = Command::new("/usr/bin/true")
-                .spawn()
-                .expect("spawn short-lived child");
-            child_process_ids.push(child.id());
-            drop(child);
-        }
-
-        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    fn wait_until_gone(pid: u32) {
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
         loop {
-            let remaining_processes = child_process_ids
-                .iter()
-                .copied()
-                .filter(|process_id| {
-                    (unsafe { libc::kill(*process_id as libc::pid_t, 0) }) == 0
-                        || io::Error::last_os_error().raw_os_error() != Some(libc::ESRCH)
-                })
-                .collect::<Vec<_>>();
-            if remaining_processes.is_empty() {
+            let result = unsafe { libc::kill(pid as libc::pid_t, 0) };
+            if result == -1 && io::Error::last_os_error().raw_os_error() == Some(libc::ESRCH) {
                 return;
             }
             assert!(
                 std::time::Instant::now() < deadline,
-                "dropped children were not reaped: {remaining_processes:?}"
+                "process {pid} was not reaped"
             );
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
+    }
+
+    #[test]
+    fn test_drop_reaps_child() {
+        smol::block_on(async {
+            let child = Command::new("/usr/bin/true")
+                .spawn()
+                .expect("failed to spawn command");
+            let pid = child.id();
+            drop(child);
+            wait_until_gone(pid);
+        });
+    }
+
+    #[test]
+    fn test_kill_on_drop_kills_and_reaps_child() {
+        smol::block_on(async {
+            let child = Command::new("/bin/sleep")
+                .arg("60")
+                .kill_on_drop(true)
+                .spawn()
+                .expect("failed to spawn command");
+            let pid = child.id();
+            drop(child);
+            wait_until_gone(pid);
+        });
     }
 
     #[test]
@@ -906,5 +925,195 @@ mod tests {
             assert!(output.status.success());
             assert_eq!(output.stdout, b"piped input");
         });
+    }
+
+    #[test]
+    fn test_bare_program_resolved_via_custom_path() {
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+
+        let link_path = temp_dir.path().join("zed-test-echo");
+        std::os::unix::fs::symlink("/bin/echo", &link_path).expect("failed to create symlink");
+
+        let custom_path = temp_dir.path().to_string_lossy().into_owned();
+
+        smol::block_on(async {
+            let output = Command::new("zed-test-echo")
+                .args(["-n", "from-custom-path"])
+                .env("PATH", &custom_path)
+                .output()
+                .await
+                .expect("failed to spawn with custom PATH");
+
+            assert!(output.status.success());
+            assert_eq!(output.stdout, b"from-custom-path");
+        });
+    }
+
+    #[test]
+    fn test_bare_program_preserves_argv0_when_resolved_via_custom_path() {
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+
+        let link_path = temp_dir.path().join("zed-test-sh");
+        std::os::unix::fs::symlink("/bin/sh", &link_path).expect("failed to create symlink");
+
+        let custom_path = temp_dir.path().to_string_lossy().into_owned();
+
+        smol::block_on(async {
+            let output = Command::new("zed-test-sh")
+                .args(["-c", "printf %s \"$0\""])
+                .env("PATH", &custom_path)
+                .output()
+                .await
+                .expect("failed to spawn with custom PATH");
+
+            assert!(output.status.success());
+            assert_eq!(output.stdout, b"zed-test-sh");
+        });
+    }
+
+    #[test]
+    fn test_bare_program_with_custom_path_falls_back_when_not_found() {
+        smol::block_on(async {
+            let result = Command::new("zed-nonexistent-binary-xyz")
+                .env("PATH", "/nonexistent/path")
+                .spawn();
+
+            assert!(result.is_err());
+        });
+    }
+
+    #[test]
+    fn test_bare_program_with_custom_env_no_path_key() {
+        smol::block_on(async {
+            let output = Command::new("echo")
+                .args(["-n", "from-inherited-path"])
+                .env("ZED_TEST_VAR", "test")
+                .output()
+                .await
+                .expect("failed to spawn with custom env but no PATH override");
+
+            assert!(output.status.success());
+            assert_eq!(output.stdout, b"from-inherited-path");
+        });
+    }
+
+    #[test]
+    fn test_relative_path_resolved_against_current_dir() {
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+
+        let link_path = temp_dir.path().join("zed-test-echo");
+        std::os::unix::fs::symlink("/bin/echo", &link_path).expect("failed to create symlink");
+
+        let relative_path = "./zed-test-echo";
+
+        smol::block_on(async {
+            let output = Command::new(relative_path)
+                .args(["-n", "from-relative-path"])
+                .current_dir(temp_dir.path())
+                .env("PATH", "/nonexistent/path")
+                .output()
+                .await
+                .expect("failed to spawn with relative path");
+
+            assert!(output.status.success());
+            assert_eq!(output.stdout, b"from-relative-path");
+        });
+    }
+
+    #[test]
+    fn test_absolute_path_passes_through_unchanged() {
+        smol::block_on(async {
+            let output = Command::new("/bin/echo")
+                .args(["-n", "from-absolute-path"])
+                .env("PATH", "/nonexistent/path")
+                .output()
+                .await
+                .expect("failed to spawn with absolute path");
+
+            assert!(output.status.success());
+            assert_eq!(output.stdout, b"from-absolute-path");
+        });
+    }
+
+    #[test]
+    fn test_stdio_inherit_keeps_stdio_open() {
+        smol::block_on(async {
+            let status = Command::new("/bin/sh")
+                .args([
+                    "-c",
+                    "[ -e /dev/fd/0 ] && [ -e /dev/fd/1 ] && [ -e /dev/fd/2 ]",
+                ])
+                .stdin(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .status()
+                .await
+                .expect("failed to run command");
+
+            assert!(
+                status.success(),
+                "stdio fds should be open in the child when using Stdio::inherit()"
+            );
+        });
+    }
+
+    #[test]
+    fn test_child_sigpipe_disposition_matches_std() {
+        const SCRIPT: &str = "kill -s PIPE $$; echo survived";
+
+        #[allow(clippy::disallowed_methods)]
+        let std_output = std::process::Command::new("/bin/sh")
+            .args(["-c", SCRIPT])
+            .output()
+            .expect("failed to run std command");
+
+        let our_output = smol::block_on(async {
+            Command::new("/bin/sh")
+                .args(["-c", SCRIPT])
+                .output()
+                .await
+                .expect("failed to run command")
+        });
+
+        assert_eq!(
+            std_output.status.signal(),
+            Some(libc::SIGPIPE),
+            "expected std to reset SIGPIPE to SIG_DFL in children; did its default change?"
+        );
+        assert_eq!(
+            our_output.status.signal(),
+            std_output.status.signal(),
+            "child SIGPIPE disposition diverges from std::process::Command"
+        );
+        assert_eq!(our_output.stdout, std_output.stdout);
+    }
+
+    #[test]
+    fn test_stdio_fds_closed_on_error() {
+        fn count_open_fds() -> usize {
+            let limit = unsafe { libc::getdtablesize() };
+            (0..limit)
+                .filter(|&fd| unsafe { libc::fcntl(fd, libc::F_GETFD) } != -1)
+                .count()
+        }
+
+        const ATTEMPTS: usize = 100;
+        const SLACK: usize = 32;
+
+        let before = count_open_fds();
+        for _ in 0..ATTEMPTS {
+            Command::new("/bin/binarythatdoesnotexist")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect_err("spawn should fail for a nonexistent binary");
+        }
+        let after = count_open_fds();
+
+        assert!(
+            after <= before + SLACK,
+            "fd leak detected: {before} open fds before, {after} after {ATTEMPTS} failed spawns"
+        );
     }
 }

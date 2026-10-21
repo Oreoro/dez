@@ -1,12 +1,10 @@
 use crate::LanguageName;
 use collections::{HashMap, HashSet, IndexSet};
 use gpui_shared_string::SharedString;
-use lsp::LanguageServerName;
 use regex::Regex;
 use schemars::{JsonSchema, SchemaGenerator, json_schema};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::{num::NonZeroU32, path::Path, sync::Arc};
-use util::serde::default_true;
 
 /// Controls the soft-wrapping behavior in the editor.
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -33,7 +31,7 @@ pub struct LanguageConfig {
     /// The name of this language for a Markdown code fence block
     pub code_fence_block_name: Option<Arc<str>>,
     /// Alternative language names that Jupyter kernels may report for this language.
-    /// Used when a kernel's `language` field differs from dez's language name.
+    /// Used when a kernel's `language` field differs from Zed's language name.
     /// For example, the Nu extension would set this to `["nushell"]`.
     #[serde(default)]
     pub kernel_language_names: Vec<Arc<str>>,
@@ -41,13 +39,13 @@ pub struct LanguageConfig {
     pub grammar: Option<Arc<str>>,
     /// The criteria for matching this language to a given file.
     #[serde(flatten)]
-    pub matcher: LanguageMatcher,
+    pub matcher: Arc<LanguageMatcher>,
     /// List of bracket types in a language.
     #[serde(default)]
     pub brackets: BracketPairConfig,
     /// If set to true, auto indentation uses last non empty line to determine
     /// the indentation level for a new line.
-    #[serde(default = "auto_indent_using_last_non_empty_line_default")]
+    #[serde(default = "default_true")]
     pub auto_indent_using_last_non_empty_line: bool,
     // Whether indentation of pasted content should be adjusted based on the context.
     #[serde(default)]
@@ -99,16 +97,16 @@ pub struct LanguageConfig {
     /// A list of additional regex patterns that should be treated as prefixes
     /// for creating boundaries during rewrapping, ensuring content from one
     /// prefixed section doesn't merge with another (e.g., markdown list items).
-    /// By default, dez treats as paragraph and comment prefixes as boundaries.
+    /// By default, Zed treats as paragraph and comment prefixes as boundaries.
     #[serde(default, deserialize_with = "deserialize_regex_vec")]
     #[schemars(schema_with = "regex_vec_json_schema")]
     pub rewrap_prefixes: Vec<Regex>,
     /// A list of language servers that are allowed to run on subranges of a given language.
     #[serde(default)]
-    pub scope_opt_in_language_servers: Vec<LanguageServerName>,
+    pub scope_opt_in_language_servers: Vec<SharedString>,
     #[serde(default)]
     pub overrides: HashMap<String, LanguageConfigOverride>,
-    /// A list of characters that dez should treat as word characters for the
+    /// A list of characters that Zed should treat as word characters for the
     /// purpose of features that operate on word boundaries, like 'move to next word end'
     /// or a whole-word search in buffer search.
     #[serde(default)]
@@ -138,10 +136,10 @@ pub struct LanguageConfig {
     /// If configured, this language contains JSX style tags, and should support auto-closing of those tags.
     #[serde(default)]
     pub jsx_tag_auto_close: Option<JsxTagAutoCloseConfig>,
-    /// A list of characters that dez should treat as word characters for completion queries.
+    /// A list of characters that Zed should treat as word characters for completion queries.
     #[serde(default)]
     pub completion_query_characters: HashSet<char>,
-    /// A list of characters that dez should treat as word characters for linked edit operations.
+    /// A list of characters that Zed should treat as word characters for linked edit operations.
     #[serde(default)]
     pub linked_edit_characters: HashSet<char>,
     /// A list of preferred debuggers for this language.
@@ -165,9 +163,9 @@ impl Default for LanguageConfig {
             code_fence_block_name: None,
             kernel_language_names: Default::default(),
             grammar: None,
-            matcher: LanguageMatcher::default(),
+            matcher: Arc::default(),
             brackets: Default::default(),
-            auto_indent_using_last_non_empty_line: auto_indent_using_last_non_empty_line_default(),
+            auto_indent_using_last_non_empty_line: default_true(),
             auto_indent_on_paste: None,
             increase_indent_pattern: Default::default(),
             decrease_indent_pattern: Default::default(),
@@ -225,7 +223,7 @@ pub struct TaskListConfig {
     pub continuation: Arc<str>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, Default, JsonSchema)]
 pub struct LanguageMatcher {
     /// Given a list of `LanguageConfig`'s, the language of a file can be determined based on the path extension matching any of the `path_suffixes`.
     #[serde(default)]
@@ -377,7 +375,7 @@ pub struct LanguageConfigOverride {
     #[serde(default)]
     pub linked_edit_characters: Override<HashSet<char>>,
     #[serde(default)]
-    pub opt_into_language_servers: Vec<LanguageServerName>,
+    pub opt_into_language_servers: Vec<SharedString>,
     #[serde(default)]
     pub prefer_label_for_snippet: Option<bool>,
 }
@@ -481,7 +479,7 @@ pub struct WrapCharactersConfig {
     pub end_suffix: String,
 }
 
-pub fn auto_indent_using_last_non_empty_line_default() -> bool {
+pub fn default_true() -> bool {
     true
 }
 

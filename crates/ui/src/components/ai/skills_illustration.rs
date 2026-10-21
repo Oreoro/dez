@@ -52,7 +52,7 @@ impl RenderOnce for SkillsIllustration {
                 h_flex()
                     .gap_2p5()
                     .child(skill_crease("brainstorming".into(), "global".into()))
-                    .child(skill_crease("borrow-checker-expert".into(), "dez".into())),
+                    .child(skill_crease("borrow-checker-expert".into(), "zed".into())),
             )
             .child(
                 h_flex()
@@ -74,7 +74,7 @@ impl RenderOnce for SkillsIllustration {
 
         v_flex()
             .relative()
-            .h(rems_from_px(150.))
+            .h(rems_from_px(150_f32))
             .justify_end()
             .items_center()
             .rounded_t_md()

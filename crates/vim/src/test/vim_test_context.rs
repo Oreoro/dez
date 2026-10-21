@@ -20,8 +20,6 @@ impl VimTestContext {
         cx.update(|cx| {
             let settings = SettingsStore::test(cx);
             cx.set_global(settings);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             release_channel::init(Version::new(0, 0, 0), cx);
             command_palette::init(cx);
             project_panel::init(cx);
@@ -30,8 +28,9 @@ impl VimTestContext {
             crate::init(cx);
             search::init(cx);
             theme_settings::init(theme::LoadThemes::JustBase, cx);
+            settings_ui::init(cx);
             markdown_preview::init(cx);
-            dez_actions::init();
+            zed_actions::init();
         });
     }
 

@@ -1,17 +1,17 @@
 use super::{HoverTarget, HoveredWord, TerminalView};
-use anyhow::{Context as _, Result};
-use editor::Editor;
-use gpui::{App, Context, Task, TaskExt, WeakEntity, Window};
+use anyhow::Result;
+use editor::items::open_resolved_target;
+use gpui::{Context, Task, TaskExt, WeakEntity, Window};
 use std::path::PathBuf;
 use terminal::PathLikeTarget;
-use util::{ResultExt, debug_panic};
+use workspace::path_link::PathMatching;
 #[cfg(not(test))]
-use workspace::path_link::possible_open_target;
+use workspace::path_link::resolve_open_target;
 #[cfg(test)]
 use workspace::path_link::{
-    BackgroundPathChecks, OpenTargetFoundBy, possible_open_target_with_fs_checks,
+    BackgroundPathChecks, OpenTargetFoundBy, resolve_open_target_with_fs_checks,
 };
-use workspace::{OpenOptions, OpenVisible, Workspace, path_link::OpenTarget};
+use workspace::{Workspace, path_link::OpenTarget};
 
 pub(super) fn hover_path_like_target(
     workspace: &WeakEntity<Workspace>,
@@ -43,34 +43,39 @@ fn possible_hover_target(
     #[cfg(test)] background_path_checks: BackgroundPathChecks,
 ) -> Task<()> {
     #[cfg(not(test))]
-    let file_to_open_task = possible_open_target(
+    let file_to_open_task = resolve_open_target(
         workspace,
+        PathMatching::Heuristic,
         &path_like_target.maybe_path,
-        path_like_target.terminal_dir.as_deref(),
+        path_like_target.working_directory.as_deref(),
         cx,
     );
     #[cfg(test)]
-    let file_to_open_task = possible_open_target_with_fs_checks(
+    let file_to_open_task = resolve_open_target_with_fs_checks(
         workspace,
+        PathMatching::Heuristic,
         &path_like_target.maybe_path,
-        path_like_target.terminal_dir.as_deref(),
+        path_like_target.working_directory.as_deref(),
         cx,
         background_path_checks,
     );
     cx.spawn(async move |terminal_view, cx| {
         let file_to_open = file_to_open_task.await;
         terminal_view
-            .update(cx, |terminal_view, _| match file_to_open {
-                Some(OpenTarget::Path(path, ..) | OpenTarget::Worktree(path, ..)) => {
-                    terminal_view.hover = Some(HoverTarget {
-                        tooltip: path
-                            .to_string(&|path: &PathBuf| path.to_string_lossy().into_owned()),
-                        hovered_word,
-                    });
-                }
-                None => {
-                    terminal_view.hover = None;
-                }
+            .update(cx, |terminal_view, cx| {
+                match file_to_open {
+                    Some(OpenTarget::Path(path, ..) | OpenTarget::Worktree(path, ..)) => {
+                        terminal_view.hover = Some(HoverTarget {
+                            tooltip: path
+                                .to_string(&|path: &PathBuf| path.to_string_lossy().into_owned()),
+                            hovered_word,
+                        });
+                    }
+                    None => {
+                        terminal_view.hover = None;
+                    }
+                };
+                cx.notify();
             })
             .ok();
     })
@@ -120,19 +125,21 @@ fn possibly_open_target(
             .update(cx, |_, cx| {
                 #[cfg(not(test))]
                 {
-                    possible_open_target(
+                    resolve_open_target(
                         &workspace,
+                        PathMatching::Heuristic,
                         &path_like_target.maybe_path,
-                        path_like_target.terminal_dir.as_deref(),
+                        path_like_target.working_directory.as_deref(),
                         cx,
                     )
                 }
                 #[cfg(test)]
                 {
-                    possible_open_target_with_fs_checks(
+                    resolve_open_target_with_fs_checks(
                         &workspace,
+                        PathMatching::Heuristic,
                         &path_like_target.maybe_path,
-                        path_like_target.terminal_dir.as_deref(),
+                        path_like_target.working_directory.as_deref(),
                         cx,
                         background_path_checks,
                     )
@@ -143,180 +150,9 @@ fn possibly_open_target(
             return Ok(None);
         };
 
-        let path_to_open = open_target.path();
-        let opened_items = workspace
-            .update_in(cx, |workspace, window, cx| {
-                workspace.open_paths(
-                    vec![path_to_open.path.clone()],
-                    OpenOptions {
-                        visible: Some(OpenVisible::OnlyDirectories),
-                        ..Default::default()
-                    },
-                    None,
-                    window,
-                    cx,
-                )
-            })
-            .context("workspace update")?
-            .await;
-        if opened_items.len() != 1 {
-            debug_panic!(
-                "Received {} items for one path {path_to_open:?}",
-                opened_items.len(),
-            );
-        }
-
-        if let Some(opened_item) = opened_items.first() {
-            if open_target.is_file() {
-                if let Some(Ok(opened_item)) = opened_item {
-                    if let Some(row) = path_to_open.row {
-                        let col = path_to_open.column.unwrap_or(0);
-                        if let Some(active_editor) = opened_item.downcast::<Editor>() {
-                            active_editor
-                                .downgrade()
-                                .update_in(cx, |editor, window, cx| {
-                                    editor.go_to_singleton_buffer_point(
-                                        language::Point::new(
-                                            row.saturating_sub(1),
-                                            col.saturating_sub(1),
-                                        ),
-                                        window,
-                                        cx,
-                                    )
-                                })
-                                .log_err();
-                        }
-                    }
-                    return Ok(Some(open_target));
-                }
-            } else if open_target.is_dir() {
-                workspace.update(cx, |workspace, cx| {
-                    workspace.project().update(cx, |_, cx| {
-                        cx.emit(project::Event::ActivateProjectPanel);
-                    })
-                })?;
-                return Ok(Some(open_target));
-            }
-        }
-        Ok(None)
+        let opened = open_resolved_target(&workspace, &open_target, cx).await?;
+        Ok(opened.then_some(open_target))
     })
-}
-
-/// Resolves a path-like target detected in the terminal and opens it either as a
-/// project item inside Dez, or by handing it to the OS's default application,
-/// per the user's explicit choice from the terminal's right-click context menu.
-/// Unlike `open_path_like_target`, this doesn't require a pre-existing hover
-/// state, since it's driven by a menu selection rather than a click-to-open.
-pub(super) fn open_path_like_target_from_menu(
-    workspace: WeakEntity<Workspace>,
-    path_like_target: PathLikeTarget,
-    open_with_system: bool,
-    window: &mut Window,
-    cx: &mut App,
-) {
-    #[cfg(not(test))]
-    {
-        resolve_and_open_from_menu(workspace, path_like_target, open_with_system, window, cx)
-    }
-    #[cfg(test)]
-    {
-        resolve_and_open_from_menu(
-            workspace,
-            path_like_target,
-            open_with_system,
-            window,
-            cx,
-            BackgroundPathChecks::LocalFileSystem,
-        )
-    }
-}
-
-fn resolve_and_open_from_menu(
-    workspace: WeakEntity<Workspace>,
-    path_like_target: PathLikeTarget,
-    open_with_system: bool,
-    window: &mut Window,
-    cx: &mut App,
-    #[cfg(test)] background_path_checks: BackgroundPathChecks,
-) {
-    window
-        .spawn(cx, async move |cx| {
-            let Some(open_target) = cx
-                .update(|_, cx| {
-                    #[cfg(not(test))]
-                    {
-                        possible_open_target(
-                            &workspace,
-                            &path_like_target.maybe_path,
-                            path_like_target.terminal_dir.as_deref(),
-                            cx,
-                        )
-                    }
-                    #[cfg(test)]
-                    {
-                        possible_open_target_with_fs_checks(
-                            &workspace,
-                            &path_like_target.maybe_path,
-                            path_like_target.terminal_dir.as_deref(),
-                            cx,
-                            background_path_checks,
-                        )
-                    }
-                })?
-                .await
-            else {
-                return anyhow::Ok(());
-            };
-
-            let path_to_open = open_target.path().clone();
-
-            if open_with_system {
-                cx.update(|_, cx| cx.open_with_system(&path_to_open.path))?;
-                return anyhow::Ok(());
-            }
-
-            let opened_items = workspace
-                .update_in(cx, |workspace, window, cx| {
-                    workspace.open_paths(
-                        vec![path_to_open.path.clone()],
-                        OpenOptions {
-                            visible: Some(OpenVisible::OnlyDirectories),
-                            ..Default::default()
-                        },
-                        None,
-                        window,
-                        cx,
-                    )
-                })?
-                .await;
-
-            if open_target.is_file()
-                && let Some(Some(Ok(opened_item))) = opened_items.first()
-                && let Some(row) = path_to_open.row
-                && let Some(active_editor) = opened_item.downcast::<Editor>()
-            {
-                let col = path_to_open.column.unwrap_or(0);
-                active_editor
-                    .downgrade()
-                    .update_in(cx, |editor, window, cx| {
-                        editor.go_to_singleton_buffer_point(
-                            language::Point::new(row.saturating_sub(1), col.saturating_sub(1)),
-                            window,
-                            cx,
-                        )
-                    })
-                    .log_err();
-            } else if open_target.is_dir() {
-                workspace.update(cx, |workspace, cx| {
-                    workspace.project().update(cx, |_, cx| {
-                        cx.emit(project::Event::ActivateProjectPanel);
-                    })
-                })?;
-            }
-
-            anyhow::Ok(())
-        })
-        .detach_and_log_err(cx);
 }
 
 #[cfg(test)]
@@ -435,7 +271,7 @@ mod tests {
         ) -> (Option<HoverTarget>, Option<OpenTarget>),
         maybe_path: &str,
         tooltip: &str,
-        terminal_dir: Option<PathBuf>,
+        working_directory: Option<PathBuf>,
         background_path_checks: BackgroundPathChecks,
         open_target_found_by: OpenTargetFoundBy,
         file: &str,
@@ -449,7 +285,7 @@ mod tests {
             },
             PathLikeTarget {
                 maybe_path: maybe_path.to_string(),
-                terminal_dir,
+                working_directory,
             },
             background_path_checks,
         )
@@ -533,7 +369,7 @@ mod tests {
             $maybe_path:literal,
             $tooltip:literal,
             $cwd:tt,
-            $background_path_checks:path,
+            $background_fs_checks:path,
             $found_by:expr
         ) => {
             test_path_like_simple(
@@ -541,7 +377,7 @@ mod tests {
                 path!($maybe_path),
                 path!($tooltip),
                 none_or_some_pathbuf!($cwd),
-                $background_path_checks,
+                $background_fs_checks,
                 $found_by,
                 std::file!(),
                 std::line!(),
@@ -1083,17 +919,16 @@ mod tests {
             )
         }
 
+        // https://github.com/zed-industries/zed/issues/39159
         #[gpui::test]
-        async fn remote_absolute_path_outside_worktree_preserves_unicode_position(
-            cx: &mut TestAppContext,
-        ) {
-            let mut test_path_like = init_test(
+        async fn issue_39159_remote_absolute_path_outside_worktree(cx: &mut TestAppContext) {
+            test_path_likes!(
                 cx,
                 vec![
                     (
                         path!("/tmp"),
                         json!({
-                            "世界.rs": "\n\nabc\n",
+                            "a.txt": "",
                         }),
                     ),
                     (
@@ -1106,36 +941,15 @@ mod tests {
                     ),
                 ],
                 vec![path!("/code/project")],
+                {
+                    test_remote!(
+                        "/tmp/a.txt",
+                        "/tmp/a.txt",
+                        "/code/project",
+                        BackgroundPathResolution
+                    );
+                }
             )
-            .await;
-
-            let (hover_target, open_target) = test_path_like(
-                HoveredWord {
-                    word: "/tmp/世界.rs:3:2".to_string(),
-                    word_match: Range::new(Point::new(0, 0), Point::new(0, 0)),
-                    id: 0,
-                },
-                PathLikeTarget {
-                    maybe_path: "/tmp/世界.rs:3:2".to_string(),
-                    terminal_dir: Some(path!("/code/project").into()),
-                },
-                BackgroundPathChecks::ProjectPathResolution,
-            )
-            .await;
-
-            assert_eq!(
-                hover_target
-                    .expect("the remote path should produce a hover target")
-                    .tooltip,
-                "/tmp/世界.rs:3:2"
-            );
-            let open_target = open_target.expect("the remote path should produce an open target");
-            // Deliberately not `path!()`-wrapped: this is a POSIX-style path
-            // naming a remote host, so it should stay forward-slashed even
-            // when the local host (running this test) is Windows.
-            assert_eq!(open_target.path().path, Path::new("/tmp/世界.rs"));
-            assert_eq!(open_target.path().row, Some(3));
-            assert_eq!(open_target.path().column, Some(2));
         }
 
         // See https://github.com/zed-industries/zed/issues/34027

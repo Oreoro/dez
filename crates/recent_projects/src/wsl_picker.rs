@@ -75,6 +75,10 @@ impl EventEmitter<WslPickerDismissed> for Picker<WslPickerDelegate> {}
 impl picker::PickerDelegate for WslPickerDelegate {
     type ListItem = ListItem;
 
+    fn name() -> &'static str {
+        "WSL-distor-picker"
+    }
+
     fn match_count(&self) -> usize {
         self.matches.len()
     }
@@ -93,8 +97,8 @@ impl picker::PickerDelegate for WslPickerDelegate {
         cx.notify();
     }
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "recent-wsl-placeholder").into()
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        Arc::from("Enter WSL distro name")
     }
 
     fn update_matches(
@@ -199,7 +203,7 @@ impl WslOpenModal {
         cx: &mut Context<Self>,
     ) -> Self {
         let delegate = WslPickerDelegate::new();
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx).modal(false));
+        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx).embedded());
 
         let selected = cx.subscribe_in(
             &picker,

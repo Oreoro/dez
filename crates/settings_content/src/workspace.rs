@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use settings_macros::{MergeFrom, with_fallible_options};
 
 use crate::{
-    ActionName, CenteredPaddingSettings, DelayMs, DockPosition, DockSide, InactiveOpacity,
+    CenteredPaddingSettings, CommandAliasTarget, DelayMs, DockPosition, DockSide, InactiveOpacity,
     ShowIndentGuides, ShowScrollbar, serialize_optional_f32_with_two_decimal_places,
 };
 
@@ -19,10 +19,6 @@ pub struct WorkspaceSettingsContent {
     ///
     /// Default: platform_default
     pub text_rendering_mode: Option<TextRenderingMode>,
-    /// Layout mode for the bottom dock
-    ///
-    /// Default: contained
-    pub bottom_dock_layout: Option<BottomDockLayout>,
     /// Direction to split horizontally.
     ///
     /// Default: "up"
@@ -33,6 +29,11 @@ pub struct WorkspaceSettingsContent {
     pub pane_split_direction_vertical: Option<PaneSplitDirectionVertical>,
     /// Centered layout related settings.
     pub centered_layout: Option<CenteredLayoutSettings>,
+    /// The gap between workspace cards, in pixels.
+    ///
+    /// Default: 7.5
+    #[serde(serialize_with = "serialize_optional_f32_with_two_decimal_places")]
+    pub card_gap: Option<f32>,
     /// Whether or not to prompt the user to confirm before closing the application.
     ///
     /// Default: false
@@ -40,19 +41,29 @@ pub struct WorkspaceSettingsContent {
     /// Whether or not to show the call status icon in the status bar.
     ///
     /// Default: true
+    pub show_call_status_icon: Option<bool>,
     /// When to automatically save edited buffers.
     ///
     /// Default: off
     pub autosave: Option<AutosaveSetting>,
-    /// Controls previous session restoration in freshly launched dez instance.
+    /// Controls previous session restoration in freshly launched Zed instance.
     /// Values: empty_tab, last_workspace, last_session, launchpad
     /// Default: last_session
     pub restore_on_startup: Option<RestoreOnStartupBehavior>,
+    /// Chooses the first native destination for a new Workspace that has no
+    /// restorable layout or explicitly opened item.
+    ///
+    /// Default: focus
+    pub startup_intent: Option<WorkspaceStartupIntent>,
     /// The default behavior when opening paths from the CLI without
     /// an explicit `-e` or `-n` flag.
     ///
     /// Default: existing_window
     pub cli_default_open_behavior: Option<CliDefaultOpenBehavior>,
+    /// The default behavior when opening projects from the UI.
+    ///
+    /// Default: existing_window
+    pub default_open_behavior: Option<DefaultOpenBehavior>,
     /// Whether to attempt to restore previous file's state when opening it again.
     /// The state is stored per pane.
     /// When disabled, defaults are applied instead of the state restoration.
@@ -62,6 +73,10 @@ pub struct WorkspaceSettingsContent {
     ///
     /// Default: true
     pub restore_on_file_reopen: Option<bool>,
+    /// Whether to reveal an already open file in an existing pane instead of opening it in the active pane.
+    ///
+    /// Default: false
+    pub reveal_if_open: Option<bool>,
     /// The size of the workspace split drop targets on the outer edges.
     /// Given as a fraction that will be multiplied by the smaller dimension of the workspace.
     ///
@@ -72,14 +87,19 @@ pub struct WorkspaceSettingsContent {
     ///
     /// Default: auto ("on" on macOS, "off" otherwise)
     pub when_closing_with_no_tabs: Option<CloseWindowWhenNoItems>,
+    /// Whether to optimize Zed's interface for assistive technology such as
+    /// screen readers.
+    ///
+    /// Default: false
+    pub accessible_mode: Option<bool>,
     /// Whether to use the system provided dialogs for Open and Save As.
-    /// When set to false, dez will use the built-in keyboard-first pickers.
+    /// When set to false, Zed will use the built-in keyboard-first pickers.
     ///
     /// Default: true
     pub use_system_path_prompts: Option<bool>,
     /// Whether to use the system provided prompts.
-    /// When set to false, dez will use the built-in prompts.
-    /// Note that this setting has no effect on Linux, where dez will always
+    /// When set to false, Zed will use the built-in prompts.
+    /// Note that this setting has no effect on Linux, where Zed will always
     /// use the built-in prompts.
     ///
     /// Default: true
@@ -89,12 +109,16 @@ pub struct WorkspaceSettingsContent {
     ///
     /// Default: {}
     #[serde(default)]
-    pub command_aliases: HashMap<String, ActionName>,
+    pub command_aliases: HashMap<String, CommandAliasTarget>,
     /// Maximum open tabs in a pane. Will not close an unsaved
     /// tab. Set to `None` for unlimited tabs.
     ///
     /// Default: none
     pub max_tabs: Option<NonZeroUsize>,
+    /// What to show when opening a new window.
+    /// Values: empty_tab, launchpad
+    /// Default: launchpad
+    pub on_new_window: Option<OnNewWindow>,
     /// What to do when the last window is closed
     ///
     /// Default: auto (nothing on macOS, "app quit" otherwise)
@@ -111,24 +135,78 @@ pub struct WorkspaceSettingsContent {
     ///
     /// Default: false
     pub use_system_window_tabs: Option<bool>,
+    /// Which fullscreen mode the `zed::ToggleFullScreen` action enters (macOS only).
+    ///
+    /// Default: native
+    pub fullscreen_mode: Option<FullscreenMode>,
     /// Whether to show padding for zoomed panels.
     /// When enabled, zoomed bottom panels will have some top padding,
     /// while zoomed left/right panels will have padding to the right/left (respectively).
     ///
     /// Default: true
     pub zoomed_padding: Option<bool>,
-    /// Whether toggling a panel (e.g. with its keyboard shortcut) also closes
-    /// the panel when it is already focused, instead of just moving focus back
-    /// to the editor.
+    /// Whether invoking a panel's `ToggleFocus` action while the panel is
+    /// already focused closes the panel, instead of just moving focus back
+    /// to the editor. This only applies to a panel's focus-toggle action, not
+    /// to its regular visibility-toggle action.
     ///
-    /// Default: false
+    /// Default: true
     pub close_panel_on_toggle: Option<bool>,
-    /// What draws window decorations/titlebar, the client application (dez) or display server
+    /// Window title template.
+    ///
+    /// Available variables are `${projectName}`, `${fileName}`,
+    /// `${filePath}`, `${relativePath}`, `${fileStem}`, `${remoteName}`,
+    /// `${remoteHost}`, `${appName}`, `${branch}`,
+    /// and `${separator}`.
+    /// `${separator}` is omitted when adjacent variables are empty,
+    /// but literal text is preserved.
+    /// The collaboration indicator, when present, is appended after the
+    /// rendered template.
+    /// If the template renders to nothing, the default template is used instead.
+    ///
+    /// Default: `${projectName}${separator}${fileName}`
+    pub window_title_format: Option<String>,
+    /// String substituted for `${separator}` in the window title format.
+    /// Include any surrounding whitespace in the value.
+    ///
+    /// Default: ` — `
+    pub window_title_separator: Option<String>,
+    /// Controls whether Zed or the window manager or compositor draws window decorations on Linux.
+    ///
     /// Default: client
     pub window_decorations: Option<WindowDecorations>,
     /// Whether the focused panel follows the mouse location
     /// Default: false
     pub focus_follows_mouse: Option<FocusFollowsMouse>,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkspaceStartupIntent {
+    #[default]
+    #[strum(serialize = "Focus Work Area")]
+    Focus,
+    #[strum(serialize = "Files")]
+    Direct,
+    #[strum(serialize = "Default Terminal")]
+    Agentic,
+    #[strum(serialize = "Git Changes")]
+    Review,
+    #[strum(serialize = "Debug")]
+    Debug,
 }
 
 #[with_fallible_options]
@@ -144,7 +222,7 @@ pub struct ItemSettingsContent {
     pub close_position: Option<ClosePosition>,
     /// Whether to show the file icon for a tab.
     ///
-    /// Default: false
+    /// Default: true
     pub file_icons: Option<bool>,
     /// What to do after closing the current tab.
     ///
@@ -289,8 +367,7 @@ pub struct ActivePaneModifiers {
     /// The border is drawn inset.
     ///
     /// Default: `0.0`
-    #[serde(serialize_with = "crate::serialize_optional_f32_with_two_decimal_places")]
-    pub border_size: Option<f32>,
+    pub border_size: Option<crate::PixelSetting>,
     /// Opacity of inactive panels.
     /// When set to 1.0, the inactive panes have the same opacity as the active one.
     /// If set to 0, the inactive panes content will not be visible at all.
@@ -304,8 +381,8 @@ pub struct ActivePaneModifiers {
 #[derive(
     Copy,
     Clone,
-    Debug,
     Default,
+    Debug,
     Serialize,
     Deserialize,
     PartialEq,
@@ -315,18 +392,18 @@ pub struct ActivePaneModifiers {
     strum::VariantNames,
 )]
 #[serde(rename_all = "snake_case")]
-pub enum BottomDockLayout {
-    /// Contained between the left and right docks
+pub enum FullscreenMode {
+    /// Use macOS's native fullscreen, which moves the window into its own
+    /// Mission Control space.
     #[default]
-    Contained,
-    /// Takes up the full width of the window
-    Full,
-    /// Extends under the left dock while snapping to the right dock
-    LeftAligned,
-    /// Extends under the right dock while snapping to the left dock
-    RightAligned,
+    Native,
+    /// Resize the window to cover the entire screen, including the menu bar and,
+    /// on notched displays, the area around the notch.
+    Simple,
 }
 
+/// Configures what draws Zed's window decorations on Linux.
+/// This setting has no effect on other platforms.
 #[derive(
     Copy,
     Clone,
@@ -342,10 +419,11 @@ pub enum BottomDockLayout {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum WindowDecorations {
-    /// dez draws its own window decorations/titlebar (client-side decoration)
+    /// Zed draws its own window decorations/titlebar (client-side decoration).
     #[default]
     Client,
-    /// Show system's window titlebar (server-side decoration; not supported by GNOME Wayland)
+    /// The window manager or compositor draws the server-side window
+    /// decorations (not supported by GNOME Wayland).
     Server,
 }
 
@@ -399,12 +477,36 @@ impl CloseWindowWhenNoItems {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum CliDefaultOpenBehavior {
-    /// Open directories as a new workspace in the current dez window's sidebar.
+    /// Open directories as a new workspace in the current Zed window's sidebar.
     #[default]
     #[strum(serialize = "Add to Existing Window")]
     ExistingWindow,
-    /// Open directories in a new window, but reuse an existing window when
-    /// opening files that are already part of an open project.
+    /// Open paths in a new window unless they are subpaths of an existing project.
+    #[strum(serialize = "Open a New Window")]
+    NewWindow,
+}
+
+#[derive(
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    Debug,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum DefaultOpenBehavior {
+    /// Open projects in the current Zed window.
+    #[default]
+    #[strum(serialize = "Add to Existing Window")]
+    ExistingWindow,
+    /// Open projects in a new window.
     #[strum(serialize = "Open a New Window")]
     NewWindow,
 }
@@ -430,7 +532,7 @@ pub enum RestoreOnStartupBehavior {
     EmptyTab,
     /// Restore the workspace that was closed last.
     LastWorkspace,
-    /// Restore all workspaces that were open when quitting dez.
+    /// Restore all workspaces that were open when quitting Zed.
     #[default]
     LastSession,
     /// Show the launchpad with recent projects (no tabs).
@@ -487,6 +589,12 @@ pub struct StatusBarSettingsContent {
     ///
     /// Default: non_utf8
     pub active_encoding_button: Option<EncodingDisplayOptions>,
+    /// Whether to show an indicator with a countdown while timed multi-stroke input is pending.
+    /// Hovering the indicator pauses the timeout.
+    /// Its binding preview popover is disabled when the which-key popup is enabled.
+    ///
+    /// Default: true
+    pub pending_keystrokes_indicator: Option<bool>,
 }
 
 #[derive(
@@ -622,6 +730,29 @@ pub struct CenteredLayoutSettings {
     JsonSchema,
     MergeFrom,
     PartialEq,
+    Eq,
+    Debug,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum OnNewWindow {
+    /// Show an empty untitled buffer when opening a new window
+    EmptyTab,
+    /// Show the launchpad with recent projects when opening a new window
+    #[default]
+    Launchpad,
+}
+
+#[derive(
+    Copy,
+    Clone,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    PartialEq,
     Debug,
     strum::VariantArray,
     strum::VariantNames,
@@ -700,12 +831,13 @@ pub struct ProjectPanelSettingsContent {
     /// Customize default width (in pixels) taken by project panel
     ///
     /// Default: 240
-    #[serde(serialize_with = "crate::serialize_optional_f32_with_two_decimal_places")]
-    pub default_width: Option<f32>,
+    pub default_width: Option<crate::PixelSetting>,
     /// The position of project panel
     ///
     /// Default: right (Agentic layout), left (Classic layout)
     pub dock: Option<DockSide>,
+    // TODO
+    pub title_tooltip_delay: Option<ProjectPanelTitleTooltipDelay>,
     /// Spacing between worktree entries in the project panel.
     ///
     /// Default: comfortable
@@ -714,10 +846,10 @@ pub struct ProjectPanelSettingsContent {
     ///
     /// Default: true
     pub file_icons: Option<bool>,
-    /// Whether to show folder icons or chevrons for directories in the project panel.
+    /// What to show for directories in the project panel.
     ///
-    /// Default: true
-    pub folder_icons: Option<bool>,
+    /// Default: icon
+    pub folder_indicator: Option<FolderIndicator>,
     /// Whether to show the git status in the project panel.
     ///
     /// Default: true
@@ -725,8 +857,7 @@ pub struct ProjectPanelSettingsContent {
     /// Amount of indentation (in pixels) for nested items.
     ///
     /// Default: 20
-    #[serde(serialize_with = "serialize_optional_f32_with_two_decimal_places")]
-    pub indent_size: Option<f32>,
+    pub indent_size: Option<crate::PixelSetting>,
     /// Whether to reveal it in the project panel automatically,
     /// when a corresponding project entry becomes active.
     /// Gitignored entries are never auto revealed.
@@ -736,7 +867,7 @@ pub struct ProjectPanelSettingsContent {
     /// Whether to fold directories automatically
     /// when directory has only one directory inside.
     ///
-    /// Default: true
+    /// Default: false
     pub auto_fold_dirs: Option<bool>,
     /// Whether to show folder names with bold text in the project panel.
     ///
@@ -756,7 +887,7 @@ pub struct ProjectPanelSettingsContent {
     pub indent_guides: Option<ProjectPanelIndentGuidesSettings>,
     /// Whether to hide the root entry when only one folder is open in the window.
     ///
-    /// Default: false
+    /// Default: true
     pub hide_root: Option<bool>,
     /// Whether to hide the hidden entries in the project panel.
     ///
@@ -792,6 +923,31 @@ pub struct ProjectPanelSettingsContent {
     pub git_status_indicator: Option<bool>,
 }
 
+/// Controls the width of the git diff hunk indicators in the gutter.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    PartialEq,
+    strum::EnumDiscriminants,
+)]
+#[strum_discriminants(derive(strum::VariantArray, strum::VariantNames, strum::FromRepr))]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectPanelTitleTooltipDelay {
+    /// Default is 1500ms.
+    #[default]
+    Default,
+    /// A custom offset in milliseconds for the tooltip show delay.
+    Custom(crate::DelayMs),
+    /// Disables the tooltip
+    Disabled,
+}
+
 #[derive(
     Copy,
     Clone,
@@ -813,6 +969,41 @@ pub enum ProjectPanelEntrySpacing {
     Comfortable,
     /// The standard spacing of entries.
     Standard,
+}
+
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    PartialEq,
+    Eq,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum FolderIndicator {
+    /// Show a folder icon.
+    #[default]
+    Icon,
+    /// Show a disclosure chevron.
+    Chevron,
+    /// Show a disclosure chevron followed by a folder icon.
+    Both,
+}
+
+impl FolderIndicator {
+    pub fn shows_chevron(self) -> bool {
+        matches!(self, Self::Chevron | Self::Both)
+    }
+
+    pub fn shows_icon(self) -> bool {
+        matches!(self, Self::Icon | Self::Both)
+    }
 }
 
 #[derive(
@@ -899,7 +1090,7 @@ impl From<ProjectPanelSortOrder> for util::paths::SortOrder {
 pub struct ProjectPanelScrollbarSettingsContent {
     /// When to show the scrollbar in the project panel.
     ///
-    /// Default: inherits editor scrollbar settings
+    /// Default: never
     pub show: Option<ShowScrollbar>,
     /// Whether to allow horizontal scrolling in the project panel.
     /// When false, the view is locked to the leftmost position and

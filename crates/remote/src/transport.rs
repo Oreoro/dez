@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use crate::{
-    RemoteArch, RemoteLibc, RemoteOs, RemotePlatform,
+    RemoteArch, RemoteOs, RemotePlatform,
     json_log::LogRecord,
     protocol::{MESSAGE_LEN_SIZE, message_len_from_buffer, read_message_with_len, write_message},
 };
@@ -13,7 +13,6 @@ use futures::{
 use gpui::{AppContext as _, AsyncApp, Task};
 use rpc::proto::Envelope;
 use util::command::Child;
-use util::{paths::PathStyle, rel_path::RelPath};
 
 pub mod docker;
 #[cfg(any(test, feature = "test-support"))]
@@ -21,73 +20,20 @@ pub mod mock;
 pub mod ssh;
 pub mod wsl;
 
-fn remote_server_executable_path(
-    home_directory: &str,
-    relative_path: &RelPath,
-    path_style: PathStyle,
-) -> String {
-    format!(
-        "{}{}{}",
-        home_directory.trim_end_matches(path_style.separators_ch()),
-        path_style.primary_separator(),
-        relative_path.display(path_style)
-    )
-}
-
-fn parse_remote_home_directory(output: &str) -> Result<String> {
-    output
-        .lines()
-        .rev()
-        .map(str::trim)
-        .find(|line| !line.is_empty())
-        .map(str::to_string)
-        .context("remote home directory command returned no path")
-}
-
-// SSH cannot safely preserve multiline arguments through every supported login shell.
-const POSIX_TARGET_PROBE: &str = concat!(
-    "os=$(uname -s) || exit 1; ",
-    "arch=$(uname -m) || exit 1; ",
-    "libc=none; ",
-    "if [ \"$os\" = Linux ]; then ",
-    "libc=unknown; ",
-    "if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then ",
-    "libc=glibc; ",
-    "else ",
-    "ldd_output=$(ldd --version 2>&1); ",
-    "case \"$ldd_output\" in *musl*) libc=musl ;; esac; ",
-    "fi; ",
-    "fi; ",
-    "printf '__DEZ_REMOTE_TARGET__\\t%s\\t%s\\t%s\\n' \"$os\" \"$arch\" \"$libc\"",
-);
-
-fn posix_target_probe_command() -> (&'static str, [&'static str; 2]) {
-    ("sh", ["-c", POSIX_TARGET_PROBE])
-}
-
+/// Parses the output of `uname -sm` to determine the remote platform.
+/// Takes the last line to skip possible shell initialization output.
 fn parse_platform(output: &str) -> Result<RemotePlatform> {
-    const TARGET_PREFIX: &str = "__DEZ_REMOTE_TARGET__\t";
-
-    let target = output
-        .lines()
-        .rev()
-        .find_map(|line| line.strip_prefix(TARGET_PREFIX))
-        .context("remote target probe did not produce a tagged result")?;
-    let mut fields = target.split('\t');
-    let os = fields.next().context("remote target is missing its OS")?;
-    let arch = fields
-        .next()
-        .context("remote target is missing its architecture")?;
-    let libc = fields
-        .next()
-        .context("remote target is missing its libc result")?;
+    let output = output.trim();
+    let uname = output.rsplit_once('\n').map_or(output, |(_, last)| last);
+    let Some((os, arch)) = uname.split_once(" ") else {
+        anyhow::bail!("unknown uname: {uname:?}")
+    };
 
     let os = match os {
         "Darwin" => RemoteOs::MacOs,
         "Linux" => RemoteOs::Linux,
-        "Windows" => RemoteOs::Windows,
         _ => anyhow::bail!(
-            "Prebuilt remote servers are not yet available for {os:?}. See https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md"
+            "Prebuilt remote servers are not yet available for {os:?}. See https://zed.dev/docs/remote-development"
         ),
     };
 
@@ -98,24 +44,72 @@ fn parse_platform(output: &str) -> Result<RemotePlatform> {
         || arch.starts_with("aarch64")
     {
         RemoteArch::Aarch64
-    } else if arch.starts_with("x86") || arch == "AMD64" {
+    } else if arch.starts_with("x86") {
         RemoteArch::X86_64
     } else {
         anyhow::bail!(
-            "Prebuilt remote servers are not yet available for {arch:?}. See https://github.com/Oreoro/dez/blob/main/docs/src/remote-development.md"
+            "Prebuilt remote servers are not yet available for {arch:?}. See https://zed.dev/docs/remote-development"
         )
     };
 
-    let libc = match os {
-        RemoteOs::Linux => Some(match libc {
-            "glibc" => RemoteLibc::Glibc,
-            "musl" => RemoteLibc::Musl,
-            _ => RemoteLibc::Unknown,
-        }),
-        RemoteOs::MacOs | RemoteOs::Windows => None,
-    };
+    Ok(RemotePlatform { os, arch })
+}
 
-    Ok(RemotePlatform { os, arch, libc })
+/// The command (program + args) used to read a remote host's OS version, given
+/// its detected OS.
+///
+/// The output is parsed by [`parse_os_version`].
+pub(crate) fn os_version_command(os: RemoteOs) -> (&'static str, &'static [&'static str]) {
+    match os {
+        // Matches the `/etc/os-release` parsing in `client::telemetry::os_version`.
+        RemoteOs::Linux => ("cat", &["/etc/os-release"]),
+        RemoteOs::MacOs => ("sw_vers", &["-productVersion"]),
+        // Prints e.g. "Microsoft Windows [Version 10.0.19045.5011]".
+        RemoteOs::Windows => ("cmd.exe", &["/c", "ver"]),
+    }
+}
+
+/// Parses the output of [`os_version_command`] into a human-readable version
+/// string, matching the conventions used by `client::telemetry::os_version`.
+///
+/// For Linux this is `"{ID} {VERSION_ID}"` (e.g. `"ubuntu 24.04"`); for macOS it
+/// is the product version (e.g. `"15.6.1"`); for Windows it is the
+/// `major.minor.build` version (e.g. `"10.0.19045"`). Returns `None` if nothing
+/// usable could be parsed.
+pub(crate) fn parse_os_version(os: RemoteOs, output: &str) -> Option<String> {
+    let output = output.trim();
+    if output.is_empty() {
+        return None;
+    }
+    match os {
+        RemoteOs::Linux => util::parse_os_release(output),
+        RemoteOs::MacOs => {
+            // `sw_vers -productVersion` prints a single version line.
+            output
+                .lines()
+                .next_back()
+                .map(|line| line.trim().to_string())
+                .filter(|line| !line.is_empty())
+        }
+        RemoteOs::Windows => parse_windows_version(output),
+    }
+}
+
+/// Extracts a `major.minor.build` version from the output of `cmd.exe /c ver`,
+/// e.g. `"Microsoft Windows [Version 10.0.19045.5011]"` -> `"10.0.19045"`.
+///
+/// Scans for the first dotted run of integers (rather than relying on the
+/// surrounding, potentially localized, text) and drops the trailing revision so
+/// the format matches `client::telemetry::os_version` on Windows.
+fn parse_windows_version(output: &str) -> Option<String> {
+    output
+        .split(|c: char| !c.is_ascii_digit() && c != '.')
+        .filter_map(|token| {
+            let parts: Vec<&str> = token.split('.').filter(|part| !part.is_empty()).collect();
+            (parts.len() >= 3 && parts.iter().all(|part| part.parse::<u32>().is_ok()))
+                .then(|| parts[..3].join("."))
+        })
+        .next()
 }
 
 /// Parses the output of `echo $SHELL` to determine the remote shell.
@@ -252,7 +246,6 @@ async fn build_remote_server_from_source(
     cx: &mut AsyncApp,
 ) -> Result<Option<std::path::PathBuf>> {
     use std::env::VarError;
-    use std::path::Path;
     use util::command::{Command, Stdio, new_command};
 
     if let Ok(path) = std::env::var("ZED_COPY_REMOTE_SERVER") {
@@ -285,6 +278,7 @@ async fn build_remote_server_from_source(
         let output = command
             .kill_on_drop(true)
             .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .output()
             .await?;
         anyhow::ensure!(
@@ -333,7 +327,10 @@ async fn build_remote_server_from_source(
         log::info!("building remote server binary from source");
         run_cmd(
             new_command("cargo")
-                .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+                .current_dir(
+                    util::dev_repo_root()
+                        .context("locating the zed checkout to build remote_server from source")?,
+                )
                 .args([
                     "build",
                     "--package",
@@ -379,7 +376,10 @@ async fn build_remote_server_from_source(
         log::info!("building remote binary from source for {triple} with Zig");
         run_cmd(
             new_command("cargo")
-                .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+                .current_dir(
+                    util::dev_repo_root()
+                        .context("locating the zed checkout to build remote_server from source")?,
+                )
                 .args([
                     "zigbuild",
                     "--package",
@@ -395,7 +395,8 @@ async fn build_remote_server_from_source(
         )
         .await?;
     };
-    let bin_path = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
+    let bin_path = util::dev_repo_root()
+        .context("locating the zed checkout that built remote_server from source")?
         .join("target")
         .join("remote_server")
         .join(&triple)
@@ -464,99 +465,91 @@ mod tests {
     use super::*;
 
     #[test]
-    fn posix_probe_command_arguments_are_single_line() {
-        let (_, arguments) = posix_target_probe_command();
-
-        assert!(
-            arguments
-                .iter()
-                .all(|argument| !argument.contains(['\n', '\r']))
-        );
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn posix_probe_reports_a_tagged_local_target() {
-        let output = smol::block_on(async {
-            let (program, arguments) = posix_target_probe_command();
-            smol::process::Command::new(program)
-                .args(arguments)
-                .output()
-                .await
-                .expect("POSIX shell should run the target probe")
-        });
-        let stdout = String::from_utf8(output.stdout).expect("probe output should be UTF-8");
-
-        let result = parse_platform(&stdout).expect("probe output should parse");
-
-        assert!(output.status.success());
-        let expected_os = if cfg!(target_os = "macos") {
-            RemoteOs::MacOs
-        } else {
-            RemoteOs::Linux
-        };
-        assert_eq!(result.os, expected_os);
-    }
-
-    #[test]
-    fn parses_tagged_glibc_linux_target() {
-        let result = parse_platform("__DEZ_REMOTE_TARGET__\tLinux\tx86_64\tglibc\n")
-            .expect("tagged target should parse");
-
-        assert_eq!(
-            result,
-            RemotePlatform {
-                os: RemoteOs::Linux,
-                arch: RemoteArch::X86_64,
-                libc: Some(RemoteLibc::Glibc),
-            }
-        );
-    }
-
-    #[test]
-    fn parses_tagged_windows_target_without_libc() {
-        let result = parse_platform("__DEZ_REMOTE_TARGET__\tWindows\tAMD64\tnone\n")
-            .expect("tagged Windows target should parse");
-
-        assert_eq!(
-            result,
-            RemotePlatform {
-                os: RemoteOs::Windows,
-                arch: RemoteArch::X86_64,
-                libc: None,
-            }
-        );
-    }
-
-    #[test]
-    fn parses_target_after_shell_startup_noise() {
-        let result = parse_platform(
-            "welcome from shell startup\n__DEZ_REMOTE_TARGET__\tLinux\taarch64\tmusl\n",
-        )
-        .expect("tagged target should be found after startup noise");
-
-        assert_eq!(result.arch, RemoteArch::Aarch64);
-        assert_eq!(result.libc, Some(RemoteLibc::Musl));
-    }
-
-    #[test]
-    fn preserves_linux_target_when_libc_is_unknown() {
-        let result = parse_platform("__DEZ_REMOTE_TARGET__\tLinux\tx86_64\tunknown\n")
-            .expect("unknown libc should not hide the base target");
-
+    fn test_parse_platform() {
+        let result = parse_platform("Linux x86_64\n").unwrap();
         assert_eq!(result.os, RemoteOs::Linux);
         assert_eq!(result.arch, RemoteArch::X86_64);
-        assert_eq!(result.libc, Some(RemoteLibc::Unknown));
+
+        let result = parse_platform("Darwin arm64\n").unwrap();
+        assert_eq!(result.os, RemoteOs::MacOs);
+        assert_eq!(result.arch, RemoteArch::Aarch64);
+
+        let result = parse_platform("Linux x86_64").unwrap();
+        assert_eq!(result.os, RemoteOs::Linux);
+        assert_eq!(result.arch, RemoteArch::X86_64);
+
+        let result = parse_platform("some shell init output\nLinux aarch64\n").unwrap();
+        assert_eq!(result.os, RemoteOs::Linux);
+        assert_eq!(result.arch, RemoteArch::Aarch64);
+
+        let result = parse_platform("some shell init output\nLinux aarch64").unwrap();
+        assert_eq!(result.os, RemoteOs::Linux);
+        assert_eq!(result.arch, RemoteArch::Aarch64);
+
+        assert_eq!(
+            parse_platform("Linux armv8l\n").unwrap().arch,
+            RemoteArch::Aarch64
+        );
+        assert_eq!(
+            parse_platform("Linux aarch64\n").unwrap().arch,
+            RemoteArch::Aarch64
+        );
+        assert_eq!(
+            parse_platform("Linux x86_64\n").unwrap().arch,
+            RemoteArch::X86_64
+        );
+
+        let result = parse_platform(
+            r#"Linux x86_64 - What you're referring to as Linux, is in fact, GNU/Linux...\n"#,
+        )
+        .unwrap();
+        assert_eq!(result.os, RemoteOs::Linux);
+        assert_eq!(result.arch, RemoteArch::X86_64);
+
+        assert!(parse_platform("Windows x86_64\n").is_err());
+        assert!(parse_platform("Linux armv7l\n").is_err());
     }
 
     #[test]
-    fn parses_tagged_macos_target_without_libc() {
-        let result = parse_platform("__DEZ_REMOTE_TARGET__\tDarwin\tarm64\tnone\n")
-            .expect("tagged macOS target should parse");
+    fn test_parse_os_version() {
+        // Linux delegates to `util::parse_os_release` (tested there); confirm
+        // the dispatch is wired up.
+        let os_release = "ID=ubuntu\nVERSION_ID=\"24.04\"\n";
+        assert_eq!(
+            parse_os_version(RemoteOs::Linux, os_release),
+            Some("ubuntu 24.04".to_string())
+        );
 
-        assert_eq!(result.os, RemoteOs::MacOs);
-        assert_eq!(result.arch, RemoteArch::Aarch64);
-        assert_eq!(result.libc, None);
+        // macOS `sw_vers -productVersion` prints a bare version, possibly after
+        // shell initialization noise.
+        assert_eq!(
+            parse_os_version(RemoteOs::MacOs, "15.6.1\n"),
+            Some("15.6.1".to_string())
+        );
+        assert_eq!(
+            parse_os_version(RemoteOs::MacOs, "shell noise\n26.0\n"),
+            Some("26.0".to_string())
+        );
+        assert_eq!(parse_os_version(RemoteOs::MacOs, ""), None);
+
+        // Windows `cmd.exe /c ver`, with the trailing revision dropped to match
+        // the `major.minor.build` format used by local Windows telemetry.
+        assert_eq!(
+            parse_os_version(
+                RemoteOs::Windows,
+                "Microsoft Windows [Version 10.0.19045.5011]\n"
+            ),
+            Some("10.0.19045".to_string())
+        );
+        // Localized output: only the version number is relied upon.
+        assert_eq!(
+            parse_os_version(
+                RemoteOs::Windows,
+                "Microsoft Windows [Versione 10.0.22631.1]"
+            ),
+            Some("10.0.22631".to_string())
+        );
+        assert_eq!(parse_os_version(RemoteOs::Windows, "no version here"), None);
     }
 
     #[test]
@@ -575,28 +568,5 @@ mod tests {
         );
         assert_eq!(parse_shell("", "sh"), "sh");
         assert_eq!(parse_shell("\n", "sh"), "sh");
-    }
-
-    #[test]
-    fn remote_server_command_path_is_absolute_for_each_path_style() {
-        let relative =
-            RelPath::unix(".dez_server/dez-remote-server").expect("relative server path");
-
-        assert_eq!(
-            remote_server_executable_path("/home/dez", relative, PathStyle::Posix),
-            "/home/dez/.dez_server/dez-remote-server"
-        );
-        assert_eq!(
-            remote_server_executable_path(r"C:\Users\dez", relative, PathStyle::Windows),
-            r"C:\Users\dez\.dez_server\dez-remote-server"
-        );
-    }
-
-    #[test]
-    fn remote_home_directory_uses_the_last_nonempty_output_line() {
-        assert_eq!(
-            parse_remote_home_directory("shell notice\n/home/dez\n").expect("parse remote home"),
-            "/home/dez"
-        );
     }
 }

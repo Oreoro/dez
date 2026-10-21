@@ -339,11 +339,13 @@ impl AnyProtoClient {
     pub fn send_lsp_response<T: LspRequestMessage>(
         &self,
         project_id: u64,
+        peer_id: proto::PeerId,
         lsp_request_id: LspRequestId,
         server_responses: HashMap<u64, T::Response>,
     ) -> Result<()> {
         self.send(proto::LspQueryResponse {
             project_id,
+            peer_id: Some(peer_id),
             lsp_request_id: lsp_request_id.0,
             responses: server_responses
                 .into_iter()
@@ -396,10 +398,16 @@ impl AnyProtoClient {
                             Response::GetDefinitionResponse(response) => {
                                 to_any_envelope(&envelope, response)
                             }
+                            Response::GetEditPredictionDefinitionResponse(response) => {
+                                to_any_envelope(&envelope, response)
+                            }
                             Response::GetDeclarationResponse(response) => {
                                 to_any_envelope(&envelope, response)
                             }
                             Response::GetTypeDefinitionResponse(response) => {
+                                to_any_envelope(&envelope, response)
+                            }
+                            Response::GetEditPredictionTypeDefinitionResponse(response) => {
                                 to_any_envelope(&envelope, response)
                             }
                             Response::GetImplementationResponse(response) => {
@@ -418,6 +426,15 @@ impl AnyProtoClient {
                                 to_any_envelope(&envelope, response)
                             }
                             Response::GetDocumentLinksResponse(response) => {
+                                to_any_envelope(&envelope, response)
+                            }
+                            Response::PrepareCallHierarchyResponse(response) => {
+                                to_any_envelope(&envelope, response)
+                            }
+                            Response::GetIncomingCallsResponse(response) => {
+                                to_any_envelope(&envelope, response)
+                            }
+                            Response::GetOutgoingCallsResponse(response) => {
                                 to_any_envelope(&envelope, response)
                             }
                         };
@@ -464,61 +481,6 @@ impl AnyProtoClient {
                             }
                         })
                         .boxed_local()
-                }),
-            )
-    }
-
-    /// Like [`add_request_handler`](Self::add_request_handler) but the handler
-    /// returns a stream whose items are sent as successive responses to the same
-    /// request, terminated by an `EndStream`. Binds an explicit weak entity
-    /// rather than resolving one from an entity id.
-    pub fn add_stream_request_handler<M, E, H, F, S>(&self, entity: gpui::WeakEntity<E>, handler: H)
-    where
-        M: EnvelopedMessage + RequestMessage,
-        E: 'static,
-        H: 'static + Sync + Send + Fn(Entity<E>, TypedEnvelope<M>, AsyncApp) -> F,
-        F: 'static + Future<Output = Result<S>>,
-        S: 'static + Stream<Item = Result<M::Response>>,
-    {
-        self.0
-            .client
-            .message_handler_set()
-            .lock()
-            .add_message_handler(
-                TypeId::of::<M>(),
-                entity.into(),
-                Arc::new(move |entity, envelope, client, cx| {
-                    let entity = entity.downcast::<E>().unwrap();
-                    let envelope = envelope.into_any().downcast::<TypedEnvelope<M>>().unwrap();
-                    let request_id = envelope.message_id();
-                    let stream = handler(entity, *envelope, cx);
-                    async move {
-                        // An Error response is itself a terminal stream frame, so
-                        // it does not need a following EndStream.
-                        match stream.await {
-                            Ok(stream) => {
-                                futures::pin_mut!(stream);
-                                while let Some(result) = stream.next().await {
-                                    match result {
-                                        Ok(response) => {
-                                            client.send_response(request_id, response)?
-                                        }
-                                        Err(error) => {
-                                            client.send_response(request_id, error.to_proto())?;
-                                            return Err(error);
-                                        }
-                                    }
-                                }
-                                client.send_response(request_id, proto::EndStream {})?;
-                                Ok(())
-                            }
-                            Err(error) => {
-                                client.send_response(request_id, error.to_proto())?;
-                                Err(error)
-                            }
-                        }
-                    }
-                    .boxed_local()
                 }),
             )
     }

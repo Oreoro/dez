@@ -22,7 +22,6 @@ auto_update.workspace = true
 futures.workspace = true
 gpui.workspace = true
 log.workspace = true
-localization.workspace = true
 markdown.workspace = true
 menu.workspace = true
 release_channel.workspace = true
@@ -33,3 +32,9 @@ theme_settings.workspace = true
 ui.workspace = true
 ui_input.workspace = true
 workspace.workspace = true
+
+[dev-dependencies]
+editor.workspace = true
+gpui = { workspace = true, features = ["test-support"] }
+settings = { workspace = true, features = ["test-support"] }
+theme.workspace = true

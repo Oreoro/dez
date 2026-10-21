@@ -74,7 +74,7 @@ fn rank_mime_type(mimetype: &MimeType) -> usize {
         MimeType::Jpeg(_) => 3,
         MimeType::Markdown(_) => 2,
         MimeType::Plain(_) => 1,
-        // All other media types are not supported in dez at this time
+        // All other media types are not supported in Zed at this time
         _ => 0,
     }
 }
@@ -199,7 +199,7 @@ impl Output {
                     el.child(
                         IconButton::new(ElementId::Name("copy-output".into()), IconName::Copy)
                             .style(ButtonStyle::Transparent)
-                            .tooltip(Tooltip::text(localization::text(cx, "repl-copy-output")))
+                            .tooltip(Tooltip::text("Copy Output"))
                             .on_click(move |_, window, cx| {
                                 let clipboard_content = v.clipboard_content(window, cx);
 
@@ -217,7 +217,7 @@ impl Output {
                             IconName::FileTextOutlined,
                         )
                         .style(ButtonStyle::Transparent)
-                        .tooltip(Tooltip::text(localization::text(cx, "repl-open-buffer")))
+                        .tooltip(Tooltip::text("Open in Buffer"))
                         .on_click({
                             let workspace = workspace.clone();
                             move |_, window, cx| {
@@ -323,7 +323,7 @@ impl Output {
                             let full_error = format!("{}: {}\n{}", ename, evalue, traceback_text);
 
                             CopyButton::new("copy-full-error", full_error)
-                                .tooltip_label(localization::text(cx, "repl-copy-full-error"))
+                                .tooltip_label("Copy Full Error")
                         })
                         .child(
                             IconButton::new(
@@ -331,10 +331,7 @@ impl Output {
                                 IconName::FileTextOutlined,
                             )
                             .style(ButtonStyle::Transparent)
-                            .tooltip(Tooltip::text(localization::text(
-                                cx,
-                                "repl-open-full-error",
-                            )))
+                            .tooltip(Tooltip::text("Open Full Error in Buffer"))
                             .on_click({
                                 let ename = err.ename.clone();
                                 let evalue = err.evalue.clone();
@@ -756,11 +753,9 @@ impl ExecutionView {
 impl Render for ExecutionView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let status = match &self.status {
-            ExecutionStatus::ConnectingToKernel => {
-                Label::new(localization::text(cx, "repl-connecting"))
-                    .color(Color::Muted)
-                    .into_any_element()
-            }
+            ExecutionStatus::ConnectingToKernel => Label::new("Connecting to kernel...")
+                .color(Color::Muted)
+                .into_any_element(),
             ExecutionStatus::Executing => h_flex()
                 .gap_2()
                 .child(
@@ -769,35 +764,29 @@ impl Render for ExecutionView {
                         .color(Color::Muted)
                         .with_rotate_animation(3),
                 )
-                .child(Label::new(localization::text(cx, "repl-executing")).color(Color::Muted))
+                .child(Label::new("Executing...").color(Color::Muted))
                 .into_any_element(),
             ExecutionStatus::Finished => Icon::new(IconName::Check)
                 .size(IconSize::Small)
                 .into_any_element(),
-            ExecutionStatus::Unknown => Label::new(localization::text(cx, "repl-unknown-status"))
+            ExecutionStatus::Unknown => Label::new("Unknown status")
                 .color(Color::Muted)
                 .into_any_element(),
-            ExecutionStatus::ShuttingDown => {
-                Label::new(localization::text(cx, "repl-shutting-down"))
-                    .color(Color::Muted)
-                    .into_any_element()
-            }
-            ExecutionStatus::Restarting => Label::new(localization::text(cx, "repl-restarting"))
+            ExecutionStatus::ShuttingDown => Label::new("Kernel shutting down...")
                 .color(Color::Muted)
                 .into_any_element(),
-            ExecutionStatus::Shutdown => Label::new(localization::text(cx, "repl-shutdown-status"))
+            ExecutionStatus::Restarting => Label::new("Kernel restarting...")
                 .color(Color::Muted)
                 .into_any_element(),
-            ExecutionStatus::Queued => Label::new(localization::text(cx, "repl-queued"))
+            ExecutionStatus::Shutdown => Label::new("Kernel shutdown")
                 .color(Color::Muted)
                 .into_any_element(),
-            ExecutionStatus::KernelErrored(error) => Label::new(localization::tr!(
-                cx,
-                "repl-kernel-error",
-                error = error.to_string()
-            ))
-            .color(Color::Error)
-            .into_any_element(),
+            ExecutionStatus::Queued => Label::new("Queued...")
+                .color(Color::Muted)
+                .into_any_element(),
+            ExecutionStatus::KernelErrored(error) => Label::new(format!("Kernel error: {}", error))
+                .color(Color::Error)
+                .into_any_element(),
         };
 
         let pending_input_element = self.pending_input.as_ref().map(|pending_input| {
@@ -906,8 +895,6 @@ mod tests {
         cx.update(|cx| {
             let settings_store = SettingsStore::test(cx);
             cx.set_global(settings_store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
         });
         let fs = project::FakeFs::new(cx.background_executor.clone());

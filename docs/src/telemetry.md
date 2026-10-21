@@ -1,42 +1,75 @@
 ---
-title: Local Diagnostics
-description: "Crash, hang, and latency diagnostics retained on your computer."
+title: Telemetry
+description: "What data Zed collects and how to control telemetry settings."
 ---
 
-# Local Diagnostics
+# Telemetry in Zed
 
-dez does not send usage telemetry, crash reports, hang reports, or diagnostic artifacts to dez, Zed, Sentry, or another service.
+Zed collects anonymous telemetry to understand usage patterns and diagnose issues.
 
-For self-debugging, dez keeps a small set of artifacts on the machine where the issue occurred:
+Telemetry falls into two categories:
 
-- `dez.log` contains application logs.
-- A crash creates a compressed `<session>.dmp` minidump and adjacent `<session>.json` metadata file.
-- Hang detection keeps at most three recent `hang-*.miniprof.json` traces.
-- The input-latency diagnostic command renders its report locally.
+- **Client-side**: Usage metrics and crash reports. You can disable these in settings.
+- **Server-side**: Collected when using hosted services like AI or Collaboration. Required for these features to function.
 
-These files remain local until you inspect, share, or delete them. SSH remote-server crashes remain on the remote host; dez does not collect them automatically.
+## Configuring Telemetry Settings
 
-## Finding Local Files
+You have full control over what data is sent out by Zed.
+To enable or disable some or all telemetry types, open Settings ({#kb zed::OpenSettings}) and search for "telemetry", or add the following to your settings file:
 
-Run {#action dez::OpenLog} from the command palette to open the recent log, or {#action dez::RevealLogInFileManager} to reveal the full log directory.
-
-Default log directories are:
-
-- macOS: `~/Library/Logs/dez/`
-- Linux: `$XDG_DATA_HOME/dez/logs/`, or `~/.local/share/dez/logs/` when `XDG_DATA_HOME` is unset
-- Windows: `%LOCALAPPDATA%\dez\logs\`
-
-Hang traces are stored in the `hang_traces` directory under dez's data directory. SSH remote-server logs and reliability artifacts use the corresponding dez data directory on the remote host.
-
-## Inspecting a Crash
-
-The `.dmp` file is zstd-compressed despite retaining its `.dmp` extension. Decompress it before using standard minidump tools:
-
-```sh
-zstd -d <session>.dmp -o minidump.dmp
-minidump-stackwalk minidump.dmp
+```json [settings]
+"telemetry": {
+    "diagnostics": false,
+    "metrics": false
+},
 ```
 
-The adjacent `<session>.json` contains build and system metadata. Full native symbolication requires symbols matching the recorded dez build and commit.
+## Dataflow
 
-See [Debugging Crashes](./development/debugging-crashes.md) for local analysis guidance.
+Telemetry is sent from the application to our servers every 5 minutes (or when 50 events accumulate), then routed to the appropriate service. We currently use:
+
+- [Sentry](https://sentry.io): Crash-monitoring service - stores diagnostic events
+- [Snowflake](https://snowflake.com): Data warehouse - stores both diagnostic and metric events
+- [Hex](https://www.hex.tech): Dashboards and data exploration - accesses data stored in Snowflake
+- [Amplitude](https://www.amplitude.com): Dashboards and data exploration - accesses data stored in Snowflake
+
+## Types of Telemetry
+
+### Diagnostics
+
+Crash reports consist of a [minidump](https://learn.microsoft.com/en-us/windows/win32/debug/minidump-files) and debug metadata. Reports are sent on the next launch after a crash, allowing Zed to identify and fix issues without requiring you to file a bug report.
+
+You can inspect what data is sent in the `CrashInfo` struct in [crates/crashes/src/crashes.rs](https://github.com/zed-industries/zed/blob/main/crates/crashes/src/crashes.rs). See also: [Debugging Crashes](./development/debugging-crashes.md).
+
+### Client-Side Metrics
+
+Client-side telemetry includes:
+
+- File extensions of opened files
+- Features and tools used within the editor
+- Project statistics (e.g., number of files)
+- Frameworks detected in your projects
+
+This data does not include your code or sensitive project details. Events are sent over HTTPS and rate-limited.
+
+Usage data is tied to a random telemetry ID. If you've authenticated, this ID may be linked to your email so Zed can analyze patterns over time and reach out for feedback.
+
+To audit what Zed has reported, run {#action zed::OpenTelemetryLog} from the command palette or click `Help > View Telemetry Log`.
+
+For the full list of event types, see the `Event` enum in [telemetry_events.rs](https://github.com/zed-industries/zed/blob/main/crates/telemetry_events/src/telemetry_events.rs).
+
+### Server-Side Metrics
+
+When using Zed's hosted services, we collect metadata for rate limiting and billing (e.g., token usage). Zed does not store your prompts or code unless you explicitly share feedback or opt into Edit Prediction training data collection.
+
+For details on AI request paths and opt-in data sharing, see [AI Privacy](./ai/privacy-and-security.md) and [Feedback and Training Data](./ai/ai-improvement.md).
+
+## Zed Business
+
+Administrators on Zed Business can enforce a no-sharing policy org-wide; members can't opt into [Edit Prediction training data sharing](./ai/ai-improvement.md#edit-predictions) or [AI feedback ratings](./ai/ai-improvement.md#ai-feedback-with-ratings). See [Data Sharing](./business/admin-controls.md#data-sharing) in Admin Controls.
+
+<!-- TODO: link to telemetry org-wide disable control once it ships (currently planned for a future release) -->
+
+## Concerns and Questions
+
+If you have concerns about telemetry, you can [open an issue](https://github.com/zed-industries/zed/issues/new/choose) or email hi@zed.dev.

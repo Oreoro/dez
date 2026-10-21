@@ -128,14 +128,9 @@ impl Render for ModeIndicator {
             (label, None)
         } else {
             let mode_str = if temp_mode {
-                localization::tr!(
-                    cx,
-                    "vim-mode-insert-temporary",
-                    mode = mode.localized(cx).to_string()
-                )
-                .to_string()
+                format!("(insert) {}", mode)
             } else {
-                mode.localized(cx).to_string()
+                mode.to_string()
             };
 
             let current_operators_description = self.current_operators_description(vim.clone(), cx);
@@ -146,16 +141,17 @@ impl Render for ModeIndicator {
             let mode = if bg_color != system_transparent {
                 mode_str.into()
             } else {
-                localization::tr!(cx, "vim-mode-decorated", mode = mode_str)
+                format!("-- {} --", mode_str).into()
             };
             (pending.into(), Some(mode))
         };
         h_flex()
+            .h(ButtonSize::Default.rems())
             .gap_1()
             .when(!label.is_empty(), |el| {
                 el.child(
                     Label::new(label)
-                        .line_height_style(LineHeightStyle::UiLabel)
+                        .size(LabelSize::Small)
                         .weight(FontWeight::MEDIUM),
                 )
             })
@@ -171,7 +167,6 @@ impl Render for ModeIndicator {
                         .child(
                             Label::new(mode)
                                 .size(LabelSize::Small)
-                                .line_height_style(LineHeightStyle::UiLabel)
                                 .weight(FontWeight::MEDIUM)
                                 .when(
                                     bg_color != system_transparent

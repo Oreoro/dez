@@ -1,4 +1,7 @@
-use crate::wasm_host::{WasmState, wit::ToWasmtimeResult};
+use crate::wasm_host::{
+    WasmState,
+    wit::{IntoWasmtimeResult, ToWasmtimeResult},
+};
 use ::http_client::{AsyncBody, HttpRequestExt};
 use ::settings::{Settings, WorktreeId};
 use anyhow::{Context as _, Result, bail};
@@ -16,7 +19,6 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, OnceLock},
 };
-use url::Url;
 use util::paths::PathStyle;
 use util::rel_path::RelPath;
 use util::{archive::extract_zip, fs::make_file_executable, maybe};
@@ -37,7 +39,7 @@ wasmtime::component::bindgen!({
     with: {
         "worktree": ExtensionWorktree,
         "key-value-store": ExtensionKeyValueStore,
-        "zed:extension/http-client/http-response-stream": ExtensionHttpResponseStream,
+        "zed:extension/http-client.http-response-stream": ExtensionHttpResponseStream,
         "zed:extension/github": since_v0_6_0::zed::extension::github,
         "zed:extension/nodejs": latest::zed::extension::nodejs,
         "zed:extension/platform": since_v0_6_0::zed::extension::platform,
@@ -78,7 +80,13 @@ impl From<SettingsLocation> for latest::SettingsLocation {
     fn from(value: SettingsLocation) -> Self {
         Self {
             worktree_id: value.worktree_id,
-            path: value.path,
+            // Passing the path here causes project settings reads to fail,
+            // since the extension passes the absolute path to the worktree,
+            // not a relative one like the settings API expects.
+            //
+            // This has been fixed in the API itself as of v0.2.0. Align the behavior
+            // here so that older extensions can also read project settings.
+            path: String::new(),
         }
     }
 }
@@ -250,7 +258,7 @@ impl HostKeyValueStore for WasmState {
         kv_store.insert(key, value).await.to_wasmtime_result()
     }
 
-    async fn drop(&mut self, _worktree: Resource<ExtensionKeyValueStore>) -> Result<()> {
+    async fn drop(&mut self, _worktree: Resource<ExtensionKeyValueStore>) -> wasmtime::Result<()> {
         // We only ever hand out borrows of key-value stores.
         Ok(())
     }
@@ -291,7 +299,7 @@ impl HostWorktree for WasmState {
         latest::HostWorktree::which(self, delegate, binary_name).await
     }
 
-    async fn drop(&mut self, _worktree: Resource<Worktree>) -> Result<()> {
+    async fn drop(&mut self, _worktree: Resource<Worktree>) -> wasmtime::Result<()> {
         // We only ever hand out borrows of worktrees.
         Ok(())
     }
@@ -306,8 +314,6 @@ impl http_client::Host for WasmState {
     ) -> wasmtime::Result<Result<http_client::HttpResponse, String>> {
         maybe!(async {
             let url = &request.url;
-            let url_obj = Url::parse(url)?;
-            self.capability_granter.grant_download_file(&url_obj)?;
             let request = convert_request(&request)?;
             let mut response = self.host.http_client.send(request).await?;
 
@@ -324,12 +330,9 @@ impl http_client::Host for WasmState {
         &mut self,
         request: http_client::HttpRequest,
     ) -> wasmtime::Result<Result<Resource<ExtensionHttpResponseStream>, String>> {
-        let url = request.url.clone();
-        let request = convert_request(&request)?;
+        let request = convert_request(&request).into_wasmtime_result()?;
         let response = self.host.http_client.send(request);
         maybe!(async {
-            let url_obj = Url::parse(&url)?;
-            self.capability_granter.grant_download_file(&url_obj)?;
             let response = response.await?;
             let stream = Arc::new(Mutex::new(response));
             let resource = self.table.push(stream)?;
@@ -361,7 +364,10 @@ impl http_client::HostHttpResponseStream for WasmState {
         .to_wasmtime_result()
     }
 
-    async fn drop(&mut self, _resource: Resource<ExtensionHttpResponseStream>) -> Result<()> {
+    async fn drop(
+        &mut self,
+        _resource: Resource<ExtensionHttpResponseStream>,
+    ) -> wasmtime::Result<()> {
         Ok(())
     }
 }
@@ -438,7 +444,7 @@ impl ExtensionImports for WasmState {
         self.on_main_thread(|cx| {
             async move {
                 let path = location.as_ref().and_then(|location| {
-                    RelPath::new(Path::new(&location.path), PathStyle::Posix).ok()
+                    RelPath::new(Path::new(&location.path), PathStyle::Unix).ok()
                 });
                 let location = path
                     .as_ref()
@@ -501,9 +507,11 @@ impl ExtensionImports for WasmState {
             LanguageServerInstallationStatus::Failed(error) => BinaryStatus::Failed { error },
         };
 
-        self.host
-            .proxy
-            .update_language_server_status(::lsp::LanguageServerName(server_name.into()), status);
+        self.host.proxy.update_language_server_status(
+            self.language_server_status_source,
+            ::lsp::LanguageServerName(server_name.into()),
+            status,
+        );
 
         Ok(())
     }
@@ -515,9 +523,6 @@ impl ExtensionImports for WasmState {
         file_type: DownloadedFileType,
     ) -> wasmtime::Result<Result<(), String>> {
         maybe!(async {
-            let parsed_url = Url::parse(&url)?;
-            self.capability_granter.grant_download_file(&parsed_url)?;
-
             let path = PathBuf::from(path);
             let extension_work_dir = self.host.work_dir.join(self.manifest.id.as_ref());
 
@@ -584,13 +589,11 @@ impl ExtensionImports for WasmState {
     }
 
     async fn make_file_executable(&mut self, path: String) -> wasmtime::Result<Result<(), String>> {
-        self.capability_granter
-            .grant_exec("chmod", &["+x", &path])?;
-
         let path = self
             .host
             .writeable_path_from_extension(&self.manifest.id, Path::new(&path))
-            .await?;
+            .await
+            .into_wasmtime_result()?;
 
         make_file_executable(&path)
             .await

@@ -19,12 +19,19 @@ use project::debugger::{MemoryCell, dap_command::DataBreakpointContext, session:
 use settings::Settings;
 use theme_settings::ThemeSettings;
 use ui::{
-    ContextMenu, Divider, DropdownMenu, FluentBuilder, IntoElement, PopoverMenuHandle, Render,
-    ScrollableHandle, StatefulInteractiveElement, Tooltip, WithScrollbar, prelude::*,
+    ContextMenu, Divider, DropdownMenu, PopoverMenuHandle, ScrollableHandle,
+    StatefulInteractiveElement, Tooltip, WithScrollbar, prelude::*,
 };
 use workspace::Workspace;
 
-use crate::{ToggleDataBreakpoint, session::running::stack_frame_list::StackFrameList};
+use crate::{
+    ToggleDataBreakpoint,
+    canvas::{
+        debugger_background, debugger_panel_background, debugger_panel_padding, debugger_radius,
+        debugger_row_border_color, debugger_row_hover_border_color,
+    },
+    session::running::stack_frame_list::StackFrameList,
+};
 
 actions!(debugger, [GoToSelectedAddress]);
 
@@ -316,7 +323,7 @@ impl MemoryView {
             ..Default::default()
         };
         EditorStyle {
-            background: theme.colors().editor_background,
+            background: debugger_background(cx),
             local_player: theme.players().local(),
             text: text_style,
             ..Default::default()
@@ -368,7 +375,9 @@ impl MemoryView {
                 this
             }),
         )
+        .style(ui::DropdownStyle::Outlined)
         .handle(self.width_picker_handle.clone())
+        .attach(gpui::Anchor::BottomLeft)
     }
 
     fn page_down(&mut self, _: &menu::SelectLast, _: &mut Window, cx: &mut Context<Self>) {
@@ -630,14 +639,14 @@ impl MemoryView {
 
             let mut menu = menu.action_disabled_when(
                 range_too_large || *memory_unreadable,
-                localization::text(cx, "debugger-go-to-selected-address"),
+                "Go To Selected Address",
                 GoToSelectedAddress.boxed_clone(),
             );
 
             if supports_data_breakpoints {
                 menu = menu.action_disabled_when(
                     *memory_unreadable,
-                    localization::text(cx, "debugger-set-data-breakpoint"),
+                    "Set Data Breakpoint",
                     ToggleDataBreakpoint { access_type: None }.boxed_clone(),
                 );
             }
@@ -846,24 +855,25 @@ fn render_single_memory_view_line(
 }
 
 impl Render for MemoryView {
-    fn render(
-        &mut self,
-        window: &mut ui::Window,
-        cx: &mut ui::Context<Self>,
-    ) -> impl ui::IntoElement {
+    fn render(&mut self, window: &mut ui::Window, cx: &mut ui::Context<Self>) -> impl IntoElement {
         let (icon, tooltip_text) = if self.is_writing_memory {
-            (IconName::Pencil, "Edit memory at a selected address")
+            (IconName::Pencil, "Edit Memory at a Selected Address")
         } else {
             (
                 IconName::LocationEdit,
-                "Change address of currently viewed memory",
+                "Change Address of Currently Viewed Memory",
             )
         };
+        let background = debugger_background(cx);
+        let border_color = debugger_row_border_color(background, false, cx);
+        let focus_border_color = debugger_row_hover_border_color(background, false, cx);
+        let panel_padding = debugger_panel_padding(cx);
+
         v_flex()
             .id("Memory-view")
             .on_action(cx.listener(Self::cancel))
             .on_action(cx.listener(Self::go_to_address))
-            .p_1()
+            .p(panel_padding)
             .on_action(cx.listener(Self::confirm))
             .on_action(cx.listener(Self::toggle_data_breakpoint))
             .on_action(cx.listener(Self::page_down))
@@ -873,31 +883,31 @@ impl Render for MemoryView {
             .child(
                 h_flex()
                     .w_full()
-                    .mb_0p5()
+                    .mb_1()
                     .gap_1()
                     .child(
                         h_flex()
+                            .px(panel_padding)
+                            .h_6()
                             .w_full()
-                            .rounded_md()
+                            .gap_1()
                             .border_1()
-                            .gap_x_2()
-                            .px_2()
-                            .py_0p5()
-                            .mb_0p5()
-                            .bg(cx.theme().colors().editor_background)
                             .when_else(
                                 self.query_editor
                                     .focus_handle(cx)
                                     .contains_focused(window, cx),
-                                |this| this.border_color(cx.theme().colors().border_focused),
-                                |this| this.border_color(cx.theme().colors().border_transparent),
+                                |this| this.border_color(focus_border_color),
+                                |this| this.border_color(border_color),
                             )
+                            .bg(background)
+                            .map(|this| debugger_radius(this, cx))
                             .child(
                                 div()
                                     .id("memory-view-editor-icon")
                                     .child(Icon::new(icon).size(ui::IconSize::XSmall))
                                     .tooltip(Tooltip::text(tooltip_text)),
                             )
+                            .child(Divider::vertical())
                             .child(self.render_query_bar(cx)),
                     )
                     .child(self.render_width_picker(window, cx)),
@@ -922,10 +932,7 @@ impl Render for MemoryView {
                     .custom_scrollbars(
                         ui::Scrollbars::new(ui::ScrollAxes::Both)
                             .tracked_scroll_handle(&self.view_state_handle)
-                            .with_track_along(
-                                ui::ScrollAxes::Both,
-                                cx.theme().colors().panel_background,
-                            )
+                            .with_track_along(ui::ScrollAxes::Both, debugger_panel_background(cx))
                             .tracked_entity(cx.entity_id()),
                         window,
                         cx,

@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tab_switcher_tests;
 
+mod canvas;
+
 use collections::{HashMap, HashSet};
 use editor::items::{
     entry_diagnostic_aware_icon_decoration_and_color, entry_git_aware_label_color,
@@ -17,10 +19,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::Settings;
 use std::{cmp::Reverse, sync::Arc};
-use ui::{
-    DecoratedIcon, IconDecoration, IconDecorationKind, ListItem, ListItemSpacing, Tooltip,
-    prelude::*,
-};
+use ui::{DecoratedIcon, IconDecoration, IconDecorationKind, ListItem, Tooltip, prelude::*};
 use util::ResultExt;
 use workspace::{
     Event as WorkspaceEvent, ModalView, Pane, SaveIntent, Workspace,
@@ -115,11 +114,7 @@ impl TabSwitcher {
         cx: &mut Context<Workspace>,
     ) {
         let mut weak_pane = workspace.active_pane().downgrade();
-        for dock in [
-            workspace.left_dock(),
-            workspace.bottom_dock(),
-            workspace.right_dock(),
-        ] {
+        for dock in [workspace.left_dock(), workspace.right_dock()] {
             dock.update(cx, |this, cx| {
                 let Some(panel) = this
                     .active_panel()
@@ -176,6 +171,10 @@ impl TabSwitcher {
                 } else {
                     Picker::nonsearchable_list(delegate, window, cx)
                 }
+                .surface_density(canvas::tab_switcher_picker_density(cx))
+                .surface_radius(canvas::tab_switcher_picker_radius(cx))
+                .surface_contrast(canvas::tab_switcher_picker_contrast(cx))
+                .initial_width(rems(PANEL_WIDTH_REMS))
             }),
             init_modifiers,
         }
@@ -274,7 +273,9 @@ impl TabMatch {
                 let project = project.read(cx);
                 let entry = project.entry_for_path(&path, cx)?;
                 let git_status = project
-                    .project_path_git_status(&path, cx)
+                    .git_store()
+                    .read(cx)
+                    .display_status_for_project_path(&path, cx)
                     .map(|status| status.summary())
                     .unwrap_or_default();
                 Some(entry_git_aware_label_color(
@@ -717,12 +718,16 @@ impl TabSwitcherDelegate {
 impl PickerDelegate for TabSwitcherDelegate {
     type ListItem = ListItem;
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "tab-switcher-placeholder").into()
+    fn name() -> &'static str {
+        "tab switcher"
     }
 
-    fn no_matches_text(&self, _window: &mut Window, cx: &mut App) -> Option<SharedString> {
-        Some(localization::text(cx, "tab-switcher-empty"))
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Search all tabs…".into()
+    }
+
+    fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
+        Some("No tabs".into())
     }
 
     fn match_count(&self) -> usize {
@@ -831,6 +836,7 @@ impl PickerDelegate for TabSwitcherDelegate {
             preview: tab_match.preview,
             deemphasized: false,
             max_title_len: Some(usize::MAX),
+            truncate_title_middle: true,
         };
         let label = tab_match.item.tab_content(params, window, cx);
 
@@ -845,7 +851,7 @@ impl PickerDelegate for TabSwitcherDelegate {
         let indicator = h_flex()
             .flex_shrink_0()
             .children(indicator)
-            .child(div().w_2())
+            .child(div().w(canvas::tab_switcher_indicator_gap(cx)))
             .into_any_element();
         let close_button = div()
             .id("close-button")
@@ -862,10 +868,7 @@ impl PickerDelegate for TabSwitcherDelegate {
                 IconButton::new("close_tab", IconName::Close)
                     .icon_size(IconSize::Small)
                     .icon_color(indicator_color)
-                    .tooltip(Tooltip::for_action_title(
-                        localization::text(cx, "common-close"),
-                        &CloseSelectedItem,
-                    ))
+                    .tooltip(Tooltip::for_action_title("Close", &CloseSelectedItem))
                     .on_click(cx.listener(move |picker, _, window, cx| {
                         cx.stop_propagation();
                         picker.delegate.close_item_at(ix, window, cx);
@@ -875,10 +878,10 @@ impl PickerDelegate for TabSwitcherDelegate {
 
         Some(
             ListItem::new(ix)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::tab_switcher_row_spacing(cx))
                 .inset(true)
                 .toggle_state(selected)
-                .child(h_flex().w_full().child(label))
+                .child(h_flex().w_full().min_w_0().overflow_hidden().child(label))
                 .start_slot::<DecoratedIcon>(icon)
                 .map(|el| {
                     if self.selected_index == ix {

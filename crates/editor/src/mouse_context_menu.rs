@@ -1,18 +1,21 @@
 use crate::{
     Copy, CopyAndTrim, CopyPermalinkToLine, Cut, DisplayPoint, DisplaySnapshot, Editor,
-    FindAllReferences, GoToDeclaration, GoToDefinition, GoToImplementation, GoToTypeDefinition,
-    Paste, Rename, RevealInFileManager, SelectMode, SelectionEffects, SelectionExt, ToDisplayPoint,
-    ToggleCodeActions,
+    EvaluateSelectedText, FindAllReferences, GoToDeclaration, GoToDefinition, GoToImplementation,
+    GoToTypeDefinition, Paste, Rename, RevealInFileManager, RunToCursor, SelectMode,
+    SelectionEffects, SelectionExt, ToDisplayPoint, ToggleCodeActions,
     actions::{Format, FormatSelections},
     selections_collection::SelectionsCollection,
 };
-use dez_actions::preview::{
-    markdown::OpenPreview as OpenMarkdownPreview, svg::OpenPreview as OpenSvgPreview,
-};
 use gpui::prelude::FluentBuilder;
 use gpui::{Context, DismissEvent, Entity, Focusable as _, Pixels, Point, Subscription, Window};
+use project::DisableAiSettings;
 use std::ops::Range;
+use text::PointUtf16;
 use workspace::OpenInTerminal;
+use zed_actions::agent::AddSelectionToThread;
+use zed_actions::preview::{
+    markdown::OpenPreview as OpenMarkdownPreview, svg::OpenPreview as OpenSvgPreview,
+};
 
 #[derive(Debug)]
 pub enum MenuPosition {
@@ -104,7 +107,7 @@ impl MouseContextMenu {
             }
         });
 
-        let selection_init = editor.selections.newest_anchor().clone();
+        let selection_init = *editor.selections.newest_anchor();
 
         let _cursor_move_subscription = cx.subscribe_in(
             &cx.entity(),
@@ -197,6 +200,11 @@ pub fn deploy_context_menu(
 
         let focus = window.focused(cx);
         let has_reveal_target = editor.target_file(cx).is_some();
+        let has_selections = editor
+            .selections
+            .all::<PointUtf16>(&display_map)
+            .into_iter()
+            .any(|s| !s.is_empty());
         let has_git_repo =
             buffer
                 .anchor_to_buffer_anchor(anchor)
@@ -209,7 +217,14 @@ pub fn deploy_context_menu(
                         .is_some()
                 });
 
+        let evaluate_selection = window.is_action_available(&EvaluateSelectedText, cx);
+        let run_to_cursor = window.is_action_available(&RunToCursor, cx);
         let format_selections = window.is_action_available(&FormatSelections, cx);
+        let disable_ai = DisableAiSettings::is_ai_disabled_for_buffer(
+            editor.buffer.read(cx).as_singleton().as_ref(),
+            cx,
+        );
+
         let is_markdown = editor
             .buffer()
             .read(cx)
@@ -228,57 +243,62 @@ pub fn deploy_context_menu(
                     .is_some_and(|ext| ext.eq_ignore_ascii_case("svg"))
             });
 
-        ui::ContextMenu::build(window, cx, |menu, _window, cx| {
-            let format_selections_label = localization::text(cx, "editor-format-selections");
+        ui::ContextMenu::build(window, cx, |menu, _window, _cx| {
             let builder = menu
                 .on_blur_subscription(Subscription::new(|| {}))
+                .when(run_to_cursor, |builder| {
+                    builder.action("Run to Cursor", Box::new(RunToCursor))
+                })
+                .when(evaluate_selection && has_selections, |builder| {
+                    builder.action("Evaluate Selection", Box::new(EvaluateSelectedText))
+                })
+                .when(
+                    run_to_cursor || (evaluate_selection && has_selections),
+                    |builder| builder.separator(),
+                )
+                .action("Go to Definition", Box::new(GoToDefinition::default()))
+                .action("Go to Declaration", Box::new(GoToDeclaration::default()))
                 .action(
-                    localization::text(cx, "editor-go-to-definition"),
-                    Box::new(GoToDefinition::default()),
+                    "Go to Type Definition",
+                    Box::new(GoToTypeDefinition::default()),
                 )
                 .action(
-                    localization::text(cx, "editor-go-to-declaration"),
-                    Box::new(GoToDeclaration),
-                )
-                .action(
-                    localization::text(cx, "editor-go-to-type-definition"),
-                    Box::new(GoToTypeDefinition),
-                )
-                .action(
-                    localization::text(cx, "editor-go-to-implementation"),
+                    "Go to Implementation",
                     Box::new(GoToImplementation::default()),
                 )
                 .action(
-                    localization::text(cx, "editor-find-all-references"),
+                    "Find All References",
                     Box::new(FindAllReferences::default()),
                 )
+                .action(
+                    "Show Incoming Calls",
+                    Box::new(zed_actions::ShowIncomingCalls),
+                )
+                .action(
+                    "Show Outgoing Calls",
+                    Box::new(zed_actions::ShowOutgoingCalls),
+                )
                 .separator()
-                .action(
-                    localization::text(cx, "editor-rename-symbol"),
-                    Box::new(Rename),
-                )
-                .action(
-                    localization::text(cx, "editor-format-buffer"),
-                    Box::new(Format),
-                )
-                .when(format_selections, |menu| {
-                    menu.action(format_selections_label, Box::new(FormatSelections))
+                .action("Rename Symbol", Box::new(Rename))
+                .action("Format Buffer", Box::new(Format))
+                .when(format_selections, |cx| {
+                    cx.action("Format Selections", Box::new(FormatSelections))
                 })
                 .action(
-                    localization::text(cx, "editor-show-code-actions"),
+                    "Show Code Actions",
                     Box::new(ToggleCodeActions {
                         deployed_from: None,
                         quick_launch: false,
                     }),
                 )
+                .when(!disable_ai && has_selections, |this| {
+                    this.action("Add to Agent Thread", Box::new(AddSelectionToThread))
+                })
                 .separator()
-                .action(localization::text(cx, "editor-cut"), Box::new(Cut))
-                .action(localization::text(cx, "editor-copy"), Box::new(Copy))
-                .action(
-                    localization::text(cx, "editor-copy-and-trim"),
-                    Box::new(CopyAndTrim),
-                )
-                .action(localization::text(cx, "editor-paste"), Box::new(Paste))
+                .action("Cut", Box::new(Cut))
+                .action("Copy", Box::new(Copy))
+                .action("Copy and Trim", Box::new(CopyAndTrim))
+                .action("Paste", Box::new(Paste))
                 .separator()
                 .action_disabled_when(
                     !has_reveal_target,
@@ -286,30 +306,24 @@ pub fn deploy_context_menu(
                     Box::new(RevealInFileManager),
                 )
                 .when(is_markdown, |builder| {
-                    builder.action(
-                        localization::text(cx, "editor-open-markdown-preview"),
-                        Box::new(OpenMarkdownPreview),
-                    )
+                    builder.action("Open Markdown Preview", Box::new(OpenMarkdownPreview))
                 })
                 .when(is_svg, |builder| {
-                    builder.action(
-                        localization::text(cx, "editor-open-svg-preview"),
-                        Box::new(OpenSvgPreview),
-                    )
+                    builder.action("Open SVG Preview", Box::new(OpenSvgPreview))
                 })
                 .action_disabled_when(
                     !has_reveal_target,
-                    localization::text(cx, "editor-open-in-terminal"),
+                    "Open in Terminal",
                     Box::new(OpenInTerminal),
                 )
                 .action_disabled_when(
                     !has_git_repo,
-                    localization::text(cx, "editor-copy-permalink"),
+                    "Copy Permalink to Line",
                     Box::new(CopyPermalinkToLine),
                 )
                 .action_disabled_when(
                     !has_git_repo,
-                    localization::text(cx, "editor-view-file-history"),
+                    "View File History",
                     Box::new(git::FileHistory),
                 );
             match focus {
@@ -349,7 +363,12 @@ pub fn deploy_context_menu(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{editor_tests::init_test, test::editor_lsp_test_context::EditorLspTestContext};
+    use crate::{
+        editor_tests::init_test,
+        test::{
+            editor_lsp_test_context::EditorLspTestContext, editor_test_context::EditorTestContext,
+        },
+    };
     use indoc::indoc;
 
     #[gpui::test]
@@ -396,5 +415,49 @@ mod tests {
             }
         "});
         cx.editor(|editor, _window, _app| assert!(editor.mouse_context_menu.is_some()));
+    }
+
+    #[gpui::test]
+    async fn test_mouse_context_menu_at_pixel_snapped_scroll_position(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        init_test(cx, |_| {});
+
+        let mut cx = EditorTestContext::new(cx).await;
+        cx.set_state(&format!("ˇ{}", "aaaaa\n".repeat(100)));
+        cx.update(|window, _| window.set_scale_factor(1.25));
+        cx.update_editor(|editor, _, cx| {
+            editor.set_text_style_refinement(gpui::TextStyleRefinement {
+                font_size: Some(gpui::px(14.).into()),
+                line_height: Some(gpui::relative(1.3)),
+                ..Default::default()
+            });
+            cx.notify();
+        });
+        cx.run_until_parked();
+
+        cx.update_editor(|editor, window, cx| {
+            assert_eq!(window.scale_factor(), 1.25);
+            let line_height = editor
+                .style(cx)
+                .text
+                .line_height_in_pixels(window.rem_size());
+            assert_eq!(line_height, gpui::px(18.));
+            assert!(window.pixel_snap_f64(f64::from(line_height)) / f64::from(line_height) < 1.);
+            editor.set_scroll_position(gpui::point(0., 1.), window, cx);
+            assert_eq!(editor.snapshot(window, cx).scroll_position().y, 1.);
+
+            deploy_context_menu(
+                editor,
+                Some(gpui::point(gpui::px(200.), gpui::px(200.))),
+                DisplayPoint::new(crate::display_map::DisplayRow(5), 0),
+                window,
+                cx,
+            );
+            assert!(editor.mouse_context_menu.is_some());
+        });
+        cx.run_until_parked();
+
+        assert!(cx.debug_bounds("MENU_ITEM-Copy").is_some());
     }
 }

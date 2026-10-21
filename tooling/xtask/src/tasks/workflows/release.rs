@@ -1,13 +1,15 @@
-use gh_workflow::{Event, Expression, Level, Push, Run, Step, Workflow, ctx::Context};
+use gh_workflow::{
+    Event, Expression, Level, Permissions, Push, Run, Step, Use, Workflow, ctx::Context,
+};
 use indoc::formatdoc;
 
 use crate::tasks::workflows::{
-    run_bundling::{bundle_linux, bundle_mac, bundle_windows, upload_artifact},
+    run_bundling::{build_static_bwrap, bundle_linux, bundle_mac, bundle_windows, upload_artifact},
     run_tests,
     runners::{self, Arch, Platform},
     steps::{
-        self, DownloadArtifactStep, FluentBuilder, NamedJob, TokenPermissions, dependant_job,
-        named, release_job,
+        self, CommonPermissionSets, DownloadArtifactStep, FluentBuilder, NamedJob,
+        TokenPermissions, dependant_job, named, release_job,
     },
     vars::{self, JobOutput, StepOutput, assets},
 };
@@ -19,10 +21,10 @@ pub(crate) fn release() -> Workflow {
     let macos_tests = run_tests::run_platform_tests_no_filter(Platform::Mac);
     let linux_tests = run_tests::run_platform_tests_no_filter(Platform::Linux);
     let windows_tests = run_tests::run_platform_tests_no_filter(Platform::Windows);
-    let macos_clippy = run_tests::clippy(Platform::Mac, None);
-    let linux_clippy = run_tests::clippy(Platform::Linux, None);
-    let windows_clippy = run_tests::clippy(Platform::Windows, None);
-    let check_scripts = run_tests::check_scripts();
+    let macos_clippy = run_tests::clippy(Platform::Mac, None, false);
+    let linux_clippy = run_tests::clippy(Platform::Linux, None, false);
+    let windows_clippy = run_tests::clippy(Platform::Windows, None, false);
+    let check_scripts = run_tests::check_scripts(false);
 
     let create_draft_release = create_draft_release();
     let (non_blocking_compliance_run, job_output) = compliance_check();
@@ -30,20 +32,40 @@ pub(crate) fn release() -> Workflow {
     let bundle = ReleaseBundleJobs {
         linux_aarch64: bundle_linux(
             Arch::AARCH64,
+            None,
             &[&linux_tests, &linux_clippy, &check_scripts],
         ),
-        linux_x86_64: bundle_linux(Arch::X86_64, &[&linux_tests, &linux_clippy, &check_scripts]),
+        linux_x86_64: bundle_linux(
+            Arch::X86_64,
+            None,
+            &[&linux_tests, &linux_clippy, &check_scripts],
+        ),
+        bwrap_linux_aarch64: build_static_bwrap(
+            Arch::AARCH64,
+            &[&linux_tests, &linux_clippy, &check_scripts],
+        ),
+        bwrap_linux_x86_64: build_static_bwrap(
+            Arch::X86_64,
+            &[&linux_tests, &linux_clippy, &check_scripts],
+        ),
         mac_aarch64: bundle_mac(
             Arch::AARCH64,
+            None,
             &[&macos_tests, &macos_clippy, &check_scripts],
         ),
-        mac_x86_64: bundle_mac(Arch::X86_64, &[&macos_tests, &macos_clippy, &check_scripts]),
+        mac_x86_64: bundle_mac(
+            Arch::X86_64,
+            None,
+            &[&macos_tests, &macos_clippy, &check_scripts],
+        ),
         windows_aarch64: bundle_windows(
             Arch::AARCH64,
+            None,
             &[&windows_tests, &windows_clippy, &check_scripts],
         ),
         windows_x86_64: bundle_windows(
             Arch::X86_64,
+            None,
             &[&windows_tests, &windows_clippy, &check_scripts],
         ),
     };
@@ -81,6 +103,7 @@ pub(crate) fn release() -> Workflow {
     named::workflow()
         .on(Event::default().push(Push::default().tags(vec!["v*".to_string()])))
         .concurrency(vars::one_workflow_per_non_main_branch())
+        .with_minimal_permissions()
         .add_env(("CARGO_TERM_COLOR", "always"))
         .add_env(("RUST_BACKTRACE", "1"))
         .add_job(macos_tests.name, macos_tests.job)
@@ -111,6 +134,8 @@ pub(crate) fn release() -> Workflow {
 pub(crate) struct ReleaseBundleJobs {
     pub linux_aarch64: NamedJob,
     pub linux_x86_64: NamedJob,
+    pub bwrap_linux_aarch64: NamedJob,
+    pub bwrap_linux_x86_64: NamedJob,
     pub mac_aarch64: NamedJob,
     pub mac_x86_64: NamedJob,
     pub windows_aarch64: NamedJob,
@@ -122,6 +147,8 @@ impl ReleaseBundleJobs {
         vec![
             &self.linux_aarch64,
             &self.linux_x86_64,
+            &self.bwrap_linux_aarch64,
+            &self.bwrap_linux_x86_64,
             &self.mac_aarch64,
             &self.mac_x86_64,
             &self.windows_aarch64,
@@ -133,6 +160,8 @@ impl ReleaseBundleJobs {
         vec![
             self.linux_aarch64,
             self.linux_x86_64,
+            self.bwrap_linux_aarch64,
+            self.bwrap_linux_x86_64,
             self.mac_aarch64,
             self.mac_x86_64,
             self.windows_aarch64,
@@ -141,11 +170,23 @@ impl ReleaseBundleJobs {
     }
 }
 
+pub(crate) fn create_sentry_release() -> Step<Use> {
+    named::uses(
+        "getsentry",
+        "action-release",
+        "526942b68292201ac6bbb99b9a0747d4abee354c", // v3
+    )
+    .add_env(("SENTRY_ORG", "zed-dev"))
+    .add_env(("SENTRY_PROJECT", "zed"))
+    .add_env(("SENTRY_AUTH_TOKEN", vars::SENTRY_AUTH_TOKEN))
+    .add_with(("environment", "production"))
+}
+
 pub(crate) const COMPLIANCE_REPORT_PATH: &str = "compliance-report-${GITHUB_REF_NAME}.md";
 pub(crate) const COMPLIANCE_REPORT_ARTIFACT_PATH: &str =
     "compliance-report-${{ github.ref_name }}.md";
 pub(crate) const COMPLIANCE_STEP_ID: &str = "run-compliance-check";
-const NEEDS_REVIEW_PULLS_URL: &str = "https://github.com/zed-industries/zed/pulls?q=is%3Apr+is%3Aclosed+label%3A%22PR+state%3Aneeds+review%22";
+const NEEDS_REVIEW_PULLS_URL: &str = "https://github.com/$GITHUB_REPOSITORY/pulls?q=is%3Apr+is%3Aclosed+label%3A%22PR+state%3Aneeds+review%22";
 
 pub(crate) enum ComplianceContext {
     Release { non_blocking_outcome: JobOutput },
@@ -300,7 +341,7 @@ fn validate_release_assets(deps: &[&NamedJob]) -> NamedJob {
         EXPECTED_ASSETS='{expected_assets_json}'
         TAG="$GITHUB_REF_NAME"
 
-        ACTUAL_ASSETS=$(gh release view "$TAG" --json assets -q '[.assets[].name]')
+        ACTUAL_ASSETS=$(gh release view "$TAG" --repo=$GITHUB_REPOSITORY --json assets -q '[.assets[].name]')
 
         MISSING_ASSETS=$(echo "$EXPECTED_ASSETS" | jq -r --argjson actual "$ACTUAL_ASSETS" '. - $actual | .[]')
 
@@ -315,9 +356,14 @@ fn validate_release_assets(deps: &[&NamedJob]) -> NamedJob {
     };
 
     named::job(
-        dependant_job(deps).runs_on(runners::LINUX_SMALL).add_step(
-            named::bash(&validation_script).add_env(("GITHUB_TOKEN", vars::GITHUB_TOKEN)),
-        ),
+        dependant_job(deps)
+            .runs_on(runners::LINUX_SMALL)
+            // The release is still a draft at this point, and draft releases are
+            // only visible to tokens with write access to repository contents.
+            .permissions(Permissions::default().contents(Level::Write))
+            .add_step(
+                named::bash(&validation_script).add_env(("GITHUB_TOKEN", vars::GITHUB_TOKEN)),
+            ),
     )
 }
 
@@ -371,7 +417,7 @@ fn auto_release_preview(deps: &[&NamedJob]) -> (NamedJob, JobOutput) {
             fi
 
             if [[ "$should_release" == "true" ]]; then
-                gh release edit "$tag" --repo=zed-industries/zed --draft=false
+                gh release edit "$tag" --repo=$GITHUB_REPOSITORY --draft=false
                 release_published=true
             fi
 
@@ -381,7 +427,10 @@ fn auto_release_preview(deps: &[&NamedJob]) -> (NamedJob, JobOutput) {
         .add_env(("GITHUB_TOKEN", token))
     }
 
-    let (authenticate, token) = steps::authenticate_as_zippy().into();
+    let (authenticate, token) = steps::authenticate_as_zippy()
+        .for_repository(steps::RepositoryTarget::current())
+        .with_permissions([(steps::TokenPermissions::Contents, Level::Write)])
+        .into();
     let auto_release_preview_step = auto_release_preview(&token);
     let release_published = StepOutput::new(&auto_release_preview_step, "release_published");
 
@@ -428,11 +477,12 @@ fn upload_release_assets(deps: &[&NamedJob], bundle: &ReleaseBundleJobs) -> Name
     named::job(
         dependant_job(&deps)
             .runs_on(runners::LINUX_MEDIUM)
+            .permissions(Permissions::default().contents(Level::Write))
             .add_step(download_workflow_artifacts())
             .add_step(steps::script("ls -lR ./artifacts"))
             .add_step(prep_release_artifacts())
             .add_step(
-                steps::script("gh release upload \"$GITHUB_REF_NAME\" release-artifacts/*")
+                steps::script("gh release upload \"$GITHUB_REF_NAME\" --repo=$GITHUB_REPOSITORY release-artifacts/*")
                     .add_env(("GITHUB_TOKEN", vars::GITHUB_TOKEN)),
             ),
     )
@@ -451,6 +501,7 @@ fn create_draft_release() -> NamedJob {
     }
 
     let (authenticate_step, token) = steps::authenticate_as_zippy()
+        .for_repository(steps::RepositoryTarget::current())
         .with_permissions([(TokenPermissions::Contents, Level::Write)])
         .into();
 
@@ -544,7 +595,7 @@ pub(crate) fn push_release_update_notification(
         if [ "$DRAFT_RESULT" == "failure" ]; then
             echo "❌ Draft release creation failed for $TAG: $RUN_URL"
         else
-            RELEASE_URL=$(gh release view "$TAG" --repo=zed-industries/zed --json url -q '.url')
+            RELEASE_URL=$(gh release view "$TAG" --repo=$GITHUB_REPOSITORY --json url -q '.url')
             if [ "$UPLOAD_RESULT" == "failure" ]; then
                 echo "❌ Release asset upload failed for $TAG: $RELEASE_URL"
             elif [ "$UPLOAD_RESULT" == "cancelled" ] || [ "$UPLOAD_RESULT" == "skipped" ]; then

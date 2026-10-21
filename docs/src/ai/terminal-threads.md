@@ -1,21 +1,34 @@
 ---
-title: Terminal Threads - Zed
-description: Run agent CLIs and TUIs directly in terminal-backed threads in Zed.
+title: Terminals - Dez
+description: Run shells, developer tools, and agent CLIs in first-class terminal Surfaces while Dez supervises their lifecycle and attention.
 ---
 
-# Terminal Threads
+# Terminals
 
-Terminal Threads are terminal-backed threads in the [Threads Sidebar](./parallel-agents.md#threads-sidebar). Use them when you want to run an agent CLI or TUI directly in Zed.
+A Terminal is a shell or terminal-native tool running in the **Main Work
+Area**. It remains a normal native Zed Surface: it can sit beside
+files, Workspace Search, diagnostics, and Agent Review.
 
-Terminal Threads are different from [External Agents](./external-agents.md). External Agents integrate with Zed through ACP and render as agent threads. Terminal Threads run the native command-line tool in a terminal that Zed organizes as a thread.
+**Workspaces** is a compact supervisory view of that same computation. It
+adds a Session row after managed ownership or supported agent evidence exists,
+then shows lifecycle, detected agent state, attention, and review evidence.
+Selecting the row focuses or reattaches the owning Terminal; it does not open a
+second terminal inside Workspaces or the Built-in Agent.
 
-## What Zed Owns {#what-zed-owns}
+Use Terminals for shells, build tools, test runners, servers, and native
+agent CLIs or TUIs. [External Agents](./external-agents.md) are different: they
+integrate through ACP and render as Agent Sessions.
 
-Zed owns the thread surface:
+## What Dez Owns {#what-zed-owns}
 
-- the terminal-backed thread in the Threads Sidebar
-- thread grouping by project
-- switching and organizing the terminal session alongside other threads
+Dez owns:
+
+- the native Terminal Surface in the Main Work Area
+- Workspace ownership and supported-agent supervision in Workspaces
+- terminal title, Workspace placement, and lifecycle presentation
+- packaged Host-owned Session identity, detach, reattach, and explicit termination
+- bell and supported structured attention signals
+- evidence-backed review links when observations are available
 
 ## What the CLI Owns {#what-the-cli-owns}
 
@@ -28,31 +41,61 @@ The CLI or TUI running inside the terminal owns its own:
 - skills and instruction files
 - MCP configuration
 
-Zed Agent profiles, Zed Agent tool permissions, Zed Skills, and Zed Agent MCP settings do not automatically apply to Terminal Threads.
+Agent profiles, Agent permissions, Dez Skills, and Agent MCP settings do not
+automatically apply to a native CLI running in a Terminal.
 
-## Opening a Terminal Thread {#opening-a-terminal-thread}
+## Opening a Terminal {#opening-a-terminal-thread}
 
-Open the new-thread menu from the [Agent Panel](./agent-panel.md) using the agent selector button on the left or the `+` icon in the top-right of the panel toolbar, then choose **Terminal**. The Terminal Thread opens in the panel body, just like switching to an agent thread.
+Use **Open Terminal** in the active Workspace, or choose **Open Terminal** from
+**Add to Main Work Area** in the native pane tab strip. The
+terminal opens as Zed's existing `TerminalView` in the Main Work Area; Dez
+does not wrap it in a separate terminal renderer. Workspaces observes that
+Surface and adds the corresponding Workspace-owned Session row after managed
+ownership or supported agent evidence exists.
 
-You can open as many Terminal Threads as you like. Each gets its own entry in the Threads Sidebar.
+Opening a Terminal is intentionally separate from creating a **New Agent
+Session**. The Built-in Agent owns conversations; it is not a terminal
+container.
+You can open multiple terminals and move among them like other IDE Surfaces.
 
-## Terminal Thread Titles {#terminal-thread-titles}
+## Terminal Titles {#terminal-thread-titles}
 
-The terminal title in the toolbar updates automatically to reflect the running shell or process. You can also set a custom name by clicking the title or the pencil icon that appears on hover.
+The terminal title updates automatically to reflect the running shell or
+process. You can set a custom name from its tab or Workspaces row. At normal
+Workspaces widths, hover or keyboard-select the row and use its pencil. At narrow
+widths, use the row's context menu or the selected-row rename action. Editing
+the name does not freeze a running-agent or shell status prefix.
 
-## Notifications {#terminal-thread-notifications}
+The Main Work Area tab and Workspaces row receive the full title. Each visual
+surface truncates it only when its own available width requires it, so tooltips,
+switching, and restored Sessions retain useful context.
 
-When a terminal produces a bell character while not in focus, Zed notifies you the same way it does when an agent finishes: with a visual pop-up and an optional sound. Clicking the notification brings the terminal into focus and clears the indicator.
+## Attention {#terminal-thread-notifications}
+
+The terminal title in the toolbar updates automatically to reflect the running shell or process. You can set a custom name by clicking the title or the pencil icon that appears on hover. In the Threads Sidebar, right-click a Terminal Thread and select **Rename Title**, or select it and press {#kb agent::RenameSelectedThread}.
 
 The same `agent.notify_when_agent_waiting` and `agent.play_sound_when_agent_done` settings apply.
 
-## Closing Terminal Threads {#closing-terminal-threads}
+## Closing and Ending {#closing-terminal-threads}
 
-Unlike agent threads, Terminal Threads are closed rather than archived. They do not go to Thread History. To close one, hover over it in the Threads Sidebar and click the **×** button, or select it and press {#kb agent::ArchiveSelectedThread}.
+Terminals are not archived into Agent History. Hover over a supervised row to
+reveal its state-specific lifecycle action, open its context menu, or
+select it and press {#kb agent::ArchiveSelectedThread}.
+
+The action names its actual effect:
+
+- **Detach Live Terminal** closes an attached Surface while preserving the
+  persistent computation.
+- **End Terminal…** stops the
+  shell and foreground process after a critical confirmation.
+- exited, missing, incompatible, and saved records use **Close** or **Remove**
+  rather than pretending a process can still be terminated.
 
 ## CLI/TUI Setup Notes {#cli-setup}
 
-Some agent CLIs and TUIs can send terminal signals, such as bell notifications or title updates, that Zed uses to show useful context in the sidebar.
+Some agent CLIs and TUIs can send terminal signals, such as bell notifications
+or title updates, that Dez uses to show useful context in Workspaces after the
+tool is recognized as supported agent work.
 
 ### Claude Code Notifications {#claude-code-notifications}
 
@@ -76,7 +119,9 @@ For more, see the [Claude Code documentation](https://code.claude.com/docs/en/te
 
 ### Amp Notifications {#amp-notifications}
 
-Amp updates terminal titles automatically and can also notify you when it needs your attention. To enable notifications in Zed Terminal Threads, add `AMP_FORCE_BEL=1` to your terminal environment settings:
+Amp updates terminal titles automatically and can also notify you when it needs
+your attention. To enable notifications in Dez Terminal Sessions, add
+`AMP_FORCE_BEL=1` to your terminal environment settings:
 
 ```json [settings]
 {
@@ -92,14 +137,18 @@ Restart Amp after adding the environment variable.
 
 ### OpenCode Notifications {#opencode-notifications}
 
-OpenCode can update terminal titles automatically. For Zed notifications, add an OpenCode plugin that emits a terminal bell when OpenCode needs your attention.
+OpenCode can update terminal titles automatically. For Dez attention, add an
+OpenCode plugin that emits a terminal bell when OpenCode needs your attention.
 
-Create `.opencode/plugins/zed-bell.js` in your project, or `~/.config/opencode/plugins/zed-bell.js` to use it globally:
+Create `.opencode/plugins/dez-bell.js` in your Workspace, or
+`~/.config/opencode/plugins/dez-bell.js` to use it globally:
 
 ```js
-export const ZedBell = async () => {
+export const DezBell = async () => {
   return {
     event: async ({ event }) => {
+      if (process.env.OPENCODE_CLIENT === "acp") return;
+
       if (event.type === "session.idle" || event.type === "permission.asked") {
         process.stdout.write("\x07");
       }
@@ -112,7 +161,9 @@ Restart OpenCode after adding the plugin.
 
 ### Pi Notifications {#pi-notifications}
 
-Pi can use an extension to emit a notification when it finishes a turn. Create `.pi/extensions/zed-bell.ts` in your project, or `~/.pi/agent/extensions/zed-bell.ts` to use it globally:
+Pi can use an extension to emit a notification when it finishes a turn. Create
+`.pi/extensions/dez-bell.ts` in your Workspace, or
+`~/.pi/agent/extensions/dez-bell.ts` to use it globally:
 
 ```ts
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -128,7 +179,9 @@ Restart Pi after adding the extension, or run `/reload` if the extension is in o
 
 ### Codex Terminal Titles {#codex-terminal-titles}
 
-Codex can update the terminal title as it works, which Zed uses to show useful context for Codex Terminal Threads in the sidebar, such as the project, current status, branch, model, or task progress.
+Codex can update the terminal title as it works. Dez uses that title as useful
+Workspaces context, such as the Workspace, current state, branch, model, or
+task progress.
 
 To configure this from within Codex, run `/title` and use the picker to choose which fields appear and in what order. Codex saves the selection to `tui.terminal_title` in `~/.codex/config.toml`. You can also edit it directly:
 
@@ -137,15 +190,18 @@ To configure this from within Codex, run `/title` and use the picker to choose w
 terminal_title = ["spinner", "project-name", "run-state", "thread-title"]
 ```
 
-## Credentials and Remote Projects {#credentials-and-remote-projects}
+## Credentials and Remote Workspaces {#credentials-and-remote-projects}
 
 Credentials come from the terminal session and the CLI/TUI running inside it.
 
-In remote projects, the CLI may read the remote shell environment and remote config files. In local Terminal Threads, it reads the local shell environment and local config files. Zed does not copy API keys from LLM provider settings into Terminal Threads.
+In remote Workspaces, the CLI may read the remote shell environment and remote
+configuration files. In local Terminals, it reads the local shell environment
+and local configuration files. Dez does not copy API keys from model-provider
+settings into Terminals.
 
-## When to Use Terminal Threads {#when-to-use-terminal-threads}
+## When to Use Terminals {#when-to-use-terminal-threads}
 
-Use Terminal Threads when:
+Use Terminals when:
 
 - you want the tool's native CLI/TUI experience
 - no ACP integration exists

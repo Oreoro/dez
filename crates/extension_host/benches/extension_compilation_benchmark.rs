@@ -4,7 +4,7 @@ use criterion::{BatchSize, BenchmarkId, Criterion, criterion_group, criterion_ma
 use extension::{
     ExtensionCapability, ExtensionHostProxy, ExtensionLibraryKind, ExtensionManifest,
     LanguageServerManifestEntry, LibManifestEntry, SchemaVersion,
-    extension_builder::{CompileExtensionOptions, ExtensionBuilder},
+    extension_builder::{CompilationConcurrency, CompileExtensionOptions, ExtensionBuilder},
 };
 use extension_host::wasm_host::WasmHost;
 use fs::{Fs, RealFs};
@@ -76,7 +76,10 @@ fn wasm_bytes(cx: &TestAppContext, manifest: &mut ExtensionManifest, fs: Arc<dyn
         .block_on(extension_builder.compile_extension(
             &path,
             manifest,
-            CompileExtensionOptions { release: true },
+            CompileExtensionOptions {
+                release: true,
+                max_concurrency: CompilationConcurrency::Unbounded,
+            },
             fs,
         ))
         .unwrap();
@@ -85,7 +88,7 @@ fn wasm_bytes(cx: &TestAppContext, manifest: &mut ExtensionManifest, fs: Arc<dyn
 
 fn extension_builder() -> ExtensionBuilder {
     let user_agent = format!(
-        "dez Extension CLI/{} ({}; {})",
+        "Zed Extension CLI/{} ({}; {})",
         env!("CARGO_PKG_VERSION"),
         std::env::consts::OS,
         std::env::consts::ARCH

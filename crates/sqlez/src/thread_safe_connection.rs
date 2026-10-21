@@ -14,8 +14,11 @@ use thread_local::ThreadLocal;
 use crate::{connection::Connection, domain::Migrator, util::UnboundedSyncSender};
 
 const MIGRATION_RETRIES: usize = 10;
-const CONNECTION_INITIALIZE_RETRIES: usize = 50;
-const CONNECTION_INITIALIZE_RETRY_DELAY: Duration = Duration::from_millis(1);
+const CONNECTION_INITIALIZE_RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_millis(50),
+    Duration::from_millis(100),
+    Duration::from_millis(250),
+];
 
 type QueuedWrite = Box<dyn 'static + Send + FnOnce()>;
 type WriteQueue = Box<dyn 'static + Send + Sync + Fn(QueuedWrite)>;
@@ -202,35 +205,38 @@ impl ThreadSafeConnection {
 
         if let Some(initialize_query) = connection_initialize_query {
             let mut last_error = None;
-            let initialized = (0..CONNECTION_INITIALIZE_RETRIES).any(|attempt| {
+            let mut initialized = false;
+            for (attempt, delay) in CONNECTION_INITIALIZE_RETRY_DELAYS.iter().enumerate() {
                 match connection
                     .exec(initialize_query)
                     .and_then(|mut statement| statement())
                 {
-                    Ok(()) => true,
+                    Ok(()) => {
+                        initialized = true;
+                        break;
+                    }
                     Err(err)
                         if is_schema_lock_error(&err)
-                            && attempt + 1 < CONNECTION_INITIALIZE_RETRIES =>
+                            && attempt + 1 < CONNECTION_INITIALIZE_RETRY_DELAYS.len() =>
                     {
                         last_error = Some(err);
-                        thread::sleep(CONNECTION_INITIALIZE_RETRY_DELAY);
-                        false
+                        thread::sleep(*delay);
                     }
                     Err(err) => {
-                        panic!(
-                            "Initialize query failed to execute: {}\n\nCaused by:\n{err:#}",
-                            initialize_query
-                        )
+                        last_error = Some(err);
+                        break;
                     }
                 }
-            });
+            }
 
             if !initialized {
-                let err = last_error
-                    .expect("connection initialization retries should record the last error");
-                panic!(
-                    "Initialize query failed to execute after retries: {}\n\nCaused by:\n{err:#}",
-                    initialize_query
+                // A locked connection initialization must not take down the
+                // editor. The PRAGMAs are defensive; continuing without them is
+                // safer than aborting every later file open.
+                log::error!(
+                    "Initialize query failed to execute: {}\n\nCaused by:\n{:#}",
+                    initialize_query,
+                    last_error.map(|err| format!("{err:#}")).unwrap_or_default()
                 );
             }
         }

@@ -109,13 +109,13 @@ impl Vim {
                 for selection in &display_selections {
                     let range = match &target {
                         SurroundsType::Object(object, around) => {
-                            object.range(&display_map, selection.clone(), *around, None)
+                            object.range(&display_map, *selection, *around, None)
                         }
                         SurroundsType::Motion(motion) => {
                             motion
                                 .range(
                                     &display_map,
-                                    selection.clone(),
+                                    *selection,
                                     count,
                                     &text_layout_details,
                                     forced_motion,
@@ -210,9 +210,7 @@ impl Vim {
 
                 for selection in &display_selections {
                     let start = selection.start.to_offset(&display_map, Bias::Left);
-                    if let Some(range) =
-                        pair_object.range(&display_map, selection.clone(), true, None)
-                    {
+                    if let Some(range) = pair_object.range(&display_map, *selection, true, None) {
                         // If the current parenthesis object is single-line,
                         // then we need to filter whether it is the current line or not
                         if !pair_object.is_multiline() {
@@ -420,13 +418,14 @@ impl Vim {
 
                     for selection in &selections {
                         let start = selection.start.to_offset(&display_map, Bias::Left);
-                        let in_range = object
-                            .range(&display_map, selection.clone(), true, None)
-                            .filter(|range| {
-                                object.is_multiline()
-                                    || (selection.start.row() == range.start.row()
-                                        && selection.end.row() == range.end.row())
-                            });
+                        let in_range =
+                            object
+                                .range(&display_map, *selection, true, None)
+                                .filter(|range| {
+                                    object.is_multiline()
+                                        || (selection.start.row() == range.start.row()
+                                            && selection.end.row() == range.end.row())
+                                });
                         let Some(range) = in_range else {
                             updated_cursor_ranges.push(start..start);
                             matched_pair_anchors.push(None);
@@ -510,14 +509,14 @@ impl Vim {
             // below could be done.
             //
             // ```
-            // (< name:ˇ'dez' >)
+            // (< name:ˇ'Zed' >)
             // <[ name:ˇ'DeltaDB' ]>
             // ```
             //
             // After using `csb{`:
             //
             // ```
-            // (ˇ{ name:'dez' })
+            // (ˇ{ name:'Zed' })
             // <ˇ{ name:'DeltaDB' }>
             // ```
             if let Some(selection) = selections.first() {
@@ -559,7 +558,7 @@ impl Vim {
                 // For now, only primary selection is used to select the bracket/quote pair. It might be weird
                 // if multi-select resulted in different quote kinds being replaced for different selections.
                 // any_pair uses the same logic, so this should be consistent across {Any,Mini}{Quotes,Brackets}
-                let selection = selections.first()?.clone();
+                let selection = *selections.first()?;
                 let range = object.range(&display_map, selection, true, None)?;
                 let start_offset = range.start.to_offset(&display_map, Bias::Left);
                 let (pair_char, _) = display_map.buffer_chars_at(start_offset).next()?;
@@ -1354,13 +1353,13 @@ mod test {
         cx.simulate_keystrokes("c s b [");
         cx.assert_state(indoc! {"ˇ[ bracketed ]"}, Mode::Normal);
 
-        cx.set_state(indoc! {"(< name: ˇ'dez' >)"}, Mode::Normal);
+        cx.set_state(indoc! {"(< name: ˇ'Zed' >)"}, Mode::Normal);
         cx.simulate_keystrokes("c s b }");
-        cx.assert_state(indoc! {"(ˇ{ name: 'dez' })"}, Mode::Normal);
+        cx.assert_state(indoc! {"(ˇ{ name: 'Zed' })"}, Mode::Normal);
 
         cx.set_state(
             indoc! {"
-            (< name: ˇ'dez' >)
+            (< name: ˇ'Zed' >)
             (< nˇame: 'DeltaDB' >)
         "},
             Mode::Normal,
@@ -1368,7 +1367,7 @@ mod test {
         cx.simulate_keystrokes("c s b {");
         cx.set_state(
             indoc! {"
-            (ˇ{ name: 'dez' })
+            (ˇ{ name: 'Zed' })
             (ˇ{ name: 'DeltaDB' })
         "},
             Mode::Normal,
@@ -1404,13 +1403,13 @@ mod test {
         cx.simulate_keystrokes("c s b [");
         cx.assert_state(indoc! {"ˇ[ bracketed ]"}, Mode::Normal);
 
-        cx.set_state(indoc! {"(<ˇdez>)"}, Mode::Normal);
+        cx.set_state(indoc! {"(<ˇZed>)"}, Mode::Normal);
         cx.simulate_keystrokes("c s b )");
-        cx.assert_state(indoc! {"(ˇ(dez))"}, Mode::Normal);
+        cx.assert_state(indoc! {"(ˇ(Zed))"}, Mode::Normal);
 
         cx.set_state(
             indoc! {"
-                (<ˇdez>)
+                (<ˇZed>)
                 (<ˇDeltaDB>)
             "},
             Mode::Normal,
@@ -1418,7 +1417,7 @@ mod test {
         cx.simulate_keystrokes("c s b (");
         cx.assert_state(
             indoc! {"
-                (ˇ( dez ))
+                (ˇ( Zed ))
                 (ˇ( DeltaDB ))
             "},
             Mode::Normal,

@@ -8,7 +8,7 @@ use workspace::AppState;
 use crate::div_inspector::DivInspector;
 
 pub fn init(app_state: Arc<AppState>, cx: &mut App) {
-    cx.on_action(|_: &dez_actions::dev::ToggleInspector, cx| {
+    cx.on_action(|_: &zed_actions::dev::ToggleInspector, cx| {
         let Some(active_window) = cx
             .active_window()
             .context("no active window to toggle inspector")
@@ -26,8 +26,9 @@ pub fn init(app_state: Arc<AppState>, cx: &mut App) {
 
     // Project used for editor buffers with LSP support
     let project = project::Project::local(
-        app_state.http_client.clone(),
+        app_state.client.clone(),
         app_state.node_runtime.clone(),
+        app_state.user_store.clone(),
         app_state.languages.clone(),
         app_state.fs.clone(),
         None,
@@ -108,10 +109,11 @@ fn render_inspector_id(inspector_id: &InspectorElementId, cx: &App) -> Div {
     let source_location = inspector_id.path.source_location;
     // For unknown reasons, for some elements the path is absolute.
     let source_location_string = source_location.to_string();
-    let source_location_string = source_location_string
-        .strip_prefix(env!("ZED_REPO_DIR"))
-        .and_then(|s| s.strip_prefix("/"))
-        .map(|s| s.to_string())
+    // Resolve the checkout at runtime rather than baking it in at build time
+    // (which corgi rejects, and which would be wrong in any other worktree).
+    let source_location_string = util::dev_repo_root()
+        .and_then(|root| Path::new(&source_location_string).strip_prefix(root).ok())
+        .map(|path| path.display().to_string())
         .unwrap_or(source_location_string);
 
     v_flex()
@@ -138,9 +140,9 @@ fn render_inspector_id(inspector_id: &InspectorElementId, cx: &App) -> Div {
                 .font_buffer(cx)
                 .text_xs()
                 .child(source_location_string)
-                .tooltip(Tooltip::text("Click to open by running dez CLI"))
+                .tooltip(Tooltip::text("Click to open by running the Dez CLI"))
                 .on_click(move |_, _window, cx| {
-                    cx.background_spawn(open_dez_source_location(source_location))
+                    cx.background_spawn(open_zed_source_location(source_location))
                         .detach_and_log_err(cx);
                 }),
         )
@@ -156,10 +158,12 @@ fn render_inspector_id(inspector_id: &InspectorElementId, cx: &App) -> Div {
         )
 }
 
-async fn open_dez_source_location(
+async fn open_zed_source_location(
     location: &'static std::panic::Location<'static>,
 ) -> anyhow::Result<()> {
-    let mut path = Path::new(env!("ZED_REPO_DIR")).to_path_buf();
+    let mut path = util::dev_repo_root()
+        .context("locating the zed checkout to open sources from")?
+        .to_path_buf();
     path.push(Path::new(location.file()));
     let path_arg = format!(
         "{}:{}:{}",
@@ -168,15 +172,15 @@ async fn open_dez_source_location(
         location.column()
     );
 
-    let output = new_command("dez")
+    let output = new_command("zed")
         .arg(&path_arg)
         .output()
         .await
-        .with_context(|| format!("running dez to open {path_arg} failed"))?;
+        .with_context(|| format!("running zed to open {path_arg} failed"))?;
 
     if !output.status.success() {
         Err(anyhow!(
-            "running dez to open {path_arg} failed with stderr: {}",
+            "running zed to open {path_arg} failed with stderr: {}",
             String::from_utf8_lossy(&output.stderr)
         ))
     } else {

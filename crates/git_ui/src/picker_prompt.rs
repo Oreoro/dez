@@ -4,8 +4,7 @@ use fuzzy::{StringMatch, StringMatchCandidate};
 use core::cmp;
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, InteractiveElement,
-    IntoElement, ParentElement, Render, SharedString, Styled, Subscription, Task, WeakEntity,
-    Window, rems,
+    IntoElement, ParentElement, Render, SharedString, Subscription, Task, WeakEntity, Window, rems,
 };
 use picker::{Picker, PickerDelegate};
 use std::sync::Arc;
@@ -15,12 +14,11 @@ use workspace::{ModalView, Workspace};
 
 pub struct PickerPrompt {
     pub picker: Entity<Picker<PickerPromptDelegate>>,
-    rem_width: f32,
     _subscription: Subscription,
 }
 
 pub fn prompt(
-    prompt: impl Into<SharedString>,
+    prompt: &str,
     options: Vec<SharedString>,
     workspace: WeakEntity<Workspace>,
     window: &mut Window,
@@ -31,12 +29,12 @@ pub fn prompt(
     } else if options.len() == 1 {
         return Task::ready(Some(0));
     }
-    let prompt = prompt.into();
+    let prompt = prompt.to_string().into();
 
     window.spawn(cx, async move |cx| {
         // Modal branch picker has a longer trailoff than a popover one.
         let (tx, rx) = oneshot::channel();
-        let delegate = PickerPromptDelegate::new(prompt.to_string().into(), options, tx, 70);
+        let delegate = PickerPromptDelegate::new(prompt, options, tx, 70);
 
         workspace
             .update_in(cx, |workspace, window, cx| {
@@ -57,11 +55,11 @@ impl PickerPrompt {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker =
+            cx.new(|cx| Picker::uniform_list(delegate, window, cx).initial_width(rems(rem_width)));
         let _subscription = cx.subscribe(&picker, |_, _, _, cx| cx.emit(DismissEvent));
         Self {
             picker,
-            rem_width,
             _subscription,
         }
     }
@@ -78,7 +76,6 @@ impl Focusable for PickerPrompt {
 impl Render for PickerPrompt {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         v_flex()
-            .w(rems(self.rem_width))
             .child(self.picker.clone())
             .on_mouse_down_out(cx.listener(|this, _, window, cx| {
                 this.picker.update(cx, |this, cx| {
@@ -117,6 +114,10 @@ impl PickerPromptDelegate {
 
 impl PickerDelegate for PickerPromptDelegate {
     type ListItem = ListItem;
+
+    fn name() -> &'static str {
+        "picker prompt"
+    }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
         self.prompt.clone()

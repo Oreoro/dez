@@ -1,9 +1,12 @@
 use gpui::{App, actions};
 use workspace::Workspace;
 
+pub mod markdown_preview_settings;
 pub mod markdown_preview_view;
 
-pub use dez_actions::preview::markdown::{OpenPreview, OpenPreviewToTheSide};
+pub use zed_actions::preview::markdown::{OpenPreview, OpenPreviewToTheSide};
+
+use crate::markdown_preview_view::MarkdownPreviewView;
 
 actions!(
     markdown,
@@ -27,11 +30,16 @@ actions!(
         /// Scrolls to the bottom of the markdown preview.
         ScrollToBottom,
         /// Opens a following markdown preview that syncs with the editor.
-        OpenFollowingPreview
+        OpenFollowingPreview,
+        /// Closes the markdown preview and returns focus to the source editor.
+        CloseAndReturnToEditor
     ]
 );
 
 pub fn init(cx: &mut App) {
+    workspace::register_project_item::<MarkdownPreviewView>(cx);
+    workspace::register_serializable_item::<MarkdownPreviewView>(cx);
+
     cx.observe_new(|workspace: &mut Workspace, window, cx| {
         let Some(window) = window else {
             return;

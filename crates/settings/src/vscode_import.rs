@@ -4,10 +4,11 @@ use collections::HashMap;
 use fs::Fs;
 use gpui::Rgba;
 use paths::{cursor_settings_file_paths, vscode_settings_file_paths};
+use serde::Deserialize;
 use serde_json::{Map, Value};
 use std::{
     num::{NonZeroU32, NonZeroUsize},
-    path::Path,
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -98,6 +99,15 @@ impl VsCodeSettings {
             .map(|s| s.to_owned())
     }
 
+    fn read_window_title_format(&self) -> Option<String> {
+        self.read_string("window.title")
+            .map(|template| translate_vscode_window_title_format(&template))
+            // If every placeholder is dropped during translation, keep Zed's
+            // default title behavior instead of importing a template that
+            // renders as nothing but whitespace.
+            .filter(|template| !template.trim().is_empty())
+    }
+
     fn read_bool(&self, setting: &str) -> Option<bool> {
         self.read_value(setting).and_then(|v| v.as_bool())
     }
@@ -171,12 +181,22 @@ impl VsCodeSettings {
 
     pub fn settings_content(&self) -> SettingsContent {
         SettingsContent {
+            agent: self.agent_settings_content(),
+            agent_servers: None,
+            accessibility: None,
+            audio: None,
+            auto_connect: None,
             auto_update: None,
             base_keymap: Some(BaseKeymapContent::VSCode),
-            dez_sidebar: None,
+            calls: None,
+            collaboration_panel: None,
+            credentials_url: None,
+            debugger: None,
             diagnostics: None,
+            design_system: None,
             editor: self.editor_settings_content(),
             extension: ExtensionSettingsContent::default(),
+            call_hierarchy: None,
             file_finder: None,
             git: self.git_settings_content(),
             git_panel: self.git_panel_settings_content(),
@@ -187,30 +207,41 @@ impl VsCodeSettings {
             helix_mode: None,
             hide_mouse: None,
             image_viewer: None,
+            markdown_preview: None,
+            agent_ui: None,
             journal: None,
+            language_models: None,
             line_indicator_format: None,
             log: None,
-            markdown: None,
-            message_editor: None,
+            multiplexer: None,
             node: self.node_binary_settings(),
 
             outline_panel: self.outline_panel_settings_content(),
+            pane_grid: None,
             preview_tabs: self.preview_tabs_settings_content(),
             project: self.project_settings_content(),
             project_panel: self.project_panel_settings_content(),
             proxy: self.read_string("http.proxy"),
+            reduce_motion: self.read_enum("workbench.reduceMotion", |s| match s {
+                "on" => Some(ReduceMotionMode::On),
+                "off" => Some(ReduceMotionMode::Off),
+                _ => None,
+            }),
             remote: RemoteSettingsContent::default(),
             repl: None,
+            server_url: None,
             session: None,
+            session_rail: None,
+            sidebar: None,
             status_bar: self.status_bar_settings_content(),
             tab_bar: self.tab_bar_settings_content(),
             tabs: self.item_settings_content(),
+            telemetry: self.telemetry_settings_content(),
             terminal: self.terminal_settings_content(),
-            agent_threads: None,
             theme: Box::new(self.theme_settings_content()),
-            title_bar: None,
             vim: None,
             vim_mode: None,
+            workspace_bar: None,
             workspace: self.workspace_settings_content(),
             which_key: None,
             modeline_lines: None,
@@ -219,9 +250,19 @@ impl VsCodeSettings {
         }
     }
 
+    fn agent_settings_content(&self) -> Option<AgentSettingsContent> {
+        let enabled = self.read_bool("chat.agent.enabled");
+        skip_default(AgentSettingsContent {
+            enabled: enabled,
+            button: enabled,
+            ..Default::default()
+        })
+    }
+
     fn editor_settings_content(&self) -> EditorSettingsContent {
         EditorSettingsContent {
             auto_signature_help: self.read_bool("editor.parameterHints.enabled"),
+            language_detection: self.read_bool("workbench.editor.languageDetection"),
             autoscroll_on_clicks: None,
             cursor_blink: self.read_enum("editor.cursorBlinking", |s| match s {
                 "blink" | "phase" | "expand" | "smooth" => Some(true),
@@ -235,6 +276,7 @@ impl VsCodeSettings {
                 "underline" | "underline-thin" => Some(CursorShape::Underline),
                 _ => None,
             }),
+            cursor_animation: None,
             current_line_highlight: self.read_enum("editor.renderLineHighlight", |s| match s {
                 "gutter" => Some(CurrentLineHighlight::Gutter),
                 "line" => Some(CurrentLineHighlight::Line),
@@ -321,13 +363,14 @@ impl VsCodeSettings {
             }),
             min_line_number_digits: None,
             runnables: None,
-            bookmarks: None,
             breakpoints: None,
+            bookmarks: None,
             folds: self.read_enum("editor.showFoldingControls", |s| match s {
                 "always" | "mouseover" => Some(true),
                 "never" => Some(false),
                 _ => None,
             }),
+            git_gutter_width: None,
         })
     }
 
@@ -354,6 +397,7 @@ impl VsCodeSettings {
     fn search_content(&self) -> Option<SearchSettingsContent> {
         skip_default(SearchSettingsContent {
             include_ignored: self.read_bool("search.useIgnoreFiles"),
+            search_on_type: self.read_bool("search.searchOnType"),
             ..Default::default()
         })
     }
@@ -491,6 +535,7 @@ impl VsCodeSettings {
     fn project_settings_content(&self) -> ProjectSettingsContent {
         ProjectSettingsContent {
             all_languages: AllLanguageSettingsContent {
+                edit_predictions: self.edit_predictions_settings_content(),
                 defaults: self.default_language_settings_content(),
                 languages: Default::default(),
                 file_types: self.file_types(),
@@ -499,8 +544,11 @@ impl VsCodeSettings {
             lsp: Default::default(),
             terminal: None,
             dap: Default::default(),
+            context_servers: self.context_servers(),
+            context_server_timeout: None,
             load_direnv: None,
             git_hosting_providers: None,
+            disable_ai: None,
         }
     }
 
@@ -522,6 +570,7 @@ impl VsCodeSettings {
                 ..Default::default()
             }),
             debuggers: None,
+            edit_predictions_disabled_in: None,
             enable_language_server: None,
             ensure_final_newline_on_save: self.read_bool("files.insertFinalNewline"),
             line_ending: self.read_enum("files.eol", |s| match s {
@@ -533,9 +582,15 @@ impl VsCodeSettings {
             extend_comment_on_newline: None,
             extend_list_on_newline: None,
             indent_list_on_tab: None,
-            format_on_save: self.read_bool("editor.guides.formatOnSave").map(|b| {
-                if b {
-                    FormatOnSave::On
+            // In VS Code, `editor.formatOnSaveMode` only applies when `editor.formatOnSave` is enabled.
+            format_on_save: self.read_bool("editor.formatOnSave").map(|enabled| {
+                if enabled {
+                    self.read_enum("editor.formatOnSaveMode", |s| match s {
+                        "modificationsIfAvailable" => Some(FormatOnSave::ModificationsIfAvailable),
+                        "modifications" => Some(FormatOnSave::Modifications),
+                        _ => None,
+                    })
+                    .unwrap_or(FormatOnSave::On)
                 } else {
                     FormatOnSave::Off
                 }
@@ -567,6 +622,7 @@ impl VsCodeSettings {
             show_completion_documentation: None,
             colorize_brackets: self.read_bool("editor.bracketPairColorization.enabled"),
             show_completions_on_input: self.read_bool("editor.suggestOnTriggerCharacters"),
+            show_edit_predictions: self.read_bool("editor.inlineSuggest.enabled"),
             show_whitespaces: self.read_enum("editor.renderWhitespace", |s| {
                 Some(match s {
                     "boundary" => ShowWhitespaceSetting::Boundary,
@@ -608,21 +664,48 @@ impl VsCodeSettings {
         }
     }
 
-    fn file_types(&self) -> Option<HashMap<Arc<str>, ExtendingVec<String>>> {
+    fn file_types(&self) -> Option<FileTypeMap> {
         // vscodes file association map is inverted from ours, so we flip the mapping before merging
-        let mut associations: HashMap<Arc<str>, ExtendingVec<String>> = HashMap::default();
+        let mut associations: HashMap<Arc<str>, ExtendingSet<String>> = HashMap::default();
         let map = self.read_value("files.associations")?.as_object()?;
         for (k, v) in map {
             let Some(v) = v.as_str() else { continue };
-            associations.entry(v.into()).or_default().0.push(k.clone());
+            associations
+                .entry(v.into())
+                .or_default()
+                .0
+                .insert(k.clone());
         }
-        skip_default(associations)
+        skip_default(FileTypeMap(associations))
+    }
+
+    fn edit_predictions_settings_content(&self) -> Option<EditPredictionSettingsContent> {
+        let disabled_globs = self
+            .read_value("cursor.general.globalCursorIgnoreList")?
+            .as_array()?;
+
+        skip_default(EditPredictionSettingsContent {
+            disabled_globs: skip_default(
+                disabled_globs
+                    .iter()
+                    .filter_map(|glob| glob.as_str())
+                    .map(|s| s.to_string())
+                    .collect(),
+            ),
+            ..Default::default()
+        })
     }
 
     fn outline_panel_settings_content(&self) -> Option<OutlinePanelSettingsContent> {
         skip_default(OutlinePanelSettingsContent {
             file_icons: self.read_bool("outline.icons"),
-            folder_icons: self.read_bool("outline.icons"),
+            folder_indicator: self.read_bool("outline.icons").map(|icons| {
+                if icons {
+                    FolderIndicator::Icon
+                } else {
+                    FolderIndicator::Chevron
+                }
+            }),
             git_status: self.read_bool("git.decorations.enabled"),
             ..Default::default()
         })
@@ -649,6 +732,38 @@ impl VsCodeSettings {
             }),
             ..Default::default()
         })
+    }
+
+    fn context_servers(&self) -> HashMap<Arc<str>, ContextServerSettingsContent> {
+        #[derive(Deserialize)]
+        struct VsCodeContextServerCommand {
+            command: PathBuf,
+            args: Option<Vec<String>>,
+            env: Option<HashMap<String, String>>,
+            // note: we don't support envFile and type
+        }
+        let Some(mcp) = self.read_value("mcp").and_then(|v| v.as_object()) else {
+            return Default::default();
+        };
+        mcp.iter()
+            .filter_map(|(k, v)| {
+                Some((
+                    k.clone().into(),
+                    ContextServerSettingsContent::Stdio {
+                        enabled: true,
+                        remote: false,
+                        command: serde_json::from_value::<VsCodeContextServerCommand>(v.clone())
+                            .ok()
+                            .map(|cmd| ContextServerCommand {
+                                path: cmd.command,
+                                args: cmd.args.unwrap_or_default(),
+                                env: cmd.env,
+                                timeout: None,
+                            })?,
+                    },
+                ))
+            })
+            .collect()
     }
 
     fn item_settings_content(&self) -> Option<ItemSettingsContent> {
@@ -719,6 +834,7 @@ impl VsCodeSettings {
             cursor_position_button: None,
             line_endings_button: None,
             active_encoding_button: None,
+            pending_keystrokes_indicator: None,
         })
     }
 
@@ -728,12 +844,13 @@ impl VsCodeSettings {
             auto_reveal_entries: self.read_bool("explorer.autoReveal"),
             bold_folder_labels: None,
             button: None,
+            title_tooltip_delay: None,
             default_width: None,
             dock: None,
             drag_and_drop: None,
             entry_spacing: None,
             file_icons: None,
-            folder_icons: None,
+            folder_indicator: None,
             git_status: self.read_bool("git.decorations.enabled"),
             hide_gitignore: self.read_bool("explorer.excludeGitIgnore"),
             hide_hidden: None,
@@ -780,6 +897,22 @@ impl VsCodeSettings {
         skip_default(project_panel_settings)
     }
 
+    fn telemetry_settings_content(&self) -> Option<TelemetrySettingsContent> {
+        self.read_enum("telemetry.telemetryLevel", |level| {
+            let (metrics, diagnostics) = match level {
+                "all" => (true, true),
+                "error" | "crash" => (false, true),
+                "off" => (false, false),
+                _ => return None,
+            };
+            Some(TelemetrySettingsContent {
+                metrics: Some(metrics),
+                diagnostics: Some(diagnostics),
+                anthropic_retention: None,
+            })
+        })
+    }
+
     fn terminal_settings_content(&self) -> Option<TerminalSettingsContent> {
         let (font_family, font_fallbacks) = self.read_fonts("terminal.integrated.fontFamily");
         skip_default(TerminalSettingsContent {
@@ -804,6 +937,7 @@ impl VsCodeSettings {
             default_height: None,
             default_width: None,
             dock: None,
+            starts_open: None,
             font_fallbacks,
             font_family,
             font_features: None,
@@ -840,7 +974,6 @@ impl VsCodeSettings {
             toolbar: None,
             show_count_badge: None,
             flexible: None,
-            dedicated_ssh_connection: None,
         })
     }
 
@@ -859,7 +992,7 @@ impl VsCodeSettings {
             .map(|v| {
                 v.iter()
                     .map(|(k, v)| (k.clone(), v.to_string()))
-                    // dez does not support substitutions, so this can break env vars
+                    // zed does not support substitutions, so this can break env vars
                     .filter(|(_, v)| !v.contains('$'))
                     .collect()
             });
@@ -891,10 +1024,11 @@ impl VsCodeSettings {
             buffer_font_weight: self.read_f32("editor.fontWeight").map(FontWeightContent),
             buffer_line_height: None,
             buffer_font_features: None,
+            agent_ui_font_family: None,
+            agent_ui_font_size: None,
+            agent_buffer_font_family: None,
+            agent_buffer_font_size: None,
             git_commit_buffer_font_size: None,
-            markdown_preview_font_family: None,
-            markdown_preview_code_font_family: None,
-            markdown_preview_theme: None,
             theme: None,
             icon_theme: None,
             ui_density: None,
@@ -907,6 +1041,7 @@ impl VsCodeSettings {
     fn workspace_settings_content(&self) -> WorkspaceSettingsContent {
         WorkspaceSettingsContent {
             active_pane_modifiers: self.active_pane_modifiers(),
+            accessible_mode: None,
             text_rendering_mode: None,
             autosave: self.read_enum("files.autoSave", |s| match s {
                 "off" => Some(AutosaveSetting::Off),
@@ -921,9 +1056,9 @@ impl VsCodeSettings {
                 "onWindowChange" => Some(AutosaveSetting::OnWindowChange),
                 _ => None,
             }),
-            bottom_dock_layout: None,
             centered_layout: None,
             cli_default_open_behavior: None,
+            default_open_behavior: None,
             close_on_file_delete: None,
             close_panel_on_toggle: None,
             command_aliases: Default::default(),
@@ -933,6 +1068,7 @@ impl VsCodeSettings {
                 _ => None,
             }),
             drop_target_size: None,
+            card_gap: None,
             // workbench.editor.limit contains "enabled", "value", and "perEditorGroup"
             // our semantics match if those are set to true, some N, and true respectively.
             // we'll ignore "perEditorGroup" for now since we only support a global max
@@ -942,16 +1078,29 @@ impl VsCodeSettings {
             } else {
                 None
             },
+            on_new_window: None,
             on_last_window_closed: None,
             pane_split_direction_horizontal: None,
             pane_split_direction_vertical: None,
             resize_all_panels_in_dock: None,
             restore_on_file_reopen: self.read_bool("workbench.editor.restoreViewState"),
+            reveal_if_open: self.read_bool("workbench.editor.revealIfOpen"),
             restore_on_startup: None,
+            startup_intent: None,
             window_decorations: None,
+            show_call_status_icon: None,
             use_system_path_prompts: self.read_bool("files.simpleDialog.enable").map(|b| !b),
             use_system_prompts: None,
             use_system_window_tabs: self.read_bool("window.nativeTabs"),
+            fullscreen_mode: self.read_bool("window.nativeFullScreen").map(|b| {
+                if b {
+                    FullscreenMode::Native
+                } else {
+                    FullscreenMode::Simple
+                }
+            }),
+            window_title_format: self.read_window_title_format(),
+            window_title_separator: self.read_string("window.titleSeparator"),
             when_closing_with_no_tabs: self.read_bool("window.closeWhenEmpty").map(|b| {
                 if b {
                     CloseWindowWhenNoItems::CloseWindow
@@ -980,6 +1129,7 @@ impl VsCodeSettings {
     fn worktree_settings_content(&self) -> WorktreeSettingsContent {
         WorktreeSettingsContent {
             prevent_sharing_in_public_channels: false,
+            file_scan_depth: None,
             file_scan_exclusions: self
                 .read_value("files.watcherExclude")
                 .and_then(|v| v.as_array())
@@ -988,7 +1138,8 @@ impl VsCodeSettings {
                         .filter_map(|n| n.as_str().map(str::to_owned))
                         .collect::<Vec<_>>()
                 })
-                .filter(|r| !r.is_empty()),
+                .filter(|r| !r.is_empty())
+                .map(SplicingVec::from),
             file_scan_inclusions: self
                 .read_value("files.watcherInclude")
                 .and_then(|v| v.as_array())
@@ -1020,10 +1171,142 @@ impl VsCodeSettings {
     }
 }
 
+fn translate_vscode_window_title_format(template: &str) -> String {
+    let mut translated = String::new();
+    let mut start = 0;
+
+    // Workspace owns the runtime template parser, so the VS Code importer keeps
+    // its own small placeholder scan here instead of depending on that crate.
+    while let Some(offset) = template[start..].find("${") {
+        let variable_start = start + offset;
+        translated.push_str(&template[start..variable_start]);
+
+        let content_start = variable_start + 2;
+        let Some(content_end_offset) = template[content_start..].find('}') else {
+            translated.push_str(&template[variable_start..]);
+            return translated;
+        };
+
+        let content_end = content_start + content_end_offset;
+        let variable = &template[content_start..content_end];
+        match variable {
+            "projectName" | "fileName" | "filePath" | "relativePath" | "fileStem"
+            | "remoteHost" | "appName" | "branch" | "separator" => {
+                translated.push_str(&template[variable_start..=content_end]);
+            }
+            // Keep VS Code alias support in the importer so native Zed settings
+            // only expose the documented placeholder names.
+            "rootName" => translated.push_str("${projectName}"),
+            "activeEditorShort" => translated.push_str("${fileName}"),
+            "activeEditorMedium" => translated.push_str("${relativePath}"),
+            "activeEditorLong" => translated.push_str("${filePath}"),
+            "activeRepositoryBranchName" => translated.push_str("${branch}"),
+            // VS Code's `${remoteName}` is a provider label such as `SSH`, while
+            // Zed's `${remoteName}` resolves to the connection's name or host,
+            // so the token is dropped rather than imported with mismatched
+            // semantics.
+            _ => {}
+        }
+
+        start = content_end + 1;
+    }
+
+    translated.push_str(&template[start..]);
+    translated
+}
+
 fn skip_default<T: Default + PartialEq>(value: T) -> Option<T> {
     if value == T::default() {
         None
     } else {
         Some(value)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn imported_reduce_motion(content: &str) -> Option<ReduceMotionMode> {
+        VsCodeSettings::from_str(content, VsCodeSettingsSource::VsCode)
+            .unwrap()
+            .settings_content()
+            .reduce_motion
+    }
+
+    #[test]
+    fn test_import_reduce_motion() {
+        assert_eq!(
+            imported_reduce_motion(r#"{ "workbench.reduceMotion": "on" }"#),
+            Some(ReduceMotionMode::On)
+        );
+        assert_eq!(
+            imported_reduce_motion(r#"{ "workbench.reduceMotion": "off" }"#),
+            Some(ReduceMotionMode::Off)
+        );
+        assert_eq!(
+            imported_reduce_motion(r#"{ "workbench.reduceMotion": "auto" }"#),
+            None
+        );
+        assert_eq!(imported_reduce_motion("{}"), None);
+    }
+
+    #[test]
+    fn test_import_reveal_if_open() {
+        let settings = VsCodeSettings::from_str(
+            r#"{ "workbench.editor.revealIfOpen": true }"#,
+            VsCodeSettingsSource::VsCode,
+        )
+        .unwrap()
+        .settings_content();
+
+        assert_eq!(settings.workspace.reveal_if_open, Some(true));
+    }
+
+    #[test]
+    fn test_import_window_title_format() {
+        let imported_title = |content: &str| {
+            VsCodeSettings::from_str(content, VsCodeSettingsSource::VsCode)
+                .unwrap()
+                .settings_content()
+                .workspace
+                .window_title_format
+        };
+
+        assert_eq!(imported_title("{}"), None);
+
+        // VS Code variables are translated to their Zed equivalents.
+        assert_eq!(
+            imported_title(
+                r#"{ "window.title": "${rootName} ${activeRepositoryBranchName} ${activeEditorMedium}" }"#,
+            ),
+            Some("${projectName} ${branch} ${relativePath}".to_string())
+        );
+
+        // Zed-native variables pass through unchanged.
+        assert_eq!(
+            imported_title(r#"{ "window.title": "${projectName}${separator}${filePath}" }"#),
+            Some("${projectName}${separator}${filePath}".to_string())
+        );
+
+        // VS Code's `${remoteName}` is a provider label such as `SSH`, which
+        // doesn't match Zed's connection-name semantics, so it is dropped.
+        assert_eq!(
+            imported_title(r#"{ "window.title": "${remoteName}: ${rootName}" }"#),
+            Some(": ${projectName}".to_string())
+        );
+
+        // Templates that translate to nothing but whitespace fall back to
+        // Zed's default title instead of overriding it.
+        assert_eq!(
+            imported_title(r#"{ "window.title": " ${activeFolderShort} " }"#),
+            None
+        );
+
+        // Literal text around unsupported variables is still imported.
+        assert_eq!(
+            imported_title(r#"{ "window.title": "${activeFolderShort} — literal" }"#),
+            Some(" — literal".to_string())
+        );
     }
 }

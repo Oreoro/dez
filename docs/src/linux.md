@@ -1,35 +1,32 @@
 ---
-title: dez on Linux
-description: "The installation script on the download page is the fastest way to install dez:"
+title: Zed on Linux
+description: "The installation script on the download page is the fastest way to install Zed:"
 ---
 
-# dez on Linux
+# Zed on Linux
 
 ## Standard Installation
 
-The installation script on the [download](https://dez.dev/download) page is the fastest way to install dez:
+The installation script on the [download](https://zed.dev/download) page is the fastest way to install Zed:
 
 ```sh
-curl -f https://dez.dev/install.sh | sh
+curl -f https://zed.dev/install.sh | sh
 ```
 
-The installation script is the supported Linux install path for official builds
-because it keeps dez on the auto-update path.
-
-To install the latest Nightly build:
+We also offer a preview build of Zed which receives updates about a week ahead of stable. You can install it with:
 
 ```sh
-curl -f https://dez.dev/install.sh | ZED_CHANNEL=nightly sh
+curl -f https://zed.dev/install.sh | ZED_CHANNEL=preview sh
 ```
 
-The dez installed by the script works best on systems that:
+The Zed installed by the script works best on systems that:
 
-- have a Vulkan compatible GPU available (for example Linux on an M-series macBook)
-- have a system-wide glibc (NixOS and Alpine do not by default)
+- have a Vulkan compatible GPU available (for example Linux on an M-series MacBook)
+- have a system-wide glibc
   - x86_64 (Intel/AMD): glibc version >= 2.31 (Ubuntu 20 and newer)
   - aarch64 (ARM): glibc version >= 2.35 (Ubuntu 22 and newer)
 
-Both Nix and Alpine have third-party dez packages available (though they are currently a few weeks out of date). If you'd like to use our builds they do work if you install a glibc compatibility layer. On NixOS you can try [nix-ld](https://github.com/Mic92/nix-ld), and on Alpine [gcompat](https://wiki.alpinelinux.org/wiki/Running_glibc_programs).
+NixOS does not have a system-wide glibc by default. If you'd like to use our builds on NixOS, they may work if you install a glibc compatibility layer such as [nix-ld](https://github.com/Mic92/nix-ld).
 
 You will need to build from source for:
 
@@ -37,157 +34,114 @@ You will need to build from source for:
 - Redhat Enterprise Linux 8.x, Rocky Linux 8, AlmaLinux 8, Amazon Linux 2 on all architectures
 - Redhat Enterprise Linux 9.x, Rocky Linux 9.3, AlmaLinux 8, Amazon Linux 2023 on aarch64 (x86_x64 OK)
 
-## Other ways to install dez on Linux
+## Other ways to install Zed on Linux
 
-dez is open source, and [you can install from source](./development/linux.md).
+Zed is open source, and [you can install from source](./development/linux.md).
 
 ### Installing via a package manager
 
-There are several third-party dez packages for various Linux distributions and package managers, sometimes under `dez-editor`. You may be able to install dez using these packages:
+There are several third-party Zed packages for various Linux distributions and package managers, sometimes under `zed-editor`. Availability varies by distribution, but you may be able to install Zed using one of these packages:
 
-- Arch: [`dez`](https://archlinux.org/packages/extra/x86_64/dez/)
-- Arch (AUR): [`dez-git`](https://aur.archlinux.org/packages/dez-git), [`dez-preview`](https://aur.archlinux.org/packages/dez-preview), [`dez-preview-bin`](https://aur.archlinux.org/packages/dez-preview-bin)
-- Alpine: `dez` ([aarch64](https://pkgs.alpinelinux.org/package/edge/testing/aarch64/dez)) ([x86_64](https://pkgs.alpinelinux.org/package/edge/testing/x86_64/dez))
-- Fedora/Ultramarine (Terra): [`dez`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/dez/stable), [`dez-preview`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/dez/preview), [`dez-nightly`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/dez/nightly)
-- Manjaro: [`dez`](https://manjaristas.org/branch_compare?q=dez)
-- Conda: [`dez`](https://anaconda.org/conda-forge/dez)
-- Nix: `dez-editor` ([unstable](https://search.nixos.org/packages?channel=unstable&show=dez-editor))
-- Solus: [`dez`](https://github.com/getsolus/packages/tree/main/packages/z/dez)
-- Parabola: [`dez`](https://www.parabola.nu/packages/extra/x86_64/dez/)
-- ALT Linux (Sisyphus): [`dez`](https://packages.altlinux.org/en/sisyphus/srpms/dez/)
-- AOSC OS: [`dez`](https://packages.aosc.io/packages/dez)
-- Flathub: [`dev.dez.dez`](https://flathub.org/apps/dev.dez.dez)
+- Arch: [`zed`](https://archlinux.org/packages/extra/x86_64/zed/)
+- Arch (AUR): [`zed-git`](https://aur.archlinux.org/packages/zed-git), [`zed-preview`](https://aur.archlinux.org/packages/zed-preview), [`zed-preview-bin`](https://aur.archlinux.org/packages/zed-preview-bin)
+- Fedora/Ultramarine (Terra): [`zed`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/zed/stable), [`zed-preview`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/zed/preview), [`zed-nightly`](https://github.com/terrapkg/packages/tree/frawhide/anda/devs/zed/nightly)
+- Manjaro: [`zed`](https://manjaristas.org/branch_compare?q=zed)
+- Conda: [`zed`](https://anaconda.org/conda-forge/zed)
+- Nix: `zed-editor` ([unstable](https://search.nixos.org/packages?channel=unstable&show=zed-editor))
+- Solus: [`zed`](https://github.com/getsolus/packages/tree/main/packages/z/zed)
+- Parabola: [`zed`](https://www.parabola.nu/packages/extra/x86_64/zed/)
+- ALT Linux (Sisyphus): [`zed`](https://packages.altlinux.org/en/sisyphus/srpms/zed/)
+- AOSC OS: [`zed`](https://packages.aosc.io/packages/zed)
+- Flathub: [`dev.zed.Zed`](https://flathub.org/apps/dev.zed.Zed)
 
-See [Repology](https://repology.org/project/dez-editor/versions) for a list of dez packages in various repositories.
+See [Repology](https://repology.org/project/zed-editor/versions) for a current list of Zed packages in various repositories.
 
 ### Community
 
-When installing a third-party package please be aware that it may not be completely up to date and may be slightly different from the dez we package (a common change is to rename the binary to `dezit` or `dezitor` to avoid conflicting with other packages).
+When installing a third-party package please be aware that it may not be completely up to date and may be slightly different from the Zed we package (a common change is to rename the binary to `zedit` or `zeditor` to avoid conflicting with other packages).
 
-We'd love your help making dez available for everyone. If dez is not yet available for your package manager, and you would like to fix that, we have some notes on [how to do it](./development/linux.md#notes-for-packaging-dez).
+We'd love your help making Zed available for everyone. If Zed is not yet available for your package manager, and you would like to fix that, we have some notes on [how to do it](./development/linux.md#notes-for-packaging-zed).
 
-The packages in this section provide binary installs for dez but are not official packages within the associated distributions. These packages are maintained by community members and as such a higher level of caution should be taken when installing them.
-
-#### Debian and Ubuntu
-
-dez is available in [this community-maintained repository](https://debian.griffo.io/).
-
-Instructions for each version are available in the README of the repository where packages are built.
-Build, packaging and instructions for each version are available in the README of the [repository](https://github.com/dariogriffo/dez-debian)
+The packages in this section provide binary installs for Zed but are not official packages within the associated distributions. These packages are maintained by community members and as such a higher level of caution should be taken when installing them.
 
 ### Downloading manually
 
-For official builds, use the curl installer above whenever possible so dez can
-receive auto updates. The portable tarball below is available for custom
-installation paths and is the artifact used by the installer.
+If you'd prefer, you can install Zed by downloading our pre-built .tar.gz. This is the same artifact that our install script uses, but you can customize the location of your installation by modifying the instructions below:
 
-<!--
-Native `.deb` and `.rpm` packages are intentionally hidden because they do not
-support dez's auto-update path. Use the curl installer above instead.
+Download the `.tar.gz` file:
 
-Native packages are the easiest manual installation option. They install the
-dez launcher, desktop entry, MIME registration, and application icons so
-desktop environments can associate dez's windows with the correct dock icon.
+- [zed-linux-x86_64.tar.gz](https://cloud.zed.dev/releases/stable/latest/download?asset=zed&arch=x86_64&os=linux&source=docs)
+  ([preview](https://cloud.zed.dev/releases/preview/latest/download?asset=zed&arch=x86_64&os=linux&source=docs))
+- [zed-linux-aarch64.tar.gz](https://cloud.zed.dev/releases/stable/latest/download?asset=zed&arch=aarch64&os=linux&source=docs)
+  ([preview](https://cloud.zed.dev/releases/preview/latest/download?asset=zed&arch=aarch64&os=linux&source=docs))
 
-For Debian and Ubuntu, download the package for your architecture:
-
-- [dez-linux-x86_64.deb](https://github.com/Oreoro/dez/releases/latest/download/dez-linux-x86_64.deb)
-- [dez-linux-aarch64.deb](https://github.com/Oreoro/dez/releases/latest/download/dez-linux-aarch64.deb)
-
-Install it with:
-
-```sh
-sudo apt install ./dez-linux-x86_64.deb
-```
-
-For Fedora and other RPM-based distributions, download:
-
-- [dez-linux-x86_64.rpm](https://github.com/Oreoro/dez/releases/latest/download/dez-linux-x86_64.rpm)
-- [dez-linux-aarch64.rpm](https://github.com/Oreoro/dez/releases/latest/download/dez-linux-aarch64.rpm)
-
-Install it with:
-
-```sh
-sudo dnf install ./dez-linux-x86_64.rpm
-```
-
-The native packages have the same glibc and GPU requirements described above.
--->
-
-#### Portable tarball
-
-The portable `.tar.gz` is the same artifact used by the installation script.
-Use it when you need a custom installation location:
-
-- [dez-linux-x86_64.tar.gz](https://github.com/Oreoro/dez/releases/latest/download/dez-linux-x86_64.tar.gz)
-- [dez-linux-aarch64.tar.gz](https://github.com/Oreoro/dez/releases/latest/download/dez-linux-aarch64.tar.gz)
-
-Ensure that the `dez` binary in the tarball is on your path. The easiest way
-is to unpack the tarball and create a symlink:
+Then ensure that the `zed` binary in the tarball is on your path. The easiest way is to unpack the tarball and create a symlink:
 
 ```sh
 mkdir -p ~/.local
-# extract dez to ~/.local/dez.app/
+# extract zed to ~/.local/zed.app/
 tar -xvf <path/to/download>.tar.gz -C ~/.local
-# link the dez binary to ~/.local/bin (or another directory in your $PATH)
-ln -sf ~/.local/dez.app/bin/dez ~/.local/bin/dez
+# link the zed binary to ~/.local/bin (or another directory in your $PATH)
+ln -sf ~/.local/zed.app/bin/zed ~/.local/bin/zed
 ```
 
 If you'd like integration with an XDG-compatible desktop environment, you will also need to install the `.desktop` file:
 
 ```sh
-install -D ~/.local/dez.app/share/applications/dev.dez.dez.desktop -t ~/.local/share/applications
-sed -i "s|Icon=dez|Icon=$HOME/.local/dez.app/share/icons/hicolor/512x512/apps/dez.png|g" ~/.local/share/applications/dev.dez.dez.desktop
-sed -i "s|Exec=dez|Exec=$HOME/.local/dez.app/bin/dez|g" ~/.local/share/applications/dev.dez.dez.desktop
+install -D ~/.local/zed.app/share/applications/dev.zed.Zed.desktop -t ~/.local/share/applications
+sed -i "s|Icon=zed|Icon=$HOME/.local/zed.app/share/icons/hicolor/512x512/apps/zed.png|g" ~/.local/share/applications/dev.zed.Zed.desktop
+sed -i "s|Exec=zed|Exec=$HOME/.local/zed.app/bin/zed|g" ~/.local/share/applications/dev.zed.Zed.desktop
 ```
 
-## Uninstalling dez
+## Uninstalling Zed
 
 ### Standard Uninstall
 
-If dez was installed using the default installation script, it can be uninstalled by supplying the `--uninstall` flag to the `dez` shell command
+If Zed was installed using the default installation script, it can be uninstalled by supplying the `--uninstall` flag to the `zed` shell command:
 
 ```sh
-dez --uninstall
+zed --uninstall
 ```
 
-If there are no errors, the shell will then prompt you whether you'd like to keep your preferences or delete them. After making a choice, you should see a message that dez was successfully uninstalled.
+Note that this will uninstall the Zed variant that the symlink points to. If you have multiple, parallel installations (such as both Stable and Preview), then you should instead use its absolute path as described further down in this section.
 
-In the case that the `dez` shell command was not found in your PATH, you can try one of the following commands
+If there are no errors, the shell will then prompt you whether you'd like to keep your preferences or delete them. After making a choice, you should see a message that Zed was successfully uninstalled.
+
+In the case that the `zed` shell command was not found in your PATH, you can try one of the following commands:
 
 ```sh
-$HOME/.local/bin/dez --uninstall
+$HOME/.local/bin/zed --uninstall
 ```
 
-or
+or the absolute path to your installation, such as
 
 ```sh
-$HOME/.local/dez.app/bin.dez --uninstall
+$HOME/.local/zed.app/bin/zed --uninstall
 ```
 
-The first case might fail if a symlink was not properly established between `$HOME/.local/bin/dez` and `$HOME/.local/dez.app/bin.dez`. But the second case should work as long as dez was installed to its default location.
+The first case might fail if a symlink was not properly established between `$HOME/.local/bin/zed` and `$HOME/.local/zed.app/bin/zed`, or if the symlink was overwritten by having parallel installations of different versions of Zed. But the second command should always work as long as Zed was installed to its default location.
 
-If dez was installed to a different location, you must invoke the `dez` binary stored in that installation directory and pass the `--uninstall` flag to it in the same format as the previous commands.
+If Zed was installed to a different location (such as the `zed-preview.app` variant), you must invoke the `zed` binary stored in that installation directory and pass the `--uninstall` flag to it in the same format as the previous commands.
 
 ### Package Manager
 
-If dez was installed using a package manager, please consult the documentation for that package manager on how to uninstall a package.
+If Zed was installed using a package manager, please consult the documentation for that package manager on how to uninstall a package.
 
 ## Troubleshooting
 
-Linux works on a large variety of systems configured in many different ways. We primarily test dez on a vanilla Ubuntu setup, as it is the most common distribution our users use, that said we do expect it to work on a wide variety of machines.
+Linux works on a large variety of systems configured in many different ways. We primarily test Zed on a vanilla Ubuntu setup, as it is the most common distribution our users use. That said, we do expect it to work on a wide variety of machines.
 
-### dez fails to start
+### Zed fails to start
 
-If you see an error like "/lib64/libc.so.6: version 'GLIBC_2.29' not found" it means that your distribution's version of glibc is too old. You can either upgrade your system, or [install dez from source](./development/linux.md).
+If you see an error like "/lib64/libc.so.6: version 'GLIBC_2.29' not found" it means that your distribution's version of glibc is too old. You can either upgrade your system, or [install Zed from source](./development/linux.md).
 
 ### Graphics issues
 
-#### dez fails to open windows
+#### Zed fails to open windows
 
-dez requires a GPU to run effectively. Under the hood, we use [Vulkan](https://www.vulkan.org/) to communicate with your GPU. If you are seeing problems with performance, or dez fails to load, it is possible that Vulkan is the culprit.
+Zed requires a GPU to run effectively. Under the hood, we use [Vulkan](https://www.vulkan.org/) to communicate with your GPU. If you are seeing problems with performance, or Zed fails to load, it is possible that Vulkan is the culprit.
 
-If you see a notification saying `dez failed to open a window: NoSupportedDeviceFound` this means that Vulkan cannot find a compatible GPU. You can try running [vkcube](https://github.com/krh/vkcube) (usually available as part of the `vulkaninfo` or `vulkan-tools` package on various distributions) to try to troubleshoot where the issue is coming from like so:
+If you see a notification saying `Zed failed to open a window: NoSupportedDeviceFound` this means that Vulkan cannot find a compatible GPU. You can try running [vkcube](https://github.com/krh/vkcube) (usually available as part of the `vulkaninfo` or `vulkan-tools` package on various distributions) to try to troubleshoot where the issue is coming from like so:
 
 ```
 vkcube
@@ -197,27 +151,27 @@ vkcube
 
 This should output a line describing your current graphics setup and show a rotating cube. If this does not work, you should be able to fix it by installing Vulkan compatible GPU drivers, however in some cases there is no Vulkan support yet.
 
-You can find out which graphics card dez is using by looking in the dez log (`~/.local/share/dez/logs/dez.log`) for `Using GPU: ...`.
+You can find out which graphics card Zed is using by looking in the Zed log (`~/.local/share/zed/logs/Zed.log`) for `Using GPU: ...`.
 
 If you see errors like `ERROR_INITIALIZATION_FAILED` or `GPU Crashed` or `ERROR_SURFACE_LOST_KHR` then you may be able to work around this by installing different drivers for your GPU, or by selecting a different GPU to run on. (See [#14225](https://github.com/zed-industries/zed/issues/14225))
 
 On some systems the file `/etc/prime-discrete` can be used to enforce the use of a discrete GPU using [PRIME](https://wiki.archlinux.org/title/PRIME). Depending on the details of your setup, you may need to change the contents of this file to "on" (to force discrete graphics) or "off" (to force integrated graphics).
 
-On others, you may be able to set the environment variable `DRI_PRIME=1` when running dez to force the use of the discrete GPU.
+On others, you may be able to set the environment variable `DRI_PRIME=1` when running Zed to force the use of the discrete GPU.
 
 If you're using an AMD GPU, you might get a 'Broken Pipe' error. Try using the RADV or Mesa drivers. (See [#13880](https://github.com/zed-industries/zed/issues/13880))
 
-If you are using `amdvlk`, the default open-source AMD graphics driver, you may find that dez consistently fails to launch. This is a known issue for some users, for example on Omarchy (see issue [#28851](https://github.com/zed-industries/zed/issues/28851)). To fix this, you will need to use a different driver. We recommend removing the `amdvlk` and `lib32-amdvlk` packages and installing `vulkan-radeon` instead (see issue [#14141](https://github.com/zed-industries/zed/issues/14141)).
+If you are using `amdvlk`, the default open-source AMD graphics driver, you may find that Zed consistently fails to launch. This is a known issue for some users, for example on Omarchy (see issue [#28851](https://github.com/zed-industries/zed/issues/28851)). To fix this, you will need to use a different driver. We recommend removing the `amdvlk` and `lib32-amdvlk` packages and installing `vulkan-radeon` instead (see issue [#14141](https://github.com/zed-industries/zed/issues/14141)).
 
 For more information, the [Arch guide to Vulkan](https://wiki.archlinux.org/title/Vulkan) has some good steps that translate well to most distributions.
 
-#### Forcing dez to use a specific GPU
+#### Forcing Zed to use a specific GPU
 
-There are a few different ways to force dez to use a specific GPU:
+There are a few different ways to force Zed to use a specific GPU:
 
 ##### Option A
 
-You can use the `ZED_DEVICE_ID={device_id}` environment variable to specify the device ID of the GPU you wish to have dez use.
+You can use the `ZED_DEVICE_ID={device_id}` environment variable to specify the device ID of the GPU you wish to have Zed use.
 
 You can obtain the device ID of your GPU by running `lspci -nn | grep VGA` which will output each GPU on one line like:
 
@@ -225,17 +179,17 @@ You can obtain the device ID of your GPU by running `lspci -nn | grep VGA` which
 08:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3070] [10de:2484] (rev a1)
 ```
 
-where the device ID here is `2484`. This value is in hexadecimal, so to force dez to use this specific GPU you would set the environment variable like so:
+where the device ID here is `2484`. This value is in hexadecimal, so to force Zed to use this specific GPU you would set the environment variable like so:
 
 ```
-ZED_DEVICE_ID=0x2484 dez
+ZED_DEVICE_ID=0x2484 zed
 ```
 
 Make sure to export the variable if you choose to define it globally in a `.bashrc` or similar.
 
 ##### Option B
 
-If you are using Mesa, you can run `MESA_VK_DEVICE_SELECT=list dez --foreground` to get a list of available GPUs and then export `MESA_VK_DEVICE_SELECT=xxxx:yyyy` to choose a specific device. Furthermore, you can fallback to xwayland with an additional export of `WAYLAND_DISPLAY=""`.
+If you are using Mesa, you can run `MESA_VK_DEVICE_SELECT=list zed --foreground` to get a list of available GPUs and then export `MESA_VK_DEVICE_SELECT=xxxx:yyyy` to choose a specific device. Furthermore, you can fallback to xwayland with an additional export of `WAYLAND_DISPLAY=""`.
 
 ##### Option C
 
@@ -243,31 +197,31 @@ Using [vkdevicechooser](https://github.com/jiriks74/vkdevicechooser).
 
 #### Reporting graphics issues
 
-If Vulkan is configured correctly, and dez is still not working for you, please [file an issue](https://github.com/zed-industries/zed) with as much information as possible.
+If Vulkan is configured correctly, and Zed is still not working for you, please [file an issue](https://github.com/zed-industries/zed) with as much information as possible.
 
-When reporting issues where dez fails to start due to graphics initialization errors on GitHub, it can be impossible to run the {#action dez::CopySystemSpecsIntoClipboard} command like we instruct you to in our issue template. We provide an alternative way to collect the system specs specifically for this situation.
+When reporting issues where Zed fails to start due to graphics initialization errors on GitHub, it can be impossible to run the {#action zed::CopySystemSpecsIntoClipboard} command like we instruct you to in our issue template. We provide an alternative way to collect the system specs specifically for this situation.
 
-Passing the `--system-specs` flag to dez like
+Passing the `--system-specs` flag to Zed like
 
 ```sh
-dez --system-specs
+zed --system-specs
 ```
 
 will print the system specs to the terminal like so. It is strongly recommended to copy the output verbatim into the issue on GitHub, as it uses markdown formatting to ensure the output is readable.
 
-Additionally, it is extremely beneficial to provide the contents of your dez log when reporting such issues. The log is usually located at `~/.local/share/dez/logs/dez.log`. The recommended process for producing a helpful log file is as follows:
+Additionally, it is extremely beneficial to provide the contents of your Zed log when reporting such issues. The log is usually located at `~/.local/share/zed/logs/Zed.log`. The recommended process for producing a helpful log file is as follows:
 
 ```sh
-truncate -s 0 ~/.local/share/dez/logs/dez.log # Clear the log file
-ZED_LOG=wgpu=info dez .
-cat ~/.local/share/dez/logs/dez.log
+truncate -s 0 ~/.local/share/zed/logs/Zed.log # Clear the log file
+ZED_LOG=wgpu=info zed .
+cat ~/.local/share/zed/logs/Zed.log
 # copy the output
 ```
 
-Or, if you have the dez cli setup, you can do
+Or, if you have the Zed cli setup, you can do
 
 ```sh
-ZED_LOG=wgpu=info /path/to/dez/cli --foreground .
+ZED_LOG=wgpu=info /path/to/zed/cli --foreground .
 # copy the output
 ```
 
@@ -276,10 +230,10 @@ It is also highly recommended when pasting the log into a github issue, to do so
 > **_Note_**: The whitespace in the template is important, and will cause incorrect formatting if not preserved.
 
 ````
-<details><summary>dez Log</summary>
+<details><summary>Zed Log</summary>
 
 ```
-{dez log contents}
+{zed log contents}
 ```
 
 </details>
@@ -298,31 +252,31 @@ These features are provided by XDG desktop portals, specifically:
 
 Some window managers, such as `Hyprland`, don't provide a file picker by default. See [this list](https://wiki.archlinux.org/title/XDG_Desktop_Portal#List_of_backends_and_interfaces) as a starting point for alternatives.
 
-### dez isn't remembering my API keys
+### Zed isn't remembering my API keys
 
-### dez isn't remembering my login
+### Zed isn't remembering my login
 
 This feature also requires XDG desktop portals, specifically:
 
 - `org.freedesktop.portal.Secret` or
 - `org.freedesktop.Secrets`
 
-dez needs a place to securely store secrets such as your dez login cookie or your OpenAI API Keys and we use a system provided keychain to do this. Examples of packages that provide this are `gnome-keyring`, `KWallet` and `keepassxc` among others.
+Zed needs a place to securely store secrets such as your Zed login cookie or your OpenAI API Keys and we use a system provided keychain to do this. Examples of packages that provide this are `gnome-keyring`, `KWallet` and `keepassxc` among others.
 
 ### Could not start inotify
 
-dez relies on inotify to watch your filesystem for changes. If you cannot start inotify then dez will not work reliably.
+Zed relies on inotify to watch your filesystem for changes. If you cannot start inotify then Zed will not work reliably.
 
 If you are seeing "too many open files" then first try `sysctl fs.inotify`.
 
-- You should see that max_user_instances is 128 or higher (you can change the limit with `sudo sysctl fs.inotify.max_user_instances=1024`). dez needs only 1 inotify instance.
-- You should see that `max_user_watches` is 8000 or higher (you can change the limit with `sudo sysctl fs.inotify.max_user_watches=64000`). dez needs one watch per directory in all your open projects + one per git repository + a handful more for settings, themes, keymaps, extensions.
+- You should see that max_user_instances is 128 or higher (you can change the limit with `sudo sysctl fs.inotify.max_user_instances=1024`). Zed needs only 1 inotify instance.
+- You should see that `max_user_watches` is 8000 or higher (you can change the limit with `sudo sysctl fs.inotify.max_user_watches=64000`). Zed needs one watch per directory in all your open projects + one per git repository + a handful more for settings, themes, keymaps, extensions.
 
 It is also possible that you are running out of file descriptors. You can check the limits with `ulimit` and update them by editing `/etc/security/limits.conf`.
 
 ### No sound or wrong output device
 
-If you're not hearing any sound in dez or the audio is routed to the wrong device, it could be due to a mismatch between audio systems. dez relies on ALSA, while your system may be using PipeWire or PulseAudio. To resolve this, you need to configure ALSA to route audio through PipeWire/PulseAudio.
+If you're not hearing any sound in Zed or the audio is routed to the wrong device, it could be due to a mismatch between audio systems. Zed relies on ALSA, while your system may be using PipeWire or PulseAudio. To resolve this, you need to configure ALSA to route audio through PipeWire/PulseAudio.
 
 If your system uses PipeWire:
 
@@ -352,13 +306,13 @@ If your system uses PipeWire:
 
 ### Forcing X11 scale factor
 
-On X11 systems, dez automatically detects the appropriate scale factor for high-DPI displays. The scale factor is determined using the following priority order:
+On X11 systems, Zed automatically detects the appropriate scale factor for high-DPI displays. The scale factor is determined using the following priority order:
 
 1. `GPUI_X11_SCALE_FACTOR` environment variable (if set)
 2. `Xft.dpi` from X resources database (xrdb)
 3. Automatic detection via RandR based on monitor resolution and physical size
 
-If you want to customize the scale factor beyond what dez detects automatically, you have several options:
+If you want to customize the scale factor beyond what Zed detects automatically, you have several options:
 
 #### Check your current scale factor
 
@@ -368,11 +322,11 @@ You can verify if you have `Xft.dpi` set:
 xrdb -query | grep Xft.dpi
 ```
 
-If this command returns no output, dez is using RandR (X11's monitor management extension) to automatically calculate the scale factor based on your monitor's reported resolution and physical dimensions.
+If this command returns no output, Zed is using RandR (X11's monitor management extension) to automatically calculate the scale factor based on your monitor's reported resolution and physical dimensions.
 
 #### Option 1: Set Xft.dpi (X Resources Database)
 
-`Xft.dpi` is a standard X11 setting that many applications use for consistent font and UI scaling. Setting this ensures dez scales the same way as other X11 applications that respect this setting.
+`Xft.dpi` is a standard X11 setting that many applications use for consistent font and UI scaling. Setting this ensures Zed scales the same way as other X11 applications that respect this setting.
 
 Edit or create the `~/.Xresources` file:
 
@@ -399,14 +353,14 @@ Load the configuration:
 xrdb -merge ~/.Xresources
 ```
 
-Restart dez for the changes to take effect.
+Restart Zed for the changes to take effect.
 
 #### Option 2: Use the GPUI_X11_SCALE_FACTOR environment variable
 
-This dez-specific environment variable directly sets the scale factor, bypassing all automatic detection.
+This Zed-specific environment variable directly sets the scale factor, bypassing all automatic detection.
 
 ```sh
-GPUI_X11_SCALE_FACTOR=1.5 dez
+GPUI_X11_SCALE_FACTOR=1.5 zed
 ```
 
 You can use decimal values (e.g., `1.25`, `1.5`, `2.0`) or set `GPUI_X11_SCALE_FACTOR=randr` to force RandR-based detection even when `Xft.dpi` is set.
@@ -423,11 +377,11 @@ Add this to your `.xprofile` or `.xinitrc`:
 xrandr --dpi 192
 ```
 
-Replace `192` with your desired DPI value. This affects the system globally and will be used by dez's automatic RandR detection when `Xft.dpi` is not set.
+Replace `192` with your desired DPI value. This affects the system globally and will be used by Zed's automatic RandR detection when `Xft.dpi` is not set.
 
 ### Font rendering parameters
 
-On Linux, dez reads `ZED_FONTS_GAMMA` and `ZED_FONTS_GRAYSCALE_ENHANCED_CONTRAST` environment variables for the values to use for font rendering.
+On Linux, Zed reads `ZED_FONTS_GAMMA` and `ZED_FONTS_GRAYSCALE_ENHANCED_CONTRAST` environment variables for the values to use for font rendering.
 
 `ZED_FONTS_GAMMA` corresponds to [getgamma](https://learn.microsoft.com/en-us/windows/win32/api/dwrite/nf-dwrite-idwriterenderingparams-getgamma) values.
 Allowed range [1.0, 2.2], other values are clipped.

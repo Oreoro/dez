@@ -1,4 +1,4 @@
-//! Vim support for dez.
+//! Vim support for Zed.
 
 #[cfg(test)]
 mod test;
@@ -329,7 +329,7 @@ pub fn init(cx: &mut App) {
 
         workspace.register_action(|_, _: &ToggleProjectPanelFocus, window, cx| {
             if Vim::take_count(cx).is_none() {
-                window.dispatch_action(dez_actions::project_panel::ToggleFocus.boxed_clone(), cx);
+                window.dispatch_action(zed_actions::project_panel::ToggleFocus.boxed_clone(), cx);
             }
         });
 
@@ -358,7 +358,7 @@ pub fn init(cx: &mut App) {
             };
         });
 
-        workspace.register_action(|_, _: &dez_actions::vim::OpenDefaultKeymap, _, cx| {
+        workspace.register_action(|_, _: &zed_actions::vim::OpenDefaultKeymap, _, cx| {
             cx.emit(workspace::Event::OpenBundledFile {
                 text: settings::vim_keymap(),
                 title: "Default Vim Bindings",
@@ -366,8 +366,8 @@ pub fn init(cx: &mut App) {
             });
         });
 
-        workspace.register_action(|workspace, _: &ResetPaneSizes, _, cx| {
-            workspace.reset_pane_sizes(cx);
+        workspace.register_action(|workspace, _: &ResetPaneSizes, window, cx| {
+            workspace.reset_pane_sizes(window, cx);
         });
 
         workspace.register_action(|workspace, _: &MaximizePane, window, cx| {
@@ -527,6 +527,7 @@ pub(crate) struct Vim {
 
     pub(crate) current_tx: Option<TransactionId>,
     pub(crate) current_anchor: Option<Selection<Anchor>>,
+    pub(crate) helix_append_state: Option<HelixAppendState>,
     pub(crate) undo_modes: HashMap<TransactionId, Mode>,
     pub(crate) undo_last_line_tx: Option<TransactionId>,
     extended_pending_selection_id: Option<usize>,
@@ -539,6 +540,13 @@ pub(crate) struct Vim {
     last_command: Option<String>,
     running_command: Option<Task<()>>,
     _subscriptions: Vec<Subscription>,
+}
+
+/// Captured by `helix_append` so that escape can restore the pre-append
+/// selections when nothing was inserted, matching Helix.
+pub(crate) struct HelixAppendState {
+    pub(crate) selections_before_append: Vec<Range<Anchor>>,
+    pub(crate) cursors_after_append: Vec<Range<Anchor>>,
 }
 
 // Hack: Vim intercepts events dispatched to a window and updates the view in response.
@@ -588,6 +596,7 @@ impl Vim {
             current_tx: None,
             undo_last_line_tx: None,
             current_anchor: None,
+            helix_append_state: None,
             extended_pending_selection_id: None,
             undo_modes: HashMap::default(),
 
@@ -924,6 +933,22 @@ impl Vim {
             Vim::action(editor, cx, |vim, _: &Tab, window, cx| {
                 vim.input_ignored(" ".into(), window, cx)
             });
+            Vim::action(
+                editor,
+                cx,
+                |vim, action: &editor::actions::AcceptEditPrediction, window, cx| {
+                    vim.update_editor(cx, |_, editor, cx| {
+                        editor.accept_edit_prediction(action, window, cx);
+                    });
+                    // In non-insertion modes, predictions will be hidden and instead a jump will be
+                    // displayed (and performed by `accept_edit_prediction`). This switches to
+                    // insert mode so that the prediction is displayed after the jump.
+                    match vim.mode {
+                        Mode::Replace => {}
+                        _ => vim.switch_mode(Mode::Insert, true, window, cx),
+                    };
+                },
+            );
             Vim::action(editor, cx, |vim, _: &Enter, window, cx| {
                 vim.input_ignored("\n".into(), window, cx)
             });
@@ -1090,6 +1115,21 @@ impl Vim {
                         cx,
                     );
                 }
+                operator @ Operator::HelixJump { .. } if keystroke_event.action.is_none() => {
+                    let modifiers = keystroke_event.keystroke.modifiers;
+                    let mut input = keystroke_event.keystroke.key.chars();
+                    if !modifiers.control
+                        && !modifiers.alt
+                        && !modifiers.platform
+                        && !modifiers.function
+                        && let Some(input_char) = input.next()
+                        && input.next().is_none()
+                    {
+                        // Jump overlays use ASCII labels even on non-ASCII keyboard layouts.
+                        self.handle_helix_jump_input(operator, input_char, window, cx);
+                        cx.stop_propagation();
+                    }
+                }
                 _ if !operator.is_waiting(self.mode) => {
                     self.clear_operator(window, cx);
                     self.stop_recording_immediately(Box::new(ClearOperators), cx)
@@ -1194,6 +1234,9 @@ impl Vim {
         if mode == Mode::Normal || mode != last_mode {
             self.current_tx.take();
             self.current_anchor.take();
+            if mode != Mode::Insert {
+                self.helix_append_state.take();
+            }
             self.update_editor(cx, |_, editor, _| {
                 editor.clear_selection_drag_state();
             });
@@ -1221,6 +1264,17 @@ impl Vim {
             } else if self.mode == Mode::Visual {
                 self.mode = Mode::HelixSelect
             }
+        }
+
+        // Multi-key bindings in Insert mode temporarily insert their pending keys
+        // and remove them only after the action runs. Refresh the selection anchors
+        // afterward so they re-attach to the remaining text.
+        if last_mode == Mode::Insert && matches!(self.mode, Mode::Normal | Mode::HelixNormal) {
+            cx.defer_in(window, |vim, _window, cx| {
+                vim.update_editor(cx, |_, editor, cx| {
+                    editor.refresh_selection_anchors(cx);
+                });
+            })
         }
 
         if leave_selections {
@@ -1384,7 +1438,8 @@ impl Vim {
     fn expects_character_input(&self) -> bool {
         if let Some(operator) = self.operator_stack.last() {
             if operator.is_waiting(self.mode) {
-                return true;
+                // Helix jump labels are commands that need to reach Vim before an active IME.
+                return !matches!(operator, Operator::HelixJump { .. });
             }
         }
         self.editor_input_enabled()
@@ -1453,6 +1508,22 @@ impl Vim {
                 } else {
                     mode = "waiting".to_string();
                 }
+            } else if matches!(
+                active_operator,
+                Operator::HelixNext { .. } | Operator::HelixPrevious { .. }
+            ) {
+                // Helix `[`/`]` take a curated, keymap-dispatched selector key
+                // rather than a motion over a range, so they keep `operator_id`
+                // set (so `vim_operator == helix_next/previous` context must
+                // resolve) but must not use the `operator` mode, as that adds
+                // `VimControl` and the `vim_mode == operator` context, whose `g
+                // ...` bindings would make a single-key follow-up like `g` a
+                // multi-key prefix and leave `] g` waiting for more input.
+                // Setting the mode to `waiting` carries none of those
+                // conflicting bindings and still provides bindings for
+                // `escape`/`ctrl-c` to `ClearOperators`.
+                operator_id = active_operator.id();
+                mode = "waiting".to_string();
             } else {
                 operator_id = active_operator.id();
                 mode = "operator".to_string();
@@ -1466,6 +1537,12 @@ impl Vim {
             || mode == "helix_select"
         {
             context.add("VimControl");
+        }
+        // `vim_mode` is replaced by "operator"/"waiting" while an operator is
+        // pending, so expose helix-ness separately to allow Helix-specific
+        // bindings in those states (e.g. text objects after `mi`/`ma`).
+        if self.mode.is_helix() {
+            context.add("helix_mode");
         }
         context.set("vim_mode", mode);
         context.set("vim_operator", operator_id);
@@ -1501,7 +1578,12 @@ impl Vim {
         let editor = editor.read(cx);
         let editor_mode = editor.mode();
 
-        if editor_mode.is_full() && !newest_selection_empty && self.mode == Mode::Normal {
+        if editor_mode.is_full()
+            && !newest_selection_empty
+            && self.mode == Mode::Normal
+            // When following someone, don't switch vim mode.
+            && editor.leader_id().is_none()
+        {
             if preserve_selection {
                 self.switch_mode(Mode::Visual, true, window, cx);
             } else {
@@ -1935,7 +2017,11 @@ impl Vim {
     fn local_selections_changed(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(editor) = self.editor() else { return };
 
-        let newest = editor.read(cx).selections.newest_anchor().clone();
+        if editor.read(cx).leader_id().is_some() {
+            return;
+        }
+
+        let newest = *editor.read(cx).selections.newest_anchor();
         let is_multicursor = editor.read(cx).selections.count() > 1;
         if self.mode == Mode::Insert && self.current_tx.is_some() {
             if let Some(current_anchor) = &self.current_anchor {
@@ -2178,6 +2264,16 @@ impl Vim {
                 if self.mode == Mode::Replace {
                     self.multi_replace(text, window, cx)
                 }
+
+                if self.mode == Mode::Normal {
+                    self.update_editor(cx, |_, editor, cx| {
+                        editor.accept_edit_prediction(
+                            &editor::actions::AcceptEditPrediction {},
+                            window,
+                            cx,
+                        );
+                    });
+                }
             }
         }
     }
@@ -2200,13 +2296,16 @@ impl Vim {
             autoindent: self.should_autoindent(),
             cursor_offset_on_selection: self.mode.has_selection(),
             line_mode: matches!(self.mode, Mode::VisualLine),
+            hide_edit_predictions: !matches!(self.mode, Mode::Insert | Mode::Replace)
+                && !(self.mode.is_normal()
+                    && VimSettings::get_global(cx).show_edit_predictions_in_normal_mode),
         }
     }
 
     fn sync_vim_settings_to_editor(
         state: &VimEditorSettingsState,
         editor: &mut Editor,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Editor>,
     ) {
         editor.set_cursor_shape(state.cursor_shape, cx);
@@ -2217,6 +2316,7 @@ impl Vim {
         editor.set_autoindent(state.autoindent);
         editor.set_cursor_offset_on_selection(state.cursor_offset_on_selection);
         editor.selections.set_line_mode(state.line_mode);
+        editor.set_edit_predictions_hidden_for_vim_mode(state.hide_edit_predictions, window, cx);
     }
 
     fn set_status_label(&mut self, label: impl Into<SharedString>, cx: &mut Context<Editor>) {
@@ -2234,6 +2334,7 @@ struct VimEditorSettingsState {
     autoindent: bool,
     cursor_offset_on_selection: bool,
     line_mode: bool,
+    hide_edit_predictions: bool,
 }
 
 #[derive(Clone, RegisterSetting)]
@@ -2247,6 +2348,7 @@ struct VimSettings {
     pub custom_digraphs: HashMap<String, Arc<str>>,
     pub highlight_on_yank_duration: u64,
     pub cursor_shape: CursorShapeSettings,
+    pub show_edit_predictions_in_normal_mode: bool,
 }
 
 /// Cursor shape configuration for insert mode.
@@ -2334,6 +2436,7 @@ impl Settings for VimSettings {
             custom_digraphs: vim.custom_digraphs.unwrap(),
             highlight_on_yank_duration: vim.highlight_on_yank_duration.unwrap(),
             cursor_shape: vim.cursor_shape.unwrap().into(),
+            show_edit_predictions_in_normal_mode: vim.show_edit_predictions_in_normal_mode.unwrap(),
         }
     }
 }

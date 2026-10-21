@@ -377,7 +377,7 @@ impl SyntaxTreeView {
         row.child(if node.is_named() {
             Label::new(node.kind()).color(Color::Default)
         } else {
-            Label::new(format!("\"{}\"", node.kind())).color(Color::Created)
+            Label::new(format_anonymous_node_kind(node.kind())).color(Color::Created)
         })
         .child(
             div()
@@ -531,28 +531,18 @@ impl Render for SyntaxTreeView {
                         .max_w_3_5()
                         .map(|this| {
                             if editor_state.is_some_and(|state| !state.has_language()) {
-                                this.child(Label::new(localization::text(
-                                    cx,
-                                    "language-tools-no-associated-language",
-                                )))
-                                .child(
-                                    Label::new(localization::text(
-                                        cx,
-                                        "language-tools-assign-language",
-                                    ))
-                                    .size(LabelSize::Small),
-                                )
+                                this.child(Label::new("Current editor has no associated language"))
+                                    .child(
+                                        Label::new(concat!(
+                                            "Try assigning a language or",
+                                            "switching to a different buffer"
+                                        ))
+                                        .size(LabelSize::Small),
+                                    )
                             } else {
-                                this.child(Label::new(localization::text(
-                                    cx,
-                                    "language-tools-not-attached",
-                                )))
-                                .child(
-                                    Label::new(localization::text(
-                                        cx,
-                                        "language-tools-focus-editor-tree",
-                                    ))
-                                    .size(LabelSize::Small),
+                                this.child(Label::new("Not attached to an editor")).child(
+                                    Label::new("Focus an editor to show a new tree view")
+                                        .size(LabelSize::Small),
                                 )
                             }
                         });
@@ -582,6 +572,10 @@ impl Item for SyntaxTreeView {
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         "Syntax Tree".into()
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
     }
 
     fn can_split(&self) -> bool {
@@ -725,6 +719,10 @@ fn format_node_range(node: Node) -> String {
     )
 }
 
+fn format_anonymous_node_kind(kind: &str) -> String {
+    format!("\"{}\"", kind.escape_debug())
+}
+
 impl Render for SyntaxTreeToolbarItemView {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         h_flex()
@@ -753,5 +751,18 @@ impl ToolbarItemView for SyntaxTreeToolbarItemView {
         self.tree_view = None;
         self.subscription = None;
         ToolbarItemLocation::Hidden
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn anonymous_node_kinds_escape_control_characters() {
+        assert_eq!(format_anonymous_node_kind("\n"), "\"\\n\"");
+        assert_eq!(format_anonymous_node_kind("\r\n"), "\"\\r\\n\"");
+        assert_eq!(format_anonymous_node_kind("\t"), "\"\\t\"");
+        assert_eq!(format_anonymous_node_kind(","), "\",\"");
     }
 }

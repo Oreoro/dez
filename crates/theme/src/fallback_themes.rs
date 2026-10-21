@@ -8,16 +8,16 @@ use crate::{
     ThemeFamily, ThemeStyles, default_color_scales,
 };
 
-/// The default theme family for dez.
+/// The default theme family for Zed.
 ///
 /// This is used to construct the default theme fallback values, as well as to
 /// have a theme available at compile time for tests.
-pub fn dez_default_themes() -> ThemeFamily {
+pub fn zed_default_themes() -> ThemeFamily {
     ThemeFamily {
-        id: "dez-default".to_string(),
-        name: "dez Default".into(),
+        id: "zed-default".to_string(),
+        name: "Zed Default".into(),
         author: "".into(),
-        themes: vec![dez_default_dark()],
+        themes: vec![zed_default_dark()],
         scales: default_color_scales(),
     }
 }
@@ -57,7 +57,7 @@ pub fn apply_theme_color_defaults(
     }
 }
 
-pub(crate) fn dez_default_dark() -> Theme {
+pub(crate) fn zed_default_dark() -> Theme {
     let bg = hsla(215. / 360., 12. / 100., 15. / 100., 1.);
     let editor = hsla(220. / 360., 12. / 100., 18. / 100., 1.);
     let elevated_surface = hsla(225. / 360., 12. / 100., 17. / 100., 1.);
@@ -131,7 +131,7 @@ pub(crate) fn dez_default_dark() -> Theme {
                 element_disabled: SystemColors::default().transparent,
                 element_selection_background: player.local().selection.alpha(0.25),
                 drop_target_background: hsla(220.0 / 360., 8.3 / 100., 21.4 / 100., 1.0),
-                drop_target_border: hsla(221. / 360., 11. / 100., 86. / 100., 1.0),
+                drop_target_border: hsla(206. / 360., 1.0, 50. / 100., 1.0),
                 ghost_element_background: SystemColors::default().transparent,
                 ghost_element_hover: hover,
                 ghost_element_active: hsla(220.0 / 360., 11.8 / 100., 20.0 / 100., 1.0),

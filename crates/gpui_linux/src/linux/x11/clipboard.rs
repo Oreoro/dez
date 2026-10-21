@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 - 2025 dez Industries, Inc.
+ * Copyright 2022 - 2025 Zed Industries, Inc.
  * License: Apache-2.0
  * See LICENSE-APACHE for complete license terms
  *
@@ -844,7 +844,7 @@ fn serve_requests(context: Arc<Inner>) -> Result<(), Box<dyn std::error::Error>>
 
     log::trace!("Started serve requests thread.");
 
-    let _guard = util::defer(|| {
+    let _guard = gpui_util::defer(|| {
         context.serve_stopped.store(true, Ordering::Relaxed);
     });
 

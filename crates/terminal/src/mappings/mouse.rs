@@ -136,21 +136,6 @@ mod tests {
 
         assert_eq!(reports.len(), 3);
     }
-
-    #[test]
-    fn mouse_button_report_uses_sgr_button_codes() {
-        let point = Point::new(2, 4);
-        let mode = Modes::MOUSE_MODE | Modes::SGR_MOUSE;
-
-        assert_eq!(
-            mouse_button_report(point, MouseButton::Right, Modifiers::default(), true, mode),
-            Some(b"\x1b[<2;5;3M".to_vec())
-        );
-        assert_eq!(
-            mouse_button_report(point, MouseButton::Middle, Modifiers::default(), true, mode),
-            Some(b"\x1b[<1;5;3M".to_vec())
-        );
-    }
 }
 
 pub(crate) fn alt_scroll(scroll_lines: i32) -> Vec<u8> {

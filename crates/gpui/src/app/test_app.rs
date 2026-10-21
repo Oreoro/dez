@@ -281,11 +281,6 @@ impl TestApp {
         self.platform.opened_url.borrow().clone()
     }
 
-    /// Get the (title, body) pairs shown via `cx.show_desktop_notification()`.
-    pub fn shown_notifications(&self) -> Vec<(String, Option<String>)> {
-        self.platform.shown_notifications.borrow().clone()
-    }
-
     /// Check if a file path prompt is pending.
     pub fn did_prompt_for_new_path(&self) -> bool {
         self.platform.did_prompt_for_new_path()
@@ -491,7 +486,7 @@ impl<V: 'static + Render> TestAppWindow<V> {
         let mut app = self.app.borrow_mut();
         let any_handle: AnyWindowHandle = self.handle.into();
         app.update_window(any_handle, |_, window, cx| {
-            window.draw(cx).clear();
+            window.draw(cx).clear(cx);
         })
         .unwrap();
     }

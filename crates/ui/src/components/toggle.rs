@@ -1,6 +1,6 @@
 use gpui::{
     AnyElement, AnyView, ClickEvent, ElementId, Hsla, IntoElement, KeybindingKeystroke, Keystroke,
-    Styled, Window, div, hsla, prelude::*,
+    Role, Styled, Toggled, Window, div, hsla, prelude::*,
 };
 use std::{rc::Rc, sync::Arc};
 
@@ -295,21 +295,17 @@ pub enum SwitchColor {
 }
 
 impl SwitchColor {
-    fn get_colors(&self, is_on: bool, cx: &App) -> (Hsla, Hsla) {
+    fn bg_color(&self, is_on: bool, cx: &App) -> Hsla {
         if !is_on {
-            return (
-                cx.theme().colors().element_disabled,
-                cx.theme().colors().border,
-            );
+            return cx.theme().colors().element_disabled;
         }
 
         match self {
             SwitchColor::Accent => {
                 let status = cx.theme().status();
-                let colors = cx.theme().colors();
-                (status.info.opacity(0.4), colors.text_accent.opacity(0.2))
+                status.info.opacity(0.4)
             }
-            SwitchColor::Custom(color) => (*color, color.opacity(0.6)),
+            SwitchColor::Custom(color) => *color,
         }
     }
 }
@@ -331,6 +327,13 @@ pub enum SwitchLabelPosition {
     End,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
+pub enum SwitchSize {
+    #[default]
+    Default,
+    Small,
+}
+
 /// # Switch
 ///
 /// Switches are used to represent opposite states, such as enabled or disabled.
@@ -343,10 +346,14 @@ pub struct Switch {
     label: Option<SharedString>,
     label_position: Option<SwitchLabelPosition>,
     label_size: LabelSize,
+    label_color: Color,
     full_width: bool,
     key_binding: Option<KeyBinding>,
     color: SwitchColor,
+    size: SwitchSize,
     tab_index: Option<isize>,
+    aria_label: Option<SharedString>,
+    aria_description: Option<SharedString>,
 }
 
 impl Switch {
@@ -360,10 +367,14 @@ impl Switch {
             label: None,
             label_position: None,
             label_size: LabelSize::Small,
+            label_color: Color::Default,
             full_width: false,
             key_binding: None,
             color: SwitchColor::default(),
+            size: SwitchSize::default(),
             tab_index: None,
+            aria_label: None,
+            aria_description: None,
         }
     }
 
@@ -407,6 +418,16 @@ impl Switch {
         self
     }
 
+    pub fn label_color(mut self, color: Color) -> Self {
+        self.label_color = color;
+        self
+    }
+
+    pub fn size(mut self, size: SwitchSize) -> Self {
+        self.size = size;
+        self
+    }
+
     pub fn full_width(mut self, full_width: bool) -> Self {
         self.full_width = full_width;
         self
@@ -422,16 +443,30 @@ impl Switch {
         self.tab_index = Some(tab_index.into());
         self
     }
+
+    /// Sets the label announced by assistive technology.
+    /// Defaults to the switch's visible label, if any.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
+        self
+    }
+
+    /// Sets the supplementary description announced by assistive technology
+    /// after the switch's name, role, and state.
+    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
+        self.aria_description = Some(description.into());
+        self
+    }
 }
 
 impl RenderOnce for Switch {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let is_on = self.toggle_state == ToggleState::Selected;
         let adjust_ratio = if is_light(cx) { 1.5 } else { 1.0 };
 
         let base_color = cx.theme().colors().text;
         let thumb_color = base_color;
-        let (bg_color, border_color) = self.color.get_colors(is_on, cx);
+        let bg_color = self.color.bg_color(is_on, cx);
 
         let bg_hover_color = if is_on {
             bg_color.blend(base_color.opacity(0.16 * adjust_ratio))
@@ -447,21 +482,44 @@ impl RenderOnce for Switch {
 
         let group_id = format!("switch_group_{:?}", self.id);
         let label = self.label;
+        let aria_label = self.aria_label.or_else(|| label.clone());
+        let aria_description = self.aria_description;
+        let aria_keyshortcuts = self
+            .key_binding
+            .as_ref()
+            .and_then(|key_binding| key_binding.keyboard_shortcut_text(window, cx));
+        let (switch_width, switch_height, thumb_size) = match self.size {
+            SwitchSize::Default => (
+                DynamicSpacing::Base32.rems(cx),
+                DynamicSpacing::Base20.rems(cx),
+                DynamicSpacing::Base12.rems(cx),
+            ),
+            SwitchSize::Small => (
+                rems_from_px(28_f32),
+                rems_from_px(16_f32),
+                rems_from_px(10_f32),
+            ),
+        };
 
         let switch = div()
             .id((self.id.clone(), "switch"))
-            .p(px(1.0))
-            .border_2()
-            .border_color(cx.theme().colors().border_transparent)
-            .rounded_full()
+            .role(Role::Switch)
+            .when_some(aria_label, |this, label| this.aria_label(label))
+            .when_some(aria_keyshortcuts, |this, keyshortcuts| {
+                this.aria_keyshortcuts(keyshortcuts)
+            })
+            .when_some(aria_description, |this, description| {
+                this.aria_description(description)
+            })
+            .aria_toggled(match self.toggle_state {
+                ToggleState::Selected => Toggled::True,
+                ToggleState::Indeterminate => Toggled::Mixed,
+                ToggleState::Unselected => Toggled::False,
+            })
             .when_some(
                 self.tab_index.filter(|_| !self.disabled),
                 |this, tab_index| {
                     this.tab_index(tab_index)
-                        .focus_visible(|mut style| {
-                            style.border_color = Some(cx.theme().colors().border_focused);
-                            style
-                        })
                         .when_some(self.on_click.clone(), |this, on_click| {
                             this.on_click(move |_, window, cx| {
                                 on_click(&self.toggle_state.inverse(), window, cx)
@@ -471,8 +529,8 @@ impl RenderOnce for Switch {
             )
             .child(
                 h_flex()
-                    .w(DynamicSpacing::Base32.rems(cx))
-                    .h(DynamicSpacing::Base20.rems(cx))
+                    .w(switch_width)
+                    .h(switch_height)
                     .group(group_id.clone())
                     .child(
                         h_flex()
@@ -485,11 +543,9 @@ impl RenderOnce for Switch {
                             .when(!self.disabled, |this| {
                                 this.group_hover(group_id.clone(), |el| el.bg(bg_hover_color))
                             })
-                            .border_1()
-                            .border_color(border_color)
                             .child(
                                 div()
-                                    .size(DynamicSpacing::Base12.rems(cx))
+                                    .size(thumb_size)
                                     .rounded_full()
                                     .bg(thumb_color)
                                     .opacity(thumb_opacity),
@@ -506,7 +562,11 @@ impl RenderOnce for Switch {
                 self.label_position == Some(SwitchLabelPosition::Start),
                 |this| {
                     this.when_some(label.clone(), |this, label| {
-                        this.child(Label::new(label).size(self.label_size))
+                        this.child(
+                            Label::new(label)
+                                .size(self.label_size)
+                                .color(self.label_color),
+                        )
                     })
                 },
             )
@@ -515,7 +575,11 @@ impl RenderOnce for Switch {
                 self.label_position == Some(SwitchLabelPosition::End),
                 |this| {
                     this.when_some(label, |this, label| {
-                        this.child(Label::new(label).size(self.label_size))
+                        this.child(
+                            Label::new(label)
+                                .size(self.label_size)
+                                .color(self.label_color),
+                        )
                     })
                 },
             )

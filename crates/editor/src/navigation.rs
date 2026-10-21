@@ -45,6 +45,9 @@ impl Editor {
         if self.take_rename(true, window, cx).is_some() {
             return;
         }
+        if self.cycle_inline_input_history(InlineInputHistoryDirection::Older, window, cx) {
+            return;
+        }
 
         if self.mode.is_single_line() {
             cx.propagate();
@@ -262,6 +265,9 @@ impl Editor {
         if self.take_rename(true, window, cx).is_some() {
             return;
         }
+        if self.cycle_inline_input_history(InlineInputHistoryDirection::Newer, window, cx) {
+            return;
+        }
 
         if self.mode.is_single_line() {
             cx.propagate();
@@ -385,7 +391,7 @@ impl Editor {
         self.change_selections(Default::default(), window, cx, |s| {
             s.move_cursors_with(&mut |map, head, _| {
                 (
-                    movement::previous_word_start(map, head),
+                    movement::previous_word_start(map, head, false),
                     SelectionGoal::None,
                 )
             });
@@ -417,7 +423,7 @@ impl Editor {
         self.change_selections(Default::default(), window, cx, |s| {
             s.move_heads_with(&mut |map, head, _| {
                 (
-                    movement::previous_word_start(map, head),
+                    movement::previous_word_start(map, head, false),
                     SelectionGoal::None,
                 )
             });
@@ -448,7 +454,10 @@ impl Editor {
     ) {
         self.change_selections(Default::default(), window, cx, |s| {
             s.move_cursors_with(&mut |map, head, _| {
-                (movement::next_word_end(map, head), SelectionGoal::None)
+                (
+                    movement::next_word_end(map, head, false),
+                    SelectionGoal::None,
+                )
             });
         })
     }
@@ -474,7 +483,10 @@ impl Editor {
     ) {
         self.change_selections(Default::default(), window, cx, |s| {
             s.move_heads_with(&mut |map, head, _| {
-                (movement::next_word_end(map, head), SelectionGoal::None)
+                (
+                    movement::next_word_end(map, head, false),
+                    SelectionGoal::None,
+                )
             });
         })
     }
@@ -606,6 +618,68 @@ impl Editor {
                 )
             });
         })
+    }
+
+    pub fn move_to_next_comment_paragraph(
+        &mut self,
+        _: &MoveToNextCommentParagraph,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if matches!(self.mode, EditorMode::SingleLine) {
+            cx.propagate();
+            return;
+        }
+        // Keep the destination paragraph near the top of the viewport so the
+        // whole paragraph below the caret stays visible after a jump.
+        self.change_selections(
+            SelectionEffects::scroll(Autoscroll::top_relative(5.0)),
+            window,
+            cx,
+            |s| {
+                s.move_with(&mut |map, selection| {
+                    selection.collapse_to(
+                        movement::comment_paragraph(
+                            map,
+                            selection.head(),
+                            workspace::searchable::Direction::Next,
+                        ),
+                        SelectionGoal::None,
+                    )
+                });
+            },
+        )
+    }
+
+    pub fn move_to_previous_comment_paragraph(
+        &mut self,
+        _: &MoveToPreviousCommentParagraph,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if matches!(self.mode, EditorMode::SingleLine) {
+            cx.propagate();
+            return;
+        }
+        // Keep the destination paragraph near the top of the viewport so the
+        // whole paragraph below the caret stays visible after a jump.
+        self.change_selections(
+            SelectionEffects::scroll(Autoscroll::top_relative(5.0)),
+            window,
+            cx,
+            |s| {
+                s.move_with(&mut |map, selection| {
+                    selection.collapse_to(
+                        movement::comment_paragraph(
+                            map,
+                            selection.head(),
+                            workspace::searchable::Direction::Prev,
+                        ),
+                        SelectionGoal::None,
+                    )
+                });
+            },
+        )
     }
 
     pub fn select_to_start_of_paragraph(
@@ -1000,7 +1074,7 @@ impl Editor {
 
     pub fn go_to_declaration_split(
         &mut self,
-        _: &GoToDeclaration,
+        _: &GoToDeclarationSplit,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Result<Navigated>> {
@@ -1080,7 +1154,16 @@ impl Editor {
             };
 
             if let Some(url) = url {
-                cx.update(|_, cx| cx.open_url(&url))?;
+                cx.update(|window, cx| {
+                    if parse_zed_link(&url, cx).is_some() {
+                        window.dispatch_action(
+                            Box::new(zed_actions::OpenZedUrl { url: url.into() }),
+                            cx,
+                        );
+                    } else {
+                        cx.open_url(&url);
+                    }
+                })?;
             }
 
             anyhow::Ok(())
@@ -1360,12 +1443,12 @@ impl Editor {
                 return anyhow::Ok(Navigated::No);
             }
             for ranges in locations.values_mut() {
-                ranges.sort_by_key(|range| (range.start, Reverse(range.end)));
+                ranges.sort_unstable_by_key(|range| (range.start, Reverse(range.end)));
                 ranges.dedup();
             }
             let mut num_locations = 0;
             for ranges in locations.values_mut() {
-                ranges.sort_by_key(|range| (range.start, Reverse(range.end)));
+                ranges.sort_unstable_by_key(|range| (range.start, Reverse(range.end)));
                 ranges.dedup();
                 num_locations += ranges.len();
             }
@@ -1390,8 +1473,6 @@ impl Editor {
                         window.defer(cx, move |window, cx| {
                             let target_editor: Entity<Self> =
                                 workspace.update(cx, |workspace, cx| {
-                                    let pane = workspace.active_pane().clone();
-
                                     let preview_tabs_settings = PreviewTabsSettings::get_global(cx);
                                     let keep_old_preview = preview_tabs_settings
                                         .enable_keep_preview_on_code_navigation;
@@ -1399,7 +1480,7 @@ impl Editor {
                                         .enable_preview_file_from_code_navigation;
 
                                     workspace.open_project_item(
-                                        pane,
+                                        Some(workspace.active_pane().clone()),
                                         target_buffer.clone(),
                                         true,
                                         true,
@@ -1597,6 +1678,29 @@ impl Editor {
         }
     }
 
+    pub(super) fn go_to_line<T: 'static>(
+        &mut self,
+        position: Anchor,
+        highlight_color: fn(&App) -> Hsla,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let snapshot = self.snapshot(window, cx).display_snapshot;
+        let position = position.to_point(&snapshot.buffer_snapshot());
+        let start = snapshot
+            .buffer_snapshot()
+            .clip_point(Point::new(position.row, 0), Bias::Left);
+        let end = start + Point::new(1, 0);
+        let start = snapshot.buffer_snapshot().anchor_before(start);
+        let end = snapshot.buffer_snapshot().anchor_before(end);
+
+        self.highlight_rows::<T>(start..end, highlight_color, Default::default(), cx);
+
+        if self.buffer.read(cx).is_singleton() {
+            self.request_autoscroll(Autoscroll::center().for_anchor(start), cx);
+        }
+    }
+
     pub fn navigate_to_hover_links(
         &mut self,
         kind: Option<GotoDefinitionKind>,
@@ -1649,7 +1753,7 @@ impl Editor {
             })?;
             let mut num_locations = 0;
             for ranges in locations.values_mut() {
-                ranges.sort_by_key(|range| (range.start, Reverse(range.end)));
+                ranges.sort_unstable_by_key(|range| (range.start, Reverse(range.end)));
                 ranges.dedup();
                 // Merge overlapping or contained ranges. After sorting by
                 // (start, Reverse(end)), we can merge in a single pass:
@@ -1746,7 +1850,16 @@ impl Editor {
                 // If there is one url or file, open it directly
                 match first_url_or_file {
                     Some(Either::Left(url)) => {
-                        cx.update(|_, cx| cx.open_url(&url))?;
+                        cx.update(|window, cx| {
+                            if parse_zed_link(&url, cx).is_some() {
+                                window.dispatch_action(
+                                    Box::new(zed_actions::OpenZedUrl { url: url.into() }),
+                                    cx,
+                                );
+                            } else {
+                                cx.open_url(&url);
+                            }
+                        })?;
                         Ok(Navigated::Yes)
                     }
                     Some(Either::Right(file_target)) => {
@@ -1833,7 +1946,7 @@ impl Editor {
                         window.defer(cx, move |window, cx| {
                             let (target_editor, target_pane): (Entity<Self>, Entity<Pane>) =
                                 workspace.update(cx, |workspace, cx| {
-                                    let pane = if split {
+                                    let requested_pane = if split {
                                         workspace.adjacent_pane(window, cx)
                                     } else {
                                         workspace.active_pane().clone()
@@ -1846,7 +1959,7 @@ impl Editor {
                                         .enable_preview_file_from_code_navigation;
 
                                     let editor = workspace.open_project_item(
-                                        pane.clone(),
+                                        Some(requested_pane.clone()),
                                         target_buffer.clone(),
                                         true,
                                         true,
@@ -1855,7 +1968,10 @@ impl Editor {
                                         window,
                                         cx,
                                     );
-                                    (editor, pane)
+                                    let target_pane = workspace
+                                        .pane_for_item_id(editor.entity_id())
+                                        .unwrap_or(requested_pane);
+                                    (editor, target_pane)
                                 });
                             // We create our own nav history instead of using
                             // `target_editor.nav_history` because `nav_history`
@@ -2098,7 +2214,9 @@ impl Editor {
         let excerpt_buffer = cx.new(|cx| {
             let key = &mut key.1;
             let mut multibuffer = MultiBuffer::new(capability);
-            for (buffer, mut ranges_for_buffer) in locations {
+            let mut sorted_locations = locations.into_iter().collect::<Vec<_>>();
+            sorted_locations.sort_by_key(|(buffer, _)| buffer.read(cx).remote_id());
+            for (buffer, mut ranges_for_buffer) in sorted_locations {
                 ranges_for_buffer.sort_by_key(|range| (range.start, Reverse(range.end)));
                 key.push((buffer.read(cx).remote_id(), ranges_for_buffer.clone()));
                 multibuffer.set_excerpts_for_path(
@@ -2191,6 +2309,11 @@ impl Editor {
         pane.update(cx, |pane, cx| {
             if allow_preview && !was_existing {
                 destination_index = pane.replace_preview_item_id(item.item_id(), window, cx);
+                editor.update(cx, |editor, cx| {
+                    editor
+                        .buffer
+                        .update(cx, |buffer, cx| buffer.refresh_preview(cx))
+                });
             }
             if was_existing && !allow_preview {
                 pane.unpreview_item_if_preview(item.item_id());
@@ -2258,7 +2381,7 @@ impl Editor {
         })
     }
 
-    fn go_to_definition_of_kind(
+    pub(crate) fn go_to_definition_of_kind(
         &mut self,
         kind: GotoDefinitionKind,
         split: bool,
@@ -2328,10 +2451,9 @@ impl Editor {
             let location = Some({
                 let target_buffer_handle = location_task.await.context("open local buffer")?;
                 let range = target_buffer_handle.read_with(cx, |target_buffer, _| {
-                    let target_start = target_buffer
-                        .clip_point_utf16(point_from_lsp(lsp_location.range.start), Bias::Left);
-                    let target_end = target_buffer
-                        .clip_point_utf16(point_from_lsp(lsp_location.range.end), Bias::Left);
+                    let range = language::range_from_lsp(lsp_location.range);
+                    let target_start = target_buffer.clip_point_utf16(range.start, Bias::Left);
+                    let target_end = target_buffer.clip_point_utf16(range.end, Bias::Left);
                     target_buffer.anchor_after(target_start)
                         ..target_buffer.anchor_before(target_end)
                 });
@@ -2352,10 +2474,15 @@ impl Editor {
         cx: &mut Context<Self>,
     ) {
         let multibuffer = self.buffer().read(cx);
-        if !multibuffer.is_singleton() {
+        let Some(buffer) = multibuffer.as_singleton() else {
             return;
         };
-        let anchor_range = range.to_anchors(&multibuffer.snapshot(cx));
+        let Some(start) = multibuffer.buffer_point_to_anchor(&buffer, range.start, cx) else {
+            return;
+        };
+        let Some(end) = multibuffer.buffer_point_to_anchor(&buffer, range.end, cx) else {
+            return;
+        };
         self.change_selections(
             SelectionEffects::scroll(Autoscroll::for_go_to_definition(
                 self.cursor_top_offset(cx),
@@ -2364,7 +2491,7 @@ impl Editor {
             .nav_history(record_nav_history),
             window,
             cx,
-            |s| s.select_anchor_ranges([anchor_range]),
+            |s| s.select_anchor_ranges([start..end]),
         );
     }
 

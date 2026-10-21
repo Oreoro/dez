@@ -21,9 +21,9 @@ impl AiSettingItemStatus {
             Self::Starting => "Server is starting.",
             Self::Running => "Server is active.",
             Self::Error => "Server has an error.",
-            Self::AuthRequired => "Authentication required.",
-            Self::ClientSecretRequired => "Client secret required.",
-            Self::Authenticating => "Waiting for authorization…",
+            Self::AuthRequired => "Authentication Required.",
+            Self::ClientSecretRequired => "Client Secret Required.",
+            Self::Authenticating => "Waiting for Authorization…",
         }
     }
 
@@ -52,8 +52,8 @@ pub enum AiSettingItemSource {
 impl AiSettingItemSource {
     fn icon_name(&self) -> IconName {
         match self {
-            Self::Extension => IconName::DezSrcExtension,
-            Self::Custom => IconName::DezSrcCustom,
+            Self::Extension => IconName::ZedSrcExtension,
+            Self::Custom => IconName::ZedSrcCustom,
             Self::Registry => IconName::AcpRegistry,
         }
     }
@@ -198,6 +198,7 @@ impl RenderOnce for AiSettingItem {
         v_flex()
             .id(id)
             .min_w_0()
+            .py_2()
             .child(
                 h_flex()
                     .min_w_0()
@@ -374,7 +375,7 @@ impl Component for AiSettingItem {
                             AiSettingItemSource::Registry,
                         )
                         .icon(
-                            Icon::new(IconName::DezAssistant)
+                            Icon::new(IconName::Sparkle)
                                 .size(IconSize::Small)
                                 .color(Color::Muted),
                         ),

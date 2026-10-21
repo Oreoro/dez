@@ -1,26 +1,25 @@
 use std::sync::Arc;
 
-use crate::TaskContexts;
+use crate::{TaskContexts, canvas};
 use editor::Editor;
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     Action, AnyElement, App, AppContext as _, Context, DismissEvent, Entity, EventEmitter,
-    Focusable, InteractiveElement, ParentElement, Render, Styled, Subscription, Task, WeakEntity,
-    Window, rems,
+    Focusable, InteractiveElement, ParentElement, Render, SharedString, Styled, Subscription, Task,
+    WeakEntity, Window,
 };
 use itertools::Itertools;
 use picker::{Picker, PickerDelegate, highlighted_match_with_paths::HighlightedMatch};
 use project::{TaskSourceKind, task_store::TaskStore};
 use task::{DebugScenario, ResolvedTask, RevealTarget, TaskContext, TaskTemplate};
 use ui::{
-    ActiveTheme, Clickable, FluentBuilder as _, IconButtonShape, IconWithIndicator, Indicator,
-    IntoElement, KeyBinding, ListItem, ListItemSpacing, RenderOnce, Toggleable, Tooltip, div,
-    prelude::*,
+    Clickable, FluentBuilder as _, IconButtonShape, IconWithIndicator, Indicator, IntoElement,
+    KeyBinding, ListItem, RenderOnce, Toggleable, Tooltip, div, prelude::*,
 };
 
-pub use dez_actions::{Rerun, Spawn};
 use util::{ResultExt, truncate_and_trailoff};
 use workspace::{ModalView, Workspace};
+pub use zed_actions::{Rerun, Spawn};
 
 /// A modal used to spawn new tasks.
 pub struct TasksModalDelegate {
@@ -44,22 +43,96 @@ pub struct TaskOverrides {
     pub reveal_target: Option<RevealTarget>,
 }
 
+fn task_no_matches_copy(app_name: &str, candidates_loaded: bool, prompt: &str) -> SharedString {
+    if app_name == "Zed" {
+        return "No matches".into();
+    }
+
+    if !candidates_loaded {
+        "Loading Workspace tasks…".into()
+    } else if prompt.trim().is_empty() {
+        "No saved tasks. Type a command above to run it once.".into()
+    } else {
+        "No matching task. Press Enter to run this command once.".into()
+    }
+}
+
+fn task_run_action_label(
+    app_name: &str,
+    is_recent: bool,
+    is_command: bool,
+    without_history: bool,
+) -> &'static str {
+    if app_name == "Zed" {
+        if is_command {
+            if without_history {
+                "Spawn Oneshot Without History"
+            } else {
+                "Spawn Oneshot"
+            }
+        } else if is_recent {
+            "Rerun"
+        } else if without_history {
+            "Spawn Without History"
+        } else {
+            "Spawn"
+        }
+    } else if is_command {
+        if without_history {
+            "Run Command Without History"
+        } else {
+            "Run Command"
+        }
+    } else if is_recent {
+        if without_history {
+            "Rerun Without History"
+        } else {
+            "Rerun"
+        }
+    } else if without_history {
+        "Run Task Without History"
+    } else {
+        "Run Task"
+    }
+}
+
+fn task_picker_placeholder(app_name: &str, targets_center_pane: bool) -> &'static str {
+    match (app_name == "Zed", targets_center_pane) {
+        (true, true) => "Find a task, or run a command in the central pane",
+        (false, true) => "Find a task, or run a command in the Main Work Area",
+        (_, false) => "Find a task, or run a command",
+    }
+}
+
+fn recent_task_removal_action_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Delete from Recent Tasks"
+    } else {
+        "Remove from Recent Tasks"
+    }
+}
+
+fn recent_task_removal_is_persistently_visible(app_name: &str, selected: bool) -> bool {
+    app_name != "Zed" && selected
+}
+
 impl TasksModalDelegate {
     fn new(
         task_store: Entity<TaskStore>,
         task_contexts: Arc<TaskContexts>,
         task_overrides: Option<TaskOverrides>,
         workspace: WeakEntity<Workspace>,
-        cx: &App,
     ) -> Self {
-        let placeholder_text = if let Some(TaskOverrides {
-            reveal_target: Some(RevealTarget::Center),
-        }) = &task_overrides
-        {
-            Arc::from(localization::text(cx, "tasks-placeholder-central").to_string())
-        } else {
-            Arc::from(localization::text(cx, "tasks-placeholder").to_string())
-        };
+        let targets_center_pane = matches!(
+            task_overrides.as_ref(),
+            Some(TaskOverrides {
+                reveal_target: Some(RevealTarget::Center),
+            })
+        );
+        let placeholder_text = Arc::from(task_picker_placeholder(
+            paths::APP_NAME,
+            targets_center_pane,
+        ));
         Self {
             task_store,
             workspace,
@@ -145,12 +218,14 @@ impl TasksModal {
                     task_contexts,
                     task_overrides,
                     workspace.clone(),
-                    cx,
                 ),
                 window,
                 cx,
             )
-            .modal(is_modal)
+            .surface_density(canvas::task_picker_density(cx))
+            .surface_radius(canvas::task_picker_radius(cx))
+            .surface_contrast(canvas::task_picker_contrast(cx))
+            .when(!is_modal, |picker| picker.embedded())
         });
         let mut _subscriptions = [
             cx.subscribe(&picker, |_, _, _: &DismissEvent, cx| {
@@ -213,7 +288,6 @@ impl Render for TasksModal {
     ) -> impl gpui::prelude::IntoElement {
         v_flex()
             .key_context("TasksModal")
-            .w(rems(34.))
             .child(self.picker.clone())
     }
 }
@@ -239,6 +313,10 @@ const MAX_TAGS_LINE_LEN: usize = 30;
 impl PickerDelegate for TasksModalDelegate {
     type ListItem = ListItem;
 
+    fn name() -> &'static str {
+        "tasks modal"
+    }
+
     fn match_count(&self) -> usize {
         self.matches.len()
     }
@@ -258,6 +336,14 @@ impl PickerDelegate for TasksModalDelegate {
 
     fn placeholder_text(&self, _window: &mut Window, _: &mut App) -> Arc<str> {
         self.placeholder_text.clone()
+    }
+
+    fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
+        Some(task_no_matches_copy(
+            paths::APP_NAME,
+            self.candidates.is_some(),
+            &self.prompt,
+        ))
     }
 
     fn update_matches(
@@ -338,10 +424,11 @@ impl PickerDelegate for TasksModalDelegate {
                                 let _ = picker.delegate.candidates.insert(new_candidates);
                                 match_candidates
                             })
-                            .ok()
+                            .log_err()
                             .unwrap_or_default()
                     })
                 } else {
+                    self.candidates = Some(Vec::new());
                     Task::ready(Vec::new())
                 }
             }
@@ -422,7 +509,7 @@ impl PickerDelegate for TasksModalDelegate {
                     cx,
                 );
             })
-            .ok();
+            .log_err();
 
         cx.emit(DismissEvent);
     }
@@ -503,7 +590,7 @@ impl PickerDelegate for TasksModalDelegate {
         };
         let icon = icon.map(|icon| {
             IconWithIndicator::new(icon, indicator)
-                .indicator_border_color(Some(cx.theme().colors().border_transparent))
+                .indicator_border_color(Some(canvas::task_indicator_border(cx)))
         });
         let history_run_icon = if Some(ix) <= self.divider_index {
             Some(
@@ -527,7 +614,7 @@ impl PickerDelegate for TasksModalDelegate {
                 .start_slot::<IconWithIndicator>(icon)
                 .end_slot::<AnyElement>(
                     h_flex()
-                        .gap_1()
+                        .gap(canvas::task_footer_gap(cx))
                         .child(Label::new(truncate_and_trailoff(
                             &template
                                 .tags
@@ -541,7 +628,7 @@ impl PickerDelegate for TasksModalDelegate {
                         .child(history_run_icon.unwrap())
                         .into_any_element(),
                 )
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::task_row_spacing(cx))
                 .when_some(tooltip_label, |list_item, item_label| {
                     list_item.tooltip(move |_, _| item_label.clone())
                 })
@@ -550,12 +637,20 @@ impl PickerDelegate for TasksModalDelegate {
                         || Some(ix) <= self.divider_index
                     {
                         let task_index = hit.candidate_id;
+                        let removal_action_label =
+                            recent_task_removal_action_label(paths::APP_NAME);
+                        let removal_action_is_persistently_visible =
+                            recent_task_removal_is_persistently_visible(paths::APP_NAME, selected);
                         let delete_button = div().child(
                             IconButton::new("delete", IconName::Close)
                                 .shape(IconButtonShape::Square)
                                 .icon_color(Color::Muted)
                                 .size(ButtonSize::None)
                                 .icon_size(IconSize::XSmall)
+                                .aria_label(removal_action_label)
+                                .when(removal_action_is_persistently_visible, |button| {
+                                    button.tab_index(0isize)
+                                })
                                 .on_click(cx.listener(move |picker, _event, window, cx| {
                                     cx.stop_propagation();
                                     window.prevent_default();
@@ -568,14 +663,13 @@ impl PickerDelegate for TasksModalDelegate {
                                         .checked_sub(1);
                                     picker.refresh(window, cx);
                                 }))
-                                .tooltip(|_, cx| {
-                                    Tooltip::simple(
-                                        localization::text(cx, "tasks-delete-recent"),
-                                        cx,
-                                    )
-                                }),
+                                .tooltip(move |_, cx| Tooltip::simple(removal_action_label, cx)),
                         );
-                        item.end_slot_on_hover(delete_button)
+                        if removal_action_is_persistently_visible {
+                            item.end_slot(delete_button)
+                        } else {
+                            item.end_slot_on_hover(delete_button)
+                        }
                     } else {
                         item
                     }
@@ -623,7 +717,7 @@ impl PickerDelegate for TasksModalDelegate {
                     cx,
                 )
             })
-            .ok();
+            .log_err();
         cx.emit(DismissEvent);
     }
 
@@ -650,20 +744,18 @@ impl PickerDelegate for TasksModalDelegate {
             .last_scheduled_task(None)
             .is_some()
         {
-            Some((
-                localization::text(cx, "tasks-rerun-last"),
-                Rerun::default().boxed_clone(),
-            ))
+            Some(("Rerun Last Task", Rerun::default().boxed_clone()))
         } else {
             None
         };
         Some(
             h_flex()
                 .w_full()
-                .p_1p5()
+                .p(canvas::task_footer_padding(cx))
+                .gap(canvas::task_footer_gap(cx))
                 .justify_between()
                 .border_t_1()
-                .border_color(cx.theme().colors().border_variant)
+                .border_color(canvas::task_footer_border(cx))
                 .child(
                     left_button
                         .map(|(label, action)| {
@@ -686,13 +778,14 @@ impl PickerDelegate for TasksModalDelegate {
                         }
                         .boxed_clone();
                         this.child({
-                            let spawn_oneshot_label = if current_modifiers.secondary() {
-                                localization::text(cx, "tasks-spawn-once-no-history")
-                            } else {
-                                localization::text(cx, "tasks-spawn-once")
-                            };
+                            let spawn_oneshot_label = task_run_action_label(
+                                paths::APP_NAME,
+                                false,
+                                true,
+                                current_modifiers.secondary(),
+                            );
 
-                            Button::new("spawn-onehshot", spawn_oneshot_label)
+                            Button::new("spawn-oneshot", spawn_oneshot_label)
                                 .key_binding(KeyBinding::for_action(&*action, cx))
                                 .on_click(move |_, window, cx| {
                                     window.dispatch_action(action.boxed_clone(), cx)
@@ -700,11 +793,12 @@ impl PickerDelegate for TasksModalDelegate {
                         })
                     } else if current_modifiers.secondary() {
                         this.child({
-                            let label = if is_recent_selected {
-                                localization::text(cx, "tasks-rerun-no-history")
-                            } else {
-                                localization::text(cx, "tasks-spawn-no-history")
-                            };
+                            let label = task_run_action_label(
+                                paths::APP_NAME,
+                                is_recent_selected,
+                                false,
+                                true,
+                            );
                             Button::new("spawn", label)
                                 .key_binding(KeyBinding::for_action(&menu::SecondaryConfirm, cx))
                                 .on_click(move |_, window, cx| {
@@ -713,11 +807,12 @@ impl PickerDelegate for TasksModalDelegate {
                         })
                     } else {
                         this.child({
-                            let run_entry_label = if is_recent_selected {
-                                localization::text(cx, "tasks-rerun")
-                            } else {
-                                localization::text(cx, "tasks-spawn")
-                            };
+                            let run_entry_label = task_run_action_label(
+                                paths::APP_NAME,
+                                is_recent_selected,
+                                false,
+                                false,
+                            );
 
                             Button::new("spawn", run_entry_label)
                                 .key_binding(KeyBinding::for_action(&menu::Confirm, cx))
@@ -762,6 +857,71 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn dez_task_picker_explains_loading_empty_and_command_states() {
+        assert_eq!(
+            task_no_matches_copy("Dez", false, ""),
+            "Loading Workspace tasks…"
+        );
+        assert_eq!(
+            task_no_matches_copy("Dez", true, ""),
+            "No saved tasks. Type a command above to run it once."
+        );
+        assert_eq!(
+            task_no_matches_copy("Dez", true, "cargo test"),
+            "No matching task. Press Enter to run this command once."
+        );
+        assert_eq!(task_no_matches_copy("Zed", true, ""), "No matches");
+    }
+
+    #[test]
+    fn dez_task_picker_uses_run_language_without_changing_zed() {
+        assert_eq!(
+            task_run_action_label("Dez", false, true, false),
+            "Run Command"
+        );
+        assert_eq!(
+            task_run_action_label("Dez", false, false, false),
+            "Run Task"
+        );
+        assert_eq!(
+            task_run_action_label("Zed", false, true, false),
+            "Spawn Oneshot"
+        );
+        assert_eq!(task_run_action_label("Zed", false, false, false), "Spawn");
+    }
+
+    #[test]
+    fn dez_task_picker_names_the_main_work_area_destination() {
+        assert_eq!(
+            task_picker_placeholder("Dez", true),
+            "Find a task, or run a command in the Main Work Area"
+        );
+        assert_eq!(
+            task_picker_placeholder("Dez", false),
+            "Find a task, or run a command"
+        );
+        assert_eq!(
+            task_picker_placeholder("Zed", true),
+            "Find a task, or run a command in the central pane"
+        );
+    }
+
+    #[test]
+    fn dez_keeps_recent_task_removal_named_and_visible_on_selection() {
+        assert_eq!(
+            recent_task_removal_action_label("Dez"),
+            "Remove from Recent Tasks"
+        );
+        assert!(recent_task_removal_is_persistently_visible("Dez", true));
+        assert!(!recent_task_removal_is_persistently_visible("Dez", false));
+        assert_eq!(
+            recent_task_removal_action_label("Zed"),
+            "Delete from Recent Tasks"
+        );
+        assert!(!recent_task_removal_is_persistently_visible("Zed", true));
+    }
+
     #[gpui::test]
     async fn test_spawn_tasks_modal_query_reuse(cx: &mut TestAppContext) {
         init_test(cx);
@@ -769,7 +929,7 @@ mod tests {
         fs.insert_tree(
             path!("/dir"),
             json!({
-                ".dez": {
+                ".zed": {
                     "tasks.json": r#"[
                         {
                             "label": "example task",
@@ -942,7 +1102,7 @@ mod tests {
         fs.insert_tree(
             path!("/dir"),
             json!({
-                ".dez": {
+                ".zed": {
                     "tasks.json": r#"[
                         {
                             "label": "hello from $ZED_FILE:$ZED_ROW:$ZED_COLUMN",
@@ -1062,10 +1222,11 @@ mod tests {
             Language::new(
                 LanguageConfig {
                     name: "Test".into(),
-                    matcher: LanguageMatcher {
+                    matcher: (LanguageMatcher {
                         path_suffixes: vec!["test".to_string()],
                         ..LanguageMatcher::default()
-                    },
+                    })
+                    .into(),
                     ..LanguageConfig::default()
                 },
                 None,
@@ -1144,10 +1305,11 @@ mod tests {
                 Language::new(
                     LanguageConfig {
                         name: "TypeScript".into(),
-                        matcher: LanguageMatcher {
+                        matcher: (LanguageMatcher {
                             path_suffixes: vec!["ts".to_string()],
                             ..LanguageMatcher::default()
-                        },
+                        })
+                        .into(),
                         ..LanguageConfig::default()
                     },
                     None,
@@ -1176,10 +1338,11 @@ mod tests {
                 Language::new(
                     LanguageConfig {
                         name: "Rust".into(),
-                        matcher: LanguageMatcher {
+                        matcher: (LanguageMatcher {
                             path_suffixes: vec!["rs".to_string()],
                             ..LanguageMatcher::default()
-                        },
+                        })
+                        .into(),
                         ..LanguageConfig::default()
                     },
                     None,

@@ -2,10 +2,10 @@ use editor::{Bias, Editor, SelectionEffects, scroll::Autoscroll, styled_runs_for
 use fuzzy::{StringMatch, StringMatchCandidate};
 use gpui::{
     App, Context, DismissEvent, Entity, HighlightStyle, ParentElement, StyledText, Task, TaskExt,
-    TextStyle, WeakEntity, Window, relative, rems,
+    TextStyle, WeakEntity, Window, relative,
 };
 use ordered_float::OrderedFloat;
-use picker::{Picker, PickerDelegate, PickerItemId, PickerRestorationState, PreviewUpdate};
+use picker::{Picker, PickerDelegate, PreviewUpdate};
 use project::{Project, Symbol, lsp_store::SymbolLocation};
 use settings::Settings;
 use std::{cmp::Reverse, sync::Arc};
@@ -14,8 +14,10 @@ use theme_settings::ThemeSettings;
 use util::ResultExt;
 use workspace::{
     Workspace,
-    ui::{LabelLike, ListItem, ListItemSpacing, prelude::*},
+    ui::{LabelLike, ListItem, prelude::*},
 };
+
+mod canvas;
 
 pub fn init(cx: &mut App) {
     cx.observe_new(
@@ -26,8 +28,11 @@ pub fn init(cx: &mut App) {
                     let handle = cx.entity().downgrade();
                     workspace.toggle_modal(window, cx, move |window, cx| {
                         let delegate = ProjectSymbolsDelegate::new(handle, project.clone());
-                        Picker::uniform_list_with_preview(delegate, project, window, cx)
-                            .width(rems(34.))
+                        let preview = picker_preview::editor_preview(project, window, cx);
+                        Picker::uniform_list_with_preview(delegate, preview, window, cx)
+                            .surface_density(canvas::project_symbols_picker_density(cx))
+                            .surface_radius(canvas::project_symbols_picker_radius(cx))
+                            .surface_contrast(canvas::project_symbols_picker_contrast(cx))
                     })
                 },
             );
@@ -37,45 +42,6 @@ pub fn init(cx: &mut App) {
 }
 
 pub type ProjectSymbols = Entity<Picker<ProjectSymbolsDelegate>>;
-
-struct ProjectSymbolsRequest;
-
-impl workspace::ReopenablePickerRequest for ProjectSymbolsRequest {
-    fn is_valid(&self, _workspace: &Workspace, _cx: &App) -> bool {
-        true
-    }
-
-    fn reopen(
-        &self,
-        state: workspace::StoredPickerState,
-        workspace: &mut Workspace,
-        window: &mut Window,
-        cx: &mut Context<Workspace>,
-    ) -> Task<anyhow::Result<()>> {
-        let project = workspace.project().clone();
-        let workspace_handle = cx.entity().downgrade();
-        workspace.toggle_modal(window, cx, move |window, cx| {
-            let delegate = ProjectSymbolsDelegate::new(workspace_handle, project.clone());
-            let mut picker =
-                Picker::uniform_list_with_preview(delegate, project, window, cx).width(rems(34.));
-            picker.restore_state(
-                PickerRestorationState {
-                    query: state.query,
-                    multi_select_enabled: state.multi_select_enabled,
-                    selected_item_ids: state
-                        .selected_item_ids
-                        .into_iter()
-                        .map(PickerItemId::new)
-                        .collect(),
-                },
-                window,
-                cx,
-            );
-            picker
-        });
-        Task::ready(Ok(()))
-    }
-}
 
 pub struct ProjectSymbolsDelegate {
     workspace: WeakEntity<Workspace>,
@@ -148,20 +114,12 @@ impl ProjectSymbolsDelegate {
 
 impl PickerDelegate for ProjectSymbolsDelegate {
     type ListItem = ListItem;
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "project-symbols-placeholder").into()
-    }
 
-    fn workspace(&self, _cx: &App) -> Option<WeakEntity<Workspace>> {
-        Some(self.workspace.clone())
+    fn name() -> &'static str {
+        "project symbols"
     }
-
-    fn reopen_request(
-        &self,
-        _state: &PickerRestorationState,
-        _cx: &App,
-    ) -> Option<Arc<dyn workspace::ReopenablePickerRequest>> {
-        Some(Arc::new(ProjectSymbolsRequest))
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Search project symbols...".into()
     }
 
     fn confirm(&mut self, secondary: bool, window: &mut Window, cx: &mut Context<Picker<Self>>) {
@@ -188,7 +146,14 @@ impl PickerDelegate for ProjectSymbolsDelegate {
                     };
 
                     let editor = workspace.open_project_item::<Editor>(
-                        pane, buffer, true, true, true, true, window, cx,
+                        secondary.then_some(pane),
+                        buffer,
+                        true,
+                        true,
+                        true,
+                        true,
+                        window,
+                        cx,
                     );
 
                     editor.update(cx, |editor, cx| {
@@ -237,9 +202,8 @@ impl PickerDelegate for ProjectSymbolsDelegate {
 
     fn try_get_preview_data_for_match(&self, _cx: &App) -> Option<PreviewUpdate> {
         let candidate_id = self.matches.get(self.selected_match_index)?.candidate_id;
-        Some(PreviewUpdate::from_symbol(
-            self.symbols.get(candidate_id)?.clone(),
-        ))
+        let symbol = self.symbols.get(candidate_id)?.clone();
+        Some(PreviewUpdate::from_symbol(symbol))
     }
 
     fn update_matches(
@@ -310,7 +274,7 @@ impl PickerDelegate for ProjectSymbolsDelegate {
         let path = match &symbol.path {
             SymbolLocation::InProject(project_path) => {
                 let project = self.project.read(cx);
-                let mut path = project_path.path.clone();
+                let mut path = project_path.path.to_rel_path_buf();
                 if self.show_worktree_root_name
                     && let Some(worktree) = project.worktree_for_id(project_path.worktree_id, cx)
                 {
@@ -354,7 +318,7 @@ impl PickerDelegate for ProjectSymbolsDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::project_symbols_row_spacing(cx))
                 .toggle_state(selected)
                 .child(
                     v_flex()
@@ -389,11 +353,11 @@ mod tests {
     use serde_json::json;
     use settings::SettingsStore;
     use std::{path::Path, sync::Arc};
-    use util::{path, rel_path::rel_path};
+    use util::path;
     use workspace::MultiWorkspace;
 
     #[gpui::test]
-    async fn test_project_symbols_and_reopen(cx: &mut TestAppContext) {
+    async fn test_project_symbols(cx: &mut TestAppContext) {
         init_test(cx);
 
         let fs = FakeFs::new(cx.executor());
@@ -406,10 +370,11 @@ mod tests {
         language_registry.add(Arc::new(Language::new(
             LanguageConfig {
                 name: "Rust".into(),
-                matcher: LanguageMatcher {
+                matcher: (LanguageMatcher {
                     path_suffixes: vec!["rs".to_string()],
                     ..Default::default()
-                },
+                })
+                .into(),
                 ..Default::default()
             },
             None,
@@ -488,9 +453,8 @@ mod tests {
 
         // Create the project symbols view.
         let symbols = cx.new_window_entity(|window, cx| {
-            Picker::uniform_list_with_preview(
+            Picker::uniform_list(
                 ProjectSymbolsDelegate::new(workspace.downgrade(), project.clone()),
-                project.clone(),
                 window,
                 cx,
             )
@@ -517,19 +481,11 @@ mod tests {
         });
 
         cx.run_until_parked();
-        symbols.read_with(cx, |symbols, cx| {
+        symbols.read_with(cx, |symbols, _| {
             let delegate = &symbols.delegate;
             assert_eq!(delegate.matches.len(), 2);
             assert_eq!(delegate.matches[0].string, "ton");
             assert_eq!(delegate.matches[1].string, "one");
-            assert!(
-                delegate.try_get_preview_data_for_match(cx).is_some(),
-                "the selected project symbol should provide preview data"
-            );
-            assert_eq!(
-                symbols.preview_current_path(cx),
-                Some(rel_path("test.rs").into())
-            );
         });
 
         // Spawn more updates such that in the end, there are again no matches.
@@ -545,29 +501,12 @@ mod tests {
 
         // Check that rust-analyzer path style symbols work
         symbols.update_in(cx, |p, window, cx| {
-            p.set_query("dir::to", window, cx);
+            p.update_matches("dir::to".to_string(), window, cx);
         });
 
         cx.run_until_parked();
         symbols.read_with(cx, |symbols, _| {
             assert_eq!(symbols.delegate.matches.len(), 1);
-        });
-
-        let original_id = symbols.entity_id();
-        symbols.update_in(cx, |picker, window, cx| {
-            picker.cancel(&menu::Cancel, window, cx);
-        });
-        cx.dispatch_action(workspace::ReopenLastPicker);
-        cx.run_until_parked();
-
-        let reopened = workspace.read_with(cx, |workspace, cx| {
-            workspace
-                .active_modal::<Picker<ProjectSymbolsDelegate>>(cx)
-                .expect("Project Symbols should reopen")
-        });
-        assert_ne!(original_id, reopened.entity_id());
-        reopened.read_with(cx, |picker, cx| {
-            assert_eq!(picker.query(cx), "dir::to");
         });
     }
 
@@ -585,10 +524,11 @@ mod tests {
         language_registry.add(Arc::new(Language::new(
             LanguageConfig {
                 name: "Rust".into(),
-                matcher: LanguageMatcher {
+                matcher: (LanguageMatcher {
                     path_suffixes: vec!["rs".to_string()],
                     ..Default::default()
-                },
+                })
+                .into(),
                 ..Default::default()
             },
             None,
@@ -675,12 +615,9 @@ mod tests {
         cx.update(|cx| {
             let store = SettingsStore::test(cx);
             cx.set_global(store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
             release_channel::init(semver::Version::new(0, 0, 0), cx);
             editor::init(cx);
-            super::init(cx);
         });
     }
 

@@ -64,7 +64,7 @@ impl SystemWindowTabs {
             was_use_system_window_tabs = use_system_window_tabs;
 
             let tabbing_identifier = if use_system_window_tabs {
-                Some(String::from("dez"))
+                Some(String::from("zed"))
             } else {
                 None
             };
@@ -285,74 +285,58 @@ impl SystemWindowTabs {
                 let move_tabs = tabs.clone();
                 let merge_tabs = tabs.clone();
 
-                ContextMenu::build(window, cx, move |mut menu, _window_, cx| {
-                    menu = menu.entry(
-                        localization::text(cx, "common-close-tab"),
-                        None,
-                        move |window, cx| {
-                            Self::handle_right_click_action(
-                                cx,
-                                window,
-                                &tabs,
-                                |tab| tab.id == item.id,
-                                |window, cx| {
-                                    window.dispatch_action(Box::new(CloseWindow), cx);
-                                },
-                            );
-                        },
-                    );
+                ContextMenu::build(window, cx, move |mut menu, _window_, _cx| {
+                    menu = menu.entry("Close Tab", None, move |window, cx| {
+                        Self::handle_right_click_action(
+                            cx,
+                            window,
+                            &tabs,
+                            |tab| tab.id == item.id,
+                            |window, cx| {
+                                window.dispatch_action(Box::new(CloseWindow), cx);
+                            },
+                        );
+                    });
 
-                    menu = menu.entry(
-                        localization::text(cx, "common-close-other-tabs"),
-                        None,
-                        move |window, cx| {
-                            Self::handle_right_click_action(
-                                cx,
-                                window,
-                                &other_tabs,
-                                |tab| tab.id != item.id,
-                                |window, cx| {
-                                    window.dispatch_action(Box::new(CloseWindow), cx);
-                                },
-                            );
-                        },
-                    );
+                    menu = menu.entry("Close Other Tabs", None, move |window, cx| {
+                        Self::handle_right_click_action(
+                            cx,
+                            window,
+                            &other_tabs,
+                            |tab| tab.id != item.id,
+                            |window, cx| {
+                                window.dispatch_action(Box::new(CloseWindow), cx);
+                            },
+                        );
+                    });
 
-                    menu = menu.entry(
-                        localization::text(cx, "common-move-tab-new-window"),
-                        None,
-                        move |window, cx| {
-                            Self::handle_right_click_action(
-                                cx,
-                                window,
-                                &move_tabs,
-                                |tab| tab.id == item.id,
-                                |window, cx| {
-                                    SystemWindowTabController::move_tab_to_new_window(
-                                        cx,
-                                        window.window_handle().window_id(),
-                                    );
-                                    window.move_tab_to_new_window();
-                                },
-                            );
-                        },
-                    );
+                    menu = menu.entry("Move Tab to New Window", None, move |window, cx| {
+                        Self::handle_right_click_action(
+                            cx,
+                            window,
+                            &move_tabs,
+                            |tab| tab.id == item.id,
+                            |window, cx| {
+                                SystemWindowTabController::move_tab_to_new_window(
+                                    cx,
+                                    window.window_handle().window_id(),
+                                );
+                                window.move_tab_to_new_window();
+                            },
+                        );
+                    });
 
-                    menu = menu.entry(
-                        localization::text(cx, "common-show-all-tabs"),
-                        None,
-                        move |window, cx| {
-                            Self::handle_right_click_action(
-                                cx,
-                                window,
-                                &merge_tabs,
-                                |tab| tab.id == item.id,
-                                |window, _cx| {
-                                    window.toggle_window_tab_overview();
-                                },
-                            );
-                        },
-                    );
+                    menu = menu.entry("Show All Tabs", None, move |window, cx| {
+                        Self::handle_right_click_action(
+                            cx,
+                            window,
+                            &merge_tabs,
+                            |tab| tab.id == item.id,
+                            |window, _cx| {
+                                window.toggle_window_tab_overview();
+                            },
+                        );
+                    });
 
                     menu.context(focus_handle)
                 })
@@ -499,8 +483,9 @@ impl Render for SystemWindowTabs {
                             .icon_color(Color::Muted)
                             .on_click(|_event, window, cx| {
                                 window.dispatch_action(
-                                    Box::new(dez_actions::OpenRecent {
-                                        create_new_window: true,
+                                    Box::new(zed_actions::OpenRecent {
+                                        create_new_window: Some(true),
+                                        workspace_id: None,
                                     }),
                                     cx,
                                 );

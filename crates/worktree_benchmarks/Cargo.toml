@@ -5,11 +5,9 @@ publish.workspace = true
 edition.workspace = true
 
 [dependencies]
-anyhow.workspace = true
 fs.workspace = true
 gpui_platform.workspace = true
 settings.workspace = true
-tempfile.workspace = true
 worktree.workspace = true
 
 [lints]

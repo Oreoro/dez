@@ -1,24 +1,24 @@
 ---
 title: Visual Customization
-description: "Various aspects of dez's visual layout can be configured in the Settings Editor or settings file."
+description: "Various aspects of Zed's visual layout can be configured in the Settings Editor or settings file."
 ---
 
 # Visual Customization
 
-Various aspects of dez's visual layout can be configured in the Settings Editor ({#kb dez::OpenSettings}) or in your settings file ({#kb dez::OpenSettingsFile}).
+Various aspects of Zed's visual layout can be configured in the Settings Editor ({#kb zed::OpenSettings}) or in your settings file ({#kb zed::OpenSettingsFile}).
 
 See [All Settings](./reference/all-settings.md) for additional information and other non-visual settings.
 
 ## Themes
 
-You can install many [themes](./themes.md) and [icon themes](./icon-themes.md) in form of extensions by running {#action dez::Extensions} from the command palette.
+You can install many [themes](./themes.md) and [icon themes](./icon-themes.md) in form of extensions by running {#action zed::Extensions} from the command palette.
 
 You can preview/choose amongst your installed themes and icon themes with {#action theme_selector::Toggle} ({#kb theme_selector::Toggle}) and {#action icon_theme_selector::Toggle} which will modify the following settings:
 
 ```json [settings]
 {
   "theme": "One Dark",
-  "icon_theme": "dez (Default)"
+  "icon_theme": "Dez (Default)"
 }
 ```
 
@@ -33,8 +33,8 @@ If you would like to use distinct themes for light mode/dark mode that can be se
     "mode": "system"
   },
   "icon_theme": {
-    "dark": "dez (Default)",
-    "light": "dez (Default)",
+    "dark": "Dez (Default)",
+    "light": "Dez (Default)",
     // Mode to use (dark, light) or "system" to follow the OS's light/dark mode (default)
     "mode": "system"
   }
@@ -48,15 +48,15 @@ If you would like to use distinct themes for light mode/dark mode that can be se
   // or ".ZedSans" for the bundled default (currently IBM Plex)
   "ui_font_family": ".SystemUIFont",
   "ui_font_weight": 400, // Font weight in standard CSS units from 100 to 900.
-  "ui_font_size": 16,
+  "ui_font_size": 15.5,
 
   // Buffer Font - Used by editor buffers
   // use ".ZedMono" for the bundled default monospace (currently Lilex)
   "buffer_font_family": "Berkeley Mono", // Font name for editor buffers
-  "buffer_font_size": 15,                 // Font size for editor buffers
+  "buffer_font_size": 13.5,               // Font size for editor buffers
   "buffer_font_weight": 400,              // Font weight in CSS units [100-900]
   // Line height "comfortable" (1.618), "standard" (1.3) or custom: `{ "custom": 2 }`
-  "buffer_line_height": "comfortable",
+  "buffer_line_height": { "custom": 1.55 },
 
   // Terminal Font Settings
   "terminal": {
@@ -66,17 +66,34 @@ If you would like to use distinct themes for light mode/dark mode that can be se
     "line_height": "standard",
   },
 
-  // Controls the font size for agent responses in the agent panel.
-  // If not specified, it falls back to the UI font size.
+  // Controls the font family and size for agent responses in the agent panel.
+  // If not specified, they fall back to the UI font family and size.
+  "agent_ui_font_family": "Inter",
   "agent_ui_font_size": 15,
+  // Controls the font family and size for the agent panel's message editor
+  // and user messages.
+  // If not specified, the font family falls back to the buffer font family.
+  "agent_buffer_font_family": "Berkeley Mono",
   // Controls the font size for the agent panel's message editor, user message,
   // and any other snippet of code.
-  "agent_buffer_font_size": 12
+  "agent_buffer_font_size": 13,
+
+  "markdown_preview": {
+    // Controls the font size for the markdown preview.
+    // If not specified, it falls back to the editor font size.
+    "font_size": null,
+    // Controls the font family for the markdown preview.
+    // If not specified, it falls back to the UI font family.
+    "font_family": null,
+    // Controls the font family for code blocks in the markdown preview.
+    // If not specified, it falls back to the editor font family.
+    "code_font_family": null
+  }
 ```
 
 ### Font ligatures
 
-By default dez enables font ligatures which will visually combine certain adjacent characters.
+By default Zed enables font ligatures which will visually combine certain adjacent characters.
 
 For example `=>` will be displayed as `→` and `!=` will be `≠`.
 This is purely cosmetic and the individual characters remain unchanged.
@@ -113,18 +130,20 @@ To disable this behavior use:
 }
 ```
 
-### Titlebar
+### Session Rail
 
 ```json [settings]
-  // Control which items are shown/hidden in the title bar
-  "title_bar": {
+  // Control which items are shown/hidden in the session rail
+  "sidebar": {
     "show_branch_status_icon": false, // Show git status on branch icon
     "show_branch_name": true,       // Show/hide branch name
+    "show_worktree_name": true,     // Show/hide worktree name
     "show_project_items": true,     // Show/hide project host and name
     "show_onboarding_banner": true, // Show/hide onboarding banners
     "show_user_picture": true,      // Show/hide user avatar
     "show_user_menu": true,         // Show/hide app user button
-    "show_menus": false             // Show/hide menus
+    "show_sign_in": true,           // Show/hide sign-in button
+    "show_menus": false            // Show/hide menus
   },
 ```
 
@@ -132,10 +151,10 @@ To disable this behavior use:
 
 ```json [settings]
 {
-  // Force usage of dez build in path prompts (file and directory pickers)
+  // Force usage of Zed build in path prompts (file and directory pickers)
   // instead of OS native pickers (false).
   "use_system_path_prompts": true,
-  // Force usage of dez built in confirmation prompts ("Do you want to save?")
+  // Force usage of Zed built in confirmation prompts ("Do you want to save?")
   // instead of OS native prompts (false). On linux this is ignored (always false).
   "use_system_prompts": true,
 
@@ -146,9 +165,6 @@ To disable this behavior use:
     // Opacity of the inactive panes. 0 means transparent, 1 means opaque.
     "inactive_opacity": 1.0
   },
-
-  // Layout mode of the bottom dock: contained, full, left_aligned, right_aligned
-  "bottom_dock_layout": "contained",
 
   // Whether to resize all the panels in a dock when resizing the dock.
   // Can be a combination of "left", "right" and "bottom".
@@ -209,16 +225,16 @@ TBD: Centered layout related settings
   // Gutter Settings
   "gutter": {
     "line_numbers": true,         // Show/hide line numbers in the gutter.
-    "runnables": true,            // Show/hide runnables buttons in the gutter.
+    "runnables": false,           // Show/hide runnables buttons in the gutter.
     "breakpoints": true,          // Show/hide show breakpoints in the gutter.
-    "folds": true,                // Show/hide show fold buttons in the gutter.
-    "min_line_number_digits": 4   // Reserve space for N digit line numbers
+    "folds": false,               // Show/hide show fold buttons in the gutter.
+    "min_line_number_digits": 0   // Reserve space for N digit line numbers
   },
   "relative_line_numbers": "enabled", // Show relative line numbers in gutter
 
   // Indent guides
   "indent_guides": {
-    "enabled": true,
+    "enabled": false,
     "line_width": 1,                  // Width of guides in pixels [1-10]
     "active_line_width": 1,           // Width of active guide in pixels [1-10]
     "coloring": "fixed",              // disabled, fixed, indent_aware
@@ -236,7 +252,8 @@ TBD: Centered layout related settings
   "git": {
     "inline_blame": {
       "enabled": true,             // Show/hide inline blame
-      "delay_ms": 0,                  // Show after delay (ms)
+      "delay_ms": 0,               // Show after delay (ms)
+      "location": "inline",        // inline, status_bar
       "min_column": 0,             // Minimum column to inline display blame
       "padding": 7,                // Padding between code and inline blame (em)
       "show_commit_summary": false // Show/hide commit summary
@@ -251,8 +268,10 @@ TBD: Centered layout related settings
   // Editor toolbar related settings
   "toolbar": {
     "breadcrumbs": true, // Whether to show breadcrumbs.
-    "quick_actions": true, // Whether to show quick action buttons.
-    "selections_menu": true, // Whether to show the Selections menu
+    "compact_mode": true, // Whether to use compact toolbar height.
+    "show_breadcrumb_symbols": false, // Whether to show document symbols in breadcrumbs.
+    "quick_actions": false, // Whether to show quick action buttons.
+    "selections_menu": false, // Whether to show the Selections menu
     "agent_review": true, // Whether to show agent review buttons
     "code_actions": false // Whether to show code action buttons
   }
@@ -265,6 +284,7 @@ TBD: Centered layout related settings
   "scrollbar": {
     // When to show the scrollbar in the editor (auto, system, always, never)
     "show": "auto",
+    "size": 15,              // Width of vertical scrollbar and height of horizontal scrollbar in pixels.
     "cursors": true,          // Show cursor positions in the scrollbar.
     "git_diff": true,         // Show git diff indicators in the scrollbar.
     "search_results": true,   // Show buffer search results in the scrollbar.
@@ -308,14 +328,14 @@ TBD: Centered layout related settings
   // Customize the tab bar appearance
   "tab_bar": {
     "show": true,                     // Show/hide the tab bar
-    "show_nav_history_buttons": true, // Show/hide history buttons on tab bar
+    "show_nav_history_buttons": false, // Show/hide history buttons on tab bar
     "show_tab_bar_buttons": true      // Show hide buttons (new, split, zoom)
   },
   "tabs": {
     "git_status": false,              // Color to show git status
     "close_position": "right",        // Close button position (left, right, hidden)
     "show_close_button": "hover",     // Close button shown (hover, always, hidden)
-    "file_icons": false,              // Icon showing file type
+    "file_icons": true,               // Icon showing file type
     // Show diagnostics in file icon (off, errors, all). Requires file_icons=true
     "show_diagnostics": "off"
   }
@@ -340,7 +360,12 @@ TBD: Centered layout related settings
     // Show/hide a button that displays the buffer's character encoding.
     // If set to "non_utf8", the button is hidden only for UTF-8 without BOM.
     // Defaults to "non_utf8".
-    "active_encoding_button": "non_utf8"
+    "active_encoding_button": "non_utf8",
+    // Show/hide an indicator with a countdown while timed multi-stroke
+    // input is pending. Hovering it pauses the timeout. Unless the which-key
+    // menu is enabled, hovering also lists the bindings that could still match.
+    // Defaults to true.
+    "pending_keystrokes_indicator": true
   },
   "global_lsp_settings": {
     // Show/hide the LSP button in the status bar.
@@ -454,25 +479,25 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
   "project_panel": {
     "button": true,                 // Show/hide button in the status bar
     "default_width": 240,           // Default panel width
-    "dock": "left",                 // Position of the dock (left, right)
+    "dock": "right",                // Position of the dock (left, right)
     "entry_spacing": "comfortable", // Vertical spacing (comfortable, standard)
     "file_icons": true,             // Show/hide file icons
-    "folder_icons": true,           // Show/hide folder icons
+    "folder_indicator": "icon",     // Dir glyph: icon, chevron, both
     "git_status": true,             // Indicate new/updated files
-    "indent_size": 20,              // Pixels for each successive indent
+    "indent_size": 12.5,            // Pixels for each successive indent
     "auto_reveal_entries": true,    // Show file in panel when activating its buffer
-    "auto_fold_dirs": true,         // Fold dirs with single subdir
+    "auto_fold_dirs": false,        // Fold dirs with single subdir
     "bold_folder_labels": false,    // Show folder names with bold text
     "sticky_scroll": true,          // Stick parent directories at top of the project panel.
     "drag_and_drop": true,          // Whether drag and drop is enabled
     "scrollbar": {                  // Project panel scrollbar settings
-      "show": null                  // Show/hide: (auto, system, always, never)
+      "show": "never"               // Show/hide: (auto, system, always, never)
     },
     "show_diagnostics": "all",      //
     // Settings related to indent guides in the project panel.
     "indent_guides": {
       // When to show indent guides in the project panel. (always, never)
-      "show": "always"
+      "show": "never"
     },
     // Sort order for entries (directories_first, mixed, files_first)
     "sort_mode": "directories_first",
@@ -484,7 +509,7 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
     "sort_order": "default",
     // Whether to hide the root entry when only one folder is open in the window;
     // this also affects how file paths appear in the file finder history.
-    "hide_root": false,
+    "hide_root": true,
     // Whether to hide the hidden entries in the project panel.
     "hide_hidden": false
   }
@@ -501,16 +526,19 @@ Project panel can be shown/hidden with {#action project_panel::ToggleFocus} ({#k
     "default_width": 640, // Default width (left/right docked)
     "default_height": 320 // Default height (bottom docked)
   },
-  // Controls the font size for agent responses in the agent panel.
-  // If not specified, it falls back to the UI font size.
+  // Controls the font family and size for agent responses in the agent panel.
+  // If not specified, they fall back to the UI font family and size.
+  "agent_ui_font_family": "Inter",
   "agent_ui_font_size": 15,
-  // Controls the font size for the agent panel's message editor, user message,
-  // and any other snippet of code.
+  // Controls the font family and size for the agent panel's message editor
+  // and user messages.
+  // If not specified, the font family falls back to the buffer font family.
+  "agent_buffer_font_family": "Berkeley Mono",
   "agent_buffer_font_size": 12
 }
 ```
 
-See [dez AI Documentation](./ai/overview.md) for additional non-visual AI settings.
+See [Zed AI Documentation](./ai/overview.md) for additional non-visual AI settings.
 
 ## Terminal Panel
 
@@ -577,7 +605,7 @@ See [Terminal settings](./reference/all-settings.md#terminal) for additional non
     "default_width": 300,         // Default width of the git panel
     "dock": "left",               // Where to dock: left, right
     "file_icons": true,           // Show/hide file_icons
-    "folder_icons": true,         // Show file_icons (true), chevrons (false) for dirs
+    "folder_indicator": "icon",   // Dir glyph: icon, chevron, both
     "git_status": true,           // Show git status
     "indent_size": 20,            // Indentation for nested items (pixels)
     "indent_guides": {
@@ -587,7 +615,8 @@ See [Terminal settings](./reference/all-settings.md#terminal) for additional non
     "auto_fold_dirs": true,       // Fold dirs with single subdir
     "scrollbar": {                // Project panel scrollbar settings
       "show": null                // Show/hide: (auto, system, always, never)
-    }
+    },
+    "multi_buffer_hide_symbols": false  // Hide symbols in multi-buffer views (show only files)
   }
 ```
 
@@ -597,7 +626,7 @@ See [Terminal settings](./reference/all-settings.md#terminal) for additional non
 {
   // Collaboration Panel
   "collaboration_panel": {
-    "button": true, // Show/hide status bar icon
+    "button": false, // Show/hide status bar icon
     "dock": "left", // Where to dock: left, right
     "default_width": 240 // Default width of the collaboration panel.
   },

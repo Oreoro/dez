@@ -54,6 +54,10 @@ impl ThemePickerDelegate {
 impl PickerDelegate for ThemePickerDelegate {
     type ListItem = AnyElement;
 
+    fn name() -> &'static str {
+        "theme picker"
+    }
+
     fn match_count(&self) -> usize {
         self.filtered_themes.len()
     }
@@ -67,8 +71,8 @@ impl PickerDelegate for ThemePickerDelegate {
         cx.notify();
     }
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "settings-search-themes").into()
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Search theme…".into()
     }
 
     fn update_matches(
@@ -174,6 +178,7 @@ pub fn theme_picker(
 
     Picker::uniform_list(delegate, window, cx)
         .show_scrollbar(true)
-        .width(rems_from_px(210.))
-        .max_height(Some(rems(18.).into()))
+        .initial_width(rems_from_px(210_f32))
+        .max_height(rems(18.))
+        .popover()
 }

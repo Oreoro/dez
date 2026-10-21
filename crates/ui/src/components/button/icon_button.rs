@@ -53,6 +53,39 @@ impl IconButton {
         self
     }
 
+    /// Sets the label announced by assistive technology.
+    ///
+    /// Icon buttons have no visible text, so they should always set this for
+    /// screen reader users. Often this matches the tooltip text.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.base = self.base.aria_label(label);
+        self
+    }
+
+    /// Sets the keyboard shortcut announced by assistive technology.
+    pub fn aria_keyshortcuts(mut self, keyshortcuts: impl Into<SharedString>) -> Self {
+        self.base = self.base.aria_keyshortcuts(keyshortcuts);
+        self
+    }
+
+    /// Sets the expanded state reported to assistive technology, for buttons
+    /// that control a popup (e.g. dropdown or disclosure triggers).
+    pub fn aria_expanded(mut self, expanded: bool) -> Self {
+        self.base = self.base.aria_expanded(expanded);
+        self
+    }
+
+    /// Registers a handler for an accessibility action (e.g.
+    /// [`gpui::accesskit::Action::Expand`]) dispatched by assistive technology.
+    pub fn on_a11y_action(
+        mut self,
+        action: gpui::accesskit::Action,
+        listener: impl FnMut(Option<&gpui::accesskit::ActionData>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.base = self.base.on_a11y_action(action, listener);
+        self
+    }
+
     pub fn icon_size(mut self, icon_size: IconSize) -> Self {
         self.icon_size = icon_size;
         self
@@ -95,6 +128,17 @@ impl IconButton {
     pub fn indicator_border_color(mut self, color: Option<Hsla>) -> Self {
         self.indicator_border_color = color;
 
+        self
+    }
+
+    /// Use the given callback to construct a new tooltip view when the mouse hovers over this
+    /// button. The tooltip itself is also hoverable and won't disappear when the user moves the
+    /// mouse into the tooltip, allowing it to contain interactive elements like links or buttons.
+    pub fn hoverable_tooltip(
+        mut self,
+        tooltip: impl Fn(&mut Window, &mut App) -> AnyView + 'static,
+    ) -> Self {
+        self.base = self.base.hoverable_tooltip(tooltip);
         self
     }
 }
@@ -189,6 +233,11 @@ impl VisibleOnHover for IconButton {
         self.base = self.base.visible_on_hover(group_name);
         self
     }
+
+    fn visible_on_hover_or_focus(mut self, group_name: impl Into<SharedString>) -> Self {
+        self.base = self.base.visible_on_hover_or_focus(group_name);
+        self
+    }
 }
 
 impl RenderOnce for IconButton {
@@ -243,7 +292,7 @@ impl Component for IconButton {
 
     fn description() -> &'static str {
         "A compact button that displays a single icon with an optional tooltip.\
-        The most frequently used button in the dez codebase."
+        The most frequently used button in the Zed codebase."
     }
 
     fn preview(_window: &mut Window, _cx: &mut App) -> AnyElement {

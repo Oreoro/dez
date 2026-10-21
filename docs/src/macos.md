@@ -1,82 +1,90 @@
 ---
-title: dez on macOS
-description: "dez is developed primarily on macOS, making it a first-class platform with full feature support."
+title: Zed on macOS
+description: "Zed is developed primarily on macOS, making it a first-class platform with full feature support."
 ---
 
-# dez on macOS
+# Zed on macOS
 
-dez is developed primarily on macOS, making it a first-class platform with full feature support.
+Zed is developed primarily on macOS, making it a first-class platform with full feature support.
 
-## Installing dez
+## Installing Zed
 
-Download dez from the [download page](https://dez.dev/download). The download is a `.dmg` file—open it and drag dez to your Applications folder.
+Download Zed from the [download page](https://zed.dev/download). The download is a `.dmg` file—open it and drag Zed to your Applications folder.
 
-After installation, dez checks for updates automatically and prompts you when a new version is available.
+For the preview build, which receives updates about a week ahead of stable, visit the [preview releases page](https://zed.dev/releases/preview).
+
+After installation, Zed checks for updates automatically and prompts you when a new version is available.
 
 ### Homebrew
 
-You can also install dez using Homebrew:
+You can also install Zed using Homebrew:
 
 ```sh
-brew install --cask dez
+brew install --cask zed
+```
+
+For the preview version:
+
+```sh
+brew install --cask zed@preview
 ```
 
 ### Building from Source
 
-To build dez from source, see the [macOS development documentation](./development/macos.md).
+To build Zed from source, see the [macOS development documentation](./development/macos.md).
 
 ## System Requirements
 
 - macOS 10.15.7 (Catalina) or later
 - Apple Silicon (M1/M2/M3/M4) or Intel processor
 
-dez uses Metal for GPU-accelerated rendering, which is available on all supported macOS versions.
+Zed uses Metal for GPU-accelerated rendering, which is available on all supported macOS versions.
 
 ## Installing the CLI
 
-dez includes a command-line tool for opening files and projects from Terminal. To install it:
+Zed includes a command-line tool for opening files and projects from Terminal. To install it:
 
-1. Open dez
+1. Open Zed
 2. Open the command palette with `Cmd+Shift+P`
 3. Run {#action cli::InstallCliBinary}
 
-This creates a `dez` command in `/usr/local/bin`. You can then open files and folders:
+This creates a `zed` command in `/usr/local/bin`. You can then open files and folders:
 
 ```sh
-dez .                    # Open current folder
-dez file.txt             # Open a file
-dez project/ file.txt    # Open a folder and a file
+zed .                    # Open current folder
+zed file.txt             # Open a file
+zed project/ file.txt    # Open a folder and a file
 ```
 
 See the [CLI Reference](./reference/cli.md) for all available options.
 
 ## Uninstall
 
-1. Quit dez if it's running
-2. Drag dez from Applications to the Trash
+1. Quit Zed if it's running
+2. Drag Zed from Applications to the Trash
 3. Optionally, remove your settings and extensions:
 
 ```sh
-rm -rf ~/.config/dez
-rm -rf ~/Library/Application\ Support/dez
-rm -rf ~/Library/Caches/dez
-rm -rf ~/Library/Logs/dez
-rm -rf ~/Library/Saved\ Application\ State/dev.dez.dez.savedState
+rm -rf ~/.config/zed
+rm -rf ~/Library/Application\ Support/Zed
+rm -rf ~/Library/Caches/Zed
+rm -rf ~/Library/Logs/Zed
+rm -rf ~/Library/Saved\ Application\ State/dev.zed.Zed.savedState
 ```
 
 If you installed the CLI, remove it with:
 
 ```sh
-rm /usr/local/bin/dez
+rm /usr/local/bin/zed
 ```
 
 ## Troubleshooting
 
-### dez won't open or shows "damaged" warning
+### Zed won't open or shows "damaged" warning
 
-If macOS reports that dez is damaged or can't be opened, it's likely a Gatekeeper issue. Try:
+If macOS reports that Zed is damaged or can't be opened, it's likely a Gatekeeper issue. Try:
 
-1. Right-click (or Control-click) on dez in Applications
+1. Right-click (or Control-click) on Zed in Applications
 2. Select "Open" from the context menu
 3. Click "Open" in the dialog that appears
 
@@ -85,20 +93,46 @@ This tells macOS to trust the application.
 If that doesn't work, remove the quarantine attribute:
 
 ```sh
-xattr -cr /Applications/dez.app
+xattr -cr /Applications/Zed.app
 ```
 
 ### CLI command not found
 
-If the `dez` command isn't available after installation:
+If the `zed` command isn't available after installation:
 
 1. Check that `/usr/local/bin` is in your PATH
 2. Try reinstalling the CLI via {#action cli::InstallCliBinary} in the command palette
 3. Open a new terminal window to reload your PATH
 
+### Can't install CLI {#cant-install-cli}
+
+{#action cli::InstallCliBinary} writes a `zed` symlink to `/usr/local/bin`, which requires administrator privileges. If your macOS account isn't in the `admin` group, Zed can't create that symlink and will report that it can't install the CLI automatically.
+
+Instead, you can add an alias pointing to the `cli` binary bundled inside the app. The path depends on where Zed is installed:
+
+```sh
+# Default install (Zed in /Applications)
+alias zed="/Applications/Zed.app/Contents/MacOS/cli"
+
+# User install (Zed in ~/Applications)
+alias zed="$HOME/Applications/Zed.app/Contents/MacOS/cli"
+
+# Preview build (Zed Preview in ~/Applications)
+alias zed="$HOME/Applications/Zed Preview.app/Contents/MacOS/cli"
+```
+
+Add the line that matches your install to your shell configuration file. Use `~/.zshrc` for Zsh (the default on modern macOS) or `~/.bashrc` for Bash.
+
+After you restart your shell, you will be able to use `zed` from your terminal:
+
+```sh
+zed .              # Open current folder
+zed file.txt       # Open a file
+```
+
 ### GPU or rendering issues
 
-dez uses Metal for rendering. If you experience graphical glitches:
+Zed uses Metal for rendering. If you experience graphical glitches:
 
 1. Ensure macOS is up to date
 2. Restart your Mac to reset the GPU state
@@ -106,10 +140,10 @@ dez uses Metal for rendering. If you experience graphical glitches:
 
 ### High memory or CPU usage
 
-If dez uses more resources than expected:
+If Zed uses more resources than expected:
 
-1. Check for runaway language servers in the terminal output ({#action dez::OpenLog})
+1. Check for runaway language servers in the terminal output ({#action zed::OpenLog})
 2. Try disabling extensions one by one to identify conflicts
 3. For large projects, consider using [project settings](./reference/all-settings.md#file-scan-exclusions) to exclude unnecessary folders from indexing
 
-For additional help, see the [Troubleshooting guide](./troubleshooting.md) or open an [issue](https://github.com/Oreoro/dez/issues).
+For additional help, see the [Troubleshooting guide](./troubleshooting.md) or visit the [Zed Discord](https://discord.gg/zed-community).

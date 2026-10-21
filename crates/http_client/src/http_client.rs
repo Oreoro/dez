@@ -1,7 +1,7 @@
 mod async_body;
 #[cfg(not(target_family = "wasm"))]
 pub mod github;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), feature = "github-download"))]
 pub mod github_download;
 
 pub use anyhow::{Result, anyhow};
@@ -12,9 +12,10 @@ use http::{HeaderName, HeaderValue};
 
 use futures::future::BoxFuture;
 use parking_lot::Mutex;
-use std::sync::Arc;
+use serde::Serialize;
 #[cfg(feature = "test-support")]
 use std::{any::type_name, fmt};
+use std::{sync::Arc, time::Duration};
 pub use url::{Host, Url};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -25,6 +26,9 @@ pub enum RedirectPolicy {
     FollowAll,
 }
 pub struct FollowRedirects(pub bool);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RequestTimeout(pub Duration);
 
 pub trait HttpRequestExt {
     /// Conditionally modify self with the given closure.
@@ -48,11 +52,19 @@ pub trait HttpRequestExt {
 
     /// Whether or not to follow redirects
     fn follow_redirects(self, follow: RedirectPolicy) -> Self;
+
+    /// Sets a deadline for the complete HTTP request, including its response body.
+    fn timeout(self, timeout: Duration) -> Self;
 }
 
 impl HttpRequestExt for http::request::Builder {
     fn follow_redirects(self, follow: RedirectPolicy) -> Self {
         self.extension(follow)
+    }
+
+    fn timeout(self, timeout: Duration) -> Self {
+        debug_assert!(!timeout.is_zero(), "timeout must be positive");
+        self.extension(RequestTimeout(timeout))
     }
 }
 
@@ -173,7 +185,9 @@ pub struct HttpClientWithProxy {
 impl HttpClientWithProxy {
     /// Returns a new [`HttpClientWithProxy`] with the given proxy URL.
     pub fn new(client: Arc<dyn HttpClient>, proxy_url: Option<String>) -> Self {
-        let proxy_url = resolve_proxy_url(proxy_url.as_deref());
+        let proxy_url = proxy_url
+            .and_then(|proxy| proxy.parse().ok())
+            .or_else(read_proxy_from_env);
 
         Self::new_url(client, proxy_url)
     }
@@ -243,14 +257,6 @@ impl HttpClientWithUrl {
         }
     }
 
-    pub fn with_base_url(&self, base_url: impl Into<String>) -> Self {
-        Self::new_url(
-            self.client.client.clone(),
-            base_url,
-            self.client.proxy.clone(),
-        )
-    }
-
     /// Returns the base URL.
     pub fn base_url(&self) -> String {
         self.base_url.lock().clone()
@@ -267,8 +273,8 @@ impl HttpClientWithUrl {
         format!("{}{}", self.base_url(), path)
     }
 
-    /// Builds a dez API URL using the given path.
-    pub fn build_dez_api_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
+    /// Builds a Zed API URL using the given path.
+    pub fn build_zed_api_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
         let base_url = self.base_url();
         let base_api_url = match base_url.as_ref() {
             "https://zed.dev" => "https://api.zed.dev",
@@ -283,8 +289,8 @@ impl HttpClientWithUrl {
         )?)
     }
 
-    /// Builds a dez Cloud URL using the given path.
-    pub fn build_dez_cloud_url(&self, path: &str) -> Result<Url> {
+    /// Builds a Zed Cloud URL using the given path.
+    pub fn build_zed_cloud_url(&self, path: &str) -> Result<Url> {
         let base_url = self.base_url();
         let base_api_url = match base_url.as_ref() {
             "https://zed.dev" => "https://cloud.zed.dev",
@@ -296,8 +302,21 @@ impl HttpClientWithUrl {
         Ok(Url::parse(&format!("{}{}", base_api_url, path))?)
     }
 
-    /// Builds a dez LLM URL using the given path.
-    pub fn build_dez_llm_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
+    /// Builds a Zed Cloud URL using the given path and query params.
+    pub fn build_zed_cloud_url_with_query(&self, path: &str, query: impl Serialize) -> Result<Url> {
+        let base_url = self.base_url();
+        let base_api_url = match base_url.as_ref() {
+            "https://zed.dev" => "https://cloud.zed.dev",
+            "https://staging.zed.dev" => "https://cloud.zed.dev",
+            "http://localhost:3000" => "http://localhost:8787",
+            other => other,
+        };
+        let query = serde_urlencoded::to_string(&query)?;
+        Ok(Url::parse(&format!("{}{}?{}", base_api_url, path, query))?)
+    }
+
+    /// Builds a Zed LLM URL using the given path.
+    pub fn build_zed_llm_url(&self, path: &str, query: &[(&str, &str)]) -> Result<Url> {
         let base_url = self.base_url();
         let base_api_url = match base_url.as_ref() {
             "https://zed.dev" => "https://cloud.zed.dev",
@@ -349,31 +368,6 @@ pub fn read_proxy_from_env() -> Option<Url> {
         .iter()
         .find_map(|var| std::env::var(var).ok())
         .and_then(|env| env.parse().ok())
-}
-
-pub fn resolve_proxy_url(configured_proxy: Option<&str>) -> Option<Url> {
-    resolve_proxy_url_with_fallback(configured_proxy, read_proxy_from_env())
-}
-
-fn resolve_proxy_url_with_fallback(
-    configured_proxy: Option<&str>,
-    fallback_proxy: Option<Url>,
-) -> Option<Url> {
-    let configured_proxy = configured_proxy
-        .map(str::trim)
-        .filter(|proxy| !proxy.is_empty());
-
-    let Some(configured_proxy) = configured_proxy else {
-        return fallback_proxy;
-    };
-
-    match configured_proxy.parse() {
-        Ok(proxy) => Some(proxy),
-        Err(error) => {
-            log::error!("Error parsing proxy settings: {error}");
-            fallback_proxy
-        }
-    }
 }
 
 pub fn read_no_proxy_from_env() -> Option<String> {
@@ -510,104 +504,5 @@ impl HttpClient for FakeHttpClient {
 
     fn as_fake(&self) -> &FakeHttpClient {
         self
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    struct TestHttpClient;
-
-    impl HttpClient for TestHttpClient {
-        fn send(
-            &self,
-            _request: Request<AsyncBody>,
-        ) -> BoxFuture<'static, anyhow::Result<Response<AsyncBody>>> {
-            Box::pin(async { Err(anyhow!("test client does not send requests")) })
-        }
-
-        fn user_agent(&self) -> Option<&HeaderValue> {
-            None
-        }
-
-        fn proxy(&self) -> Option<&Url> {
-            None
-        }
-    }
-
-    #[test]
-    fn zed_base_url_uses_upstream_zed_api() -> Result<()> {
-        let client = HttpClientWithUrl::new(Arc::new(TestHttpClient), "https://zed.dev", None);
-
-        let url = client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
-
-        assert_eq!(url.as_str(), "https://api.zed.dev/extensions?filter=rust");
-        Ok(())
-    }
-
-    #[test]
-    fn custom_base_url_is_preserved_for_api_urls() -> Result<()> {
-        let client = HttpClientWithUrl::new(Arc::new(TestHttpClient), "https://example.com", None);
-
-        let url = client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
-
-        assert_eq!(url.as_str(), "https://example.com/extensions?filter=rust");
-        Ok(())
-    }
-
-    #[test]
-    fn with_base_url_preserves_proxy() -> Result<()> {
-        let client = HttpClientWithUrl::new(
-            Arc::new(TestHttpClient),
-            "https://example.com",
-            Some("http://localhost:3128".into()),
-        );
-
-        let client = client.with_base_url("https://zed.dev");
-        let url = client.build_dez_api_url("/extensions", &[("filter", "rust")])?;
-
-        assert_eq!(url.as_str(), "https://api.zed.dev/extensions?filter=rust");
-        assert_eq!(
-            client.proxy().map(Url::as_str),
-            Some("http://localhost:3128/")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn configured_proxy_takes_precedence_over_environment_proxy() -> Result<()> {
-        let environment_proxy = Url::parse("http://environment.example:8080")?;
-
-        let proxy = resolve_proxy_url_with_fallback(
-            Some("  http://configured.example:3128  "),
-            Some(environment_proxy),
-        );
-
-        assert_eq!(
-            proxy.as_ref().map(Url::as_str),
-            Some("http://configured.example:3128/")
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn blank_or_invalid_proxy_falls_back_to_environment_proxy() -> Result<()> {
-        let environment_proxy = Url::parse("http://environment.example:8080")?;
-
-        let blank_proxy =
-            resolve_proxy_url_with_fallback(Some("   "), Some(environment_proxy.clone()));
-        let invalid_proxy =
-            resolve_proxy_url_with_fallback(Some("://invalid"), Some(environment_proxy));
-
-        assert_eq!(
-            blank_proxy.as_ref().map(Url::as_str),
-            Some("http://environment.example:8080/")
-        );
-        assert_eq!(
-            invalid_proxy.as_ref().map(Url::as_str),
-            Some("http://environment.example:8080/")
-        );
-        Ok(())
     }
 }

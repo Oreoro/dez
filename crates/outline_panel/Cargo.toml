@@ -24,10 +24,10 @@ futures.workspace = true
 gpui.workspace = true
 itertools.workspace = true
 language.workspace = true
-localization.workspace = true
 log.workspace = true
 menu.workspace = true
 outline.workspace = true
+paths.workspace = true
 project.workspace = true
 search.workspace = true
 serde.workspace = true
@@ -40,12 +40,12 @@ ui.workspace = true
 util.workspace = true
 workspace.workspace = true
 worktree.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 
 [dev-dependencies]
 lsp.workspace = true
 search = { workspace = true, features = ["test-support"] }
 pretty_assertions.workspace = true
 
-[package.metadata.cargo-machete]
+[package.metadata.cargo-shear]
 ignored = ["log"]

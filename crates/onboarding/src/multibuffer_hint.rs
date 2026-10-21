@@ -155,21 +155,18 @@ impl Render for MultibufferHint {
                                     .color(Color::Muted),
                             )
                             .child(Label::new(
-                                localization::text(cx, "onboarding-multibuffer-hint"),
+                                "Edit and save files directly in the results multibuffer!",
                             )),
                     )
                     .child(
-                        Button::new(
-                            "open_docs",
-                            localization::text(cx, "onboarding-learn-more"),
-                        )
+                        Button::new("open_docs", "Learn More")
                             .end_icon(
                                 Icon::new(IconName::ArrowUpRight)
                                     .size(IconSize::Small)
                                     .color(Color::Muted),
                             )
                             .on_click(move |_event, _, cx| {
-                                cx.open_url("https://github.com/Oreoro/dez/blob/main/docs/src/multibuffers.md")
+                                cx.open_url("https://zed.dev/docs/multibuffers")
                             }),
                     ),
             )
@@ -183,10 +180,7 @@ impl Render for MultibufferHint {
                             ToolbarItemLocation::Hidden,
                         ))
                     }))
-                    .tooltip(Tooltip::text(localization::text(
-                        cx,
-                        "onboarding-dismiss-hint",
-                    ))),
+                    .tooltip(Tooltip::text("Dismiss Hint")),
             )
             .into_any_element()
     }

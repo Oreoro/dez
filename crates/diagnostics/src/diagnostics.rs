@@ -18,7 +18,7 @@ use editor::{
 };
 use gpui::{
     AnyElement, App, AsyncApp, Context, Entity, EventEmitter, FocusHandle, FocusOutEvent,
-    Focusable, Global, InteractiveElement, IntoElement, ParentElement, Render, SharedString,
+    Focusable, Global, Hsla, InteractiveElement, IntoElement, ParentElement, Render, SharedString,
     Styled, Subscription, Task, WeakEntity, Window, actions, div,
 };
 use itertools::Itertools as _;
@@ -45,7 +45,7 @@ pub use toolbar_controls::ToolbarControls;
 use ui::{Icon, IconName, Label, h_flex, prelude::*};
 use util::ResultExt;
 use workspace::{
-    ItemNavHistory, Workspace,
+    DesignSystemSettings, ItemNavHistory, Workspace,
     item::{Item, ItemEvent, ItemHandle, SaveOptions, TabContentParams},
     searchable::SearchableItemHandle,
 };
@@ -62,6 +62,18 @@ actions!(
     ]
 );
 
+fn diagnostics_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Project Diagnostics"
+    } else {
+        "Workspace Diagnostics"
+    }
+}
+
+fn diagnostics_empty_refresh_visible(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
 #[derive(Default)]
 pub(crate) struct IncludeWarnings(bool);
 impl Global for IncludeWarnings {}
@@ -70,6 +82,15 @@ pub fn init(cx: &mut App) {
     editor::set_diagnostic_renderer(diagnostic_renderer::DiagnosticRenderer {}, cx);
     cx.observe_new(ProjectDiagnosticsEditor::register).detach();
     cx.observe_new(BufferDiagnosticsEditor::register).detach();
+}
+
+pub(crate) fn diagnostics_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
 }
 
 pub(crate) struct ProjectDiagnosticsEditor {
@@ -104,24 +125,28 @@ impl Render for ProjectDiagnosticsEditor {
         let child =
             if warning_count + self.summary.error_count == 0 && self.editor.read(cx).is_empty(cx) {
                 let label = if self.summary.warning_count == 0 {
-                    localization::text(cx, "diagnostics-no-problems-workspace")
+                    SharedString::new_static("No problems in workspace")
                 } else {
-                    localization::text(cx, "diagnostics-no-errors-workspace")
+                    SharedString::new_static("No errors in workspace")
                 };
                 v_flex()
                     .key_context("EmptyPane")
                     .size_full()
-                    .gap_1()
+                    .gap_2()
                     .justify_center()
                     .items_center()
                     .text_center()
-                    .bg(cx.theme().colors().editor_background)
+                    .bg(diagnostics_background(cx))
                     .child(Label::new(label).color(Color::Muted))
                     .when(self.summary.warning_count > 0, |this| {
-                        let label = localization::tr!(
-                            cx,
-                            "diagnostics-show-warnings",
-                            count = self.summary.warning_count
+                        let plural_suffix = if self.summary.warning_count > 1 {
+                            "s"
+                        } else {
+                            ""
+                        };
+                        let label = format!(
+                            "Show {} warning{}",
+                            self.summary.warning_count, plural_suffix
                         );
                         this.child(
                             Button::new("diagnostics-show-warning-label", label).on_click(
@@ -132,6 +157,17 @@ impl Render for ProjectDiagnosticsEditor {
                             ),
                         )
                     })
+                    .when(diagnostics_empty_refresh_visible(paths::APP_NAME), |this| {
+                        this.child(
+                            Button::new("diagnostics-empty-refresh", "Refresh")
+                                .tab_index(0isize)
+                                .style(ButtonStyle::Outlined)
+                                .aria_label("Refresh Workspace Diagnostics")
+                                .on_click(cx.listener(|this, _, window, cx| {
+                                    this.refresh(window, cx);
+                                })),
+                        )
+                    })
             } else {
                 div().size_full().child(self.editor.clone())
             };
@@ -140,6 +176,7 @@ impl Render for ProjectDiagnosticsEditor {
             .key_context("Diagnostics")
             .track_focus(&self.focus_handle(cx))
             .size_full()
+            .bg(diagnostics_background(cx))
             .on_action(cx.listener(Self::toggle_warnings))
             .on_action(cx.listener(Self::toggle_diagnostics_refresh))
             .child(child)
@@ -474,10 +511,13 @@ impl ProjectDiagnosticsEditor {
             return false;
         }
         existing.iter().zip(new.iter()).all(|(existing, new)| {
-            existing.diagnostic.message == new.diagnostic.message
-                && existing.diagnostic.severity == new.diagnostic.severity
+            existing.diagnostic.severity == new.diagnostic.severity
                 && existing.diagnostic.is_primary == new.diagnostic.is_primary
                 && existing.range.to_offset(snapshot) == new.range.to_offset(snapshot)
+                && existing
+                    .diagnostic
+                    .message
+                    .rendered_eq(&new.diagnostic.message)
         })
     }
 
@@ -744,17 +784,18 @@ impl Item for ProjectDiagnosticsEditor {
             .update(cx, |editor, cx| editor.navigate(data, window, cx))
     }
 
-    fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString> {
-        Some(localization::text(cx, "diagnostics-project"))
+    fn tab_tooltip_text(&self, _: &App) -> Option<SharedString> {
+        Some(diagnostics_title(paths::APP_NAME).into())
     }
 
-    fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
-        localization::text(cx, "diagnostics-tab")
+    fn tab_content_text(&self, _detail: usize, _: &App) -> SharedString {
+        "Diagnostics".into()
     }
 
-    fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
+    fn tab_content(&self, params: TabContentParams, _window: &Window, _: &App) -> AnyElement {
         h_flex()
             .gap_1()
+            .child(Label::new("Diagnostics").color(params.text_color()))
             .when(
                 self.summary.error_count == 0 && self.summary.warning_count == 0,
                 |then| {
@@ -762,10 +803,7 @@ impl Item for ProjectDiagnosticsEditor {
                         h_flex()
                             .gap_1()
                             .child(Icon::new(IconName::Check).color(Color::Success))
-                            .child(
-                                Label::new(localization::text(cx, "diagnostics-no-problems"))
-                                    .color(params.text_color()),
-                            ),
+                            .child(Label::new("No problems").color(params.text_color())),
                     )
                 },
             )
@@ -792,6 +830,10 @@ impl Item for ProjectDiagnosticsEditor {
                 )
             })
             .into_any_element()
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("Project Diagnostics Opened")
     }
 
     fn for_each_project_item(
@@ -917,6 +959,19 @@ impl Item for ProjectDiagnosticsEditor {
     }
 }
 
+#[cfg(test)]
+mod product_label_tests {
+    use super::*;
+
+    #[test]
+    fn diagnostics_title_uses_workspace_scope_only_in_dez() {
+        assert_eq!(diagnostics_title("Dez"), "Workspace Diagnostics");
+        assert_eq!(diagnostics_title("Zed"), "Project Diagnostics");
+        assert!(diagnostics_empty_refresh_visible("Dez"));
+        assert!(!diagnostics_empty_refresh_visible("Zed"));
+    }
+}
+
 impl DiagnosticsToolbarEditor for WeakEntity<ProjectDiagnosticsEditor> {
     fn include_warnings(&self, cx: &App) -> bool {
         self.read_with(cx, |project_diagnostics_editor, _cx| {
@@ -939,22 +994,25 @@ impl DiagnosticsToolbarEditor for WeakEntity<ProjectDiagnosticsEditor> {
     }
 
     fn stop_updating(&self, cx: &mut App) {
-        let _ = self.update(cx, |project_diagnostics_editor, cx| {
+        self.update(cx, |project_diagnostics_editor, cx| {
             project_diagnostics_editor.update_excerpts_task = None;
             cx.notify();
-        });
+        })
+        .log_err();
     }
 
     fn refresh_diagnostics(&self, window: &mut Window, cx: &mut App) {
-        let _ = self.update(cx, |project_diagnostics_editor, cx| {
+        self.update(cx, |project_diagnostics_editor, cx| {
             project_diagnostics_editor.refresh(window, cx);
-        });
+        })
+        .log_err();
     }
 
     fn toggle_warnings(&self, window: &mut Window, cx: &mut App) {
-        let _ = self.update(cx, |project_diagnostics_editor, cx| {
+        self.update(cx, |project_diagnostics_editor, cx| {
             project_diagnostics_editor.toggle_warnings(&Default::default(), window, cx);
-        });
+        })
+        .log_err();
     }
 
     fn get_diagnostics_for_buffer(

@@ -1,7 +1,4 @@
-use crate::{
-    settings_content::{SettingsContent, UserSettingsContent},
-    settings_store::SettingsStore,
-};
+use crate::{settings_content::SettingsContent, settings_store::SettingsStore};
 use collections::HashSet;
 use fs::{Fs, PathEventKind};
 use futures::{StreamExt, channel::mpsc};
@@ -66,15 +63,15 @@ mod tests {
     async fn test_watch_config_file_reloads_when_parent_dir_is_symlink(cx: &mut TestAppContext) {
         cx.executor().allow_parking();
         let fs = FakeFs::new(cx.background_executor.clone());
-        let config_settings_path = PathBuf::from("/root/.config/dez/settings.json");
-        let target_settings_path = PathBuf::from("/root/dotfiles/dez/settings.json");
+        let config_settings_path = PathBuf::from("/root/.config/zed/settings.json");
+        let target_settings_path = PathBuf::from("/root/dotfiles/zed/settings.json");
 
         fs.insert_tree(
             Path::new("/root"),
             json!({
                 ".config": {},
                 "dotfiles": {
-                    "dez": {
+                    "zed": {
                         "settings.json": "A"
                     }
                 }
@@ -83,8 +80,8 @@ mod tests {
         .await;
 
         fs.create_symlink(
-            Path::new("/root/.config/dez"),
-            PathBuf::from("/root/dotfiles/dez"),
+            Path::new("/root/.config/zed"),
+            PathBuf::from("/root/dotfiles/zed"),
         )
         .await
         .unwrap();
@@ -136,6 +133,7 @@ pub fn test_settings() -> &'static str {
         #[cfg(not(target_os = "windows"))]
         util::merge_non_null_json_value_into(
             serde_json::json!({
+                "format_on_save": "on",
                 "ui_font_family": "Courier",
                 "ui_font_features": {},
                 "ui_font_size": 14,
@@ -151,6 +149,7 @@ pub fn test_settings() -> &'static str {
         #[cfg(target_os = "windows")]
         util::merge_non_null_json_value_into(
             serde_json::json!({
+                "format_on_save": "on",
                 "ui_font_family": "Courier New",
                 "ui_font_features": {},
                 "ui_font_size": 14,
@@ -281,20 +280,4 @@ pub fn update_settings_file_with_completion(
     update: impl 'static + Send + FnOnce(&mut SettingsContent, &App),
 ) -> futures::channel::oneshot::Receiver<anyhow::Result<()>> {
     SettingsStore::global(cx).update_settings_file_with_completion(fs, update)
-}
-
-pub fn update_user_settings_file(
-    fs: Arc<dyn Fs>,
-    cx: &App,
-    update: impl 'static + Send + FnOnce(&mut UserSettingsContent, &App),
-) {
-    SettingsStore::global(cx).update_user_settings_file(fs, update)
-}
-
-pub fn update_user_settings_file_with_completion(
-    fs: Arc<dyn Fs>,
-    cx: &App,
-    update: impl 'static + Send + FnOnce(&mut UserSettingsContent, &App),
-) -> futures::channel::oneshot::Receiver<anyhow::Result<()>> {
-    SettingsStore::global(cx).update_user_settings_file_with_completion(fs, update)
 }

@@ -4,6 +4,7 @@ use gpui::{
     ParentElement as _, Render, Styled, Window,
 };
 use language::LanguageRegistry;
+use settings::Settings;
 use std::sync::Arc;
 use ui::prelude::*;
 use ui::{h_flex, v_flex};
@@ -116,6 +117,7 @@ impl Render for Toolbar {
 
         let has_left_items = self.left_items().count() > 0;
         let has_right_items = self.right_items().count() > 0;
+        let compact_mode = crate::ToolbarSettings::get_global(cx).compact_mode;
 
         v_flex()
             .group("toolbar")
@@ -137,7 +139,7 @@ impl Render for Toolbar {
                         .when(has_left_items, |this| {
                             this.child(
                                 h_flex()
-                                    .min_h_8()
+                                    .when(!compact_mode, |this| this.min_h_8())
                                     .flex_auto()
                                     .justify_start()
                                     .overflow_x_hidden()
@@ -147,7 +149,7 @@ impl Render for Toolbar {
                         .when(has_right_items, |this| {
                             this.child(
                                 h_flex()
-                                    .h_8()
+                                    .when(!compact_mode, |this| this.h_8())
                                     .flex_row_reverse()
                                     .when(has_left_items, |this| this.flex_none())
                                     .justify_end()

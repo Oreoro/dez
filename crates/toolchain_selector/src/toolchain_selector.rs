@@ -1,4 +1,5 @@
 mod active_toolchain;
+mod canvas;
 
 pub use active_toolchain::ActiveToolchain;
 use anyhow::Context as _;
@@ -16,13 +17,13 @@ use open_path_prompt::OpenPathDelegate;
 use picker::{Picker, PickerDelegate};
 use project::{DirectoryLister, Project, ProjectPath, Toolchains, WorktreeId};
 use std::{
+    borrow::Cow,
     path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
 };
 use ui::{
-    Divider, HighlightedLabel, KeyBinding, List, ListItem, ListItemSpacing, Navigable,
-    NavigableEntry, prelude::*,
+    Divider, HighlightedLabel, KeyBinding, List, ListItem, Navigable, NavigableEntry, prelude::*,
 };
 use util::{ResultExt, maybe, paths::PathStyle, rel_path::RelPath};
 use workspace::{ModalView, Workspace};
@@ -111,7 +112,10 @@ impl AddToolchainState {
             let (lister, rx) = Self::create_path_browser_delegate(project.clone(), cx);
             let path_style = project.read(cx).path_style(cx);
             let picker = cx.new(|cx| {
-                let picker = Picker::uniform_list(lister, window, cx);
+                let picker = Picker::uniform_list(lister, window, cx)
+                    .surface_density(canvas::toolchain_picker_density(cx))
+                    .surface_radius(canvas::toolchain_picker_radius(cx))
+                    .surface_contrast(canvas::toolchain_picker_contrast(cx));
                 let mut worktree_root = worktree_root_path.to_string_lossy().into_owned();
                 worktree_root.push_str(path_style.primary_separator());
                 picker.set_query(&worktree_root, window, cx);
@@ -171,27 +175,25 @@ impl AddToolchainState {
                         .child(Divider::horizontal())
                         .child(
                             h_flex()
-                                .p_1()
+                                .p(canvas::toolchain_footer_padding(cx))
                                 .justify_between()
-                                .gap_2()
-                                .child(
-                                    Label::new(localization::text(cx, "toolchain-select-path"))
-                                        .color(Color::Muted)
-                                        .map(|this| {
-                                            if is_loading {
-                                                this.with_animation(
-                                                    "select-toolchain-label",
-                                                    Animation::new(Duration::from_secs(2))
-                                                        .repeat()
-                                                        .with_easing(pulsating_between(0.4, 0.8)),
-                                                    |label, delta| label.alpha(delta),
-                                                )
-                                                .into_any()
-                                            } else {
-                                                this.into_any_element()
-                                            }
-                                        }),
-                                )
+                                .gap(canvas::toolchain_footer_gap(cx))
+                                .child(Label::new("Select Toolchain Path").color(Color::Muted).map(
+                                    |this| {
+                                        if is_loading {
+                                            this.with_animation(
+                                                "select-toolchain-label",
+                                                Animation::new(Duration::from_secs(2))
+                                                    .repeat()
+                                                    .with_easing(pulsating_between(0.4, 0.8)),
+                                                |label, delta| label.alpha(delta),
+                                            )
+                                            .into_any()
+                                        } else {
+                                            this.into_any_element()
+                                        }
+                                    },
+                                ))
                                 .when_some(error, |this, error| {
                                     this.child(Label::new(error).color(Color::Error))
                                 }),
@@ -233,7 +235,10 @@ impl AddToolchainState {
                             let (delegate, rx) =
                                 Self::create_path_browser_delegate(this.project.clone(), cx);
                             picker.update(cx, |picker, cx| {
-                                *picker = Picker::uniform_list(delegate, window, cx);
+                                *picker = Picker::uniform_list(delegate, window, cx)
+                                    .surface_density(canvas::toolchain_picker_density(cx))
+                                    .surface_radius(canvas::toolchain_picker_radius(cx))
+                                    .surface_contrast(canvas::toolchain_picker_contrast(cx));
                                 picker.set_query(path.to_string_lossy().as_ref(), window, cx);
                             });
                             *input_state = Self::wait_for_path(rx, window, cx);
@@ -384,18 +389,17 @@ impl Focusable for State {
 }
 impl Render for AddToolchainState {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = cx.theme().clone();
         let weak = self.weak.upgrade();
-        let label = localization::text(cx, "toolchain-add");
+        let label = SharedString::new_static("Add");
 
         v_flex()
             .size_full()
             // todo: These modal styles shouldn't be needed as the modal picker already has `elevation_3`
             // They get duplicated in the middle state of adding a virtual env, but then are needed for this last state
-            .bg(cx.theme().colors().elevated_surface_background)
+            .bg(canvas::toolchain_modal_background(cx))
             .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .rounded_lg()
+            .border_color(canvas::toolchain_border(cx))
+            .map(|modal| canvas::toolchain_modal_radius(modal, cx))
             .when_some(weak, |this, weak| {
                 this.on_action(window.listener_for(
                     &weak,
@@ -428,15 +432,15 @@ impl Render for AddToolchainState {
                             .child(
                                 h_flex()
                                     .w_full()
-                                    .p_2()
+                                    .p(canvas::toolchain_editor_padding(cx))
                                     .border_b_1()
-                                    .border_color(theme.colors().border)
+                                    .border_color(canvas::toolchain_border(cx))
                                     .child(editor.clone()),
                             )
                             .child(
                                 v_flex()
                                     .child(
-                                        Label::new(localization::text(cx, "toolchain-scope"))
+                                        Label::new("Scope")
                                             .size(LabelSize::Small)
                                             .color(Color::Muted)
                                             .mt_1()
@@ -445,24 +449,8 @@ impl Render for AddToolchainState {
                                     .child(List::new().children(
                                         scope_options.iter().enumerate().map(|(i, scope)| {
                                             let is_selected = *scope == scope_picker.selected_scope;
-                                            let (label_identifier, description_identifier) =
-                                                match scope {
-                                                    ToolchainScope::Subproject(_, _) => (
-                                                        "toolchain-scope-subproject",
-                                                        "toolchain-scope-subproject-description",
-                                                    ),
-                                                    ToolchainScope::Project => (
-                                                        "toolchain-scope-project",
-                                                        "toolchain-scope-project-description",
-                                                    ),
-                                                    ToolchainScope::Global => (
-                                                        "toolchain-scope-global",
-                                                        "toolchain-scope-global-description",
-                                                    ),
-                                                };
-                                            let label = localization::text(cx, label_identifier);
-                                            let description =
-                                                localization::text(cx, description_identifier);
+                                            let label = scope.label();
+                                            let description = scope.description();
                                             let scope_clone_for_action = scope.clone();
                                             let scope_clone_for_click = scope.clone();
 
@@ -488,10 +476,10 @@ impl Render for AddToolchainState {
                                                                 .contains_focused(window, cx),
                                                     )
                                                     .inset(true)
-                                                    .spacing(ListItemSpacing::Sparse)
+                                                    .spacing(canvas::toolchain_row_spacing(cx))
                                                     .child(
                                                         h_flex()
-                                                            .gap_2()
+                                                            .gap(canvas::toolchain_row_gap(cx))
                                                             .child(Label::new(label))
                                                             .child(
                                                                 Label::new(description)
@@ -509,44 +497,53 @@ impl Render for AddToolchainState {
                                         }),
                                     ))
                                     .child(Divider::horizontal())
-                                    .child(h_flex().p_1p5().justify_end().map(|this| {
-                                        let is_disabled = editor.read(cx).is_empty(cx);
-                                        let handle = self.focus_handle(cx);
-                                        this.child(
-                                            Button::new("add-toolchain", label)
-                                                .disabled(is_disabled)
-                                                .key_binding(KeyBinding::for_action_in(
-                                                    &menu::Confirm,
-                                                    &handle,
-                                                    cx,
-                                                ))
-                                                .on_click(cx.listener(|this, _, window, cx| {
-                                                    this.confirm_toolchain(
-                                                        &menu::Confirm,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                }))
-                                                .map(|this| {
-                                                    if false {
-                                                        this.with_animation(
-                                                            "inspecting-user-toolchain",
-                                                            Animation::new(Duration::from_millis(
-                                                                500,
-                                                            ))
-                                                            .repeat()
-                                                            .with_easing(pulsating_between(
-                                                                0.4, 0.8,
-                                                            )),
-                                                            |label, delta| label.alpha(delta),
-                                                        )
-                                                        .into_any()
-                                                    } else {
-                                                        this.into_any_element()
-                                                    }
-                                                }),
-                                        )
-                                    })),
+                                    .child(
+                                        h_flex()
+                                            .p(canvas::toolchain_footer_padding(cx))
+                                            .justify_end()
+                                            .map(|this| {
+                                                let is_disabled = editor.read(cx).is_empty(cx);
+                                                let handle = self.focus_handle(cx);
+                                                this.child(
+                                                    Button::new("add-toolchain", label)
+                                                        .disabled(is_disabled)
+                                                        .key_binding(KeyBinding::for_action_in(
+                                                            &menu::Confirm,
+                                                            &handle,
+                                                            cx,
+                                                        ))
+                                                        .on_click(cx.listener(
+                                                            |this, _, window, cx| {
+                                                                this.confirm_toolchain(
+                                                                    &menu::Confirm,
+                                                                    window,
+                                                                    cx,
+                                                                );
+                                                            },
+                                                        ))
+                                                        .map(|this| {
+                                                            if false {
+                                                                this.with_animation(
+                                                                    "inspecting-user-toolchain",
+                                                                    Animation::new(
+                                                                        Duration::from_millis(500),
+                                                                    )
+                                                                    .repeat()
+                                                                    .with_easing(pulsating_between(
+                                                                        0.4, 0.8,
+                                                                    )),
+                                                                    |label, delta| {
+                                                                        label.alpha(delta)
+                                                                    },
+                                                                )
+                                                                .into_any()
+                                                            } else {
+                                                                this.into_any_element()
+                                                            }
+                                                        }),
+                                                )
+                                            }),
+                                    ),
                             )
                             .into_any_element(),
                     );
@@ -701,6 +698,9 @@ impl ToolchainSelector {
                     cx,
                 );
                 Picker::uniform_list(delegate, window, cx)
+                    .surface_density(canvas::toolchain_picker_density(cx))
+                    .surface_radius(canvas::toolchain_picker_radius(cx))
+                    .surface_contrast(canvas::toolchain_picker_contrast(cx))
             });
             let picker_focus_handle = picker.focus_handle(cx);
             picker.update(cx, |picker, _| {
@@ -809,10 +809,9 @@ impl ToolchainSelectorDelegate {
                     .await?;
                 let relative_path = this
                     .update(cx, |this, cx| {
-                        this.delegate.add_toolchain_text = localization::tr!(
-                            cx,
-                            "toolchain-add-term",
-                            term = meta.term.as_ref().to_case(convert_case::Case::Title)
+                        this.delegate.add_toolchain_text = format!(
+                            "Add {}",
+                            meta.term.as_ref().to_case(convert_case::Case::Title)
                         )
                         .into();
                         cx.notify();
@@ -836,24 +835,18 @@ impl ToolchainSelectorDelegate {
                         )
                     })
                     .await?;
-                let placeholder_text = this
-                    .update(cx, |_, cx| {
-                        let pretty_path = if relative_path.is_empty() {
-                            localization::text(cx, "toolchain-worktree-root").to_string()
-                        } else {
-                            format!("`{}`", relative_path.display(path_style))
-                        };
-                        localization::tr!(
-                            cx,
-                            "toolchain-select-for-path",
-                            term = meta.term.to_lowercase(),
-                            path = pretty_path
-                        )
-                    })
-                    .ok()?;
+                let pretty_path = {
+                    if relative_path.is_empty() {
+                        Cow::Borrowed("worktree root")
+                    } else {
+                        Cow::Owned(format!("`{}`", relative_path.display(path_style)))
+                    }
+                };
+                let placeholder_text =
+                    format!("Select a {} for {pretty_path}…", meta.term.to_lowercase(),).into();
                 let _ = this.update_in(cx, move |this, window, cx| {
                     this.delegate.relative_path = relative_path;
-                    this.delegate.placeholder_text = placeholder_text.into();
+                    this.delegate.placeholder_text = placeholder_text;
                     this.refresh_placeholder(window, cx);
                 });
 
@@ -888,7 +881,7 @@ impl ToolchainSelectorDelegate {
                 Some(())
             }
         });
-        let placeholder_text = localization::text(cx, "toolchain-placeholder").into();
+        let placeholder_text = Arc::from("Select a toolchain…");
         Self {
             toolchain_selector,
             candidates: Default::default(),
@@ -902,7 +895,7 @@ impl ToolchainSelectorDelegate {
             _fetch_candidates_task,
             project,
             focus_handle: cx.focus_handle(),
-            add_toolchain_text: localization::text(cx, "toolchain-add-toolchain").into(),
+            add_toolchain_text: Arc::from("Add Toolchain"),
         }
     }
     fn relativize_path(
@@ -921,6 +914,10 @@ impl ToolchainSelectorDelegate {
 
 impl PickerDelegate for ToolchainSelectorDelegate {
     type ListItem = ListItem;
+
+    fn name() -> &'static str {
+        "toolchain selector"
+    }
 
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
         self.placeholder_text.clone()
@@ -977,7 +974,7 @@ impl PickerDelegate for ToolchainSelectorDelegate {
     fn dismissed(&mut self, _: &mut Window, cx: &mut Context<Picker<Self>>) {
         self.toolchain_selector
             .update(cx, |_, cx| cx.emit(DismissEvent))
-            .log_err();
+            .ok();
     }
 
     fn selected_index(&self) -> usize {
@@ -1090,7 +1087,7 @@ impl PickerDelegate for ToolchainSelectorDelegate {
         Some(
             ListItem::new(id)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::toolchain_row_spacing(cx))
                 .toggle_state(selected)
                 .child(HighlightedLabel::new(label, name_highlights))
                 .child(
@@ -1152,8 +1149,8 @@ impl PickerDelegate for ToolchainSelectorDelegate {
                 .child(Divider::horizontal())
                 .child(
                     h_flex()
-                        .p_1p5()
-                        .gap_0p5()
+                        .p(canvas::toolchain_footer_padding(cx))
+                        .gap(canvas::toolchain_footer_gap(cx))
                         .justify_end()
                         .child(
                             Button::new("xd", self.add_toolchain_text.clone())
@@ -1167,18 +1164,15 @@ impl PickerDelegate for ToolchainSelectorDelegate {
                                 }),
                         )
                         .child(
-                            Button::new(
-                                "select",
-                                localization::text(cx, "toolchain-select-button"),
-                            )
-                            .key_binding(KeyBinding::for_action_in(
-                                &menu::Confirm,
-                                &self.focus_handle,
-                                cx,
-                            ))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(menu::Confirm.boxed_clone(), cx)
-                            }),
+                            Button::new("select", "Select")
+                                .key_binding(KeyBinding::for_action_in(
+                                    &menu::Confirm,
+                                    &self.focus_handle,
+                                    cx,
+                                ))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(menu::Confirm.boxed_clone(), cx)
+                                }),
                         ),
                 )
                 .into_any_element(),

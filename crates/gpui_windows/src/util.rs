@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
-use ::util::ResultExt;
 use anyhow::Context;
+use gpui_util::ResultExt;
 use windows::{
     UI::{
         Color,
@@ -87,7 +87,7 @@ pub(crate) unsafe fn set_window_long(
 }
 
 pub(crate) fn windows_credentials_target_name(url: &str) -> String {
-    format!("dez:url={}", url)
+    format!("zed:url={}", url)
 }
 
 pub(crate) fn load_cursor(style: CursorStyle) -> Option<HCURSOR> {

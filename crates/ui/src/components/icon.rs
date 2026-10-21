@@ -12,18 +12,6 @@ pub use icons::*;
 use crate::traits::transformable::Transformable;
 use crate::{Indicator, prelude::*};
 
-/// Brand color for vendor/agent icons so they read as their product identity
-/// instead of a flat muted gray. Returns `None` for brands whose mark is
-/// monochrome (e.g. OpenAI/Codex), letting the caller fall back to the theme
-/// foreground, which is the faithful treatment for a black/white logo.
-pub fn brand_icon_color(icon: IconName) -> Option<Color> {
-    let rgb = match icon {
-        IconName::AiClaude | IconName::AiAnthropic => 0xd97757,
-        _ => return None,
-    };
-    Some(Color::Custom(gpui::rgb(rgb).into()))
-}
-
 #[derive(IntoElement)]
 pub enum AnyIcon {
     Icon(Icon),
@@ -81,11 +69,11 @@ pub enum IconSize {
 impl IconSize {
     pub fn rems(self) -> Rems {
         match self {
-            IconSize::Indicator => rems_from_px(10.),
-            IconSize::XSmall => rems_from_px(12.),
-            IconSize::Small => rems_from_px(14.),
-            IconSize::Medium => rems_from_px(16.),
-            IconSize::XLarge => rems_from_px(48.),
+            IconSize::Indicator => rems_from_px(10_f32),
+            IconSize::XSmall => rems_from_px(12_f32),
+            IconSize::Small => rems_from_px(14_f32),
+            IconSize::Medium => rems_from_px(16_f32),
+            IconSize::XLarge => rems_from_px(48_f32),
             IconSize::Custom(size) => size,
         }
     }
@@ -124,10 +112,24 @@ impl From<IconName> for Icon {
     }
 }
 
+pub fn git_hosting_provider_icon(provider_name: &str) -> IconName {
+    match provider_name {
+        "Bitbucket" => IconName::Bitbucket,
+        "Chromium" => IconName::Gerrit,
+        "Codeberg" => IconName::Codeberg,
+        "Forgejo Self-Hosted" => IconName::Forgejo,
+        "GitHub" => IconName::Github,
+        "GitLab" => IconName::Gitlab,
+        "Gitea" => IconName::Gitea,
+        "SourceHut" => IconName::Sourcehut,
+        _ => IconName::Link,
+    }
+}
+
 /// The source of an icon.
 #[derive(Clone)]
 enum IconSource {
-    /// An SVG embedded in the dez binary.
+    /// An SVG embedded in the Zed binary.
     Embedded(SharedString),
     /// An image file located at the specified path.
     ///
@@ -135,7 +137,7 @@ enum IconSource {
     ///
     /// In order to support icon themes, we render the icons as images instead.
     External(Arc<Path>),
-    /// An SVG not embedded in the dez binary.
+    /// An SVG not embedded in the Zed binary.
     ExternalSvg(SharedString),
 }
 

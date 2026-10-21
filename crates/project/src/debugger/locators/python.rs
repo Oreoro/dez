@@ -51,8 +51,8 @@ impl DapLocator for PythonLocator {
         let program_position = mod_name
             .is_none()
             .then(|| {
-                let dez_file = VariableName::File.template_value_with_whitespace();
-                build_config.args.iter().position(|arg| *arg == dez_file)
+                let zed_file = VariableName::File.template_value_with_whitespace();
+                build_config.args.iter().position(|arg| *arg == zed_file)
             })
             .flatten();
         let args = if let Some(position) = program_position {
@@ -67,7 +67,8 @@ impl DapLocator for PythonLocator {
             "request": "launch",
             "python": command,
             "args": args,
-            "cwd": build_config.cwd.clone()
+            "cwd": build_config.cwd.clone(),
+            "env": build_config.env.clone(),
         });
         if let Some(config_obj) = config.as_object_mut() {
             if let Some(module) = mod_name {

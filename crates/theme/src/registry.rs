@@ -108,16 +108,20 @@ impl ThemeRegistry {
             assets,
         };
 
-        // We're loading the dez default theme, as we need a theme to be loaded
+        // We're loading the Zed default theme, as we need a theme to be loaded
         // for tests.
-        registry.insert_theme_families([crate::fallback_themes::dez_default_themes()]);
+        registry.insert_theme_families([crate::fallback_themes::zed_default_themes()]);
 
         let default_icon_theme = crate::default_icon_theme();
-        registry
-            .state
-            .write()
+        let dez_default_icon_theme = crate::dez_default_icon_theme();
+        let mut state = registry.state.write();
+        state
             .icon_themes
             .insert(default_icon_theme.name.clone(), default_icon_theme);
+        state
+            .icon_themes
+            .insert(dez_default_icon_theme.name.clone(), dez_default_icon_theme);
+        drop(state);
 
         registry
     }

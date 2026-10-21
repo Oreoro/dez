@@ -12,7 +12,10 @@ use ui::{
 };
 use workspace::{ModalView, Workspace, pane};
 
-use crate::branch_picker::{self, BranchList, DeleteBranch, FilterRemotes, ForceDeleteBranch};
+use crate::branch_picker::{
+    self, BranchList, CycleBranchFilter, DeleteBranch, ForceDeleteBranch, ShowAllBranches,
+    ShowLocalBranches, ShowRemoteBranches,
+};
 use crate::stash_picker::{self, DropStashItem, ShowStashItem, StashList};
 
 actions!(git_picker, [ActivateBranchesTab, ActivateStashTab,]);
@@ -206,7 +209,7 @@ impl GitPicker {
                     )
                     .tooltip(move |_, cx| {
                         Tooltip::for_action_in(
-                            localization::text(cx, "git-toggle-branch-picker"),
+                            "Toggle Branch Picker",
                             &ActivateBranchesTab,
                             &branches_focus_handle,
                             cx,
@@ -223,7 +226,7 @@ impl GitPicker {
                     )
                     .tooltip(move |_, cx| {
                         Tooltip::for_action_in(
-                            localization::text(cx, "git-toggle-stash-picker"),
+                            "Toggle Stash Picker",
                             &ActivateStashTab,
                             &stash_focus_handle,
                             cx,
@@ -308,15 +311,55 @@ impl GitPicker {
         }
     }
 
-    fn handle_filter_remotes(
+    fn set_active_branch_filter(
         &mut self,
-        _: &FilterRemotes,
+        branch_filter: branch_picker::BranchFilter,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         if let Some(branch_list) = &self.branch_list {
             branch_list.update(cx, |list, cx| {
-                list.handle_filter(&FilterRemotes, window, cx);
+                list.set_branch_filter(branch_filter, window, cx);
+            });
+        }
+    }
+
+    fn handle_show_all_branches(
+        &mut self,
+        _: &ShowAllBranches,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_active_branch_filter(branch_picker::BranchFilter::All, window, cx);
+    }
+
+    fn handle_show_local_branches(
+        &mut self,
+        _: &ShowLocalBranches,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_active_branch_filter(branch_picker::BranchFilter::Local, window, cx);
+    }
+
+    fn handle_show_remote_branches(
+        &mut self,
+        _: &ShowRemoteBranches,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_active_branch_filter(branch_picker::BranchFilter::Remote, window, cx);
+    }
+
+    fn handle_cycle_branch_filter(
+        &mut self,
+        _: &CycleBranchFilter,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(branch_list) = &self.branch_list {
+            branch_list.update(cx, |list, cx| {
+                list.cycle_branch_filter(window, cx);
             });
         }
     }
@@ -377,7 +420,14 @@ impl Render for GitPicker {
             .elevation_3(cx)
             .overflow_hidden()
             .when(self.popover_style, |el| {
-                el.on_mouse_down_out(cx.listener(|_, _, _, cx| {
+                el.on_mouse_down_out(cx.listener(|this, _, _, cx| {
+                    if this
+                        .branch_list
+                        .as_ref()
+                        .is_some_and(|branch_list| branch_list.read(cx).branch_filter_menu_open(cx))
+                    {
+                        return;
+                    }
                     cx.emit(DismissEvent);
                 }))
             })
@@ -421,7 +471,10 @@ impl Render for GitPicker {
             .when(self.tab == GitPickerTab::Branches, |el| {
                 el.on_action(cx.listener(Self::handle_delete_branch))
                     .on_action(cx.listener(Self::handle_force_delete_branch))
-                    .on_action(cx.listener(Self::handle_filter_remotes))
+                    .on_action(cx.listener(Self::handle_show_all_branches))
+                    .on_action(cx.listener(Self::handle_show_local_branches))
+                    .on_action(cx.listener(Self::handle_show_remote_branches))
+                    .on_action(cx.listener(Self::handle_cycle_branch_filter))
             })
             .when(self.tab == GitPickerTab::Stashes, |el| {
                 el.on_action(cx.listener(Self::handle_drop_stash))
@@ -434,7 +487,7 @@ impl Render for GitPicker {
 
 pub fn open_branches(
     workspace: &mut Workspace,
-    _: &dez_actions::git::Branch,
+    _: &zed_actions::git::Branch,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
@@ -443,7 +496,7 @@ pub fn open_branches(
 
 pub fn open_stash(
     workspace: &mut Workspace,
-    _: &dez_actions::git::ViewStash,
+    _: &zed_actions::git::ViewStash,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
@@ -481,18 +534,18 @@ pub fn popover(
 }
 
 pub fn register(workspace: &mut Workspace) {
-    workspace.register_action(|workspace, _: &dez_actions::git::Branch, window, cx| {
+    workspace.register_action(|workspace, _: &zed_actions::git::Branch, window, cx| {
         open_with_tab(workspace, GitPickerTab::Branches, window, cx);
     });
-    workspace.register_action(|workspace, _: &dez_actions::git::Switch, window, cx| {
+    workspace.register_action(|workspace, _: &zed_actions::git::Switch, window, cx| {
         open_with_tab(workspace, GitPickerTab::Branches, window, cx);
     });
     workspace.register_action(
-        |workspace, _: &dez_actions::git::CheckoutBranch, window, cx| {
+        |workspace, _: &zed_actions::git::CheckoutBranch, window, cx| {
             open_with_tab(workspace, GitPickerTab::Branches, window, cx);
         },
     );
-    workspace.register_action(|workspace, _: &dez_actions::git::ViewStash, window, cx| {
+    workspace.register_action(|workspace, _: &zed_actions::git::ViewStash, window, cx| {
         open_with_tab(workspace, GitPickerTab::Stashes, window, cx);
     });
 }

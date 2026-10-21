@@ -3,20 +3,20 @@ use db::kvp::KeyValueStore;
 use fs::Fs;
 use gpui::{
     Action, AnyElement, App, AppContext, AsyncWindowContext, Context, Entity, EventEmitter,
-    FocusHandle, Focusable, Global, IntoElement, KeyContext, Render, ScrollHandle, SharedString,
-    Subscription, Task, WeakEntity, Window, actions,
+    FocusHandle, Focusable, Global, IntoElement, KeyContext, Pixels, Render, ScrollHandle,
+    SharedString, Subscription, Task, WeakEntity, Window, actions, container_query, px,
 };
 use notifications::status_toast::StatusToast;
+use paths::APP_NAME;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{SettingsStore, VsCodeSettingsSource};
 use std::sync::Arc;
 use ui::{
-    Divider, KeyBinding, ParentElement as _, StatefulInteractiveElement, Vector, VectorName,
-    WithScrollbar as _, prelude::*, rems_from_px,
+    Divider, KeyBinding, ParentElement as _, StatefulInteractiveElement, WithScrollbar as _,
+    prelude::*, rems_from_px, theme_is_transparent,
 };
 
-use dez_actions::OpenOnboarding;
 pub use workspace::welcome::ShowWelcome;
 use workspace::welcome::WelcomePage;
 use workspace::{
@@ -25,6 +25,7 @@ use workspace::{
     item::{Item, ItemEvent},
     open_new, register_serializable_item, with_active_or_new_workspace,
 };
+use zed_actions::OpenOnboarding;
 
 mod base_keymap_picker;
 mod basics_page;
@@ -33,7 +34,7 @@ mod theme_preview;
 
 /// Imports settings from Visual Studio Code.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = dez)]
+#[action(namespace = zed)]
 #[serde(deny_unknown_fields)]
 pub struct ImportVsCodeSettings {
     #[serde(default)]
@@ -42,7 +43,7 @@ pub struct ImportVsCodeSettings {
 
 /// Imports settings from Cursor editor.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Deserialize, JsonSchema, Action)]
-#[action(namespace = dez)]
+#[action(namespace = zed)]
 #[serde(deny_unknown_fields)]
 pub struct ImportCursorSettings {
     #[serde(default)]
@@ -50,6 +51,43 @@ pub struct ImportCursorSettings {
 }
 
 pub const FIRST_OPEN: &str = "first_open";
+const DEZ_ONBOARDING_COMPACT_BREAKPOINT: Pixels = px(760.);
+
+pub fn should_show_onboarding_on_first_open(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn onboarding_page_enabled_for_app(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn onboarding_responsive_viewport_width(
+    app_name: &str,
+    viewport_width: Pixels,
+    interface_scale: f32,
+) -> Pixels {
+    if app_name == "Zed" {
+        viewport_width
+    } else {
+        viewport_width * interface_scale.max(f32::EPSILON).recip()
+    }
+}
+
+fn dez_onboarding_uses_compact_layout(app_name: &str, viewport_width: Pixels) -> bool {
+    app_name != "Zed" && viewport_width < DEZ_ONBOARDING_COMPACT_BREAKPOINT
+}
+
+fn onboarding_toggles_left_dock(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn onboarding_surface_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Onboarding"
+    } else {
+        "Set Up Dez"
+    }
+}
 
 actions!(
     onboarding,
@@ -69,6 +107,11 @@ pub fn init(cx: &mut App) {
     .detach();
 
     cx.on_action(|_: &OpenOnboarding, cx| {
+        if !onboarding_page_enabled_for_app(APP_NAME) {
+            cx.dispatch_action(&zed_actions::OpenSettings);
+            return;
+        }
+
         with_active_or_new_workspace(cx, |workspace, window, cx| {
             workspace
                 .with_local_workspace(window, cx, |workspace, window, cx| {
@@ -173,13 +216,16 @@ pub fn init(cx: &mut App) {
 }
 
 pub fn show_onboarding_view(app_state: Arc<AppState>, cx: &mut App) -> Task<anyhow::Result<()>> {
+    telemetry::event!("Onboarding Page Opened");
     open_new(
         Default::default(),
         app_state,
         cx,
         |workspace, window, cx| {
             {
-                workspace.toggle_dock(DockPosition::Left, window, cx);
+                if onboarding_toggles_left_dock(APP_NAME) {
+                    workspace.toggle_dock(DockPosition::Left, window, cx);
+                }
                 let onboarding_page = Onboarding::new(workspace, cx);
                 workspace.add_item_to_center(Box::new(onboarding_page.clone()), window, cx);
 
@@ -207,6 +253,8 @@ impl Onboarding {
     fn new(workspace: &Workspace, cx: &mut App) -> Entity<Self> {
         let font_family_cache = theme::FontFamilyCache::global(cx);
 
+        telemetry::event!("Dez Onboarding Viewed");
+
         cx.new(|cx| {
             cx.spawn(async move |this, cx| {
                 font_family_cache.prefetch(cx).await;
@@ -227,6 +275,7 @@ impl Onboarding {
     }
 
     fn on_finish(_: &Finish, _: &mut Window, cx: &mut App) {
+        telemetry::event!("Finish Setup");
         go_to_welcome_page(cx);
     }
 
@@ -237,8 +286,20 @@ impl Onboarding {
 
 impl Render for Onboarding {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_dez = APP_NAME != "Zed";
+        let onboarding_background = if is_dez && theme_is_transparent(cx) {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().editor_background
+        };
+        let page = self.render_page(cx);
+        let finish_focus_handle = self.focus_handle.clone();
+        let content_scroll_handle = self.scroll_handle.clone();
+
         div()
             .image_cache(gpui::retain_all("onboarding-page"))
+            .id("onboarding-page")
+            .role(gpui::Role::Main)
             .key_context({
                 let mut ctx = KeyContext::new_with_defaults();
                 ctx.add("Onboarding");
@@ -247,7 +308,7 @@ impl Render for Onboarding {
             })
             .track_focus(&self.focus_handle)
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(onboarding_background)
             .on_action(Self::on_finish)
             .on_action(cx.listener(|_, _: &menu::SelectNext, window, cx| {
                 window.focus_next(cx);
@@ -258,7 +319,15 @@ impl Render for Onboarding {
                 cx.notify();
             }))
             .vertical_scrollbar_for(&self.scroll_handle, window, cx)
-            .child(
+            .child(container_query(move |available_size, _window, cx| {
+                let responsive_width = onboarding_responsive_viewport_width(
+                    APP_NAME,
+                    available_size.width,
+                    workspace::interface_scale(cx),
+                );
+                let compact_layout =
+                    dez_onboarding_uses_compact_layout(APP_NAME, responsive_width);
+
                 div()
                     .id("page-content")
                     .size_full()
@@ -266,65 +335,126 @@ impl Render for Onboarding {
                     .child(
                         v_flex()
                             .min_w_0()
-                            .max_w(rems_from_px(780.))
+                            .max_w(rems_from_px(if APP_NAME == "Zed" {
+                                780_f32
+                            } else {
+                                960_f32
+                            }))
                             .w_full()
-                            .mx_auto()
-                            .p_12()
-                            .gap_6()
+                            .when(APP_NAME == "Zed", |this| this.mx_auto())
+                            .when(APP_NAME == "Zed", |this| this.p_12().gap_6())
+                            .when(is_dez && compact_layout, |this| {
+                                this.px_3().py_4().gap_4()
+                            })
+                            .when(is_dez && !compact_layout, |this| {
+                                this.px_6().py_6().gap_5()
+                            })
                             .child(
                                 h_flex()
                                     .w_full()
-                                    .gap_4()
-                                    .justify_between()
-                                    .child(
+                                    .items_start()
+                                    .gap_3()
+                                    .when(compact_layout, |this| {
+                                        this.flex_col().items_stretch()
+                                    })
+                                    .when(!compact_layout, |this| this.justify_between())
+                                    .child(if APP_NAME == "Zed" {
                                         h_flex()
                                             .gap_4()
-                                            .child(Vector::square(VectorName::DezLogo, rems(2.5)))
+                                            .child(
+                                                h_flex()
+                                                    .flex_none()
+                                                    .w_10()
+                                                    .h_10()
+                                                    .rounded_md()
+                                                    .border_1()
+                                                    .border_color(
+                                                        cx.theme().colors().border_variant,
+                                                    )
+                                                    .bg(cx.theme().colors().panel_background)
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .child(
+                                                        Label::new("D")
+                                                            .buffer_font(cx)
+                                                            .size(LabelSize::Large),
+                                                    ),
+                                            )
                                             .child(
                                                 v_flex()
                                                     .child(
-                                                        Headline::new(localization::text(
-                                                            cx,
-                                                            "onboarding-title",
+                                                        Headline::new(format!(
+                                                            "Welcome to {APP_NAME}"
                                                         ))
                                                         .size(HeadlineSize::Small),
                                                     )
                                                     .child(
-                                                        Label::new(localization::text(
-                                                            cx,
-                                                            "onboarding-tagline",
-                                                        ))
+                                                        Label::new(
+                                                            "Write. Delegate. Watch. Verify.",
+                                                        )
                                                         .color(Color::Muted)
                                                         .size(LabelSize::Small)
                                                         .italic(),
                                                     ),
-                                            ),
-                                    )
+                                            )
+                                            .into_any_element()
+                                    } else {
+                                        h_flex()
+                                            .min_w_0()
+                                            .items_start()
+                                            .gap_3()
+                                            .child(
+                                                div()
+                                                    .size_8()
+                                                    .flex_none()
+                                                    .flex()
+                                                    .items_center()
+                                                    .justify_center()
+                                                    .child(
+                                                        Icon::new(IconName::Settings)
+                                                            .size(IconSize::Small)
+                                                            .color(Color::Accent),
+                                                    ),
+                                            )
+                                            .child(
+                                                v_flex()
+                                                    .min_w_0()
+                                                    .gap_1()
+                                                    .child(
+                                                        Headline::new("Set up Dez")
+                                                            .size(HeadlineSize::Large),
+                                                    )
+                                                    .child(
+                                                        Label::new(
+                                                            "Choose your editor preferences. You can change everything later in Settings.",
+                                                        )
+                                                        .color(Color::Muted)
+                                                        .size(LabelSize::Small),
+                                                    ),
+                                                )
+                                            .into_any_element()
+                                    })
                                     .child({
-                                        Button::new(
-                                            "finish_setup",
-                                            localization::text(cx, "onboarding-finish-setup"),
-                                        )
-                                        .style(ButtonStyle::Filled)
-                                        .size(ButtonSize::Medium)
-                                        .width(rems_from_px(200.))
-                                        .key_binding(KeyBinding::for_action_in(
-                                            &Finish,
-                                            &self.focus_handle,
-                                            cx,
-                                        ))
-                                        .on_click(
-                                            |_, window, cx| {
+                                        Button::new("finish_setup", "Finish Setup")
+                                            .style(ButtonStyle::Filled)
+                                            .size(ButtonSize::Medium)
+                                            .width(rems_from_px(200_f32))
+                                            .when(compact_layout, |this| this.full_width())
+                                            .key_binding(KeyBinding::for_action_in(
+                                                &Finish,
+                                                &finish_focus_handle,
+                                                cx,
+                                            ))
+                                            .on_click(|_, window, cx| {
                                                 window.dispatch_action(Finish.boxed_clone(), cx);
-                                            },
-                                        )
+                                            })
                                     }),
                             )
                             .child(Divider::horizontal().color(ui::DividerColor::BorderVariant))
-                            .child(self.render_page(cx)),
+                            .child(page),
                     )
-                    .track_scroll(&self.scroll_handle),
-            )
+                    .track_scroll(&content_scroll_handle)
+            }))
     }
 }
 
@@ -339,8 +469,12 @@ impl Focusable for Onboarding {
 impl Item for Onboarding {
     type Event = ItemEvent;
 
-    fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
-        localization::text(cx, "onboarding-tab-title")
+    fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
+        onboarding_surface_label(APP_NAME).into()
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("Onboarding Page Opened")
     }
 
     fn show_toolbar(&self) -> bool {
@@ -348,7 +482,7 @@ impl Item for Onboarding {
     }
 
     fn can_split(&self) -> bool {
-        true
+        onboarding_page_enabled_for_app(APP_NAME)
     }
 
     fn clone_on_split(
@@ -357,6 +491,10 @@ impl Item for Onboarding {
         _: &mut Window,
         cx: &mut Context<Self>,
     ) -> Task<Option<Entity<Self>>> {
+        if !onboarding_page_enabled_for_app(APP_NAME) {
+            return Task::ready(None);
+        }
+
         Task::ready(Some(cx.new(|cx| Onboarding {
             workspace: self.workspace.clone(),
             scroll_handle: ScrollHandle::new(),
@@ -367,6 +505,43 @@ impl Item for Onboarding {
 
     fn to_item_events(event: &Self::Event, f: &mut dyn FnMut(workspace::item::ItemEvent)) {
         f(*event)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dez_onboarding_collapses_before_controls_can_clip() {
+        assert!(dez_onboarding_uses_compact_layout("Dez", px(759.)));
+        assert!(!dez_onboarding_uses_compact_layout("Dez", px(760.)));
+        assert!(!dez_onboarding_uses_compact_layout("Zed", px(320.)));
+
+        assert_eq!(
+            onboarding_responsive_viewport_width("Dez", px(1140.), 1.5),
+            px(760.)
+        );
+        assert_eq!(
+            onboarding_responsive_viewport_width("Dez", px(570.), 0.75),
+            px(760.)
+        );
+        assert_eq!(
+            onboarding_responsive_viewport_width("Zed", px(570.), 1.5),
+            px(570.)
+        );
+    }
+
+    #[test]
+    fn dez_setup_stays_in_the_main_work_area() {
+        assert!(!should_show_onboarding_on_first_open("Dez"));
+        assert!(should_show_onboarding_on_first_open("Zed"));
+        assert!(!onboarding_page_enabled_for_app("Dez"));
+        assert!(onboarding_page_enabled_for_app("Zed"));
+        assert!(!onboarding_toggles_left_dock("Dez"));
+        assert!(onboarding_toggles_left_dock("Zed"));
+        assert_eq!(onboarding_surface_label("Dez"), "Set Up Dez");
+        assert_eq!(onboarding_surface_label("Zed"), "Onboarding");
     }
 }
 
@@ -420,52 +595,27 @@ pub async fn handle_import_vscode_settings(
             Ok(vscode_settings) => vscode_settings,
             Err(err) => {
                 zlog::error!("{err:?}");
-                let Ok((message, ok)) = cx.update(|_, cx| {
-                    (
-                        localization::tr!(
-                            cx,
-                            "onboarding-import-not-found",
-                            source = source.to_string()
-                        ),
-                        localization::text(cx, "common-ok"),
-                    )
-                }) else {
-                    return;
-                };
                 let _ = cx.prompt(
                     gpui::PromptLevel::Info,
-                    &message,
+                    &format!("Could not find or load a {source} settings file"),
                     None,
-                    &[gpui::PromptButton::ok(ok)],
+                    &["OK"],
                 );
                 return;
             }
         };
 
     if !skip_prompt {
-        let path = truncate_and_remove_front(&vscode_settings.path.to_string_lossy(), 128);
-        let Ok((message, ok, cancel)) = cx.update(|_, cx| {
-            (
-                localization::tr!(
-                    cx,
-                    "onboarding-import-warning",
-                    source = vscode_settings.source.to_string(),
-                    path = path.clone()
-                ),
-                localization::text(cx, "common-ok"),
-                localization::text(cx, "common-cancel"),
-            )
-        }) else {
-            return;
-        };
         let prompt = cx.prompt(
             gpui::PromptLevel::Warning,
-            &message,
+            &format!(
+                "Importing {} settings may overwrite your existing settings. \
+                Will import settings from {}",
+                vscode_settings.source,
+                truncate_and_remove_front(&vscode_settings.path.to_string_lossy(), 128),
+            ),
             None,
-            &[
-                gpui::PromptButton::ok(ok),
-                gpui::PromptButton::cancel(cancel),
-            ],
+            &["Import", "Cancel"],
         );
         let result = cx.spawn(async move |_| prompt.await.ok()).await;
         if result != Some(0) {
@@ -490,7 +640,7 @@ pub async fn handle_import_vscode_settings(
         .update_in(cx, |workspace, _, cx| match result {
             Ok(_) => {
                 let confirmation_toast = StatusToast::new(
-                    localization::tr!(cx, "onboarding-import-success", source = source.to_string()),
+                    format!("Your {} settings were successfully imported.", source),
                     cx,
                     |this, _| {
                         this.icon(
@@ -512,19 +662,21 @@ pub async fn handle_import_vscode_settings(
                 workspace.toggle_status_toast(confirmation_toast, cx);
             }
             Err(_) => {
-                let error_message = localization::text(cx, "onboarding-import-failed");
-                let open_log_label = localization::text(cx, "onboarding-open-log");
-                let error_toast = StatusToast::new(error_message, cx, move |this, _| {
-                    this.icon(
-                        Icon::new(IconName::Close)
-                            .size(IconSize::Small)
-                            .color(Color::Error),
-                    )
-                    .action(open_log_label, |window, cx| {
-                        window.dispatch_action(workspace::OpenLog.boxed_clone(), cx)
-                    })
-                    .dismiss_button(true)
-                });
+                let error_toast = StatusToast::new(
+                    "Failed to import settings. See log for details",
+                    cx,
+                    |this, _| {
+                        this.icon(
+                            Icon::new(IconName::Close)
+                                .size(IconSize::Small)
+                                .color(Color::Error),
+                        )
+                        .action("Open Log", |window, cx| {
+                            window.dispatch_action(workspace::OpenLog.boxed_clone(), cx)
+                        })
+                        .dismiss_button(true)
+                    },
+                );
                 workspace.toggle_status_toast(error_toast, cx);
             }
         })
@@ -576,6 +728,12 @@ impl workspace::SerializableItem for Onboarding {
         window: &mut Window,
         cx: &mut App,
     ) -> gpui::Task<gpui::Result<Entity<Self>>> {
+        if !onboarding_page_enabled_for_app(APP_NAME) {
+            return Task::ready(Err(anyhow::anyhow!(
+                "Dez uses Home and native Settings instead of restoring onboarding"
+            )));
+        }
+
         let db = persistence::OnboardingPagesDb::global(cx);
         window.spawn(cx, async move |cx| {
             if let Some(_) = db.get_onboarding_page(item_id, workspace_id)? {
@@ -591,7 +749,6 @@ impl workspace::SerializableItem for Onboarding {
         workspace: &mut Workspace,
         item_id: workspace::ItemId,
         _closing: bool,
-        _window: &mut Window,
         cx: &mut ui::Context<Self>,
     ) -> Option<gpui::Task<gpui::Result<()>>> {
         let workspace_id = workspace.database_id()?;
@@ -605,7 +762,7 @@ impl workspace::SerializableItem for Onboarding {
     }
 
     fn should_serialize(&self, event: &Self::Event) -> bool {
-        event == &ItemEvent::UpdateTab
+        onboarding_page_enabled_for_app(APP_NAME) && event == &ItemEvent::UpdateTab
     }
 }
 

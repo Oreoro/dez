@@ -4,11 +4,13 @@ use gpui::{
 };
 use picker::{Picker, PickerDelegate};
 use settings::{ActiveSettingsProfileName, SettingsStore};
-use ui::{HighlightedLabel, ListItem, ListItemSpacing, prelude::*};
+use ui::{HighlightedLabel, ListItem, prelude::*};
 use workspace::{ModalView, Workspace};
 
+mod canvas;
+
 pub fn init(cx: &mut App) {
-    cx.on_action(|_: &dez_actions::settings_profile_selector::Toggle, cx| {
+    cx.on_action(|_: &zed_actions::settings_profile_selector::Toggle, cx| {
         workspace::with_active_or_new_workspace(cx, |workspace, window, cx| {
             toggle_settings_profile_selector(workspace, window, cx);
         });
@@ -42,7 +44,7 @@ impl Focusable for SettingsProfileSelector {
 
 impl Render for SettingsProfileSelector {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
-        v_flex().w(rems(22.)).child(self.picker.clone())
+        v_flex().child(self.picker.clone())
     }
 }
 
@@ -52,7 +54,13 @@ impl SettingsProfileSelector {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::settings_profile_picker_density(cx))
+                .surface_radius(canvas::settings_profile_picker_radius(cx))
+                .surface_contrast(canvas::settings_profile_picker_contrast(cx))
+                .initial_width(rems(22.))
+        });
         Self { picker }
     }
 }
@@ -87,7 +95,7 @@ impl SettingsProfileSelectorDelegate {
                 candidate_id: ix,
                 score: 0.0,
                 positions: Default::default(),
-                string: display_name(profile_name, cx),
+                string: display_name(profile_name),
             })
             .collect();
 
@@ -149,8 +157,12 @@ impl SettingsProfileSelectorDelegate {
 impl PickerDelegate for SettingsProfileSelectorDelegate {
     type ListItem = ListItem;
 
-    fn placeholder_text(&self, _: &mut Window, cx: &mut App) -> std::sync::Arc<str> {
-        localization::text(cx, "settings-profile-selector-placeholder").into()
+    fn name() -> &'static str {
+        "settings profile selector"
+    }
+
+    fn placeholder_text(&self, _: &mut Window, _: &mut App) -> std::sync::Arc<str> {
+        "Select a settings profile...".into()
     }
 
     fn match_count(&self) -> usize {
@@ -182,9 +194,7 @@ impl PickerDelegate for SettingsProfileSelectorDelegate {
             .profile_names
             .iter()
             .enumerate()
-            .map(|(id, profile_name)| {
-                StringMatchCandidate::new(id, &display_name(profile_name, cx))
-            })
+            .map(|(id, profile_name)| StringMatchCandidate::new(id, &display_name(profile_name)))
             .collect::<Vec<_>>();
 
         cx.spawn_in(window, async move |this, cx| {
@@ -265,26 +275,23 @@ impl PickerDelegate for SettingsProfileSelectorDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::settings_profile_row_spacing(cx))
                 .toggle_state(selected)
                 .child(HighlightedLabel::new(
-                    display_name(profile_name, cx),
+                    display_name(profile_name),
                     mat.positions.clone(),
                 )),
         )
     }
 }
 
-fn display_name(profile_name: &Option<String>, cx: &App) -> String {
-    profile_name
-        .clone()
-        .unwrap_or_else(|| localization::text(cx, "settings-profile-selector-disabled").to_string())
+fn display_name(profile_name: &Option<String>) -> String {
+    profile_name.clone().unwrap_or("Disabled".into())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dez_actions::settings_profile_selector;
     use editor;
     use gpui::{TestAppContext, UpdateGlobal, VisualTestContext};
     use menu::{Cancel, Confirm, SelectNext, SelectPrevious};
@@ -293,6 +300,7 @@ mod tests {
     use settings::Settings;
     use theme_settings::ThemeSettings;
     use workspace::{self, AppState, MultiWorkspace};
+    use zed_actions::settings_profile_selector;
 
     async fn init_test(
         user_settings_json: serde_json::Value,
@@ -300,8 +308,6 @@ mod tests {
     ) -> (Entity<Workspace>, &mut VisualTestContext) {
         cx.update(|cx| {
             let state = AppState::test(cx);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("English localization catalog must initialize");
             let settings_store = SettingsStore::test(cx);
             cx.set_global(settings_store);
             settings::init(cx);
@@ -376,7 +382,7 @@ mod tests {
 
         picker.read_with(cx, |picker, cx| {
             assert_eq!(picker.delegate.matches.len(), 3);
-            assert_eq!(picker.delegate.matches[0].string, display_name(&None, cx));
+            assert_eq!(picker.delegate.matches[0].string, display_name(&None));
             assert_eq!(
                 picker.delegate.matches[1].string,
                 classroom_and_streaming_profile_name
@@ -714,9 +720,9 @@ mod tests {
         cx.dispatch_action(settings_profile_selector::Toggle);
         let picker = active_settings_profile_picker(&workspace, cx);
 
-        picker.read_with(cx, |picker, app| {
+        picker.read_with(cx, |picker, _| {
             assert_eq!(picker.delegate.matches.len(), 11);
-            assert_eq!(picker.delegate.matches[0].string, display_name(&None, app));
+            assert_eq!(picker.delegate.matches[0].string, display_name(&None));
             assert_eq!(picker.delegate.matches[1].string, "z");
             assert_eq!(picker.delegate.matches[2].string, "e");
             assert_eq!(picker.delegate.matches[3].string, "d");

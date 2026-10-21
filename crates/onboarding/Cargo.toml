@@ -16,7 +16,7 @@ default = []
 
 [dependencies]
 anyhow.workspace = true
-cloud_api_types.workspace = true
+client.workspace = true
 collections.workspace = true
 component.workspace = true
 db.workspace = true
@@ -24,22 +24,26 @@ documented.workspace = true
 fs.workspace = true
 fuzzy.workspace = true
 gpui.workspace = true
-localization.workspace = true
 menu.workspace = true
 notifications.workspace = true
+paths.workspace = true
 picker.workspace = true
 project.workspace = true
 schemars.workspace = true
 serde.workspace = true
 settings.workspace = true
+telemetry.workspace = true
 theme.workspace = true
 theme_settings.workspace = true
 ui.workspace = true
 util.workspace = true
 vim_mode_setting.workspace = true
 workspace.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 zlog.workspace = true
 
 [dev-dependencies]
 db = {workspace = true, features = ["test-support"]}
+
+[package.metadata.cargo-shear]
+ignored = ["component", "documented"]

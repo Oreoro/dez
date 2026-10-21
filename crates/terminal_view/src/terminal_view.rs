@@ -4,63 +4,87 @@ pub mod terminal_panel;
 mod terminal_path_like_target;
 pub mod terminal_scrollbar;
 
+use agent_settings::{AgentSettings, detect_terminal_agent_command};
+pub use agent_settings::{
+    WORKSPACE_TMUX_LAUNCHER_LABEL, configured_terminal_launcher_action_label,
+    configured_terminal_launcher_icon, configured_terminal_launcher_label, terminal_agent_icon,
+};
+use anyhow::{Result, anyhow};
+use collections::HashMap;
 use editor::{
     Editor, EditorSettings, actions::SelectAll, blink_manager::BlinkManager,
     ui_scrollbar_settings_from_raw,
 };
+use futures::{FutureExt as _, channel::oneshot, future::join_all};
+use git_ui::git_panel::ReviewChanges as ReviewGitChanges;
 use gpui::{
-    Action, AnyElement, App, ClipboardEntry, DismissEvent, Entity, EventEmitter, ExternalPaths,
-    FocusHandle, Focusable, Font, KeyContext, KeyDownEvent, Keystroke, MouseButton, MouseDownEvent,
-    Pixels, Point as GpuiPoint, Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt,
-    WeakEntity, actions, anchored, deferred, div,
+    Action, Anchor, AnyElement, App, AsyncApp, AsyncWindowContext, ClipboardEntry, ClipboardItem,
+    DismissEvent, Entity, EventEmitter, ExternalPaths, FocusHandle, Focusable, Font, Hsla,
+    KeyContext, KeyDownEvent, Keystroke, MouseButton, MouseDownEvent, Pixels, Point as GpuiPoint,
+    PromptLevel, Render, ScrollWheelEvent, Styled, Subscription, Task, TaskExt, WeakEntity,
+    actions, anchored, deferred, div,
 };
+use itertools::Itertools;
 use menu;
-use persistence::TerminalDb;
+use persistence::{StoredTerminalSessionRef, TerminalDb};
 use project::{Project, ProjectEntryId, search::SearchQuery};
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
-    SeedQuerySetting, Settings, SettingsStore, TerminalBell, TerminalBlink, TerminalDockPosition,
-    WorkingDirectory,
+    CanvasDensity, SeedQuerySetting, Settings, SettingsStore, TerminalBell, TerminalBlink,
+    TerminalLauncher, WorkingDirectory,
 };
 use std::{
     any::Any,
     cmp,
     ops::Range as StdRange,
     path::{Path, PathBuf},
+    process::ExitStatus,
     rc::Rc,
     sync::Arc,
     time::Duration,
 };
-use task::{ShellKind, TaskId};
+use task::{RevealStrategy, Shell, SpawnInTerminal, TaskId};
 use terminal::{
     Clear, Copy, Event, HoveredWord, MaybeNavigationTarget, Modes, Paste, PasteText, Point, Range,
     ScrollLineDown, ScrollLineUp, ScrollPageDown, ScrollPageUp, ScrollToBottom, ScrollToTop,
     Search, ShowCharacterPalette, TaskState, TaskStatus, Terminal, TerminalBounds, ToggleViMode,
+    session_host::{
+        LocalTerminalHost, TerminalSessionState,
+        transport::{
+            TerminalHostConnection, TerminalHostSnapshotRevision, TerminalHostSnapshotStore,
+            TerminalHostStartupState, TerminalHostStartupStatus,
+        },
+    },
     terminal_settings::{CursorShape, TerminalSettings},
 };
 use terminal_element::TerminalElement;
-use terminal_panel::TerminalPanel;
-use terminal_path_like_target::{
-    hover_path_like_target, open_path_like_target, open_path_like_target_from_menu,
-};
+use terminal_path_like_target::{hover_path_like_target, open_path_like_target};
 use terminal_scrollbar::TerminalScrollHandle;
 use ui::{
-    ContextMenu, Divider, ScrollAxes, Scrollbars, Tooltip, WithScrollbar,
+    ButtonLike, ContextMenu, Divider, PopoverMenu, ScrollAxes, Scrollbars, SplitButton, Tooltip,
+    WithScrollbar,
     prelude::*,
     scrollbars::{self, ScrollbarVisibility},
 };
-use util::{ResultExt, paths::PathExt};
+use util::ResultExt;
 use workspace::{
-    CloseActiveItem, DraggedSelection, DraggedTab, NewCenterTerminal, NewTerminal, Pane,
-    ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
+    BrowseRunningSessions, CloseActiveItem, DesignSystemSettings, DraggedSelection, DraggedTab,
+    NewCenterTerminal, NewTerminal, OpenFolder as OpenWorkspace, OpenTerminal, Pane, RevealFiles,
+    Toast, ToolbarItemLocation, Workspace, WorkspaceId, delete_unloaded_items,
     item::{
         HighlightedText, Item, ItemEvent, SerializableItem, TabContentParams, TabTooltipContent,
     },
+    notifications::NotificationId,
     register_serializable_item,
     searchable::{
         Direction, SearchEvent, SearchOptions, SearchToken, SearchableItem, SearchableItemHandle,
     },
+};
+use zed_actions::terminal::{
+    OpenAgentTerminal, OpenAiderTerminal, OpenClaudeCodeTerminal, OpenCodexTerminal,
+    OpenGeminiTerminal, OpenHerdrTerminal, OpenOpenCodeTerminal, OpenShellTerminal,
+    OpenTmuxTerminal, ResumeClaudeCodeTerminal, ResumeCodexTerminal, ResumeOpenCodeTerminal,
 };
 
 struct ImeState {
@@ -78,58 +102,895 @@ fn viewport_line_for_point(point: Point, display_offset: usize) -> Option<usize>
 }
 
 const CURSOR_BLINK_INTERVAL: Duration = Duration::from_millis(500);
+const TERMINAL_STARTUP_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
+const TERMINAL_HOST_RESTORE_ATTEMPTS: usize = 40;
+const TERMINAL_HOST_RESTORE_INTERVAL: Duration = Duration::from_millis(50);
+const TERMINAL_HOST_TERMINATION_TIMEOUT: Duration = Duration::from_secs(8);
+const TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH: Pixels = px(360.);
+const TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(480.);
+const TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH: Pixels = px(720.);
+const TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH: Pixels = px(920.);
 
-fn format_paths_for_terminal(paths: &[PathBuf], shell_kind: ShellKind) -> String {
-    let mut text = paths
-        .iter()
-        .filter_map(|path| {
-            let formatted = match shell_kind {
-                ShellKind::PowerShell | ShellKind::Pwsh | ShellKind::Cmd => {
-                    path.try_shell_safe(shell_kind)
-                }
-                ShellKind::Posix
-                | ShellKind::Csh
-                | ShellKind::Tcsh
-                | ShellKind::Rc
-                | ShellKind::Fish
-                | ShellKind::Nushell
-                | ShellKind::Xonsh
-                | ShellKind::Elvish => format_bare_posix_path(path, shell_kind),
-            };
-            formatted.map(|path| format!(" {path}")).log_err()
-        })
-        .collect::<String>();
-    text.push(' ');
-    text
+struct InstallationRequiredForTerminal;
+
+pub(crate) fn terminal_workspace_access_required(
+    error: &anyhow::Error,
+) -> Option<&project::terminals::TerminalWorkspaceAccessRequired> {
+    error.downcast_ref::<project::terminals::TerminalWorkspaceAccessRequired>()
 }
 
-fn format_bare_posix_path(path: &Path, shell_kind: ShellKind) -> anyhow::Result<String> {
-    use anyhow::Context as _;
+pub(crate) fn record_terminal_workspace_access_required(error: &anyhow::Error, cx: &mut App) {
+    if let Some(access_required) = terminal_workspace_access_required(error) {
+        workspace::mark_workspace_access_required(access_required.path().to_path_buf(), cx);
+    }
+}
 
-    let path = path.to_str().context("path contains invalid UTF-8")?;
-    if path.contains(['\n', '\r']) {
-        return shell_kind
-            .try_quote(path)
-            .map(Into::into)
-            .context("failed to quote path");
+fn resolve_terminal_startup_command(
+    requested: Option<String>,
+    configured: Option<String>,
+    app_name: &str,
+) -> Option<String> {
+    requested
+        .or_else(|| (app_name != "Zed").then_some(configured).flatten())
+        .filter(|command| !command.trim().is_empty())
+}
+
+fn terminal_startup_command_submission(command: String, app_name: &str) -> String {
+    if app_name == "Zed" || detect_terminal_agent_command(&command).is_none() {
+        return command;
     }
 
-    // Coding-agent TUIs treat surrounding quotes as prose instead of a file
-    // reference, so keep ordinary paths bare while retaining shell-safe input.
-    let mut escaped = String::with_capacity(path.len());
-    for character in path.chars() {
-        let is_safe = character.is_ascii_alphanumeric()
-            || matches!(
-                character,
-                '_' | '@' | '%' | '+' | '=' | ':' | ',' | '.' | '/' | '-'
+    #[cfg(unix)]
+    {
+        let script = format!(
+            "{command}\ndez_terminal_startup_status=$?\nif [ \"$dez_terminal_startup_status\" -ne 0 ] && [ \"$dez_terminal_startup_status\" -ne 130 ]; then\n  printf '\\n[Dez: startup command exited with status %s. Review the output above. This shell remains interactive; fix the tool configuration, then retry.]\\n' \"$dez_terminal_startup_status\"\nfi"
+        );
+        let quoted_script = script.replace('\'', "'\"'\"'");
+        format!("/bin/sh -c '{quoted_script}'")
+    }
+
+    #[cfg(not(unix))]
+    {
+        command
+    }
+}
+
+fn terminal_startup_command_input(command: String, app_name: &str) -> Vec<u8> {
+    let mut input = terminal_startup_command_submission(command, app_name).into_bytes();
+    input.push(b'\x0d');
+    input
+}
+
+fn terminal_startup_title(command: &str) -> Option<String> {
+    if command.split_whitespace().any(|word| word == "tmux") {
+        return Some(WORKSPACE_TMUX_LAUNCHER_LABEL.to_owned());
+    }
+
+    detect_terminal_agent_command(command).map(|agent_kind| agent_kind.display_name().to_owned())
+}
+
+#[cfg(test)]
+mod startup_command_tests {
+    use super::*;
+
+    #[test]
+    fn dez_uses_the_configured_agent_command_without_overriding_explicit_choices() {
+        assert_eq!(
+            resolve_terminal_startup_command(None, Some("codex".to_owned()), "Dez").as_deref(),
+            Some("codex")
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(
+                Some("claude".to_owned()),
+                Some("codex".to_owned()),
+                "Dez",
             )
-            || (!character.is_ascii() && !character.is_whitespace());
-        if !is_safe {
-            escaped.push('\\');
-        }
-        escaped.push(character);
+            .as_deref(),
+            Some("claude")
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(Some(String::new()), Some("codex".to_owned()), "Dez",),
+            None
+        );
+        assert_eq!(
+            resolve_terminal_startup_command(None, Some("codex".to_owned()), "Zed"),
+            None
+        );
     }
-    Ok(escaped)
+
+    #[test]
+    fn terminal_agent_commands_submit_once_after_shell_startup() {
+        assert_eq!(
+            terminal_startup_command_input("opencode".to_owned(), "Zed"),
+            b"opencode\r"
+        );
+        assert_eq!(
+            terminal_startup_title("claude --continue").as_deref(),
+            Some("Claude Code")
+        );
+        assert_eq!(
+            terminal_startup_title("exec tmux new-session -A -s dez").as_deref(),
+            Some(WORKSPACE_TMUX_LAUNCHER_LABEL)
+        );
+        assert_eq!(terminal_startup_title("echo ready"), None);
+    }
+
+    #[test]
+    fn dez_keeps_agent_startup_failures_inside_the_interactive_terminal() {
+        let submission = terminal_startup_command_submission("codex".to_owned(), "Dez");
+
+        #[cfg(unix)]
+        {
+            assert!(submission.starts_with("/bin/sh -c 'codex\n"));
+            assert!(submission.contains("dez_terminal_startup_status=$?"));
+            assert!(submission.contains("-ne 130"));
+            assert!(submission.contains("Review the output above"));
+            assert!(submission.contains("This shell remains interactive"));
+        }
+
+        #[cfg(not(unix))]
+        assert_eq!(submission, "codex");
+
+        assert_eq!(
+            terminal_startup_command_submission("echo ready".to_owned(), "Dez"),
+            "echo ready"
+        );
+        assert_eq!(
+            terminal_startup_command_submission(
+                "exec tmux new-session -A -s dez".to_owned(),
+                "Dez",
+            ),
+            "exec tmux new-session -A -s dez"
+        );
+    }
+
+    #[test]
+    fn tmux_session_names_are_root_scoped_and_shell_safe() {
+        let first_root = Path::new("/Users/example/first/app");
+        let second_root = Path::new("/Users/example/second/app");
+        let first_name = tmux_session_name_from_workspace_root(Some(first_root));
+        let second_name = tmux_session_name_from_workspace_root(Some(second_root));
+
+        assert!(first_name.starts_with("app-"));
+        assert!(
+            first_name
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '-')
+        );
+        assert_ne!(first_name, second_name);
+        assert_eq!(tmux_session_name_from_workspace_root(None), "dez");
+    }
+
+    #[test]
+    fn tmux_startup_preserves_only_a_matching_legacy_workspace_session() {
+        let command = tmux_startup_command_for_workspace(Some(Path::new("/workspace/Dez 3.0")));
+
+        assert!(command.starts_with("/bin/sh -c '"));
+        assert!(command.contains("/opt/homebrew/bin/tmux"));
+        assert!(command.contains("/usr/local/bin/tmux"));
+        assert!(command.contains("command -v tmux"));
+        assert!(command.contains("\"$dez_tmux_bin\" has-session"));
+        assert!(command.contains("Dez: tmux is not installed"));
+        assert!(command.contains("#{pane_current_path}"));
+        assert!(command.contains("\"$PWD\"|\"$PWD\"/*"));
+        assert!(command.contains("attach-session -t \"=Dez-3-0\""));
+        assert!(command.contains("new-session -A -s Dez-3-0-"));
+        assert_eq!(command.matches('\'').count(), 2);
+
+        let rootless_command = tmux_startup_command_for_workspace(None);
+        assert!(rootless_command.starts_with("/bin/sh -c '"));
+        assert!(rootless_command.contains("\"$dez_tmux_bin\" new-session -A -s dez"));
+        assert_eq!(rootless_command.matches('\'').count(), 2);
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct TerminalContextActionLabelVisibility {
+    workspace: bool,
+    review: bool,
+    details: bool,
+}
+
+#[derive(Clone, Copy)]
+struct TerminalForegroundPresentation {
+    display_name: &'static str,
+    icon: IconName,
+}
+
+fn unavailable_session_restores_placeholder_surface(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn terminal_container_reuses_terminal_material(app_name: &str, transparent_theme: bool) -> bool {
+    app_name != "Zed" && transparent_theme
+}
+
+fn terminal_foreground_agent_presentation(
+    app_name: &str,
+    command: Option<&str>,
+) -> Option<TerminalForegroundPresentation> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    let kind = detect_terminal_agent_command(command?)?;
+    let display_name = kind.display_name();
+    let icon = terminal_agent_icon(kind);
+
+    Some(TerminalForegroundPresentation { display_name, icon })
+}
+
+fn terminal_foreground_multiplexer_presentation(
+    app_name: &str,
+    command: Option<&str>,
+) -> Option<TerminalForegroundPresentation> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    let command = command?
+        .trim()
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let command = command.strip_suffix(".exe").unwrap_or(command.as_str());
+
+    match command {
+        "tmux" => Some(TerminalForegroundPresentation {
+            display_name: "tmux",
+            icon: IconName::SplitAlt,
+        }),
+        _ => None,
+    }
+}
+
+fn terminal_context_activity_label(
+    status: &str,
+    foreground_agent: Option<TerminalForegroundPresentation>,
+    foreground_multiplexer: Option<TerminalForegroundPresentation>,
+) -> Option<String> {
+    if terminal_context_uses_foreground_activity(status)
+        && let Some(foreground_tool) = foreground_agent.or(foreground_multiplexer)
+    {
+        return Some(format!("{} running", foreground_tool.display_name));
+    }
+
+    (status != "Active").then(|| status.to_owned())
+}
+
+fn terminal_context_uses_foreground_activity(status: &str) -> bool {
+    matches!(status, "Active" | "Running")
+}
+
+fn terminal_context_activity_label_visible(width: Pixels) -> bool {
+    width >= TERMINAL_CONTEXT_ACTIVITY_LABEL_MIN_WIDTH
+}
+
+fn terminal_context_strip_height(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(28.),
+        CanvasDensity::Balanced => px(30.),
+        CanvasDensity::Spacious => px(32.),
+    }
+}
+
+fn terminal_context_strip_gap(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(3.),
+        CanvasDensity::Balanced => px(4.),
+        CanvasDensity::Spacious => px(6.),
+    }
+}
+
+fn terminal_context_strip_padding_x(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(6.),
+        CanvasDensity::Balanced => px(8.),
+        CanvasDensity::Spacious => px(12.),
+    }
+}
+
+// Horizontal gutter for inline recovery regions (launch failure, terminal
+// unavailable). Keeps the content column aligned with the density system
+// instead of a single hard-coded value.
+fn terminal_recovery_padding_x(density: CanvasDensity) -> Pixels {
+    match density {
+        CanvasDensity::Compact => px(24.),
+        CanvasDensity::Balanced => px(32.),
+        CanvasDensity::Spacious => px(40.),
+    }
+}
+
+fn terminal_context_strip_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.toolbar_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.toolbar_background,
+        settings::CanvasContrast::High => colors
+            .toolbar_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn terminal_context_strip_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border_variant.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn terminal_tab_status(
+    session_unavailable: bool,
+    process_exited: bool,
+    task_status: Option<&TaskStatus>,
+) -> &'static str {
+    if session_unavailable {
+        "Unavailable"
+    } else {
+        match task_status {
+            Some(TaskStatus::Running) => "Running",
+            Some(TaskStatus::Unknown) => "Status unknown",
+            Some(TaskStatus::Completed { success: true }) => "Completed",
+            Some(TaskStatus::Completed { success: false }) => "Failed",
+            None if process_exited => "Exited",
+            None => "Active",
+        }
+    }
+}
+
+fn terminal_tab_status_color(status: &str) -> Color {
+    match status {
+        "Running" => Color::Accent,
+        "Completed" => Color::Success,
+        "Failed" | "Unavailable" => Color::Error,
+        "Status unknown" => Color::Warning,
+        "Active" | "Exited" => Color::Muted,
+        _ => Color::Muted,
+    }
+}
+
+fn terminal_tab_status_indicator_visible(status: &str, selected: bool) -> bool {
+    selected || matches!(status, "Failed" | "Unavailable" | "Status unknown")
+}
+
+fn terminal_tab_status_label_visible(status: &str) -> bool {
+    matches!(status, "Failed" | "Unavailable" | "Status unknown")
+}
+
+fn terminal_tab_icon_presentation(
+    task_status: Option<&TaskStatus>,
+    foreground_agent: Option<TerminalForegroundPresentation>,
+    foreground_multiplexer: Option<TerminalForegroundPresentation>,
+) -> (IconName, Color) {
+    match task_status {
+        Some(TaskStatus::Running) => (IconName::PlayFilled, Color::Disabled),
+        Some(TaskStatus::Unknown) => (IconName::Warning, Color::Warning),
+        Some(TaskStatus::Completed { success: true }) => (IconName::Check, Color::Success),
+        Some(TaskStatus::Completed { success: false }) => (IconName::XCircle, Color::Error),
+        None => foreground_agent
+            .map(|agent| (agent.icon, Color::Accent))
+            .or_else(|| foreground_multiplexer.map(|multiplexer| (multiplexer.icon, Color::Muted)))
+            .unwrap_or((IconName::Terminal, Color::Muted)),
+    }
+}
+
+fn terminal_surface_accessibility_label(app_name: &str, title: &str, status: &str) -> String {
+    if app_name == "Zed" {
+        format!("Terminal Session: {title}. Status: {status}")
+    } else {
+        format!("Terminal: {title}. Status: {status}")
+    }
+}
+
+fn terminal_context_action_label_visibility(
+    width: Pixels,
+    has_workspace_files: bool,
+    changed_files: usize,
+) -> TerminalContextActionLabelVisibility {
+    let primary_visible = width >= TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH;
+    let secondary_visible = width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH;
+
+    TerminalContextActionLabelVisibility {
+        workspace: primary_visible
+            && (!has_workspace_files || changed_files == 0 || secondary_visible),
+        review: primary_visible && changed_files > 0,
+        details: width >= TERMINAL_CONTEXT_DETAILS_LABEL_MIN_WIDTH,
+    }
+}
+
+fn terminal_context_strip_is_relevant(
+    activity_label: Option<&str>,
+    has_workspace_files: bool,
+    changed_files: usize,
+) -> bool {
+    activity_label.is_some() || !has_workspace_files || changed_files > 0
+}
+
+fn terminal_details_disclosure_label(expanded: bool, show_text: bool) -> &'static str {
+    match (expanded, show_text) {
+        (true, true) => "Hide Details",
+        (false, true) => "Terminal Details",
+        (_, false) => "",
+    }
+}
+
+fn terminal_details_disclosure_accessibility_label(expanded: bool) -> &'static str {
+    if expanded {
+        "Hide Terminal Details"
+    } else {
+        "Show Terminal Details"
+    }
+}
+
+fn terminal_details_process_summary(
+    foreground_agent: Option<&str>,
+    foreground_multiplexer: Option<&str>,
+    foreground_command: Option<&str>,
+    process_id: Option<&str>,
+) -> String {
+    let (kind, name) = if let Some(agent) = foreground_agent {
+        ("Agent", agent)
+    } else if let Some(multiplexer) = foreground_multiplexer {
+        ("Multiplexer", multiplexer)
+    } else if let Some(command) = foreground_command.filter(|command| !command.trim().is_empty()) {
+        ("Process", command)
+    } else {
+        ("Process", "Shell")
+    };
+
+    if let Some(process_id) = process_id {
+        format!("{kind} · {name} · PID {process_id}")
+    } else {
+        format!("{kind} · {name}")
+    }
+}
+
+fn terminal_details_git_summary(
+    has_workspace_files: bool,
+    repository: &str,
+    changes: &str,
+) -> String {
+    if has_workspace_files {
+        format!("Git · {repository} · {changes}")
+    } else {
+        "Git · No Workspace repository".to_owned()
+    }
+}
+
+fn terminal_details_ownership_note(
+    has_persistent_owner: bool,
+    host_connection_verified: bool,
+) -> &'static str {
+    if has_persistent_owner && !host_connection_verified {
+        "Ownership · Dez Terminal Host · Connection unavailable; detaching preserves the Session record."
+    } else if has_persistent_owner {
+        "Ownership · Dez Terminal Host · Closing this tab detaches the Session."
+    } else {
+        "Ownership · Workspace · Closing Dez ends this process."
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ExternalSessionInputOwnershipIntent {
+    PreserveExternal,
+    RequestTakeover,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct ExternalSessionTaskMetadata<'a> {
+    owner: &'a str,
+    input_ownership_intent: ExternalSessionInputOwnershipIntent,
+}
+
+fn external_session_task_metadata(task_id: &str) -> Option<ExternalSessionTaskMetadata<'_>> {
+    let metadata = task_id.strip_prefix("dez-external-session:")?;
+    let (first_field, remainder) = metadata.split_once(':')?;
+    if first_field != "v2" {
+        return (!first_field.is_empty() && !remainder.is_empty()).then_some(
+            ExternalSessionTaskMetadata {
+                owner: first_field,
+                input_ownership_intent: ExternalSessionInputOwnershipIntent::PreserveExternal,
+            },
+        );
+    }
+
+    let (owner, remainder) = remainder.split_once(':')?;
+    let (input_ownership_intent, session_id) = remainder.split_once(':')?;
+    if owner.is_empty() || session_id.is_empty() {
+        return None;
+    }
+    let input_ownership_intent = match input_ownership_intent {
+        "preserve-external" => ExternalSessionInputOwnershipIntent::PreserveExternal,
+        "request-takeover" => ExternalSessionInputOwnershipIntent::RequestTakeover,
+        _ => return None,
+    };
+    Some(ExternalSessionTaskMetadata {
+        owner,
+        input_ownership_intent,
+    })
+}
+
+fn external_session_owner_from_task_id(task_id: &str) -> Option<&str> {
+    external_session_task_metadata(task_id).map(|metadata| metadata.owner)
+}
+
+fn herdr_preserves_external_input_ownership(
+    metadata: Option<ExternalSessionTaskMetadata<'_>>,
+) -> bool {
+    metadata.is_some_and(|metadata| {
+        metadata.owner.eq_ignore_ascii_case("Herdr")
+            && metadata.input_ownership_intent
+                == ExternalSessionInputOwnershipIntent::PreserveExternal
+    })
+}
+
+fn terminal_external_input_owner_action_label(
+    width: Pixels,
+    metadata: Option<ExternalSessionTaskMetadata<'_>>,
+    task_running: bool,
+) -> Option<&'static str> {
+    (task_running && herdr_preserves_external_input_ownership(metadata)).then_some(
+        if width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH {
+            "Input in Herdr"
+        } else {
+            ""
+        },
+    )
+}
+
+fn terminal_external_input_owner_action_accessibility_label(workspace_label: &str) -> String {
+    format!(
+        "Herdr owns input for this pane; open Running Sessions for Workspace {workspace_label} to choose Take Control in Dez"
+    )
+}
+
+fn external_session_attach_failed(task_id: &str, task_status: &TaskStatus) -> bool {
+    external_session_owner_from_task_id(task_id).is_some()
+        && matches!(task_status, TaskStatus::Completed { success: false })
+}
+
+fn terminal_external_attach_retry_label(
+    width: Pixels,
+    external_attach_failed: bool,
+) -> Option<&'static str> {
+    external_attach_failed.then_some(
+        if width >= TERMINAL_CONTEXT_PRIMARY_ACTION_LABEL_MIN_WIDTH {
+            "Retry Attach"
+        } else {
+            ""
+        },
+    )
+}
+
+fn terminal_external_attach_new_shell_label(
+    width: Pixels,
+    external_attach_failed: bool,
+) -> Option<&'static str> {
+    external_attach_failed.then_some(
+        if width >= TERMINAL_CONTEXT_SECONDARY_ACTION_LABEL_MIN_WIDTH {
+            "New Shell"
+        } else {
+            ""
+        },
+    )
+}
+
+fn terminal_external_attach_retry_accessibility_label(
+    external_owner: &str,
+    workspace_label: &str,
+) -> String {
+    format!("Retry {external_owner} attach in Workspace {workspace_label}")
+}
+
+fn terminal_external_attach_new_shell_accessibility_label(
+    external_owner: &str,
+    workspace_label: &str,
+) -> String {
+    format!(
+        "Open a new native shell in Workspace {workspace_label}; {external_owner} remains external"
+    )
+}
+
+fn terminal_context_open_action_label(app_name: &str, configured_command: Option<&str>) -> String {
+    if app_name == "Zed" {
+        "Open Terminal".to_owned()
+    } else {
+        configured_terminal_launcher_action_label(configured_command)
+    }
+}
+
+fn terminal_unavailable_new_shell_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Start Fresh Terminal"
+    } else {
+        "Open New Shell Here"
+    }
+}
+
+fn terminal_details_ownership_note_with_external_owner(
+    has_persistent_owner: bool,
+    host_connection_verified: bool,
+    external_session: Option<ExternalSessionTaskMetadata<'_>>,
+) -> String {
+    if herdr_preserves_external_input_ownership(external_session) {
+        "Input · Herdr owns this pane · Open Running Sessions and choose Take Control to interact in Dez."
+            .to_owned()
+    } else if external_session.is_some_and(|metadata| {
+        metadata.owner.eq_ignore_ascii_case("Herdr")
+            && metadata.input_ownership_intent
+                == ExternalSessionInputOwnershipIntent::RequestTakeover
+    }) {
+        "Input · Dez requested control from Herdr for this attach.".to_owned()
+    } else if let Some(external_session) = external_session {
+        format!(
+            "Ownership · {} remains external · This tab owns only the attach client.",
+            external_session.owner
+        )
+    } else {
+        terminal_details_ownership_note(has_persistent_owner, host_connection_verified).to_owned()
+    }
+}
+
+fn terminal_surface_tab_label(app_name: &str, title: &str) -> SharedString {
+    let title = title.trim();
+    if app_name == "Zed" || title.is_empty() || title == "Terminal" {
+        if title.is_empty() {
+            "Terminal".into()
+        } else {
+            title.to_owned().into()
+        }
+    } else {
+        format!("Terminal · {title}").into()
+    }
+}
+
+fn terminal_unavailable_description(reason: Option<&str>) -> String {
+    let reason =
+        reason.unwrap_or("The saved terminal process is no longer available on this Dez host.");
+    format!(
+        "{reason} Dez did not start a replacement shell. Open a new shell only when you want separate computation."
+    )
+}
+
+pub(crate) fn terminal_failed_to_start_guidance(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Workspace access is required before a terminal can start. Open Workspaces, then grant access to the blocked folder."
+    } else if app_name == "Zed" {
+        "No terminal process was started. Review terminal settings, then use New Terminal to try again."
+    } else {
+        "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
+    }
+}
+
+pub(crate) fn terminal_launch_failure_primary_label(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Open Workspaces"
+    } else if app_name == "Zed" {
+        "Edit Settings"
+    } else {
+        "Edit Terminal Settings"
+    }
+}
+
+pub(crate) fn terminal_launch_failure_more_label(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "More Terminal Recovery Options"
+    } else {
+        "More Terminal Settings"
+    }
+}
+
+pub(crate) fn terminal_launch_failure_title(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> &'static str {
+    if app_name != "Zed" && workspace_access_required {
+        "Workspace access required"
+    } else {
+        "Terminal did not start"
+    }
+}
+
+pub(crate) fn terminal_launch_failure_tab_icon(app_name: &str) -> Option<IconName> {
+    (app_name != "Zed").then_some(IconName::Warning)
+}
+
+pub(crate) fn terminal_launch_failure_tab_tooltip(
+    app_name: &str,
+    workspace_access_required: bool,
+) -> Option<SharedString> {
+    (app_name != "Zed").then(|| {
+        format!(
+            "{}. {}",
+            terminal_launch_failure_title(app_name, workspace_access_required),
+            terminal_failed_to_start_guidance(app_name, workspace_access_required),
+        )
+        .into()
+    })
+}
+
+pub(crate) fn terminal_launch_failure_is_top_anchored(app_name: &str) -> bool {
+    app_name != "Zed"
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct TerminalWorkspaceContext {
+    workspace_label: Option<String>,
+    branch_label: Option<String>,
+    changed_files: usize,
+}
+
+fn workspace_label_from_paths(paths: &[PathBuf]) -> Option<String> {
+    let first = paths.first()?;
+    let first = first
+        .file_name()
+        .filter(|name| !name.is_empty())
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| first.to_string_lossy().into_owned());
+    Some(if paths.len() == 1 {
+        first
+    } else {
+        format!("{first} +{}", paths.len() - 1)
+    })
+}
+
+fn terminal_workspace_context(
+    project: Option<&Entity<Project>>,
+    cx: &App,
+) -> TerminalWorkspaceContext {
+    let Some(project) = project else {
+        return TerminalWorkspaceContext {
+            workspace_label: None,
+            branch_label: None,
+            changed_files: 0,
+        };
+    };
+    let (workspace_paths, git_store) = {
+        let project = project.read(cx);
+        (
+            project
+                .worktree_paths(cx)
+                .folder_path_list()
+                .ordered_paths()
+                .cloned()
+                .collect::<Vec<_>>(),
+            project.git_store().clone(),
+        )
+    };
+    let repositories = git_store.read(cx);
+    let mut changed_files = 0usize;
+    let branch_labels = repositories
+        .repositories()
+        .values()
+        .filter_map(|repository| {
+            let repository = repository.read(cx);
+            changed_files = changed_files.saturating_add(repository.status_summary().count);
+            repository
+                .snapshot()
+                .branch
+                .as_ref()
+                .map(|branch| branch.name().to_owned())
+        })
+        .unique()
+        .collect::<Vec<_>>();
+
+    TerminalWorkspaceContext {
+        workspace_label: workspace_label_from_paths(&workspace_paths),
+        branch_label: (branch_labels.len() == 1).then(|| branch_labels[0].clone()),
+        changed_files,
+    }
+}
+
+fn changed_files_label(changed_files: usize) -> String {
+    let noun = if changed_files == 1 {
+        "change"
+    } else {
+        "changes"
+    };
+    format!("{changed_files} {noun}")
+}
+
+fn terminal_close_label(is_hosted: bool) -> &'static str {
+    if is_hosted {
+        "Detach Terminal"
+    } else {
+        "Close Terminal Tab"
+    }
+}
+
+fn terminal_terminate_label(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Terminate Terminal Session…"
+    } else {
+        "End Terminal…"
+    }
+}
+
+fn terminal_termination_available(session_unavailable: bool, process_exited: bool) -> bool {
+    !session_unavailable && !process_exited
+}
+
+fn terminal_has_persistent_owner(terminal: &Terminal, _cx: &App) -> bool {
+    terminal.is_hosted()
+}
+
+fn terminal_host_connection_verified(terminal: &Terminal, cx: &App) -> bool {
+    if !terminal.is_hosted() {
+        return false;
+    }
+    let Some(connection) = TerminalHostConnection::try_global(cx) else {
+        return false;
+    };
+    matches!(
+        TerminalHostStartupStatus::state(cx),
+        TerminalHostStartupState::Connected { host_id } if host_id == connection.host_id()
+    )
+}
+
+fn terminal_ownership_label(
+    app_name: &str,
+    has_persistent_owner: bool,
+    session_unavailable: bool,
+) -> &'static str {
+    if app_name == "Zed" {
+        if session_unavailable {
+            "Saved Terminal Session"
+        } else if has_persistent_owner {
+            "Persistent Terminal Session"
+        } else {
+            "Workspace Terminal Session"
+        }
+    } else if session_unavailable {
+        "Saved terminal"
+    } else if has_persistent_owner {
+        "Host-owned terminal"
+    } else {
+        "Workspace terminal"
+    }
+}
+
+fn terminal_termination_confirmation(
+    app_name: &str,
+    has_persistent_owner: bool,
+    title: &str,
+) -> (String, String) {
+    let title = match title.trim() {
+        "" => "Terminal",
+        title => title,
+    };
+    let detail = if has_persistent_owner {
+        if app_name == "Zed" {
+            format!(
+                "“{title}” will stop immediately, including its shell and any foreground process. This cannot be undone. Its Surface will close; closing the Surface alone only detaches the persistent Terminal Session."
+            )
+        } else {
+            format!(
+                "“{title}” will stop immediately, including its shell and any foreground command. This cannot be undone. Closing the tab alone only detaches this host-owned terminal."
+            )
+        }
+    } else {
+        format!(
+            "“{title}” will stop immediately, including its shell and any foreground command, and its tab will close. This cannot be undone."
+        )
+    };
+    let heading = if app_name == "Zed" {
+        "Terminate Terminal Session?"
+    } else {
+        "End Terminal?"
+    };
+    (heading.to_owned(), detail)
 }
 
 /// Event to transmit the scroll from the element to the view
@@ -151,6 +1012,8 @@ actions!(
     [
         /// Reruns the last executed task in the terminal.
         RerunTask,
+        /// Explicitly ends the process owned by the current terminal session.
+        TerminateSession,
     ]
 );
 
@@ -160,14 +1023,865 @@ actions!(
 pub struct RenameTerminal;
 
 pub fn init(cx: &mut App) {
-    terminal_panel::init(cx);
-
     register_serializable_item::<TerminalView>(cx);
 
-    cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
+    cx.observe_new(|workspace: &mut Workspace, window, cx| {
+        let terminal_provider = cx.new(|_| WorkspaceTerminalProviderState::new(workspace));
+        workspace.set_terminal_provider(WorkspaceTerminalProvider(terminal_provider));
         workspace.register_action(TerminalView::deploy);
+        workspace.register_action(new_terminal);
+        workspace.register_action(open_agent_terminal);
+        workspace.register_action(open_shell_terminal);
+        workspace.register_action(open_tmux_terminal);
+        workspace.register_action(open_codex_terminal);
+        workspace.register_action(resume_codex_terminal);
+        workspace.register_action(open_claude_code_terminal);
+        workspace.register_action(resume_claude_code_terminal);
+        workspace.register_action(open_opencode_terminal);
+        workspace.register_action(resume_opencode_terminal);
+        workspace.register_action(open_gemini_terminal);
+        workspace.register_action(open_aider_terminal);
+        workspace.register_action(open_herdr_terminal);
+        workspace.register_action(open_terminal);
+        if let Some(window) = window
+            && let Some((database_id, serialization_key)) = workspace
+                .database_id()
+                .zip(persistence::terminal_panel_serialization_key(workspace))
+        {
+            persistence::migrate_legacy_terminal_panel(
+                workspace.weak_handle(),
+                database_id,
+                serialization_key,
+                workspace.project().clone(),
+                window,
+                cx,
+            )
+            .detach_and_log_err(cx);
+        }
     })
     .detach();
+}
+
+struct WorkspaceTerminalProvider(Entity<WorkspaceTerminalProviderState>);
+
+impl workspace::TerminalProvider for WorkspaceTerminalProvider {
+    fn spawn(
+        &self,
+        task: SpawnInTerminal,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Task<Option<Result<ExitStatus>>> {
+        let terminal_provider = self.0.clone();
+        window.spawn(cx, async move |cx| {
+            let terminal = terminal_provider
+                .update_in(cx, |terminal_provider, window, cx| {
+                    terminal_provider.spawn_task(&task, window, cx)
+                })
+                .ok()?
+                .await;
+            match terminal {
+                Ok(terminal) => {
+                    let exit_status = terminal
+                        .read_with(cx, |terminal, cx| terminal.wait_for_completed_task(cx))
+                        .ok()?
+                        .await?;
+                    Some(Ok(exit_status))
+                }
+                Err(error) => Some(Err(error)),
+            }
+        })
+    }
+}
+
+struct WorkspaceTerminalProviderState {
+    workspace: WeakEntity<Workspace>,
+    deferred_tasks: HashMap<TaskId, Task<()>>,
+}
+
+impl WorkspaceTerminalProviderState {
+    fn new(workspace: &Workspace) -> Self {
+        Self {
+            workspace: workspace.weak_handle(),
+            deferred_tasks: HashMap::default(),
+        }
+    }
+
+    fn spawn_task(
+        &mut self,
+        task: &SpawnInTerminal,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<WeakEntity<Terminal>>> {
+        let Some(workspace) = self.workspace.upgrade() else {
+            return Task::ready(Err(anyhow!("failed to read workspace")));
+        };
+
+        let project = workspace.read(cx).project().read(cx);
+
+        if project.is_via_collab() {
+            return Task::ready(Err(anyhow!("cannot spawn tasks as a guest")));
+        }
+
+        let remote_client = project.remote_client();
+        let is_windows = project.path_style(cx).is_windows();
+        let remote_shell = remote_client
+            .as_ref()
+            .and_then(|remote_client| remote_client.read(cx).shell());
+
+        let shell = if let Some(remote_shell) = remote_shell
+            && task.shell == Shell::System
+        {
+            Shell::Program(remote_shell)
+        } else {
+            task.shell.clone()
+        };
+
+        let task = terminal_panel::prepare_task_for_spawn(task, &shell, is_windows);
+
+        if task.allow_concurrent_runs && task.use_new_terminal {
+            return self.spawn_in_new_terminal(task, window, cx);
+        }
+
+        let mut terminals_for_task = self.terminals_for_task(&task.full_label, cx);
+        let Some((_, existing_terminal)) = terminals_for_task.pop() else {
+            return self.spawn_in_new_terminal(task, window, cx);
+        };
+
+        if task.allow_concurrent_runs {
+            return self.replace_terminal(task, existing_terminal, window, cx);
+        }
+
+        let (tx, rx) = oneshot::channel();
+
+        self.deferred_tasks.insert(
+            task.id.clone(),
+            cx.spawn_in(window, async move |terminal_provider, cx| {
+                wait_for_terminals_tasks(terminals_for_task, cx).await;
+                let task = terminal_provider.update_in(cx, |terminal_provider, window, cx| {
+                    if task.use_new_terminal {
+                        terminal_provider.spawn_in_new_terminal(task, window, cx)
+                    } else {
+                        terminal_provider.replace_terminal(task, existing_terminal, window, cx)
+                    }
+                });
+                if let Ok(task) = task {
+                    tx.send(task.await).ok();
+                }
+            }),
+        );
+
+        cx.spawn(async move |_, _| rx.await?)
+    }
+
+    fn terminals_for_task(
+        &self,
+        label: &str,
+        cx: &mut App,
+    ) -> Vec<(Entity<Pane>, Entity<TerminalView>)> {
+        let Some(workspace) = self.workspace.upgrade() else {
+            return Vec::new();
+        };
+
+        let panes = workspace.read(cx).panes().to_vec();
+        let mut terminals = Vec::new();
+        for pane in panes {
+            let terminal_views = pane
+                .read(cx)
+                .items()
+                .filter_map(|item| item.act_as::<TerminalView>(cx))
+                .collect::<Vec<_>>();
+
+            for terminal_view in terminal_views {
+                let matches_label = terminal_view
+                    .read(cx)
+                    .terminal()
+                    .read(cx)
+                    .task()
+                    .is_some_and(|task_state| task_state.spawned_task.full_label == label);
+
+                if matches_label {
+                    terminals.push((pane.clone(), terminal_view));
+                }
+            }
+        }
+
+        terminals.sort_by_key(|(_, terminal_view)| terminal_view.entity_id());
+        terminals
+    }
+
+    fn spawn_in_new_terminal(
+        &mut self,
+        spawn_task: SpawnInTerminal,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<WeakEntity<Terminal>>> {
+        let reveal = spawn_task.reveal;
+        let workspace = self.workspace.clone();
+        cx.spawn_in(window, async move |_, cx| {
+            let project = workspace.update(cx, |workspace, cx| {
+                if !is_enabled_in_workspace(workspace, cx) {
+                    anyhow::bail!("terminal not yet supported for remote projects");
+                }
+                Ok(workspace.project().clone())
+            })??;
+
+            let terminal = match project
+                .update(cx, |project, cx| {
+                    project.create_terminal_task(spawn_task, cx)
+                })
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(error) => {
+                    workspace.update(cx, |_workspace, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
+                    })?;
+                    return Err(error);
+                }
+            };
+
+            workspace.update_in(cx, |workspace, window, cx| {
+                attach_terminal_to_workspace(
+                    workspace,
+                    select_terminal_target_pane(workspace, cx),
+                    terminal.clone(),
+                    matches!(reveal, RevealStrategy::Always),
+                    window,
+                    cx,
+                );
+                Ok(terminal.downgrade())
+            })?
+        })
+    }
+
+    fn replace_terminal(
+        &self,
+        spawn_task: SpawnInTerminal,
+        terminal_to_replace: Entity<TerminalView>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<WeakEntity<Terminal>>> {
+        let reveal = spawn_task.reveal;
+        let workspace = self.workspace.clone();
+        cx.spawn_in(window, async move |_, cx| {
+            let project = workspace.read_with(cx, |workspace, _| workspace.project().clone())?;
+            let new_terminal = match project
+                .update(cx, |project, cx| {
+                    project.create_terminal_task(spawn_task, cx)
+                })
+                .await
+            {
+                Ok(terminal) => terminal,
+                Err(error) => {
+                    workspace.update(cx, |_workspace, cx| {
+                        record_terminal_workspace_access_required(&error, cx);
+                    })?;
+                    return Err(error);
+                }
+            };
+
+            terminal_to_replace.update_in(cx, |terminal_to_replace, window, cx| {
+                terminal_to_replace.set_terminal(new_terminal.clone(), window, cx);
+            })?;
+
+            match reveal {
+                RevealStrategy::Always => {
+                    workspace.update_in(cx, |workspace, window, cx| {
+                        let did_activate =
+                            workspace.activate_item(&terminal_to_replace, true, true, window, cx);
+                        anyhow::ensure!(did_activate, "failed to retrieve terminal pane");
+                        anyhow::Ok(())
+                    })??;
+                }
+                RevealStrategy::NoFocus => {
+                    workspace.update_in(cx, |workspace, window, cx| {
+                        workspace.activate_item(&terminal_to_replace, false, false, window, cx);
+                    })?;
+                }
+                RevealStrategy::Never => {}
+            }
+
+            Ok(new_terminal.downgrade())
+        })
+    }
+}
+
+fn new_terminal(
+    workspace: &mut Workspace,
+    action: &NewTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    let local = action.local;
+    let working_directory = default_working_directory(workspace, cx);
+    add_terminal_to_active_pane(workspace, window, cx, None, move |project, cx| {
+        if local {
+            project.create_local_terminal(cx)
+        } else {
+            project.create_terminal_shell(working_directory, cx)
+        }
+    })
+    .detach_and_log_err(cx);
+}
+
+fn open_agent_terminal(
+    workspace: &mut Workspace,
+    _: &OpenAgentTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if paths::APP_NAME == "Zed" {
+        new_terminal(workspace, &NewTerminal::default(), window, cx);
+    } else if AgentSettings::get_global(cx).terminal_launcher == TerminalLauncher::Tmux {
+        open_tmux_terminal(workspace, &OpenTmuxTerminal, window, cx);
+    } else if prepare_agent_terminal_workspace(workspace, window, cx) {
+        TerminalView::deploy(workspace, &NewCenterTerminal::default(), window, cx);
+    }
+}
+
+fn open_shell_terminal(
+    workspace: &mut Workspace,
+    _: &OpenShellTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    TerminalView::deploy(
+        workspace,
+        &NewCenterTerminal {
+            local: false,
+            startup_command: Some(String::new()),
+            working_directory: None,
+        },
+        window,
+        cx,
+    );
+}
+
+fn tmux_session_name_from_workspace_label(label: Option<&str>) -> String {
+    let session_name = label
+        .unwrap_or("dez")
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() || matches!(character, '-' | '_') {
+                character
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    let session_name = session_name.trim_matches('-');
+    if session_name.is_empty() {
+        "dez".to_owned()
+    } else {
+        session_name.to_owned()
+    }
+}
+
+pub fn tmux_session_name_from_workspace_root(root: Option<&Path>) -> String {
+    let legacy_name = tmux_session_name_from_workspace_label(
+        root.and_then(Path::file_name)
+            .and_then(|name| name.to_str()),
+    );
+    let Some(root) = root else {
+        return legacy_name;
+    };
+
+    // DefaultHasher does not promise a stable identity across Rust releases.
+    let mut hash = 0xcbf29ce484222325_u64;
+    for byte in root.to_string_lossy().as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    format!("{legacy_name}-{hash:010x}")
+}
+
+const TMUX_EXECUTABLE_RESOLUTION: &str = "if [ -x /opt/homebrew/bin/tmux ]; then dez_tmux_bin=/opt/homebrew/bin/tmux; elif [ -x /usr/local/bin/tmux ]; then dez_tmux_bin=/usr/local/bin/tmux; elif command -v tmux >/dev/null 2>&1; then dez_tmux_bin=tmux; else printf \"%s\\n\" \"Dez: tmux is not installed. Install tmux or choose another Default Terminal.\"; exit 127; fi;";
+
+pub fn tmux_startup_command_for_workspace(root: Option<&Path>) -> String {
+    let legacy_name = tmux_session_name_from_workspace_label(
+        root.and_then(Path::file_name)
+            .and_then(|name| name.to_str()),
+    );
+    let session_name = tmux_session_name_from_workspace_root(root);
+    let script = if session_name == legacy_name {
+        format!(
+            "{TMUX_EXECUTABLE_RESOLUTION} exec \"$dez_tmux_bin\" new-session -A -s {session_name}"
+        )
+    } else {
+        format!(
+            "{TMUX_EXECUTABLE_RESOLUTION} if \"$dez_tmux_bin\" has-session -t \"={session_name}\" 2>/dev/null; then exec \"$dez_tmux_bin\" attach-session -t \"={session_name}\"; elif \"$dez_tmux_bin\" has-session -t \"={legacy_name}\" 2>/dev/null; then dez_tmux_cwd=$(\"$dez_tmux_bin\" display-message -p -t \"={legacy_name}\" \"#{{pane_current_path}}\" 2>/dev/null); case \"$dez_tmux_cwd\" in \"$PWD\"|\"$PWD\"/*) exec \"$dez_tmux_bin\" attach-session -t \"={legacy_name}\" ;; *) exec \"$dez_tmux_bin\" new-session -A -s {session_name} ;; esac; else exec \"$dez_tmux_bin\" new-session -A -s {session_name}; fi"
+        )
+    };
+
+    format!("/bin/sh -c '{script}'")
+}
+
+fn open_tmux_terminal(
+    workspace: &mut Workspace,
+    _: &OpenTmuxTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+
+    let project_group_key = workspace.project_group_key(cx);
+    let workspace_root = project_group_key
+        .path_list()
+        .ordered_paths()
+        .next()
+        .map(PathBuf::as_path);
+    let startup_command = tmux_startup_command_for_workspace(workspace_root);
+    open_terminal_with_startup_command(workspace, &startup_command, window, cx);
+}
+
+fn open_codex_terminal(
+    workspace: &mut Workspace,
+    _: &OpenCodexTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "codex", window, cx);
+}
+
+fn resume_codex_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeCodexTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "codex resume --last", window, cx);
+}
+
+fn open_claude_code_terminal(
+    workspace: &mut Workspace,
+    _: &OpenClaudeCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "claude", window, cx);
+}
+
+fn resume_claude_code_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeClaudeCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "claude --continue", window, cx);
+}
+
+fn open_opencode_terminal(
+    workspace: &mut Workspace,
+    _: &OpenOpenCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "opencode", window, cx);
+}
+
+fn resume_opencode_terminal(
+    workspace: &mut Workspace,
+    _: &ResumeOpenCodeTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "opencode --continue", window, cx);
+}
+
+fn open_gemini_terminal(
+    workspace: &mut Workspace,
+    _: &OpenGeminiTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "gemini", window, cx);
+}
+
+fn open_aider_terminal(
+    workspace: &mut Workspace,
+    _: &OpenAiderTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "aider", window, cx);
+}
+
+fn open_herdr_terminal(
+    workspace: &mut Workspace,
+    _: &OpenHerdrTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if !prepare_agent_terminal_workspace(workspace, window, cx) {
+        return;
+    }
+    open_terminal_with_startup_command(workspace, "herdr", window, cx);
+}
+
+fn prepare_agent_terminal_workspace(
+    workspace: &Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> bool {
+    let has_workspace = workspace.project().read(cx).worktrees(cx).next().is_some();
+    if paths::APP_NAME == "Zed" || has_workspace {
+        return true;
+    }
+
+    window.dispatch_action(
+        OpenWorkspace {
+            create_new_window: Some(false),
+        }
+        .boxed_clone(),
+        cx,
+    );
+    false
+}
+
+fn open_terminal_with_startup_command(
+    workspace: &mut Workspace,
+    startup_command: &str,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    TerminalView::deploy(
+        workspace,
+        &NewCenterTerminal {
+            local: false,
+            startup_command: Some(startup_command.to_owned()),
+            working_directory: None,
+        },
+        window,
+        cx,
+    );
+}
+
+fn open_terminal(
+    workspace: &mut Workspace,
+    action: &OpenTerminal,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    let local = action.local;
+    let working_directory = action.working_directory.clone();
+    add_terminal_to_active_pane(workspace, window, cx, None, move |project, cx| {
+        if local {
+            project.create_local_terminal(cx)
+        } else {
+            project.create_terminal_shell(Some(working_directory), cx)
+        }
+    })
+    .detach_and_log_err(cx);
+}
+
+fn add_terminal_to_active_pane<F>(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+    initial_title: Option<String>,
+    create_terminal: F,
+) -> Task<Result<WeakEntity<Terminal>>>
+where
+    F: FnOnce(&mut Project, &mut Context<Project>) -> Task<Result<Entity<Terminal>>> + 'static,
+{
+    if let Err(error) = workspace::ensure_workspace_startup_ready(cx) {
+        workspace.show_toast(
+            Toast::new(
+                NotificationId::unique::<InstallationRequiredForTerminal>(),
+                error.to_string(),
+            )
+            .autohide(),
+            cx,
+        );
+        return Task::ready(Err(error));
+    }
+    if !is_enabled_in_workspace(workspace, cx) {
+        return Task::ready(Err(anyhow!(
+            "terminal not yet supported for collaborative projects"
+        )));
+    }
+
+    let project = workspace.project().downgrade();
+
+    cx.spawn_in(window, async move |workspace, cx| {
+        let terminal = project.update(cx, create_terminal)?.await;
+        workspace.update_in(cx, |workspace, window, cx| match terminal {
+            Ok(terminal) => {
+                let pane = workspace.active_pane().clone();
+                let terminal_view = attach_terminal_to_workspace(
+                    workspace,
+                    pane,
+                    terminal.clone(),
+                    true,
+                    window,
+                    cx,
+                );
+                if let Some(initial_title) = initial_title {
+                    terminal_view.update(cx, |terminal_view, cx| {
+                        terminal_view.set_custom_title(Some(initial_title), cx);
+                    });
+                }
+                Ok(terminal.downgrade())
+            }
+            Err(error) => {
+                let workspace_access_required =
+                    terminal_workspace_access_required(&error).is_some();
+                record_terminal_workspace_access_required(&error, cx);
+                let pane = workspace.active_pane().clone();
+                let failed_to_spawn = Box::new(cx.new(|cx| FailedToSpawnTerminal {
+                    error: error.to_string(),
+                    workspace_access_required,
+                    focus_handle: cx.focus_handle(),
+                }));
+                workspace.add_item(pane, failed_to_spawn, None, true, true, window, cx);
+                Err(error)
+            }
+        })?
+    })
+}
+
+pub fn attach_terminal_to_workspace(
+    workspace: &mut Workspace,
+    pane: Entity<Pane>,
+    terminal: Entity<Terminal>,
+    focus: bool,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> Entity<TerminalView> {
+    let terminal_view = cx.new(|cx| {
+        TerminalView::new(
+            terminal,
+            workspace.weak_handle(),
+            workspace.database_id(),
+            workspace.project().downgrade(),
+            window,
+            cx,
+        )
+    });
+    workspace.add_item(
+        pane,
+        Box::new(terminal_view.clone()),
+        None,
+        focus,
+        focus,
+        window,
+        cx,
+    );
+    terminal_view
+}
+
+fn select_terminal_target_pane(workspace: &Workspace, cx: &App) -> Entity<Pane> {
+    let active_pane = workspace.active_pane().clone();
+    if pane_contains_terminal(&active_pane, cx) {
+        return active_pane;
+    }
+
+    workspace
+        .panes()
+        .iter()
+        .find(|pane| pane_contains_terminal(pane, cx))
+        .cloned()
+        .unwrap_or(active_pane)
+}
+
+fn pane_contains_terminal(pane: &Entity<Pane>, cx: &App) -> bool {
+    pane.read(cx)
+        .items()
+        .any(|item| item.act_as::<TerminalView>(cx).is_some())
+}
+
+fn is_enabled_in_workspace(workspace: &Workspace, cx: &App) -> bool {
+    workspace.project().read(cx).supports_terminal(cx)
+}
+
+async fn wait_for_terminals_tasks(
+    terminals_for_task: Vec<(Entity<Pane>, Entity<TerminalView>)>,
+    cx: &mut AsyncApp,
+) {
+    let pending_tasks = terminals_for_task.iter().map(|(_, terminal)| {
+        terminal.update(cx, |terminal_view, cx| {
+            terminal_view
+                .terminal()
+                .update(cx, |terminal, cx| terminal.wait_for_completed_task(cx))
+        })
+    });
+    join_all(pending_tasks).await;
+}
+
+struct FailedToSpawnTerminal {
+    error: String,
+    workspace_access_required: bool,
+    focus_handle: FocusHandle,
+}
+
+impl Focusable for FailedToSpawnTerminal {
+    fn focus_handle(&self, _: &App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl Render for FailedToSpawnTerminal {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_dez = terminal_launch_failure_is_top_anchored(paths::APP_NAME);
+        let workspace_access_required = is_dez && self.workspace_access_required;
+        let density = DesignSystemSettings::get_global(cx).density;
+        let recovery_padding_x = terminal_recovery_padding_x(density);
+        let primary_label =
+            terminal_launch_failure_primary_label(paths::APP_NAME, workspace_access_required);
+        let more_label =
+            terminal_launch_failure_more_label(paths::APP_NAME, workspace_access_required);
+        let title = terminal_launch_failure_title(paths::APP_NAME, workspace_access_required);
+        let popover_menu = PopoverMenu::new("settings-popover")
+            .trigger(
+                IconButton::new("icon-button-popover", IconName::ChevronDown)
+                    .icon_size(IconSize::XSmall)
+                    .tab_index(0isize)
+                    .aria_label(more_label)
+                    .tooltip(Tooltip::text(more_label)),
+            )
+            .menu(move |window, cx| {
+                Some(ContextMenu::build(window, cx, |context_menu, _, _| {
+                    context_menu
+                        .action("Open Settings", zed_actions::OpenSettings.boxed_clone())
+                        .action(
+                            "Edit settings.json",
+                            zed_actions::OpenSettingsFile.boxed_clone(),
+                        )
+                }))
+            })
+            .anchor(Anchor::TopRight)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(2.0),
+            });
+
+        v_flex()
+            .id("terminal-failed-to-start")
+            .role(gpui::Role::Alert)
+            .aria_label(title)
+            .track_focus(&self.focus_handle)
+            .size_full()
+            .min_h_0()
+            .overflow_y_scroll()
+            .when(is_dez, |this| {
+                this.px(recovery_padding_x)
+                    .pt_10()
+                    .pb_8()
+                    .items_start()
+                    .justify_start()
+            })
+            .when(!is_dez, |this| this.p_4().items_center().justify_center())
+            .bg(cx.theme().colors().terminal_background)
+            .child(
+                v_flex()
+                    .w_full()
+                    .max_w(if is_dez { px(600.) } else { px(448.) })
+                    .when(!is_dez, |this| {
+                        this.items_center().justify_center().text_center()
+                    })
+                    .when(is_dez, |this| {
+                        this.gap_2().child(
+                            h_flex()
+                                .gap_2()
+                                .child(
+                                    Icon::new(IconName::Warning)
+                                        .size(IconSize::Small)
+                                        .color(Color::Warning),
+                                )
+                                .child(Headline::new(title)),
+                        )
+                    })
+                    .when(!is_dez, |this| this.child(Label::new(title)))
+                    .child(
+                        Label::new(format!(
+                            "{}\n\n{}",
+                            self.error,
+                            terminal_failed_to_start_guidance(
+                                paths::APP_NAME,
+                                workspace_access_required,
+                            ),
+                        ))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .mb_4(),
+                    )
+                    .child(SplitButton::new(
+                        ButtonLike::new("terminal-launch-recovery")
+                            .child(Label::new(primary_label).size(LabelSize::Small))
+                            .tab_index(0isize)
+                            .aria_label(primary_label)
+                            .tooltip(Tooltip::text(primary_label))
+                            .on_click(move |_, window, cx| {
+                                if workspace_access_required {
+                                    window
+                                        .dispatch_action(workspace::FocusSidebar.boxed_clone(), cx);
+                                } else if is_dez {
+                                    window.dispatch_action(
+                                        zed_actions::OpenSettingsAt {
+                                            path: "agent.terminal_launcher".to_owned(),
+                                            target: None,
+                                        }
+                                        .boxed_clone(),
+                                        cx,
+                                    );
+                                } else {
+                                    window.dispatch_action(
+                                        zed_actions::OpenSettings.boxed_clone(),
+                                        cx,
+                                    );
+                                }
+                            }),
+                        popover_menu.into_any_element(),
+                    )),
+            )
+    }
+}
+
+impl EventEmitter<()> for FailedToSpawnTerminal {}
+
+impl workspace::Item for FailedToSpawnTerminal {
+    type Event = ();
+
+    fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
+        terminal_launch_failure_title(paths::APP_NAME, self.workspace_access_required).into()
+    }
+
+    fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
+        terminal_launch_failure_tab_icon(paths::APP_NAME).map(Icon::new)
+    }
+
+    fn tab_tooltip_text(&self, _cx: &App) -> Option<SharedString> {
+        terminal_launch_failure_tab_tooltip(paths::APP_NAME, self.workspace_access_required)
+    }
 }
 
 pub struct BlockProperties {
@@ -193,13 +1907,16 @@ pub struct TerminalView {
     cursor_shape: CursorShape,
     blink_manager: Entity<BlinkManager>,
     mode: TerminalMode,
+    // Explicit override for whether workspace-specific context menu actions are shown.
+    // When `None`, visibility is derived from `mode` (hidden for embedded terminals).
+    show_workspace_actions: Option<bool>,
     blinking_terminal_enabled: bool,
     needs_serialize: bool,
+    session_ref_needs_serialize: bool,
+    session_unavailable: bool,
+    session_unavailable_reason: Option<String>,
+    show_terminal_details: bool,
     custom_title: Option<String>,
-    /// Overrides the tab icon, e.g. to show the originating agent's icon for
-    /// terminals launched from the agent threads panel.
-    tab_icon_override: Option<IconName>,
-    agent_thread: bool,
     hover: Option<HoverTarget>,
     hover_tooltip_update: Task<()>,
     workspace_id: Option<WorkspaceId>,
@@ -267,30 +1984,75 @@ impl Focusable for TerminalView {
 }
 
 impl TerminalView {
-    ///Create a new Terminal in the current working directory or the user's home directory,
-    ///or toggle the terminal dock panel if `terminal.dock` is set to a docked position.
+    ///Create a new Terminal in the current working directory or the user's home directory
     pub fn deploy(
         workspace: &mut Workspace,
         action: &NewCenterTerminal,
         window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
-        if TerminalSettings::get_global(cx).dock != TerminalDockPosition::Center {
-            if workspace.project().read(cx).supports_terminal(cx)
-                && !workspace.toggle_panel_focus::<TerminalPanel>(window, cx)
-            {
-                workspace.close_panel::<TerminalPanel>(window, cx);
-            }
-            return;
-        }
         let local = action.local;
-        let working_directory = default_working_directory(workspace, cx);
-        TerminalPanel::add_center_terminal(workspace, window, cx, move |project, cx| {
-            if local {
-                project.create_local_terminal(cx)
-            } else {
-                project.create_terminal_shell(working_directory, cx)
+        let startup_command = resolve_terminal_startup_command(
+            action.startup_command.clone(),
+            AgentSettings::get_global(cx).terminal_init_command.clone(),
+            paths::APP_NAME,
+        );
+        let initial_title = startup_command.as_deref().and_then(terminal_startup_title);
+        let working_directory = action
+            .working_directory
+            .clone()
+            .or_else(|| default_working_directory(workspace, cx));
+        let terminal_task = add_terminal_to_active_pane(
+            workspace,
+            window,
+            cx,
+            initial_title,
+            move |project, cx| {
+                if local {
+                    project.create_local_terminal(cx)
+                } else {
+                    project.create_terminal_shell(working_directory, cx)
+                }
+            },
+        );
+
+        let Some(startup_command) = startup_command else {
+            terminal_task.detach_and_log_err(cx);
+            return;
+        };
+
+        cx.spawn(async move |_, cx| {
+            let terminal = terminal_task
+                .await?
+                .upgrade()
+                .ok_or_else(|| anyhow!("terminal closed before its startup command ran"))?;
+            let input = terminal_startup_command_input(startup_command, paths::APP_NAME);
+            let is_pty = terminal.read_with(cx, |terminal, _cx| terminal.is_pty());
+
+            if !is_pty {
+                terminal.update(cx, |terminal, _cx| terminal.write_init_command(input));
+                return anyhow::Ok(());
             }
+
+            let startup = terminal.update(cx, |terminal, _cx| {
+                terminal.start_init_command_startup_handshake()
+            });
+            let timeout = cx
+                .background_executor()
+                .timer(TERMINAL_STARTUP_COMMAND_TIMEOUT);
+            futures::select_biased! {
+                _ = startup.fuse() => {}
+                _ = timeout.fuse() => {}
+            }
+
+            terminal.update(cx, move |terminal, cx| {
+                if !terminal.write_init_command_after_startup(input, cx) {
+                    log::debug!(
+                        "skipping terminal startup command because the terminal is no longer eligible"
+                    );
+                }
+            });
+            anyhow::Ok(())
         })
         .detach_and_log_err(cx);
     }
@@ -335,12 +2097,24 @@ impl TerminalView {
             )
         });
 
-        let subscriptions = vec![
+        let mut subscriptions = vec![
+            cx.on_release(|this, cx| {
+                let session_id = this.terminal.read(cx).session_id();
+                if let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx) {
+                    host.update(cx, |host, _cx| {
+                        host.detach(session_id);
+                    });
+                }
+            }),
             focus_in,
             focus_out,
             cx.observe(&blink_manager, |_, _, cx| cx.notify()),
             cx.observe_global::<SettingsStore>(Self::settings_changed),
         ];
+        if let Some(project) = project.upgrade() {
+            let git_store = project.read(cx).git_store().clone();
+            subscriptions.push(cx.subscribe(&git_store, |_, _, _, cx| cx.notify()));
+        }
 
         Self {
             terminal,
@@ -355,15 +2129,18 @@ impl TerminalView {
             hover: None,
             hover_tooltip_update: Task::ready(()),
             mode: TerminalMode::Standalone,
+            show_workspace_actions: None,
             workspace_id,
             show_breadcrumbs: TerminalSettings::get_global(cx).toolbar.breadcrumbs,
             block_below_cursor: None,
             scroll_top: Pixels::ZERO,
             scroll_handle,
             needs_serialize: false,
+            session_ref_needs_serialize: true,
+            session_unavailable: false,
+            session_unavailable_reason: None,
+            show_terminal_details: false,
             custom_title: None,
-            tab_icon_override: None,
-            agent_thread: false,
             ime_state: None,
             self_handle: cx.entity().downgrade(),
             rename_editor: None,
@@ -385,39 +2162,38 @@ impl TerminalView {
         cx.notify();
     }
 
-    pub fn set_agent_thread(&mut self, agent_thread: bool, cx: &mut Context<Self>) {
-        if self.agent_thread == agent_thread {
-            return;
-        }
-        self.agent_thread = agent_thread;
+    /// Explicitly override whether workspace-specific context menu actions (e.g. creating or
+    /// closing terminal tabs, inline assist) are shown.
+    ///
+    /// This lets hosts that aren't workspace panes (such as the agent panel) hide these
+    /// actions without `terminal_view` needing to know about those hosts. When never called,
+    /// visibility is derived from the terminal's `mode`.
+    pub fn set_show_workspace_actions(&mut self, show: bool, cx: &mut Context<Self>) {
+        self.show_workspace_actions = Some(show);
         cx.notify();
     }
 
-    /// Refreshes `self.workspace`/`self.project` and rebuilds
-    /// `_terminal_subscriptions` when this item's owning workspace has
-    /// genuinely changed. No-ops on the initial add (workspace already
-    /// matches), so a plain `move_item` between panes of the *same*
-    /// workspace never rebuilds subscriptions needlessly.
-    ///
-    /// Rebuilding the subscriptions is required, not optional:
-    /// `subscribe_for_terminal_events` captures `workspace: WeakEntity<Workspace>`
-    /// by value into a `move` closure at subscribe time, so reassigning
-    /// `self.workspace` alone does not update that already-captured copy --
-    /// terminal-originated navigation (`open_path_like_target`,
-    /// `hover_path_like_target`) would keep resolving against the old
-    /// workspace even after the tab visually moved to a new one. Dropping
-    /// the old `Subscription`s (by overwriting `_terminal_subscriptions`)
-    /// unsubscribes them immediately, so the stale closures can never fire
-    /// again regardless.
-    fn reparent(&mut self, workspace: &Workspace, window: &mut Window, cx: &mut Context<Self>) {
-        let workspace_handle = workspace.weak_handle();
-        if self.workspace == workspace_handle {
-            return;
+    pub fn set_session_unavailable(&mut self, unavailable: bool, cx: &mut Context<Self>) {
+        self.session_unavailable = unavailable;
+        if !unavailable {
+            self.session_unavailable_reason = None;
         }
-        self.workspace = workspace_handle.clone();
-        self.project = workspace.project().downgrade();
-        self._terminal_subscriptions =
-            subscribe_for_terminal_events(&self.terminal, workspace_handle, window, cx);
+        cx.notify();
+    }
+
+    pub fn set_session_unavailable_reason(
+        &mut self,
+        reason: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        self.session_unavailable = reason.is_some();
+        self.session_unavailable_reason = reason;
+        cx.notify();
+    }
+
+    fn shows_workspace_actions(&self) -> bool {
+        self.show_workspace_actions
+            .unwrap_or_else(|| !matches!(self.mode, TerminalMode::Embedded { .. }))
     }
 
     const MAX_EMBEDDED_LINES: usize = 1_000;
@@ -431,12 +2207,13 @@ impl TerminalView {
             TerminalMode::Embedded {
                 max_lines_when_unfocused,
             } => {
-                let total_lines = self.terminal.read(cx).total_lines();
+                let terminal = self.terminal.read(cx);
+                let total_lines = terminal.total_lines();
 
                 if total_lines > Self::MAX_EMBEDDED_LINES {
                     ContentMode::Scrollable
                 } else {
-                    let mut displayed_lines = total_lines;
+                    let mut displayed_lines = terminal.used_lines().min(total_lines);
 
                     if !self.focus_handle.is_focused(window)
                         && let Some(max_lines) = max_lines_when_unfocused
@@ -480,8 +2257,10 @@ impl TerminalView {
     /// Commits (sends) the given text to the PTY. Called by InputHandler::replace_text_in_range.
     pub(crate) fn commit_text(&mut self, text: &str, cx: &mut Context<Self>) {
         if !text.is_empty() {
-            self.terminal.update(cx, |term, _| {
-                term.input(text.to_string().into_bytes());
+            self.terminal.update(cx, |term, terminal_cx| {
+                if term.input(text.to_string().into_bytes()) {
+                    terminal_cx.notify();
+                }
             });
         }
     }
@@ -503,7 +2282,9 @@ impl TerminalView {
     }
 
     pub fn set_custom_title(&mut self, label: Option<String>, cx: &mut Context<Self>) {
-        let label = label.filter(|l| !l.trim().is_empty());
+        let label = label
+            .map(|label| label.trim().to_string())
+            .filter(|label| !label.is_empty());
         if self.custom_title != label {
             self.custom_title = label;
             self.needs_serialize = true;
@@ -512,12 +2293,9 @@ impl TerminalView {
         }
     }
 
-    pub fn set_tab_icon_override(&mut self, icon: Option<IconName>, cx: &mut Context<Self>) {
-        if self.tab_icon_override != icon {
-            self.tab_icon_override = icon;
-            cx.emit(ItemEvent::UpdateTab);
-            cx.notify();
-        }
+    pub(crate) fn mark_needs_serialize(&mut self, cx: &mut Context<Self>) {
+        self.needs_serialize = true;
+        cx.emit(ItemEvent::UpdateTab);
     }
 
     pub fn is_renaming(&self) -> bool {
@@ -542,7 +2320,7 @@ impl TerminalView {
             } else {
                 // Only set custom_title if the text differs from the terminal's dynamic title.
                 // This prevents subtle layout changes when clicking away without making changes.
-                let terminal_title = self.terminal.read(cx).title(true);
+                let terminal_title = self.terminal.read(cx).title(false);
                 if new_label == terminal_title {
                     None
                 } else {
@@ -568,7 +2346,7 @@ impl TerminalView {
         let current_label = self
             .custom_title
             .clone()
-            .unwrap_or_else(|| self.terminal.read(cx).title(true));
+            .unwrap_or_else(|| self.terminal.read(cx).title(false));
 
         let rename_editor = cx.new(|cx| Editor::single_line(window, cx));
         let rename_editor_subscription = cx.subscribe_in(&rename_editor, window, {
@@ -609,92 +2387,72 @@ impl TerminalView {
     pub fn deploy_context_menu(
         &mut self,
         position: GpuiPoint<Pixels>,
-        _has_selection: bool,
+        has_selection: bool,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let hovered_path_like_target = self.terminal.update(cx, |terminal, _| {
-            match terminal.navigation_target_at_position(position) {
-                Some(MaybeNavigationTarget::PathLike(path_like_target)) => Some(path_like_target),
-                _ => None,
-            }
-        });
-        let can_open_with_system = hovered_path_like_target.is_some()
-            && self.project.upgrade().is_some_and(|project| {
-                let project = project.read(cx);
-                project.is_local() || project.is_via_wsl_with_host_interop(cx)
-            });
-        let workspace = self.workspace.clone();
-
-        let context_menu = ContextMenu::build(window, cx, |menu, _, cx| {
-            let menu = menu
-                .context(self.focus_handle.clone())
-                .action(
-                    localization::text(cx, "terminal-new-terminal"),
-                    Box::new(NewTerminal::default()),
-                )
-                .action(
-                    localization::text(cx, "terminal-new-item"),
-                    Box::new(NewCenterTerminal::default()),
-                )
-                .separator()
-                .action(localization::text(cx, "terminal-copy"), Box::new(Copy))
-                .action(localization::text(cx, "terminal-paste"), Box::new(Paste))
-                .action(
-                    localization::text(cx, "terminal-paste-text"),
-                    Box::new(PasteText),
-                )
-                .action(
-                    localization::text(cx, "terminal-select-all"),
-                    Box::new(SelectAll),
-                )
-                .action(localization::text(cx, "terminal-clear"), Box::new(Clear));
-
-            let menu = menu.when_some(
-                hovered_path_like_target.clone(),
-                |menu, path_like_target| {
-                    let menu = menu.separator().entry(
-                        localization::text(cx, "terminal-open-in-dez"),
-                        None,
-                        {
-                            let workspace = workspace.clone();
-                            let path_like_target = path_like_target.clone();
-                            move |window, cx| {
-                                open_path_like_target_from_menu(
-                                    workspace.clone(),
-                                    path_like_target.clone(),
-                                    false,
-                                    window,
-                                    cx,
-                                );
-                            }
-                        },
-                    );
-                    menu.when(can_open_with_system, |menu| {
-                        menu.entry(localization::text(cx, "terminal-open-default-app"), None, {
-                            let workspace = workspace.clone();
-                            let path_like_target = path_like_target.clone();
-                            move |window, cx| {
-                                open_path_like_target_from_menu(
-                                    workspace.clone(),
-                                    path_like_target.clone(),
-                                    true,
-                                    window,
-                                    cx,
-                                );
-                            }
-                        })
-                    })
-                },
-            );
-
-            menu.separator().action(
-                localization::text(cx, "terminal-close-tab"),
-                Box::new(CloseActiveItem {
-                    save_intent: None,
-                    close_pinned: true,
-                }),
+        let (is_hosted, can_terminate) = {
+            let terminal = self.terminal.read(cx);
+            (
+                terminal.is_hosted(),
+                terminal_termination_available(self.session_unavailable, terminal.process_exited()),
             )
+        };
+        let close_label = terminal_close_label(is_hosted);
+        let terminate_label = terminal_terminate_label(paths::APP_NAME);
+        let terminal_context_open_label = terminal_context_open_action_label(
+            paths::APP_NAME,
+            AgentSettings::get_global(cx)
+                .terminal_init_command
+                .as_deref(),
+        );
+        let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
+            menu.context(self.focus_handle.clone())
+                .when(self.shows_workspace_actions(), |menu| {
+                    if paths::APP_NAME == "Zed" {
+                        menu.action("New Terminal", Box::new(NewTerminal::default()))
+                            .action(
+                                "New Center Terminal",
+                                Box::new(NewCenterTerminal::default()),
+                            )
+                            .separator()
+                    } else {
+                        menu.action(
+                            terminal_context_open_label.clone(),
+                            Box::new(OpenAgentTerminal),
+                        )
+                        .separator()
+                    }
+                })
+                .when(has_selection, |menu| {
+                    menu.action("Copy Selection", Box::new(Copy))
+                })
+                .when(
+                    !matches!(self.mode, TerminalMode::Embedded { .. }),
+                    |menu| {
+                        menu.action("Paste Clipboard", Box::new(Paste))
+                            .action("Paste Text Only", Box::new(PasteText))
+                    },
+                )
+                .action("Select All", Box::new(SelectAll))
+                .when(
+                    !matches!(self.mode, TerminalMode::Embedded { .. }),
+                    |menu| menu.action("Clear Screen", Box::new(Clear)),
+                )
+                .when(self.shows_workspace_actions(), |menu| {
+                    menu.separator()
+                        .action(
+                            close_label,
+                            Box::new(CloseActiveItem {
+                                save_intent: None,
+                                close_pinned: true,
+                            }),
+                        )
+                        .when(can_terminate, |menu| {
+                            menu.separator()
+                                .action(terminate_label, Box::new(TerminateSession))
+                        })
+                })
         });
 
         window.focus(&context_menu.focus_handle(cx), cx);
@@ -762,11 +2520,14 @@ impl TerminalView {
             .mode
             .contains(Modes::ALT_SCREEN)
         {
-            self.terminal.update(cx, |term, cx| {
-                term.try_keystroke(
+            self.terminal.update(cx, |term, terminal_cx| {
+                let (_, input_rejected) = term.try_keystroke_with_feedback(
                     &Keystroke::parse("ctrl-cmd-space").unwrap(),
-                    TerminalSettings::get_global(cx).option_as_meta,
-                )
+                    TerminalSettings::get_global(terminal_cx).option_as_meta,
+                );
+                if input_rejected {
+                    terminal_cx.notify();
+                }
             });
         } else {
             window.show_character_palette();
@@ -786,6 +2547,87 @@ impl TerminalView {
             .map(|task| terminal_rerun_override(&task.spawned_task.id))
             .unwrap_or_default();
         window.dispatch_action(Box::new(task), cx);
+    }
+
+    fn terminate_session(
+        &mut self,
+        _: &TerminateSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let (has_persistent_owner, process_exited) = {
+            let terminal = self.terminal.read(cx);
+            (
+                terminal_has_persistent_owner(&terminal, cx),
+                terminal.process_exited(),
+            )
+        };
+        if !terminal_termination_available(self.session_unavailable, process_exited) {
+            return;
+        }
+
+        let title = self.tab_content_text(1, cx);
+        let (message, detail) =
+            terminal_termination_confirmation(paths::APP_NAME, has_persistent_owner, &title);
+        let confirmation = window.prompt(
+            PromptLevel::Critical,
+            &message,
+            Some(&detail),
+            &[
+                if paths::APP_NAME == "Zed" {
+                    "Terminate Session"
+                } else {
+                    "End Terminal"
+                },
+                "Cancel",
+            ],
+            cx,
+        );
+
+        cx.spawn_in(window, async move |this, cx| -> anyhow::Result<()> {
+            if confirmation.await.log_err() != Some(0) {
+                return Ok(());
+            }
+            let hosted_termination = this.update(cx, |this, cx| {
+                this.terminal.read(cx).request_hosted_termination()
+            })?;
+            if let Some(hosted_termination) = hosted_termination {
+                let timeout = cx
+                    .background_executor()
+                    .timer(TERMINAL_HOST_TERMINATION_TIMEOUT);
+                futures::pin_mut!(timeout);
+                let termination_result =
+                    match futures::future::select(hosted_termination, timeout).await {
+                        futures::future::Either::Left((result, _)) => result,
+                        futures::future::Either::Right(_) => Err(anyhow!(
+                            "the Terminal Host did not respond within {TERMINAL_HOST_TERMINATION_TIMEOUT:?}"
+                        )),
+                    };
+                if let Err(error) = termination_result {
+                    let message = format!(
+                        "\r\n[Dez: could not confirm that this terminal ended: {error}. Its Host remains authoritative; wait for Workspaces to refresh before retrying.]\r\n"
+                    );
+                    this.update(cx, |this, cx| {
+                        this.terminal.update(cx, |terminal, cx| {
+                            terminal.write_output(message.as_bytes(), cx)
+                        });
+                    })?;
+                    log::warn!("could not confirm hosted terminal termination: {error:#}");
+                    return Ok(());
+                }
+                this.update(cx, |this, cx| {
+                    this.terminal
+                        .update(cx, |terminal, cx| terminal.confirm_hosted_termination(cx));
+                })?;
+            } else {
+                this.update(cx, |this, cx| {
+                    this.terminal
+                        .update(cx, |terminal, cx| terminal.terminate_process(cx));
+                })?;
+            }
+            Ok(())
+        })
+        .detach_and_log_err(cx);
     }
 
     fn clear(&mut self, _: &Clear, _: &mut Window, cx: &mut Context<Self>) {
@@ -958,6 +2800,10 @@ impl TerminalView {
     }
 
     pub fn should_show_cursor(&self, focused: bool, cx: &mut Context<Self>) -> bool {
+        if self.session_unavailable {
+            return false;
+        }
+
         // Hide cursor when in embedded mode and not focused (read-only output like Agent panel)
         if let TerminalMode::Embedded { .. } = &self.mode {
             if !focused {
@@ -993,14 +2839,6 @@ impl TerminalView {
 
     pub fn terminal(&self) -> &Entity<Terminal> {
         &self.terminal
-    }
-
-    pub fn workspace_handle(&self) -> WeakEntity<Workspace> {
-        self.workspace.clone()
-    }
-
-    pub fn is_agent_thread(&self) -> bool {
-        self.agent_thread
     }
 
     pub fn set_block_below_cursor(
@@ -1053,8 +2891,11 @@ impl TerminalView {
             }
             _ => {
                 if let Some(text) = clipboard.text() {
-                    self.terminal
-                        .update(cx, |terminal, _cx| terminal.paste(&text));
+                    self.terminal.update(cx, |terminal, terminal_cx| {
+                        if terminal.paste(&text) {
+                            terminal_cx.notify();
+                        }
+                    });
                 }
             }
         }
@@ -1079,33 +2920,45 @@ impl TerminalView {
         };
 
         if let Some(text) = clipboard.text() {
-            self.terminal
-                .update(cx, |terminal, _cx| terminal.paste(&text));
+            self.terminal.update(cx, |terminal, terminal_cx| {
+                if terminal.paste(&text) {
+                    terminal_cx.notify();
+                }
+            });
         }
     }
 
     /// Emits a raw Ctrl+V so TUI agents can read the OS clipboard directly
     /// and attach images using their native workflows.
     fn forward_ctrl_v(&self, cx: &mut Context<Self>) {
-        self.terminal.update(cx, |term, _| {
-            term.input(vec![0x16]);
+        self.terminal.update(cx, |term, terminal_cx| {
+            if term.input(vec![0x16]) {
+                terminal_cx.notify();
+            }
         });
     }
 
     pub fn add_paths_to_terminal(&self, paths: &[PathBuf], window: &mut Window, cx: &mut App) {
-        let shell_kind = self.terminal.read(cx).shell_kind();
-        let text = format_paths_for_terminal(paths, shell_kind);
+        let mut text = paths
+            .iter()
+            .filter_map(|path| Some(format!(" {}", shlex::try_quote(path.to_str()?).ok()?)))
+            .collect::<String>();
+        text.push(' ');
         window.focus(&self.focus_handle(cx), cx);
-        self.terminal.update(cx, |terminal, _| {
-            terminal.paste(&text);
+        self.terminal.update(cx, |terminal, terminal_cx| {
+            if terminal.paste(&text) {
+                terminal_cx.notify();
+            }
         });
     }
 
     fn send_text(&mut self, text: &SendText, _: &mut Window, cx: &mut Context<Self>) {
         self.clear_bell(cx);
         self.blink_manager.update(cx, BlinkManager::pause_blinking);
-        self.terminal.update(cx, |term, _| {
-            term.input(text.0.to_string().into_bytes());
+        self.terminal.update(cx, |term, terminal_cx| {
+            if term.input(text.0.to_string().into_bytes()) {
+                terminal_cx.notify();
+            }
         });
     }
 
@@ -1120,9 +2973,6 @@ impl TerminalView {
     fn dispatch_context(&self, cx: &App) -> KeyContext {
         let mut dispatch_context = KeyContext::new_with_defaults();
         dispatch_context.add("Terminal");
-        if self.agent_thread {
-            dispatch_context.add("AgentTerminalThread");
-        }
 
         if self.terminal.read(cx).vi_mode_enabled() {
             dispatch_context.add("vi_mode");
@@ -1225,15 +3075,10 @@ impl TerminalView {
             IconButton::new("rerun-icon", IconName::Rerun)
                 .icon_size(IconSize::Small)
                 .size(ButtonSize::Compact)
+                .aria_label("Rerun task")
                 .icon_color(Color::Default)
                 .shape(ui::IconButtonShape::Square)
-                .tooltip(move |_window, cx| {
-                    Tooltip::for_action(
-                        localization::text(cx, "terminal-rerun-task"),
-                        &RerunTask,
-                        cx,
-                    )
-                })
+                .tooltip(move |_window, cx| Tooltip::for_action("Rerun task", &RerunTask, cx))
                 .on_click(move |_, window, cx| {
                     window.dispatch_action(Box::new(terminal_rerun_override(&task_id)), cx);
                 }),
@@ -1241,8 +3086,8 @@ impl TerminalView {
     }
 }
 
-fn terminal_rerun_override(task: &TaskId) -> dez_actions::Rerun {
-    dez_actions::Rerun {
+fn terminal_rerun_override(task: &TaskId) -> zed_actions::Rerun {
+    zed_actions::Rerun {
         task_id: Some(task.0.clone()),
         allow_concurrent_runs: Some(true),
         use_new_terminal: Some(false),
@@ -1257,20 +3102,85 @@ fn subscribe_for_terminal_events(
     cx: &mut Context<TerminalView>,
 ) -> Vec<Subscription> {
     let terminal_subscription = cx.observe(terminal, |_, _, cx| cx.notify());
-    let mut previous_cwd = None;
+    let (mut previous_cwd, initial_session_id, is_hosted) = {
+        let terminal = terminal.read(cx);
+        (
+            terminal.working_directory(),
+            terminal.session_id().to_string(),
+            terminal.is_hosted(),
+        )
+    };
+    // TerminalView is constructed from inside a Workspace update. Seed scope
+    // and associate the Host on the next GPUI turn so we never try to lease
+    // that Workspace recursively while still preserving idle-terminal
+    // evidence before user interaction.
+    let initial_workspace = workspace.clone();
+    let initial_terminal = terminal.clone();
+    let initial_cwd = previous_cwd.clone();
+    cx.defer(move |cx| {
+        initial_workspace
+            .update(cx, |workspace, cx| {
+                workspace.set_terminal_working_directory_evidence(
+                    initial_session_id,
+                    initial_cwd,
+                    cx,
+                );
+            })
+            .ok();
+
+        let workspace_id = initial_workspace
+            .upgrade()
+            .and_then(|workspace| workspace.read(cx).database_id())
+            .map(i64::from);
+        if let Some(workspace_id) = workspace_id {
+            let session_id = initial_terminal.read(cx).session_id();
+            if let Some(host) = LocalTerminalHost::try_global(cx) {
+                host.update(cx, |host, cx| {
+                    host.associate_workspace(session_id, workspace_id, cx)
+                });
+            }
+            if is_hosted && let Some(connection) = TerminalHostConnection::try_global(cx) {
+                connection.associate_workspace(&initial_terminal, workspace_id, cx);
+            }
+        }
+        if is_hosted {
+            reconcile_host_terminal_evidence(&initial_terminal, &initial_workspace, cx);
+        }
+    });
+    let event_workspace = workspace.clone();
     let terminal_events_subscription = cx.subscribe_in(
         terminal,
         window,
         move |terminal_view, terminal, event, window, cx| {
             let current_cwd = terminal.read(cx).working_directory();
+            let terminal_session_id = terminal.read(cx).session_id().to_string();
             if current_cwd != previous_cwd {
-                previous_cwd = current_cwd;
+                previous_cwd = current_cwd.clone();
                 terminal_view.needs_serialize = true;
+                event_workspace
+                    .update(cx, |workspace, cx| {
+                        workspace.set_terminal_working_directory_evidence(
+                            terminal_session_id.clone(),
+                            current_cwd,
+                            cx,
+                        );
+                    })
+                    .ok();
             }
 
             match event {
                 Event::Wakeup => {
+                    event_workspace
+                        .update(cx, |workspace, cx| {
+                            workspace.set_terminal_evidence_lifecycle(
+                                &terminal_session_id,
+                                workspace::evidence::WorkspaceEvidenceLifecycle::Current,
+                                cx,
+                            );
+                        })
+                        .ok();
                     cx.notify();
+                    window.invalidate_character_coordinates();
                     cx.emit(Event::Wakeup);
                     cx.emit(ItemEvent::UpdateTab);
                     cx.emit(SearchEvent::MatchesInvalidated);
@@ -1282,7 +3192,6 @@ fn subscribe_for_terminal_events(
                         window.play_system_bell();
                     }
                     cx.emit(Event::Wakeup);
-                    cx.emit(ItemEvent::UpdateTab);
                 }
 
                 Event::BlinkChanged(blinking) => {
@@ -1337,7 +3246,7 @@ fn subscribe_for_terminal_events(
                             {
                                 terminal_view.hover = None;
                                 terminal_view.hover_tooltip_update = hover_path_like_target(
-                                    &workspace,
+                                    &event_workspace,
                                     hovered_word.clone(),
                                     path_like_target,
                                     cx,
@@ -1356,7 +3265,7 @@ fn subscribe_for_terminal_events(
                 Event::Open(maybe_navigation_target) => match maybe_navigation_target {
                     MaybeNavigationTarget::Url(url) => cx.open_url(url),
                     MaybeNavigationTarget::PathLike(path_like_target) => open_path_like_target(
-                        &workspace,
+                        &event_workspace,
                         terminal_view,
                         path_like_target,
                         window,
@@ -1364,8 +3273,25 @@ fn subscribe_for_terminal_events(
                     ),
                 },
                 Event::BreadcrumbsChanged => cx.emit(ItemEvent::UpdateBreadcrumbs),
-                Event::ProcessInfoChanged => {}
-                Event::ProcessExited { .. } => {}
+                Event::ProcessInfoChanged => {
+                    // Foreground-agent presentation lives inside the terminal
+                    // surface as well as its tab. Refresh both immediately
+                    // when shell -> agent or agent -> shell is observed.
+                    cx.notify();
+                    cx.emit(ItemEvent::UpdateTab);
+                }
+                Event::ProcessExited { .. } => {
+                    event_workspace
+                        .update(cx, |workspace, cx| {
+                            workspace.set_terminal_evidence_lifecycle(
+                                &terminal_session_id,
+                                workspace::evidence::WorkspaceEvidenceLifecycle::Stale,
+                                cx,
+                            );
+                        })
+                        .ok();
+                    cx.emit(ItemEvent::UpdateTab)
+                }
                 Event::CloseTerminal => cx.emit(ItemEvent::CloseItem),
                 Event::SelectionsChanged => {
                     window.invalidate_character_coordinates();
@@ -1374,7 +3300,69 @@ fn subscribe_for_terminal_events(
             }
         },
     );
+    let host_snapshot_subscription = is_hosted.then(|| {
+        TerminalHostSnapshotRevision::init(cx);
+        let terminal = terminal.clone();
+        let workspace = workspace.clone();
+        cx.observe_global_in::<TerminalHostSnapshotRevision>(window, move |_, _, cx| {
+            reconcile_host_terminal_evidence(&terminal, &workspace, cx);
+        })
+    });
     vec![terminal_subscription, terminal_events_subscription]
+        .into_iter()
+        .chain(host_snapshot_subscription)
+        .collect()
+}
+
+fn reconcile_host_terminal_evidence(
+    terminal: &Entity<Terminal>,
+    workspace: &WeakEntity<Workspace>,
+    cx: &mut App,
+) {
+    let session_id = terminal.read(cx).session_id();
+    let Some(snapshot) = TerminalHostSnapshotStore::try_global(cx).and_then(|store| {
+        store
+            .read(cx)
+            .snapshots()
+            .iter()
+            .find(|snapshot| snapshot.session_id == session_id)
+            .cloned()
+    }) else {
+        return;
+    };
+    let lifecycle = workspace_evidence_lifecycle_for_host_state(&snapshot.state);
+    workspace
+        .update(cx, |workspace, cx| {
+            if snapshot.working_directory.is_some() {
+                workspace.set_terminal_working_directory_evidence(
+                    session_id.to_string(),
+                    snapshot.working_directory,
+                    cx,
+                );
+            }
+            workspace.set_terminal_evidence_lifecycle(&session_id.to_string(), lifecycle, cx);
+        })
+        .ok();
+}
+
+fn workspace_evidence_lifecycle_for_host_state(
+    state: &TerminalSessionState,
+) -> workspace::evidence::WorkspaceEvidenceLifecycle {
+    match state {
+        TerminalSessionState::Starting
+        | TerminalSessionState::Attached
+        | TerminalSessionState::Detached => {
+            workspace::evidence::WorkspaceEvidenceLifecycle::Current
+        }
+        TerminalSessionState::Reconnecting
+        | TerminalSessionState::Missing
+        | TerminalSessionState::Incompatible { .. } => {
+            workspace::evidence::WorkspaceEvidenceLifecycle::Unresolved
+        }
+        TerminalSessionState::Exited { .. } => {
+            workspace::evidence::WorkspaceEvidenceLifecycle::Stale
+        }
+    }
 }
 
 fn regex_search_for_query(query: &SearchQuery) -> Option<Search> {
@@ -1409,14 +3397,15 @@ impl TerminalView {
     /// updates the cursor locally without sending data to the shell, so there's no
     /// shell output to automatically trigger a re-render.
     fn process_keystroke(&mut self, keystroke: &Keystroke, cx: &mut Context<Self>) -> bool {
-        let (handled, vi_mode_enabled) = self.terminal.update(cx, |term, cx| {
-            (
-                term.try_keystroke(keystroke, TerminalSettings::get_global(cx).option_as_meta),
-                term.vi_mode_enabled(),
-            )
+        let (handled, vi_mode_enabled, input_rejected) = self.terminal.update(cx, |term, cx| {
+            let (handled, input_rejected) = term.try_keystroke_with_feedback(
+                keystroke,
+                TerminalSettings::get_global(cx).option_as_meta,
+            );
+            (handled, term.vi_mode_enabled(), input_rejected)
         });
 
-        if handled && vi_mode_enabled {
+        if handled && (vi_mode_enabled || input_rejected) {
             cx.notify();
         }
 
@@ -1426,6 +3415,13 @@ impl TerminalView {
     fn key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         self.clear_bell(cx);
         self.pause_cursor_blinking(window, cx);
+
+        if event.prefer_character_input
+            && event.keystroke.key_char.is_some()
+            && !self.terminal.read(cx).vi_mode_enabled()
+        {
+            return;
+        }
 
         if self.process_keystroke(&event.keystroke, cx) {
             cx.stop_propagation();
@@ -1460,6 +3456,482 @@ impl TerminalView {
         });
         cx.notify();
     }
+
+    fn render_session_context_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if paths::APP_NAME == "Zed"
+            || !matches!(&self.mode, TerminalMode::Standalone)
+            || self.session_unavailable
+        {
+            return None;
+        }
+
+        let density = DesignSystemSettings::get_global(cx).density;
+        let terminal = self.terminal.read(cx);
+        let terminal_entity_id = self.terminal.entity_id();
+        let context_width = terminal.last_content().terminal_bounds.bounds.size.width;
+        let status = terminal_tab_status(
+            false,
+            terminal.process_exited(),
+            terminal.task().map(|task| &task.status),
+        );
+        let status_color = terminal_tab_status_color(status);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let activity_label =
+            terminal_context_activity_label(status, foreground_agent, foreground_multiplexer);
+        let activity_accessibility_label = activity_label.as_deref().unwrap_or(status).to_owned();
+        let activity_label_visible =
+            activity_label.is_some() && terminal_context_activity_label_visible(context_width);
+        let activity_color =
+            if foreground_agent.is_some() && terminal_context_uses_foreground_activity(status) {
+                Color::Accent
+            } else {
+                status_color
+            };
+        let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
+        let host_connection_verified = terminal_host_connection_verified(&terminal, cx);
+        let working_directory = terminal
+            .working_directory()
+            .map(|path| path.to_string_lossy().into_owned());
+        let process_id = terminal
+            .pid_getter()
+            .map(|pid_getter| pid_getter.fallback_pid().to_string());
+        let session_id = terminal.session_id().to_string();
+
+        let project = self.project.upgrade();
+        let workspace_context = terminal_workspace_context(project.as_ref(), cx);
+        let workspace_label = workspace_context
+            .workspace_label
+            .clone()
+            .unwrap_or_else(|| "Scratch Workspace".to_owned());
+        let repository_label = workspace_context
+            .branch_label
+            .as_ref()
+            .map(|branch| format!("{workspace_label} / {branch}"))
+            .unwrap_or_else(|| workspace_label.clone());
+        let changed_files = workspace_context.changed_files;
+        let changes_label = changed_files_label(changed_files);
+        let has_workspace_files = workspace_context.workspace_label.is_some();
+        if !terminal_context_strip_is_relevant(
+            activity_label.as_deref(),
+            has_workspace_files,
+            changed_files,
+        ) {
+            return None;
+        }
+        let action_label_visibility = terminal_context_action_label_visibility(
+            context_width,
+            has_workspace_files,
+            changed_files,
+        );
+
+        let terminal_task = terminal.task();
+        let external_session =
+            terminal_task.and_then(|task| external_session_task_metadata(&task.spawned_task.id.0));
+        let external_owner = external_session.map(|metadata| metadata.owner);
+        let external_attach_retry_task_id = terminal_task
+            .filter(|task| external_session_attach_failed(&task.spawned_task.id.0, &task.status))
+            .map(|task| task.spawned_task.id.clone());
+        let retry_attach_visible_label = terminal_external_attach_retry_label(
+            context_width,
+            external_attach_retry_task_id.is_some(),
+        );
+        let new_shell_visible_label = terminal_external_attach_new_shell_label(
+            context_width,
+            external_attach_retry_task_id.is_some(),
+        );
+        let external_owner_label = external_owner.unwrap_or("external session");
+        let retry_attach_accessibility_label = terminal_external_attach_retry_accessibility_label(
+            external_owner_label,
+            &workspace_label,
+        );
+        let new_shell_accessibility_label = terminal_external_attach_new_shell_accessibility_label(
+            external_owner_label,
+            &workspace_label,
+        );
+        let external_input_owner_visible_label = terminal_external_input_owner_action_label(
+            context_width,
+            external_session,
+            terminal_task.is_some_and(|task| task.status == TaskStatus::Running),
+        );
+        let external_input_owner_accessibility_label =
+            terminal_external_input_owner_action_accessibility_label(&workspace_label);
+
+        let details_status = format!("Status · {activity_accessibility_label}");
+        let details_process = terminal_details_process_summary(
+            foreground_agent.map(|agent| agent.display_name),
+            foreground_multiplexer.map(|multiplexer| multiplexer.display_name),
+            foreground_command.as_deref(),
+            process_id.as_deref(),
+        );
+        let details_git =
+            terminal_details_git_summary(has_workspace_files, &repository_label, &changes_label);
+        let details_working_directory = working_directory;
+        let details_session_id = session_id;
+        let details_visible_label = terminal_details_disclosure_label(
+            self.show_terminal_details,
+            action_label_visibility.details,
+        );
+        let details_accessibility_label =
+            terminal_details_disclosure_accessibility_label(self.show_terminal_details);
+        let files_visible_label = if action_label_visibility.workspace {
+            "Files"
+        } else {
+            ""
+        };
+        let open_workspace_visible_label = if action_label_visibility.workspace {
+            "Open Workspace"
+        } else {
+            ""
+        };
+        let review_visible_label = if action_label_visibility.review {
+            "Review Changes"
+        } else {
+            ""
+        };
+        let review_accessibility_label = format!(
+            "Review {changed_files} changed {}",
+            if changed_files == 1 { "file" } else { "files" }
+        );
+        let ownership_note = terminal_details_ownership_note_with_external_owner(
+            has_persistent_owner,
+            host_connection_verified,
+            external_session,
+        );
+        let details_toggle = Button::new(
+            ("terminal-session-details-trigger", terminal_entity_id),
+            details_visible_label,
+        )
+        .size(ButtonSize::Compact)
+        .style(ButtonStyle::Subtle)
+        .start_icon(Icon::new(IconName::Info).size(IconSize::XSmall))
+        .tab_index(0isize)
+        .aria_label(details_accessibility_label)
+        .aria_expanded(self.show_terminal_details)
+        .tooltip(Tooltip::text(details_accessibility_label))
+        .on_click(cx.listener(|this, _, _, cx| {
+            this.show_terminal_details = !this.show_terminal_details;
+            cx.notify();
+        }));
+
+        let details = self.show_terminal_details.then(|| {
+            let details_path = details_working_directory
+                .as_deref()
+                .map(|working_directory| format!("Path · {working_directory}"))
+                .unwrap_or_else(|| "Path · Unavailable".to_owned());
+            let details_accessibility_label = format!(
+                "Terminal Details. {details_status}. {details_process}. {details_path}. {details_git}. {ownership_note}"
+            );
+            let copy_working_directory = details_working_directory.clone();
+            let copy_session_id = details_session_id.clone();
+
+            v_flex()
+                .id(("terminal-session-details", terminal_entity_id))
+                .role(gpui::Role::Region)
+                .aria_label(details_accessibility_label)
+                .w_full()
+                .flex_none()
+                .gap_1()
+                .px(terminal_context_strip_padding_x(density))
+                .py_1p5()
+                .border_b_1()
+                .border_color(terminal_context_strip_border(cx))
+                .bg(terminal_context_strip_background(cx))
+                .child(
+                    h_flex()
+                        .w_full()
+                        .min_w_0()
+                        .flex_wrap()
+                        .gap_x_3()
+                        .gap_y_1()
+                        .child(
+                            Label::new("Terminal Details")
+                                .size(LabelSize::Small)
+                                .color(Color::Default),
+                        )
+                        .child(
+                            Label::new(details_status)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        ),
+                )
+                .child(
+                    h_flex()
+                        .w_full()
+                        .min_w_0()
+                        .flex_wrap()
+                        .gap_x_3()
+                        .gap_y_1()
+                        .child(
+                            Label::new(details_process)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new(details_git)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        ),
+                )
+                .child(
+                    Label::new(details_path)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    Label::new(ownership_note)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    h_flex()
+                        .flex_wrap()
+                        .gap_1()
+                        .when_some(copy_working_directory, |this, working_directory| {
+                            this.child(
+                                Button::new(
+                                    ("copy-terminal-working-directory", terminal_entity_id),
+                                    "Copy Path",
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .tab_index(0isize)
+                                .aria_label("Copy terminal working directory")
+                                .on_click(move |_, _, cx| {
+                                    cx.write_to_clipboard(ClipboardItem::new_string(
+                                        working_directory.clone(),
+                                    ));
+                                }),
+                            )
+                        })
+                        .child(
+                            Button::new(
+                                ("copy-terminal-session-id", terminal_entity_id),
+                                "Copy Session ID",
+                            )
+                            .size(ButtonSize::Compact)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0isize)
+                            .on_click(move |_, _, cx| {
+                                cx.write_to_clipboard(ClipboardItem::new_string(
+                                    copy_session_id.clone(),
+                                ));
+                            }),
+                        ),
+                )
+        });
+
+        Some(
+            v_flex()
+                .w_full()
+                .flex_none()
+                .child(
+                    h_flex()
+                .id(("terminal-session-context", terminal_entity_id))
+                .role(gpui::Role::Toolbar)
+                .aria_label(format!(
+                    "Terminal controls. Status: {activity_accessibility_label}. {repository_label}. {changes_label}."
+                ))
+                .w_full()
+                .h(terminal_context_strip_height(density))
+                .flex_none()
+                .gap(terminal_context_strip_gap(density))
+                .px(terminal_context_strip_padding_x(density))
+                .border_b_1()
+                .border_color(terminal_context_strip_border(cx))
+                .bg(terminal_context_strip_background(cx))
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .flex_1()
+                        .overflow_hidden()
+                        .gap_1p5()
+                        .when(activity_label_visible, |this| {
+                            this.child(
+                                Label::new(activity_label.unwrap_or_default())
+                                    .size(LabelSize::XSmall)
+                                    .color(activity_color),
+                            )
+                            .child(div().h_4().border_l_1().border_color(
+                                cx.theme().colors().border_variant,
+                            ))
+                        })
+                        .child(
+                            Label::new(repository_label)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted)
+                                .truncate(),
+                        )
+                        .when(changed_files > 0, |this| {
+                            this.child(
+                                Label::new(changes_label)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Accent),
+                            )
+                        }),
+                )
+                .child(
+                    h_flex()
+                        .flex_none()
+                        .gap(terminal_context_strip_gap(density))
+                        .when_some(
+                            external_attach_retry_task_id.zip(retry_attach_visible_label),
+                            |this, (retry_task_id, visible_label)| {
+                                let accessibility_label =
+                                    retry_attach_accessibility_label.clone();
+                                let tooltip_label = accessibility_label.clone();
+                                this.child(
+                                    Button::new(
+                                        ("terminal-context-retry-attach", terminal_entity_id),
+                                        visible_label,
+                                    )
+                                    .size(ButtonSize::Compact)
+                                    .style(ButtonStyle::Filled)
+                                    .start_icon(Icon::new(IconName::Rerun).size(IconSize::XSmall))
+                                    .tab_index(0isize)
+                                    .aria_label(accessibility_label)
+                                    .tooltip(move |_, cx| {
+                                        Tooltip::for_action(tooltip_label.clone(), &RerunTask, cx)
+                                    })
+                                    .on_click(move |_, window, cx| {
+                                        window.dispatch_action(
+                                            Box::new(terminal_rerun_override(&retry_task_id)),
+                                            cx,
+                                        );
+                                    }),
+                                )
+                            },
+                        )
+                        .when_some(new_shell_visible_label, |this, visible_label| {
+                            let accessibility_label = new_shell_accessibility_label.clone();
+                            let tooltip_label = accessibility_label.clone();
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-new-shell", terminal_entity_id),
+                                    visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(Icon::new(IconName::Terminal).size(IconSize::XSmall))
+                                .tab_index(0isize)
+                                .aria_label(accessibility_label)
+                                .tooltip(move |_, cx| {
+                                    Tooltip::for_action(
+                                        tooltip_label.clone(),
+                                        &OpenShellTerminal,
+                                        cx,
+                                    )
+                                })
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(OpenShellTerminal.boxed_clone(), cx);
+                                }),
+                            )
+                        })
+                        .when_some(
+                            external_input_owner_visible_label,
+                            |this, visible_label| {
+                                let accessibility_label =
+                                    external_input_owner_accessibility_label.clone();
+                                let tooltip_label = accessibility_label.clone();
+                                this.child(
+                                    Button::new(
+                                        ("terminal-context-herdr-input-owner", terminal_entity_id),
+                                        visible_label,
+                                    )
+                                    .size(ButtonSize::Compact)
+                                    .style(ButtonStyle::Subtle)
+                                    .start_icon(
+                                        Icon::new(IconName::Inception).size(IconSize::XSmall),
+                                    )
+                                    .tab_index(0isize)
+                                    .aria_label(accessibility_label)
+                                    .tooltip(Tooltip::text(tooltip_label))
+                                    .on_click(|_, window, cx| {
+                                        window.dispatch_action(
+                                            BrowseRunningSessions.boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                                )
+                            },
+                        )
+                        .when(has_workspace_files, |this| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-files", terminal_entity_id),
+                                    files_visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(
+                                    Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
+                                )
+                                .tab_index(0isize)
+                                .aria_label("Open Files for this Workspace")
+                                .tooltip(Tooltip::text("Open Files for this Workspace"))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(RevealFiles.boxed_clone(), cx);
+                                }),
+                            )
+                        })
+                        .when(!has_workspace_files, |this| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-open-workspace", terminal_entity_id),
+                                    open_workspace_visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(
+                                    Icon::new(IconName::FolderOpen).size(IconSize::XSmall),
+                                )
+                                .tab_index(0isize)
+                                .aria_label(
+                                    "Open a Workspace in this window and keep this terminal",
+                                )
+                                .tooltip(Tooltip::text(
+                                    "Open a Workspace in this window and keep this terminal",
+                                ))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(
+                                        OpenWorkspace {
+                                            create_new_window: Some(false),
+                                        }
+                                        .boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                            )
+                        })
+                        .when(changed_files > 0, |this| {
+                            this.child(
+                                Button::new(
+                                    ("terminal-context-review", terminal_entity_id),
+                                    review_visible_label,
+                                )
+                                .size(ButtonSize::Compact)
+                                .style(ButtonStyle::Subtle)
+                                .start_icon(Icon::new(IconName::Diff).size(IconSize::XSmall))
+                                .tab_index(0isize)
+                                .aria_label(review_accessibility_label.clone())
+                                .tooltip(Tooltip::text(review_accessibility_label.clone()))
+                                .on_click(|_, window, cx| {
+                                    window.dispatch_action(ReviewGitChanges.boxed_clone(), cx);
+                                }),
+                            )
+                        })
+                        .child(details_toggle),
+                )
+                )
+                .children(details)
+                .into_any_element(),
+        )
+    }
 }
 
 impl Render for TerminalView {
@@ -1482,9 +3954,146 @@ impl Render for TerminalView {
         let terminal_view_handle = cx.entity();
 
         let focused = self.focus_handle.is_focused(window);
+        let accessibility_title = self.tab_content_text(1, cx);
+        let accessibility_status = {
+            let terminal = self.terminal.read(cx);
+            terminal_tab_status(
+                self.session_unavailable,
+                terminal.process_exited(),
+                terminal.task().map(|task| &task.status),
+            )
+        };
+        let unavailable_description =
+            terminal_unavailable_description(self.session_unavailable_reason.as_deref());
+        let unavailable_new_shell_label = terminal_unavailable_new_shell_label(paths::APP_NAME);
+        let unavailable_new_shell_accessibility_label =
+            format!("{unavailable_new_shell_label} in Main Work Area");
+        let unavailable_new_shell_action: Box<dyn gpui::Action> = if paths::APP_NAME == "Zed" {
+            NewCenterTerminal::default().boxed_clone()
+        } else {
+            OpenShellTerminal.boxed_clone()
+        };
+        let unavailable_new_shell_tooltip_action = unavailable_new_shell_action.boxed_clone();
+        let unavailable_new_shell_tooltip_label = unavailable_new_shell_accessibility_label.clone();
+        let session_context_strip = self.render_session_context_strip(cx);
+        let terminal_container_background = if terminal_container_reuses_terminal_material(
+            paths::APP_NAME,
+            ui::theme_is_transparent(cx),
+        ) {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().editor_background
+        };
+        let terminal_surface = if self.session_unavailable {
+            let density = DesignSystemSettings::get_global(cx).density;
+            let recovery_padding_x = terminal_recovery_padding_x(density);
+            div()
+                .id("terminal-unavailable-state")
+                .role(gpui::Role::Alert)
+                .aria_label("Terminal unavailable")
+                .size_full()
+                .min_h_0()
+                .overflow_y_scroll()
+                .bg(cx.theme().colors().terminal_background)
+                .px(recovery_padding_x)
+                .pt_10()
+                .pb_8()
+                .child(
+                    v_flex()
+                        .w_full()
+                        .max_w(px(600.))
+                        .gap_5()
+                        .child(
+                            v_flex()
+                                .gap_2()
+                                .child(
+                                    Label::new("TERMINAL")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted),
+                                )
+                                .child(
+                                    h_flex()
+                                        .id("terminal-unavailable-heading")
+                                        .role(gpui::Role::Heading)
+                                        .aria_level(1)
+                                        .aria_label("Terminal unavailable")
+                                        .gap_2()
+                                        .child(
+                                            Icon::new(IconName::Warning)
+                                                .size(IconSize::Small)
+                                                .color(Color::Warning),
+                                        )
+                                        .child(Headline::new("Terminal unavailable")),
+                                )
+                                .child(
+                                    Label::new(unavailable_description)
+                                        .size(LabelSize::Small)
+                                        .color(Color::Muted),
+                                ),
+                        )
+                        .child(
+                            h_flex().w_full().flex_wrap().gap_2().child(
+                                Button::new(
+                                    "new-terminal-from-unavailable",
+                                    unavailable_new_shell_label,
+                                )
+                                .style(ButtonStyle::Filled)
+                                .start_icon(Icon::new(IconName::Terminal))
+                                .tab_index(0isize)
+                                .aria_label(unavailable_new_shell_accessibility_label)
+                                .tooltip(move |_, cx| {
+                                    Tooltip::for_action(
+                                        unavailable_new_shell_tooltip_label.clone(),
+                                        &*unavailable_new_shell_tooltip_action,
+                                        cx,
+                                    )
+                                })
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(
+                                        unavailable_new_shell_action.boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                            ),
+                        ),
+                )
+                .into_any_element()
+        } else {
+            // This wrapper keeps TerminalElement from stealing events from the context menu.
+            div()
+                .id("terminal-view-container")
+                .size_full()
+                .bg(terminal_container_background)
+                .child(TerminalElement::new(
+                    terminal_handle,
+                    terminal_view_handle,
+                    self.workspace.clone(),
+                    self.focus_handle.clone(),
+                    focused,
+                    self.should_show_cursor(focused, cx),
+                    self.block_below_cursor.clone(),
+                    self.mode.clone(),
+                ))
+                .when(self.content_mode(window, cx).is_scrollable(), |div| {
+                    div.custom_scrollbars(
+                        Scrollbars::for_settings::<TerminalScrollbarSettingsWrapper>()
+                            .show_along(ScrollAxes::Vertical)
+                            .tracked_scroll_handle(&self.scroll_handle),
+                        window,
+                        cx,
+                    )
+                })
+                .into_any_element()
+        };
 
         div()
             .id("terminal-view")
+            .role(gpui::Role::Group)
+            .aria_label(terminal_surface_accessibility_label(
+                paths::APP_NAME,
+                accessibility_title.as_ref(),
+                accessibility_status,
+            ))
             .size_full()
             .relative()
             .track_focus(&self.focus_handle(cx))
@@ -1507,6 +4116,7 @@ impl Render for TerminalView {
             .on_action(cx.listener(TerminalView::show_character_palette))
             .on_action(cx.listener(TerminalView::select_all))
             .on_action(cx.listener(TerminalView::rerun_task))
+            .on_action(cx.listener(TerminalView::terminate_session))
             .on_action(cx.listener(TerminalView::rename_terminal))
             .on_key_down(cx.listener(Self::key_down))
             .on_mouse_down(
@@ -1533,34 +4143,11 @@ impl Render for TerminalView {
                 }),
             )
             .child(
-                // TODO: Oddly this wrapper div is needed for TerminalElement to not steal events from the context menu
-                div()
-                    .id("terminal-view-container")
+                v_flex()
                     .size_full()
-                    .bg(cx.theme().colors().editor_background)
-                    .child(TerminalElement::new(
-                        terminal_handle,
-                        terminal_view_handle,
-                        self.focus_handle.clone(),
-                        focused,
-                        self.should_show_cursor(focused, cx),
-                        self.block_below_cursor.clone(),
-                        self.mode.clone(),
-                    ))
-                    .when(self.content_mode(window, cx).is_scrollable(), |div| {
-                        let colors = cx.theme().colors();
-                        div.custom_scrollbars(
-                            Scrollbars::for_settings::<TerminalScrollbarSettingsWrapper>()
-                                .show_along(ScrollAxes::Vertical)
-                                .with_stable_track_along(
-                                    ScrollAxes::Vertical,
-                                    colors.editor_background,
-                                )
-                                .tracked_scroll_handle(&self.scroll_handle),
-                            window,
-                            cx,
-                        )
-                    }),
+                    .min_h_0()
+                    .children(session_context_strip)
+                    .child(div().flex_1().min_h_0().child(terminal_surface)),
             )
             .children(self.context_menu.as_ref().map(|(menu, position, _)| {
                 deferred(
@@ -1577,144 +4164,276 @@ impl Render for TerminalView {
 impl Item for TerminalView {
     type Event = ItemEvent;
 
-    fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {
-        Some(TabTooltipContent::Custom(Box::new(Tooltip::element({
-            let terminal = self.terminal().read(cx);
-            let title = terminal.title(false);
-            let pid = terminal.pid_getter()?.fallback_pid();
+    fn tab_icon(&self, _window: &Window, cx: &App) -> Option<Icon> {
+        let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let (icon, color) = terminal_tab_icon_presentation(
+            terminal.task().map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
 
-            let process_id = localization::tr!(cx, "terminal-process-id", pid = pid.to_string());
+        Some(Icon::new(icon).size(IconSize::Small).color(color))
+    }
+
+    fn tab_icon_element(&self, _window: &Window, cx: &App) -> Option<AnyElement> {
+        let terminal_entity_id = self.terminal().entity_id();
+        let terminal = self.terminal().read(cx);
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref());
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        );
+        let terminal_task = terminal.task();
+        let (icon, icon_color) = terminal_tab_icon_presentation(
+            terminal_task.map(|task| &task.status),
+            foreground_agent,
+            foreground_multiplexer,
+        );
+        let rerun_button = terminal_task.and_then(TerminalView::rerun_button);
+        let foreground_process_label = foreground_agent
+            .or(foreground_multiplexer)
+            .map(|process| format!("{} running in terminal", process.display_name));
+
+        Some(
+            h_flex()
+                .id(("terminal-tab-icon", terminal_entity_id))
+                .relative()
+                .flex_none()
+                .size(IconSize::Small.rems())
+                .items_center()
+                .justify_center()
+                .group("term-tab-icon")
+                .when_some(foreground_process_label, |this, label| {
+                    this.role(gpui::Role::Label).aria_label(label)
+                })
+                .child(
+                    div()
+                        .when(rerun_button.is_some(), |this| {
+                            this.group_hover("", |style| style.invisible())
+                        })
+                        .child(Icon::new(icon).size(IconSize::Small).color(icon_color)),
+                )
+                .when_some(rerun_button, |this, rerun_button| {
+                    this.child(div().absolute().visible_on_hover("").child(rerun_button))
+                })
+                .into_any(),
+        )
+    }
+
+    fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
+        let title = terminal_surface_tab_label(
+            paths::APP_NAME,
+            self.tab_content_text(params.detail.unwrap_or_default(), cx)
+                .as_ref(),
+        );
+        let overlay = self.tab_content_overlay(window, cx);
+        let terminal_entity_id = self.terminal().entity_id();
+        let terminal = self.terminal().read(cx);
+        let status = terminal_tab_status(
+            self.session_unavailable,
+            terminal.process_exited(),
+            terminal.task().map(|task| &task.status),
+        );
+        let status_color = terminal_tab_status_color(status);
+
+        let content = h_flex()
+            .min_w_0()
+            .gap_1()
+            .child(
+                Label::new(title)
+                    .color(params.text_color())
+                    .truncate()
+                    .when(overlay.is_some(), |label| label.alpha(0.)),
+            )
+            .when(
+                overlay.is_none() && terminal_tab_status_indicator_visible(status, params.selected),
+                |this| {
+                    this.child(
+                        h_flex()
+                            .id(("terminal-tab-status", terminal_entity_id))
+                            .flex_none()
+                            .gap_1()
+                            .role(gpui::Role::Label)
+                            .aria_label(format!("Status: {status}"))
+                            .child(div().size(px(5.)).rounded_full().bg(status_color.color(cx)))
+                            .when(terminal_tab_status_label_visible(status), |this| {
+                                this.child(
+                                    Label::new(status)
+                                        .size(LabelSize::XSmall)
+                                        .color(status_color),
+                                )
+                            }),
+                    )
+                },
+            );
+
+        if let Some(overlay) = overlay {
+            h_flex()
+                .relative()
+                .min_w_0()
+                .child(content)
+                .child(div().absolute().top_0().left_0().size_full().child(overlay))
+                .into_any_element()
+        } else {
+            content.into_any_element()
+        }
+    }
+
+    fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {
+        let title = self.tab_content_text(1, cx);
+        let session_unavailable = self.session_unavailable;
+        let terminal = self.terminal().read(cx);
+        let session_id = terminal.session_id();
+        let is_hosted = terminal.is_hosted();
+        let has_persistent_owner = terminal_has_persistent_owner(&terminal, cx);
+        let status = terminal_tab_status(
+            session_unavailable,
+            terminal.process_exited(),
+            terminal.task().map(|task| &task.status),
+        );
+        let foreground_command = terminal.foreground_process_command_name();
+        let foreground_agent =
+            terminal_foreground_agent_presentation(paths::APP_NAME, foreground_command.as_deref())
+                .map(|agent| agent.display_name);
+        let foreground_multiplexer = terminal_foreground_multiplexer_presentation(
+            paths::APP_NAME,
+            foreground_command.as_deref(),
+        )
+        .map(|multiplexer| multiplexer.display_name);
+        let ownership =
+            terminal_ownership_label(paths::APP_NAME, has_persistent_owner, session_unavailable);
+        let working_directory = terminal
+            .working_directory()
+            .map(|path| path.to_string_lossy().into_owned())
+            .map(|path| util::truncate_and_trailoff(&path, 64));
+        let pid = terminal
+            .pid_getter()
+            .map(|pid_getter| pid_getter.fallback_pid().to_string());
+        let session_identity = (is_hosted || session_unavailable).then(|| {
+            let session_id = session_id.to_string();
+            let short_id = session_id.chars().take(8).collect::<String>();
+            if short_id.len() < session_id.len() {
+                format!("{short_id}…")
+            } else {
+                short_id
+            }
+        });
+
+        Some(TabTooltipContent::Custom(Box::new(Tooltip::element({
             move |_, _| {
                 v_flex()
-                    .gap_1()
+                    .min_w(px(220.))
+                    .max_w(px(420.))
+                    .gap_1p5()
                     .child(Label::new(title.clone()))
                     .child(h_flex().flex_grow_1().child(Divider::horizontal()))
                     .child(
-                        Label::new(process_id.clone())
+                        Label::new(format!("{status} · {ownership}"))
                             .color(Color::Muted)
                             .size(LabelSize::Small),
                     )
+                    .when_some(foreground_agent, |this, foreground_agent| {
+                        this.child(
+                            Label::new(format!(
+                                "Foreground agent: {foreground_agent} (observed process)"
+                            ))
+                            .color(Color::Accent)
+                            .size(LabelSize::Small),
+                        )
+                    })
+                    .when_some(
+                        foreground_multiplexer,
+                        |this, foreground_multiplexer| {
+                            this.child(
+                                Label::new(format!(
+                                    "Foreground multiplexer: {foreground_multiplexer} (observed process)"
+                                ))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                            )
+                        },
+                    )
+                    .when_some(working_directory.clone(), |this, working_directory| {
+                        this.child(
+                            Label::new(format!("Working directory: {working_directory}"))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                        )
+                    })
+                    .when_some(pid.clone(), |this, pid| {
+                        this.child(
+                            Label::new(format!("Process ID: {pid}"))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                        )
+                    })
+                    .when_some(session_identity.clone(), |this, session_identity| {
+                        this.child(
+                            Label::new(format!("Session ID: {session_identity}"))
+                                .color(Color::Muted)
+                                .size(LabelSize::Small),
+                        )
+                    })
                     .into_any_element()
             }
         }))))
     }
 
-    fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
-        let terminal = self.terminal().read(cx);
+    fn tab_content_overlay(&self, _window: &Window, _cx: &App) -> Option<AnyElement> {
+        let editor = self.rename_editor.clone()?;
+        let self_handle = self.self_handle.clone();
+        let self_handle_cancel = self.self_handle.clone();
+
+        Some(
+            div()
+                .size_full()
+                .child(editor)
+                .on_action(move |_: &menu::Confirm, window, cx| {
+                    self_handle
+                        .update(cx, |this, cx| this.finish_renaming(true, window, cx))
+                        .ok();
+                })
+                .on_action(move |_: &menu::Cancel, window, cx| {
+                    self_handle_cancel
+                        .update(cx, |this, cx| this.finish_renaming(false, window, cx))
+                        .ok();
+                })
+                .into_any(),
+        )
+    }
+
+    fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
         let title = self
             .custom_title
             .as_ref()
             .filter(|title| !title.trim().is_empty())
             .cloned()
-            .unwrap_or_else(|| terminal.title(true));
+            .unwrap_or_else(|| {
+                let terminal = self.terminal().read(cx);
+                terminal.title(detail == 0)
+            });
 
-        let (icon, icon_color, rerun_button) = match self.tab_icon_override {
-            Some(icon) => (
-                icon,
-                ui::brand_icon_color(icon).unwrap_or(Color::Default),
-                None,
-            ),
-            None => match terminal.task() {
-                Some(terminal_task) => match &terminal_task.status {
-                    TaskStatus::Running => (
-                        IconName::PlayFilled,
-                        Color::Disabled,
-                        TerminalView::rerun_button(terminal_task),
-                    ),
-                    TaskStatus::Unknown => (
-                        IconName::Warning,
-                        Color::Warning,
-                        TerminalView::rerun_button(terminal_task),
-                    ),
-                    TaskStatus::Completed { success } => {
-                        let rerun_button = TerminalView::rerun_button(terminal_task);
-
-                        if *success {
-                            (IconName::Check, Color::Success, rerun_button)
-                        } else {
-                            (IconName::XCircle, Color::Error, rerun_button)
-                        }
-                    }
-                },
-                None => (IconName::Terminal, Color::Muted, None),
-            },
-        };
-
-        let self_handle = self.self_handle.clone();
-        h_flex()
-            .gap_1()
-            .group("term-tab-icon")
-            .when(!params.selected, |this| {
-                this.track_focus(&self.focus_handle)
-            })
-            .on_action(move |action: &RenameTerminal, window, cx| {
-                self_handle
-                    .update(cx, |this, cx| this.rename_terminal(action, window, cx))
-                    .ok();
-            })
-            .child(
-                h_flex()
-                    .group("term-tab-icon")
-                    .child(
-                        div()
-                            .when(rerun_button.is_some(), |this| {
-                                this.hover(|style| style.invisible().w_0())
-                            })
-                            .child(Icon::new(icon).color(icon_color)),
-                    )
-                    .when_some(rerun_button, |this, rerun_button| {
-                        this.child(
-                            div()
-                                .absolute()
-                                .visible_on_hover("term-tab-icon")
-                                .child(rerun_button),
-                        )
-                    }),
-            )
-            .child(
-                div()
-                    .relative()
-                    .child(
-                        Label::new(title)
-                            .color(params.text_color())
-                            .when(self.is_renaming(), |this| this.alpha(0.)),
-                    )
-                    .when_some(self.rename_editor.clone(), |this, editor| {
-                        let self_handle = self.self_handle.clone();
-                        let self_handle_cancel = self.self_handle.clone();
-                        this.child(
-                            div()
-                                .absolute()
-                                .top_0()
-                                .left_0()
-                                .size_full()
-                                .child(editor)
-                                .on_action(move |_: &menu::Confirm, window, cx| {
-                                    self_handle
-                                        .update(cx, |this, cx| {
-                                            this.finish_renaming(true, window, cx)
-                                        })
-                                        .ok();
-                                })
-                                .on_action(move |_: &menu::Cancel, window, cx| {
-                                    self_handle_cancel
-                                        .update(cx, |this, cx| {
-                                            this.finish_renaming(false, window, cx)
-                                        })
-                                        .ok();
-                                }),
-                        )
-                    }),
-            )
-            .into_any()
+        match title.trim() {
+            "" => "Terminal".into(),
+            title => title.to_string().into(),
+        }
     }
 
-    fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString {
-        if let Some(custom_title) = self.custom_title.as_ref().filter(|l| !l.trim().is_empty()) {
-            return custom_title.clone().into();
-        }
-        let terminal = self.terminal().read(cx);
-        terminal.title(detail == 0).into()
+    fn force_show_tab_bar(&self) -> bool {
+        true
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
     }
 
     fn handle_drop(
@@ -1760,72 +4479,7 @@ impl Item for TerminalView {
             };
 
             if item.downcast::<TerminalView>().is_some() {
-                let Some(split_direction) = active_pane.drag_split_direction() else {
-                    return false;
-                };
-
-                let Some(terminal_panel) = workspace.read(cx).panel::<TerminalPanel>(cx) else {
-                    return false;
-                };
-
-                if !terminal_panel.read(cx).center.panes().contains(&&this_pane) {
-                    return false;
-                }
-
-                let source = tab.pane.clone();
-                let item_id_to_move = item.item_id();
-                let is_zoomed = {
-                    let terminal_panel = terminal_panel.read(cx);
-                    if terminal_panel.active_pane == this_pane {
-                        active_pane.is_zoomed()
-                    } else {
-                        terminal_panel.active_pane.read(cx).is_zoomed()
-                    }
-                };
-
-                let workspace = workspace.downgrade();
-                let terminal_panel = terminal_panel.downgrade();
-                // Defer the split operation to avoid re-entrancy panic.
-                // The pane may be the one currently being updated, so we cannot
-                // call mark_positions (via split) synchronously.
-                window
-                    .spawn(cx, async move |cx| {
-                        cx.update(|window, cx| {
-                            let Ok(new_pane) = terminal_panel.update(cx, |terminal_panel, cx| {
-                                let new_pane = terminal_panel::new_terminal_pane(
-                                    workspace, project, is_zoomed, window, cx,
-                                );
-                                terminal_panel.apply_tab_bar_buttons(&new_pane, cx);
-                                terminal_panel.center.split(
-                                    &this_pane,
-                                    &new_pane,
-                                    split_direction,
-                                    cx,
-                                );
-                                anyhow::Ok(new_pane)
-                            }) else {
-                                return;
-                            };
-
-                            let Some(new_pane) = new_pane.log_err() else {
-                                return;
-                            };
-
-                            workspace::move_item(
-                                &source,
-                                &new_pane,
-                                item_id_to_move,
-                                new_pane.read(cx).active_item_index(),
-                                true,
-                                window,
-                                cx,
-                            );
-                        })
-                        .ok();
-                    })
-                    .detach();
-
-                return true;
+                return false;
             } else {
                 if let Some(project_path) = item.project_path(cx)
                     && let Some(path) = project.read(cx).absolute_path(&project_path, cx)
@@ -1872,7 +4526,7 @@ impl Item for TerminalView {
     ) -> Vec<(SharedString, Box<dyn gpui::Action>)> {
         let terminal = self.terminal.read(cx);
         if terminal.task().is_none() {
-            vec![("Rename".into(), Box::new(RenameTerminal))]
+            vec![("Rename Terminal…".into(), Box::new(RenameTerminal))]
         } else {
             Vec::new()
         }
@@ -1919,11 +4573,6 @@ impl Item for TerminalView {
     }
 
     fn is_dirty(&self, cx: &App) -> bool {
-        // Agent sessions run as long-lived tasks; the thread list already shows
-        // their live status, so don't flag the tab as dirty for them.
-        if self.tab_icon_override.is_some() {
-            return false;
-        }
         match self.terminal.read(cx).task() {
             Some(task) => task.status == TaskStatus::Running,
             None => self.has_bell(),
@@ -1967,15 +4616,9 @@ impl Item for TerminalView {
     fn added_to_workspace(
         &mut self,
         workspace: &mut Workspace,
-        window: &mut Window,
+        _: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        // Runs on every add, not only a move (the initial construction also
-        // triggers this, redundantly but harmlessly re-subscribing to the
-        // same workspace it was just built with) -- `reparent` no-ops
-        // unless the owning workspace actually changed.
-        self.reparent(workspace, window, cx);
-
         if self.terminal().read(cx).task().is_none() {
             if let Some((new_id, old_id)) = workspace.database_id().zip(self.workspace_id) {
                 log::debug!(
@@ -2017,7 +4660,6 @@ impl SerializableItem for TerminalView {
         _workspace: &mut Workspace,
         item_id: workspace::ItemId,
         _closing: bool,
-        _: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Task<anyhow::Result<()>>> {
         let terminal = self.terminal().read(cx);
@@ -2025,14 +4667,31 @@ impl SerializableItem for TerminalView {
             return None;
         }
 
-        if !self.needs_serialize {
+        if !self.needs_serialize && !self.session_ref_needs_serialize {
             return None;
         }
 
         let workspace_id = self.workspace_id?;
         let cwd = terminal.working_directory();
         let custom_title = self.custom_title.clone();
+        let session_ref = terminal::session_host::LocalTerminalHost::try_global(cx)
+            .and_then(|host| {
+                host.read(cx)
+                    .session_ref_if_registered(terminal.session_id())
+            })
+            .or_else(|| {
+                if !terminal.is_hosted() {
+                    return None;
+                }
+                let connection =
+                    terminal::session_host::transport::TerminalHostConnection::try_global(cx)?;
+                Some(terminal::session_host::TerminalSessionRef {
+                    host_id: connection.host_id(),
+                    session_id: terminal.session_id(),
+                })
+            });
         self.needs_serialize = false;
+        self.session_ref_needs_serialize = false;
 
         let db = TerminalDb::global(cx);
         Some(cx.background_spawn(async move {
@@ -2042,20 +4701,16 @@ impl SerializableItem for TerminalView {
             }
             db.save_custom_title(item_id, workspace_id, custom_title)
                 .await?;
+            if let Some(session_ref) = session_ref {
+                db.save_session_ref(item_id, workspace_id, session_ref)
+                    .await?;
+            }
             Ok(())
         }))
     }
 
     fn should_serialize(&self, _: &Self::Event) -> bool {
-        self.needs_serialize
-    }
-
-    fn should_serialize_in_pane(&self, cx: &App) -> bool {
-        // Task-backed terminals (e.g. agent-thread sessions) are relaunched by
-        // their own restore path. Recording them in the pane layout would
-        // resurrect them here as generic shell terminals on the next startup,
-        // producing extra terminals that don't match the pre-close state.
-        self.terminal().read(cx).task().is_none()
+        self.needs_serialize || self.session_ref_needs_serialize
     }
 
     fn deserialize(
@@ -2067,7 +4722,7 @@ impl SerializableItem for TerminalView {
         cx: &mut App,
     ) -> Task<anyhow::Result<Entity<Self>>> {
         window.spawn(cx, async move |cx| {
-            let (cwd, custom_title) = cx
+            let (cwd, custom_title, stored_session_ref) = cx
                 .update(|_window, cx| {
                     let db = TerminalDb::global(cx);
                     let from_db = db
@@ -2089,15 +4744,109 @@ impl SerializableItem for TerminalView {
                         .log_err()
                         .flatten()
                         .filter(|title| !title.trim().is_empty());
-                    (cwd, custom_title)
+                    let stored_session_ref = db
+                        .get_session_ref(item_id, workspace_id)
+                        .unwrap_or_else(|error| {
+                            log::error!("failed to restore terminal session reference: {error:#}");
+                            StoredTerminalSessionRef::Invalid
+                        });
+                    (cwd, custom_title, stored_session_ref)
                 })
                 .ok()
-                .unwrap_or((None, None));
+                .unwrap_or((None, None, StoredTerminalSessionRef::Invalid));
 
-            let terminal = project
-                .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
-                .await?;
+            let restored_session_ref = match stored_session_ref {
+                StoredTerminalSessionRef::Valid(session_ref) => Some(session_ref),
+                StoredTerminalSessionRef::Legacy | StoredTerminalSessionRef::Invalid => None,
+            };
+            let fallback_evidence_cwd = cwd.clone();
+            let (terminal, session_unavailable_reason) = match stored_session_ref {
+                StoredTerminalSessionRef::Legacy => (
+                    project
+                        .update(cx, |project, cx| project.create_terminal_shell(cwd, cx))
+                        .await?,
+                    None,
+                ),
+                StoredTerminalSessionRef::Valid(session_ref) => {
+                    let attached = cx
+                        .update(|_window, cx| {
+                            let host = terminal::session_host::LocalTerminalHost::try_global(cx)?;
+                            if host.read(cx).host_id() != session_ref.host_id {
+                                return None;
+                            }
+                            host.update(cx, |host, _cx| {
+                                host.attach(session_ref.session_id, None).terminal
+                            })
+                        })
+                        .ok()
+                        .flatten();
+                    if let Some(terminal) = attached {
+                        (terminal, None)
+                    } else if let Some(connection) =
+                        wait_for_hosted_terminal_connection(session_ref.host_id, cx).await
+                    {
+                        match restore_hosted_terminal(&project, connection, session_ref, cwd, cx)
+                            .await?
+                        {
+                            Some(terminal) => (terminal, None),
+                            None => {
+                                let reason = "The terminal host no longer owns this saved session.";
+                                if !unavailable_session_restores_placeholder_surface(
+                                    paths::APP_NAME,
+                                ) {
+                                    return Err(anyhow!(reason));
+                                }
+                                (
+                                    cx.update(|window, cx| {
+                                        session_unavailable_terminal(&project, window, cx)
+                                    })?,
+                                    Some(reason.to_owned()),
+                                )
+                            }
+                        }
+                    } else {
+                        let reason =
+                            "The saved terminal process is no longer available on this Dez host.";
+                        if !unavailable_session_restores_placeholder_surface(paths::APP_NAME) {
+                            return Err(anyhow!(reason));
+                        }
+                        (
+                            cx.update(|window, cx| {
+                                session_unavailable_terminal(&project, window, cx)
+                            })?,
+                            Some(reason.to_owned()),
+                        )
+                    }
+                }
+                StoredTerminalSessionRef::Invalid => {
+                    let reason = "The saved terminal session reference is incomplete or invalid.";
+                    if !unavailable_session_restores_placeholder_surface(paths::APP_NAME) {
+                        return Err(anyhow!(reason));
+                    }
+                    (
+                        cx.update(|window, cx| session_unavailable_terminal(&project, window, cx))?,
+                        Some(reason.to_owned()),
+                    )
+                }
+            };
+            let session_unavailable = session_unavailable_reason.is_some();
             cx.update(|window, cx| {
+                if session_unavailable && let Some(session_ref) = restored_session_ref {
+                    workspace
+                        .update(cx, |workspace, cx| {
+                            workspace.set_terminal_working_directory_evidence(
+                                session_ref.session_id.to_string(),
+                                fallback_evidence_cwd,
+                                cx,
+                            );
+                            workspace.set_terminal_evidence_lifecycle(
+                                &session_ref.session_id.to_string(),
+                                workspace::evidence::WorkspaceEvidenceLifecycle::Unresolved,
+                                cx,
+                            );
+                        })
+                        .ok();
+                }
                 cx.new(|cx| {
                     let mut view = TerminalView::new(
                         terminal,
@@ -2110,11 +4859,154 @@ impl SerializableItem for TerminalView {
                     if custom_title.is_some() {
                         view.custom_title = custom_title;
                     }
+                    view.session_unavailable = session_unavailable;
+                    view.session_unavailable_reason = session_unavailable_reason;
                     view
                 })
             })
         })
     }
+}
+
+pub async fn restore_hosted_terminal(
+    project: &Entity<Project>,
+    connection: Arc<terminal::session_host::transport::TerminalHostConnection>,
+    session_ref: terminal::session_host::TerminalSessionRef,
+    fallback_working_directory: Option<PathBuf>,
+    cx: &mut AsyncWindowContext,
+) -> anyhow::Result<Option<Entity<Terminal>>> {
+    let response = connection
+        .command(terminal::session_host::TerminalSessionCommand::Attach {
+            session_id: session_ref.session_id,
+            replay_after_sequence: Some(0),
+        })
+        .await?;
+    let attachment = match response {
+        terminal::session_host::transport::TerminalHostResponse::Attachment { attachment } => {
+            attachment
+        }
+        terminal::session_host::transport::TerminalHostResponse::Error { message }
+        | terminal::session_host::transport::TerminalHostResponse::Unsupported { message } => {
+            log::warn!("terminal host restore failed: {message}");
+            return Ok(None);
+        }
+        terminal::session_host::transport::TerminalHostResponse::Sessions { .. }
+        | terminal::session_host::transport::TerminalHostResponse::Snapshot { .. }
+        | terminal::session_host::transport::TerminalHostResponse::Heartbeat { .. }
+        | terminal::session_host::transport::TerminalHostResponse::Events { .. } => {
+            log::warn!("terminal host returned an invalid attach response during restore");
+            return Ok(None);
+        }
+    };
+    if matches!(
+        attachment.snapshot.state,
+        terminal::session_host::TerminalSessionState::Missing
+            | terminal::session_host::TerminalSessionState::Incompatible { .. }
+    ) {
+        return Ok(None);
+    }
+    let working_directory = attachment
+        .snapshot
+        .working_directory
+        .or(fallback_working_directory);
+    let session_id = session_ref.session_id;
+    cx.update(|window, cx| {
+        let settings = TerminalSettings::get_global(cx);
+        let builder = terminal::TerminalBuilder::new_hosted(
+            session_id,
+            connection.controller(session_id),
+            working_directory,
+            Shell::System,
+            HashMap::default(),
+            settings.cursor_shape,
+            settings.alternate_scroll,
+            settings.max_scroll_history_lines,
+            settings.path_hyperlink_regexes.clone(),
+            settings.path_hyperlink_timeout_ms,
+            window.window_handle().window_id().as_u64(),
+            cx.background_executor(),
+            Vec::new(),
+            project.read(cx).path_style(cx),
+        );
+        let terminal = cx.new(|cx| builder.subscribe(cx));
+        connection.observe_terminal(&terminal, cx);
+        let replay_task = connection.follow_session(terminal.downgrade(), session_id, cx);
+        terminal.update(cx, |terminal, _cx| {
+            terminal.set_hosted_replay_task(replay_task);
+        });
+        Some(terminal)
+    })
+}
+
+/// Waits briefly for the packaged terminal host startup task to publish its
+/// authenticated connection. Persisted views restore concurrently with app
+/// startup, so a synchronous lookup would turn a healthy session into a false
+/// "unavailable" state.
+pub async fn wait_for_hosted_terminal_connection(
+    host_id: terminal::session_host::TerminalHostId,
+    cx: &mut AsyncWindowContext,
+) -> Option<Arc<terminal::session_host::transport::TerminalHostConnection>> {
+    let should_wait =
+        terminal::session_host::transport::terminal_host_enabled_for_app(paths::APP_NAME);
+    let attempts = if should_wait {
+        TERMINAL_HOST_RESTORE_ATTEMPTS
+    } else {
+        0
+    };
+    for attempt in 0..=attempts {
+        let connection = cx
+            .update(|_window, cx| {
+                let startup_state =
+                    terminal::session_host::transport::TerminalHostStartupStatus::state(cx);
+                let connection =
+                    terminal::session_host::transport::TerminalHostConnection::try_global(cx)?;
+                matches!(
+                    startup_state,
+                    terminal::session_host::transport::TerminalHostStartupState::Connected {
+                        host_id: connected_host_id,
+                    } if connected_host_id == host_id
+                )
+                .then_some(connection)
+            })
+            .ok()
+            .flatten()
+            .filter(|connection| connection.host_id() == host_id);
+        if connection.is_some() || attempt == attempts {
+            return connection;
+        }
+        cx.background_executor()
+            .timer(TERMINAL_HOST_RESTORE_INTERVAL)
+            .await;
+    }
+    None
+}
+
+/// Builds a terminal-shaped recovery surface without starting a process.
+/// Callers use this when a persisted session identity cannot be reconciled.
+pub fn session_unavailable_terminal(
+    project: &Entity<Project>,
+    window: &mut Window,
+    cx: &mut App,
+) -> Entity<Terminal> {
+    let settings = TerminalSettings::get_global(cx);
+    let cursor_shape = settings.cursor_shape;
+    let alternate_scroll = settings.alternate_scroll;
+    let max_scroll_history_lines = settings.max_scroll_history_lines;
+    let path_style = project.read(cx).path_style(cx);
+    let window_id = window.window_handle().window_id().as_u64();
+    let builder = terminal::TerminalBuilder::new_display_only(
+        cursor_shape,
+        alternate_scroll,
+        max_scroll_history_lines,
+        window_id,
+        cx.background_executor(),
+        path_style,
+    );
+    cx.new(|cx| {
+        builder
+            .with_display_text("Terminal unavailable", &[])
+            .subscribe(cx)
+    })
 }
 
 impl SearchableItem for TerminalView {
@@ -2330,64 +5222,655 @@ fn first_project_directory(workspace: &Workspace, cx: &App) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{TestAppContext, VisualTestContext};
+    use gpui::{TestAppContext, UpdateGlobal, VisualTestContext};
     use project::{Entry, Project, ProjectPath, Worktree};
     use remote::RemoteClient;
-    use std::{
-        cell::RefCell,
-        path::{Path, PathBuf},
-    };
+    use std::path::{Path, PathBuf};
     use util::paths::PathStyle;
     use util::rel_path::RelPath;
     use workspace::item::test::{TestItem, TestProjectItem};
     use workspace::{AppState, MultiWorkspace, SelectedEntry};
 
+    #[test]
+    fn dez_drops_unavailable_restored_surfaces_instead_of_faking_a_terminal() {
+        assert!(unavailable_session_restores_placeholder_surface("Zed"));
+        assert!(!unavailable_session_restores_placeholder_surface("Dez"));
+    }
+
+    #[test]
+    fn dez_terminal_launch_failures_use_native_recovery_hierarchy() {
+        assert!(terminal_launch_failure_is_top_anchored("Dez"));
+        assert!(!terminal_launch_failure_is_top_anchored("Zed"));
+        assert_eq!(
+            terminal_failed_to_start_guidance("Dez", false),
+            "No terminal process was started. Review Terminal Launch settings, then open a new terminal."
+        );
+        assert_eq!(
+            terminal_launch_failure_primary_label("Dez", false),
+            "Edit Terminal Settings"
+        );
+        assert_eq!(
+            terminal_launch_failure_primary_label("Zed", true),
+            "Edit Settings"
+        );
+        assert_eq!(
+            terminal_failed_to_start_guidance("Dez", true),
+            "Workspace access is required before a terminal can start. Open Workspaces, then grant access to the blocked folder."
+        );
+        assert_eq!(
+            terminal_launch_failure_primary_label("Dez", true),
+            "Open Workspaces"
+        );
+        assert_eq!(
+            terminal_launch_failure_more_label("Dez", true),
+            "More Terminal Recovery Options"
+        );
+        assert_eq!(
+            terminal_launch_failure_more_label("Zed", true),
+            "More Terminal Settings"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Dez", true),
+            "Workspace access required"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Dez", false),
+            "Terminal did not start"
+        );
+        assert_eq!(
+            terminal_launch_failure_title("Zed", true),
+            "Terminal did not start"
+        );
+        assert_eq!(
+            terminal_launch_failure_tab_icon("Dez"),
+            Some(IconName::Warning)
+        );
+        assert_eq!(terminal_launch_failure_tab_icon("Zed"), None);
+
+        let access_tooltip = terminal_launch_failure_tab_tooltip("Dez", true)
+            .expect("Dez access failure should explain its tab state");
+        assert!(access_tooltip.contains("Workspace access required"));
+        assert!(access_tooltip.contains("Open Workspaces"));
+
+        let launch_tooltip = terminal_launch_failure_tab_tooltip("Dez", false)
+            .expect("Dez launch failure should explain its tab state");
+        assert!(launch_tooltip.contains("Terminal did not start"));
+        assert!(launch_tooltip.contains("Terminal Launch settings"));
+        assert_eq!(terminal_launch_failure_tab_tooltip("Zed", false), None);
+    }
+
+    #[test]
+    fn dez_terminal_element_owns_the_translucent_terminal_material() {
+        assert!(terminal_container_reuses_terminal_material("Dez", true));
+        assert!(!terminal_container_reuses_terminal_material("Dez", false));
+        assert!(!terminal_container_reuses_terminal_material("Zed", true));
+    }
+
+    #[test]
+    fn foreground_agent_presentation_is_immediate_but_product_scoped() {
+        let codex = terminal_foreground_agent_presentation("Dez", Some("/opt/homebrew/bin/codex"))
+            .expect("Codex should receive native terminal presentation");
+        assert_eq!(codex.display_name, "Codex");
+        assert_eq!(
+            terminal_context_activity_label("Active", Some(codex), None),
+            Some("Codex running".to_owned())
+        );
+        assert_eq!(terminal_context_activity_label("Active", None, None), None);
+        assert_eq!(
+            terminal_context_activity_label("Failed", None, None),
+            Some("Failed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Running", Some(codex), None),
+            Some("Codex running".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Running", None, None),
+            Some("Running".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Failed", Some(codex), None),
+            Some("Failed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Exited", Some(codex), None),
+            Some("Exited".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Completed", Some(codex), None),
+            Some("Completed".to_owned())
+        );
+        assert_eq!(
+            terminal_context_activity_label("Status unknown", Some(codex), None),
+            Some("Status unknown".to_owned())
+        );
+        assert!(!terminal_context_activity_label_visible(px(359.)));
+        assert!(terminal_context_activity_label_visible(px(360.)));
+
+        let claude = terminal_foreground_agent_presentation("Dez", Some(r"C:\tools\claude.exe"))
+            .expect("Claude Code should receive native terminal presentation");
+        assert_eq!(claude.display_name, "Claude Code");
+
+        let aider = terminal_foreground_agent_presentation("Dez", Some("aider"))
+            .expect("Aider should receive native terminal presentation");
+        assert_eq!(aider.display_name, "Aider");
+        assert_eq!(aider.icon, IconName::AiEdit);
+
+        let herdr = terminal_foreground_agent_presentation("Dez", Some("herdr"))
+            .expect("Herdr should receive native terminal presentation");
+        assert_eq!(herdr.display_name, "Herdr");
+        assert_eq!(herdr.icon, IconName::Inception);
+        assert_eq!(
+            terminal_context_activity_label("Active", Some(herdr), None),
+            Some("Herdr running".to_owned())
+        );
+
+        let tmux =
+            terminal_foreground_multiplexer_presentation("Dez", Some("/opt/homebrew/bin/tmux"))
+                .expect("tmux should receive native terminal presentation");
+        assert_eq!(tmux.display_name, "tmux");
+        assert_eq!(
+            terminal_context_activity_label("Active", None, Some(tmux)),
+            Some("tmux running".to_owned())
+        );
+        assert_eq!(tmux.icon, IconName::SplitAlt);
+        assert!(
+            terminal_foreground_multiplexer_presentation("Dez", Some("herdr")).is_none(),
+            "Herdr should keep its agent identity when it is the foreground process"
+        );
+
+        assert!(
+            terminal_foreground_agent_presentation("Dez", Some("zsh")).is_none(),
+            "ordinary shells should keep quiet terminal presentation"
+        );
+        assert!(
+            terminal_foreground_agent_presentation("Dez", Some("node")).is_none(),
+            "generic runtimes must not be mislabeled as agents"
+        );
+        assert!(
+            terminal_foreground_agent_presentation("Zed", Some("codex")).is_none(),
+            "official Zed keeps its upstream terminal presentation"
+        );
+        assert!(
+            terminal_foreground_multiplexer_presentation("Zed", Some("tmux")).is_none(),
+            "official Zed keeps its upstream terminal presentation"
+        );
+
+        assert_eq!(
+            terminal_tab_icon_presentation(None, Some(codex), None).0,
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(None, None, Some(tmux)).0,
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(Some(&TaskStatus::Running), Some(codex), None).0,
+            IconName::PlayFilled,
+            "task state should outrank the process observed inside that task terminal"
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(
+                Some(&TaskStatus::Completed { success: false }),
+                None,
+                None,
+            )
+            .0,
+            IconName::XCircle
+        );
+        assert_eq!(
+            terminal_tab_icon_presentation(None, None, None).0,
+            IconName::Terminal
+        );
+    }
+
+    #[test]
+    fn terminal_context_strip_tracks_canvas_density() {
+        assert_eq!(
+            terminal_context_strip_height(CanvasDensity::Compact),
+            px(28.)
+        );
+        assert_eq!(
+            terminal_context_strip_height(CanvasDensity::Balanced),
+            px(30.)
+        );
+        assert_eq!(
+            terminal_context_strip_height(CanvasDensity::Spacious),
+            px(32.)
+        );
+
+        assert_eq!(terminal_context_strip_gap(CanvasDensity::Compact), px(3.));
+        assert_eq!(terminal_context_strip_gap(CanvasDensity::Balanced), px(4.));
+        assert_eq!(terminal_context_strip_gap(CanvasDensity::Spacious), px(6.));
+
+        assert_eq!(
+            terminal_context_strip_padding_x(CanvasDensity::Compact),
+            px(6.)
+        );
+        assert_eq!(
+            terminal_context_strip_padding_x(CanvasDensity::Balanced),
+            px(8.)
+        );
+        assert_eq!(
+            terminal_context_strip_padding_x(CanvasDensity::Spacious),
+            px(12.)
+        );
+    }
+
+    #[test]
+    fn terminal_context_copy_keeps_workspace_and_change_counts_compact() {
+        assert_eq!(
+            workspace_label_from_paths(&[PathBuf::from("/code/dez")]),
+            Some("dez".to_owned())
+        );
+        assert_eq!(
+            workspace_label_from_paths(&[
+                PathBuf::from("/code/dez"),
+                PathBuf::from("/code/dez-worktree")
+            ]),
+            Some("dez +1".to_owned())
+        );
+        assert_eq!(workspace_label_from_paths(&[]), None);
+        assert_eq!(changed_files_label(0), "0 changes");
+        assert_eq!(changed_files_label(1), "1 change");
+        assert_eq!(changed_files_label(5), "5 changes");
+        assert!(!terminal_context_strip_is_relevant(None, true, 0));
+        assert!(terminal_context_strip_is_relevant(
+            Some("Codex running"),
+            true,
+            0
+        ));
+        assert!(terminal_context_strip_is_relevant(None, true, 2));
+        assert!(terminal_context_strip_is_relevant(None, false, 0));
+        assert_eq!(
+            terminal_details_disclosure_label(false, true),
+            "Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_disclosure_label(true, true),
+            "Hide Details"
+        );
+        assert_eq!(terminal_details_disclosure_label(false, false), "");
+        assert_eq!(
+            terminal_details_disclosure_accessibility_label(false),
+            "Show Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_disclosure_accessibility_label(true),
+            "Hide Terminal Details"
+        );
+        assert_eq!(
+            terminal_details_process_summary(
+                Some("Claude Code"),
+                None,
+                Some("claude"),
+                Some("4242"),
+            ),
+            "Agent · Claude Code · PID 4242"
+        );
+        assert_eq!(
+            terminal_details_process_summary(None, Some("tmux"), Some("tmux"), None),
+            "Multiplexer · tmux"
+        );
+        assert_eq!(
+            terminal_details_process_summary(None, None, None, None),
+            "Process · Shell"
+        );
+        assert_eq!(
+            terminal_details_git_summary(true, "dez / main", "3 changes"),
+            "Git · dez / main · 3 changes"
+        );
+        assert_eq!(
+            terminal_details_git_summary(false, "Scratch Workspace", "0 changes"),
+            "Git · No Workspace repository"
+        );
+        assert_eq!(
+            terminal_details_ownership_note(true, true),
+            "Ownership · Dez Terminal Host · Closing this tab detaches the Session."
+        );
+        assert_eq!(
+            terminal_details_ownership_note(true, false),
+            "Ownership · Dez Terminal Host · Connection unavailable; detaching preserves the Session record."
+        );
+        assert_eq!(
+            external_session_owner_from_task_id("dez-external-session:tmux:$0"),
+            Some("tmux")
+        );
+        assert_eq!(
+            external_session_owner_from_task_id("dez-external-session:Herdr:session-1"),
+            Some("Herdr")
+        );
+        let observed_herdr = external_session_task_metadata(
+            "dez-external-session:v2:Herdr:preserve-external:session-1",
+        );
+        let controlled_herdr = external_session_task_metadata(
+            "dez-external-session:v2:Herdr:request-takeover:session-1",
+        );
+        assert_eq!(
+            observed_herdr,
+            Some(ExternalSessionTaskMetadata {
+                owner: "Herdr",
+                input_ownership_intent: ExternalSessionInputOwnershipIntent::PreserveExternal,
+            })
+        );
+        assert_eq!(
+            controlled_herdr,
+            Some(ExternalSessionTaskMetadata {
+                owner: "Herdr",
+                input_ownership_intent: ExternalSessionInputOwnershipIntent::RequestTakeover,
+            })
+        );
+        assert_eq!(
+            external_session_owner_from_task_id(
+                "dez-external-session:v2:tmux:preserve-external:tmux:$0"
+            ),
+            Some("tmux")
+        );
+        assert_eq!(
+            external_session_task_metadata(
+                "dez-external-session:v2:Herdr:unknown-intent:session-1"
+            ),
+            None
+        );
+        assert_eq!(external_session_owner_from_task_id("terminal:task"), None);
+        assert!(external_session_attach_failed(
+            "dez-external-session:tmux:$0",
+            &TaskStatus::Completed { success: false },
+        ));
+        assert!(!external_session_attach_failed(
+            "dez-external-session:tmux:$0",
+            &TaskStatus::Completed { success: true },
+        ));
+        assert!(!external_session_attach_failed(
+            "terminal:task",
+            &TaskStatus::Completed { success: false },
+        ));
+        assert_eq!(
+            terminal_external_attach_retry_label(px(479.), true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_attach_retry_label(px(480.), true),
+            Some("Retry Attach")
+        );
+        assert_eq!(terminal_external_attach_retry_label(px(920.), false), None);
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(719.), true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(720.), true),
+            Some("New Shell")
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_label(px(920.), false),
+            None
+        );
+        assert_eq!(
+            terminal_external_attach_retry_accessibility_label("tmux", "paykit"),
+            "Retry tmux attach in Workspace paykit"
+        );
+        assert_eq!(
+            terminal_external_attach_new_shell_accessibility_label("Herdr", "paykit"),
+            "Open a new native shell in Workspace paykit; Herdr remains external"
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(719.), observed_herdr, true),
+            Some("")
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(720.), observed_herdr, true),
+            Some("Input in Herdr")
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(920.), controlled_herdr, true),
+            None
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_label(px(920.), observed_herdr, false),
+            None
+        );
+        assert_eq!(
+            terminal_external_input_owner_action_accessibility_label("paykit"),
+            "Herdr owns input for this pane; open Running Sessions for Workspace paykit to choose Take Control in Dez"
+        );
+        assert_eq!(
+            terminal_context_open_action_label("Dez", Some("codex --yolo")),
+            "Open Terminal · Codex"
+        );
+        assert_eq!(
+            terminal_context_open_action_label("Zed", Some("codex --yolo")),
+            "Open Terminal"
+        );
+        assert_eq!(
+            terminal_unavailable_new_shell_label("Dez"),
+            "Open New Shell Here"
+        );
+        assert_eq!(
+            terminal_unavailable_new_shell_label("Zed"),
+            "Start Fresh Terminal"
+        );
+        assert_eq!(
+            terminal_details_ownership_note_with_external_owner(
+                false,
+                false,
+                external_session_task_metadata("dez-external-session:tmux:$0"),
+            ),
+            "Ownership · tmux remains external · This tab owns only the attach client."
+        );
+        assert_eq!(
+            terminal_details_ownership_note_with_external_owner(false, false, observed_herdr,),
+            "Input · Herdr owns this pane · Open Running Sessions and choose Take Control to interact in Dez."
+        );
+        assert_eq!(
+            terminal_details_ownership_note_with_external_owner(false, false, controlled_herdr,),
+            "Input · Dez requested control from Herdr for this attach."
+        );
+        assert_eq!(
+            terminal_surface_tab_label("Dez", "Codex"),
+            SharedString::from("Terminal · Codex")
+        );
+        assert_eq!(
+            terminal_surface_tab_label("Dez", "Terminal"),
+            SharedString::from("Terminal")
+        );
+        assert_eq!(
+            terminal_surface_tab_label("Zed", "Codex"),
+            SharedString::from("Codex")
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(479.), true, 5),
+            TerminalContextActionLabelVisibility::default()
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(480.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: false,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(480.), true, 0),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: false,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(480.), false, 0),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: false,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(719.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: false,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(720.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(919.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: true,
+                details: false,
+            }
+        );
+        assert_eq!(
+            terminal_context_action_label_visibility(px(920.), true, 5),
+            TerminalContextActionLabelVisibility {
+                workspace: true,
+                review: true,
+                details: true,
+            }
+        );
+    }
+
+    #[test]
+    fn hosted_session_state_maps_to_truthful_workspace_evidence_lifecycle() {
+        use workspace::evidence::WorkspaceEvidenceLifecycle;
+
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Attached),
+            WorkspaceEvidenceLifecycle::Current
+        );
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Reconnecting),
+            WorkspaceEvidenceLifecycle::Unresolved
+        );
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Missing),
+            WorkspaceEvidenceLifecycle::Unresolved
+        );
+        assert_eq!(
+            workspace_evidence_lifecycle_for_host_state(&TerminalSessionState::Exited {
+                exit_code: Some(0),
+            }),
+            WorkspaceEvidenceLifecycle::Stale
+        );
+    }
+
+    #[test]
+    fn terminal_tab_status_prioritizes_actionable_lifecycle_truth() {
+        assert_eq!(
+            terminal_tab_status(true, false, Some(&TaskStatus::Running)),
+            "Unavailable"
+        );
+        assert_eq!(
+            terminal_tab_status(
+                false,
+                false,
+                Some(&TaskStatus::Completed { success: false })
+            ),
+            "Failed"
+        );
+        assert_eq!(
+            terminal_tab_status(false, true, Some(&TaskStatus::Completed { success: true })),
+            "Completed"
+        );
+        assert_eq!(terminal_tab_status(false, true, None), "Exited");
+        assert_eq!(terminal_tab_status(false, false, None), "Active");
+        assert!(terminal_tab_status_indicator_visible("Active", true));
+        assert!(!terminal_tab_status_indicator_visible("Active", false));
+        assert!(terminal_tab_status_indicator_visible("Failed", false));
+        assert!(!terminal_tab_status_label_visible("Active"));
+        assert!(terminal_tab_status_label_visible("Failed"));
+        assert!(terminal_tab_status_label_visible("Unavailable"));
+        assert_eq!(
+            terminal_surface_accessibility_label("Dez", "tests", "Active"),
+            "Terminal: tests. Status: Active"
+        );
+        assert_eq!(
+            terminal_surface_accessibility_label("Zed", "tests", "Active"),
+            "Terminal Session: tests. Status: Active"
+        );
+        assert_eq!(
+            terminal_unavailable_description(Some(
+                "The terminal host no longer owns this saved session."
+            )),
+            "The terminal host no longer owns this saved session. Dez did not start a replacement shell. Start fresh only when you want a separate computation."
+        );
+        assert_eq!(
+            terminal_unavailable_description(None),
+            "The saved terminal process is no longer available on this Dez host. Dez did not start a replacement shell. Start fresh only when you want a separate computation."
+        );
+        assert_eq!(terminal_close_label(true), "Detach Terminal");
+        assert_eq!(terminal_close_label(false), "Close Terminal Tab");
+        assert_eq!(terminal_terminate_label("Dez"), "End Terminal…");
+        assert_eq!(
+            terminal_terminate_label("Zed"),
+            "Terminate Terminal Session…"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", true, false),
+            "Host-owned terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", false, true),
+            "Saved terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", true, true),
+            "Saved terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Dez", false, false),
+            "Workspace terminal"
+        );
+        assert_eq!(
+            terminal_ownership_label("Zed", true, false),
+            "Persistent Terminal Session"
+        );
+        assert_eq!(
+            terminal_ownership_label("Zed", false, true),
+            "Saved Terminal Session"
+        );
+        assert_eq!(
+            terminal_ownership_label("Zed", false, false),
+            "Workspace Terminal Session"
+        );
+        assert!(terminal_termination_available(false, false));
+        assert!(!terminal_termination_available(true, false));
+        assert!(!terminal_termination_available(false, true));
+        let (message, detail) = terminal_termination_confirmation("Dez", true, "build");
+        assert_eq!(message, "End Terminal?");
+        assert!(detail.contains("“build” will stop immediately"));
+        assert!(detail.contains("shell and any foreground command"));
+        assert!(detail.contains("only detaches this host-owned terminal"));
+        assert!(!detail.contains("durable"));
+        let (message, detail) = terminal_termination_confirmation("Zed", true, "build");
+        assert_eq!(message, "Terminate Terminal Session?");
+        assert!(detail.contains("“build” will stop immediately"));
+        assert!(detail.contains("shell and any foreground process"));
+        assert!(detail.contains("only detaches the persistent Terminal Session"));
+        assert!(!detail.contains("durable"));
+        let (_, detail) = terminal_termination_confirmation("Dez", false, "");
+        assert!(detail.contains("shell and any foreground command"));
+        assert!(detail.contains("“Terminal” will stop immediately"));
+    }
+
     fn expected_drop_text(paths: &[PathBuf]) -> String {
-        format_paths_for_terminal(paths, ShellKind::system())
-    }
-
-    #[test]
-    fn dropped_posix_paths_remain_bare_shell_arguments() {
-        let paths = [
-            PathBuf::from("/tmp/space name.rs"),
-            PathBuf::from("/tmp/single'quote.rs"),
-            PathBuf::from("/tmp/double\"quote.rs"),
-            PathBuf::from("/tmp/back\\slash.rs"),
-            PathBuf::from("/tmp/你好.rs"),
-        ];
-
-        assert_eq!(
-            format_paths_for_terminal(&paths, task::ShellKind::Posix),
-            " /tmp/space\\ name.rs /tmp/single\\'quote.rs /tmp/double\\\"quote.rs \
-             /tmp/back\\\\slash.rs /tmp/你好.rs "
-        );
-    }
-
-    #[test]
-    fn dropped_paths_preserve_multiple_argument_boundaries() {
-        let paths = [
-            PathBuf::from("/tmp/first file.rs"),
-            PathBuf::from("/tmp/second file.rs"),
-        ];
-
-        assert_eq!(
-            format_paths_for_terminal(&paths, task::ShellKind::Posix),
-            " /tmp/first\\ file.rs /tmp/second\\ file.rs "
-        );
-    }
-
-    #[test]
-    fn dropped_windows_paths_use_the_target_shell_quoting() {
-        let paths = [PathBuf::from(r"C:\Program Files\你好.rs")];
-
-        assert_eq!(
-            format_paths_for_terminal(&paths, task::ShellKind::PowerShell),
-            " 'C:\\Program Files\\你好.rs' "
-        );
-        assert_eq!(
-            format_paths_for_terminal(&paths, task::ShellKind::Cmd),
-            " ^\"C:\\Program Files\\你好.rs^\" "
-        );
+        let mut text = String::new();
+        for path in paths {
+            text.push(' ');
+            text.push_str(&shlex::try_quote(path.to_str().unwrap()).unwrap());
+        }
+        text.push(' ');
+        text
     }
 
     fn assert_drop_writes_to_terminal(
@@ -2523,105 +6006,95 @@ mod tests {
         );
     }
 
+    #[cfg(target_os = "linux")]
+    #[gpui::test]
+    async fn ctrl_q_is_forwarded_to_terminal_not_quit(cx: &mut TestAppContext) {
+        let (project, _workspace, window_handle) = init_test_with_window(cx).await;
+        cx.update(load_default_keymap);
+        let (_pane, terminal, _terminal_view) =
+            add_display_only_terminal(&project, window_handle, true, cx);
+
+        let mut cx = VisualTestContext::from_window(window_handle.into(), cx);
+        cx.update(|window, cx| {
+            let _ = window.draw(cx);
+        });
+        cx.run_until_parked();
+
+        cx.simulate_keystrokes("ctrl-q");
+        assert_eq!(
+            terminal.update(&mut cx, |terminal, _| terminal.take_input_log()),
+            vec![vec![0x11]],
+            "ctrl-q in a focused terminal should send 0x11 to the PTY, not trigger zed::Quit",
+        );
+    }
+
+    #[gpui::test]
+    async fn altgr_character_input_is_not_swallowed_as_meta_sequence(cx: &mut TestAppContext) {
+        let (project, _workspace, window_handle) = init_test_with_window(cx).await;
+        cx.update(|cx| {
+            SettingsStore::update_global(cx, |store, cx| {
+                store.update_user_settings(cx, |settings| {
+                    settings.terminal.get_or_insert_default().option_as_meta = Some(true);
+                });
+            });
+        });
+        let (_pane, terminal, _terminal_view) =
+            add_display_only_terminal(&project, window_handle, true, cx);
+
+        let mut cx = VisualTestContext::from_window(window_handle.into(), cx);
+        cx.update(|window, cx| {
+            let _ = window.draw(cx);
+        });
+        cx.run_until_parked();
+
+        let mut altgr_a = Keystroke::parse("ctrl-alt-a").unwrap();
+        altgr_a.key_char = Some("ą".to_string());
+
+        let propagate = cx.update(|window, cx| {
+            window
+                .dispatch_event(
+                    gpui::PlatformInput::KeyDown(KeyDownEvent {
+                        keystroke: altgr_a.clone(),
+                        is_held: false,
+                        prefer_character_input: true,
+                    }),
+                    cx,
+                )
+                .propagate
+        });
+        assert!(
+            propagate,
+            "a keystroke that produced a character must propagate so the platform can commit the text",
+        );
+        assert_eq!(
+            terminal.update(&mut cx, |terminal, _| terminal.take_input_log()),
+            Vec::<Vec<u8>>::new(),
+            "AltGr-produced characters must not be sent as meta escape sequences",
+        );
+
+        let propagate = cx.update(|window, cx| {
+            window
+                .dispatch_event(
+                    gpui::PlatformInput::KeyDown(KeyDownEvent {
+                        keystroke: altgr_a,
+                        is_held: false,
+                        prefer_character_input: false,
+                    }),
+                    cx,
+                )
+                .propagate
+        });
+        assert!(!propagate);
+        assert_eq!(
+            terminal.update(&mut cx, |terminal, _| terminal.take_input_log()),
+            vec![b"\x1b\x01".to_vec()],
+            "ctrl-alt-a without character input preference is still sent as meta ctrl-a",
+        );
+    }
+
     // Working directory calculation tests
 
     // No Worktrees in project -> home_dir()
-    #[gpui::test]
-    async fn reparent_updates_workspace_and_project_and_rebuilds_subscriptions(
-        cx: &mut TestAppContext,
-    ) {
-        let (project_a, workspace_a, window_handle) = init_test_with_window(cx).await;
-        let params = cx.update(AppState::test);
-        let project_b = Project::test(params.fs.clone(), [], cx).await;
-
-        let terminal_view = window_handle
-            .update(cx, |_, window, cx| {
-                let terminal = cx.new(|cx| {
-                    terminal::TerminalBuilder::new_display_only(
-                        CursorShape::default(),
-                        terminal::terminal_settings::AlternateScroll::On,
-                        None,
-                        0,
-                        cx.background_executor(),
-                        PathStyle::local(),
-                    )
-                    .subscribe(cx)
-                });
-                cx.new(|cx| {
-                    TerminalView::new(
-                        terminal,
-                        workspace_a.downgrade(),
-                        None,
-                        project_a.downgrade(),
-                        window,
-                        cx,
-                    )
-                })
-            })
-            .expect("window should be live");
-
-        terminal_view.read_with(cx, |view, _| {
-            assert_eq!(view.workspace, workspace_a.downgrade());
-            assert_eq!(view.project, project_a.downgrade());
-        });
-        let subscription_count_before =
-            terminal_view.read_with(cx, |view, _| view._terminal_subscriptions.len());
-
-        let workspace_b = window_handle
-            .update(cx, |_, window, cx| {
-                cx.new(|cx| Workspace::test_new(project_b.clone(), window, cx))
-            })
-            .expect("window should be live");
-
-        window_handle
-            .update(cx, |_, window, cx| {
-                workspace_b.update(cx, |workspace_b, cx| {
-                    terminal_view.update(cx, |view, cx| {
-                        view.reparent(workspace_b, window, cx);
-                    });
-                });
-            })
-            .expect("window should be live");
-
-        terminal_view.read_with(cx, |view, _| {
-            assert_eq!(
-                view.workspace,
-                workspace_b.downgrade(),
-                "reparent should update the owning workspace"
-            );
-            assert_eq!(
-                view.project,
-                project_b.downgrade(),
-                "reparent should update the owning project"
-            );
-            assert_ne!(
-                view.workspace,
-                workspace_a.downgrade(),
-                "the terminal must no longer report itself as owned by the original workspace"
-            );
-            assert_eq!(
-                view._terminal_subscriptions.len(),
-                subscription_count_before,
-                "the subscription set should be rebuilt (same shape), not merely appended to"
-            );
-        });
-
-        // Reparenting to the same workspace again must no-op rather than
-        // needlessly rebuild subscriptions a second time.
-        window_handle
-            .update(cx, |_, window, cx| {
-                workspace_b.update(cx, |workspace_b, cx| {
-                    terminal_view.update(cx, |view, cx| {
-                        view.reparent(workspace_b, window, cx);
-                    });
-                });
-            })
-            .expect("window should be live");
-        terminal_view.read_with(cx, |view, _| {
-            assert_eq!(view.workspace, workspace_b.downgrade());
-        });
-    }
-
     #[gpui::test]
     async fn no_worktree(cx: &mut TestAppContext) {
         let (project, workspace) = init_test(cx).await;
@@ -2856,77 +6329,6 @@ mod tests {
             .unwrap()
     }
 
-    #[gpui::test]
-    async fn agent_thread_search_context_is_opt_in(cx: &mut TestAppContext) {
-        let (project, _workspace, window_handle) = init_test_with_window(cx).await;
-        let (_, _, terminal_view) = add_display_only_terminal(&project, window_handle, true, cx);
-
-        terminal_view.read_with(cx, |terminal_view, cx| {
-            assert!(
-                !terminal_view
-                    .dispatch_context(cx)
-                    .contains("AgentTerminalThread")
-            );
-        });
-        terminal_view.update(cx, |terminal_view, cx| {
-            terminal_view.set_agent_thread(true, cx);
-        });
-        terminal_view.read_with(cx, |terminal_view, cx| {
-            assert!(
-                terminal_view
-                    .dispatch_context(cx)
-                    .contains("AgentTerminalThread")
-            );
-            assert!(terminal_view.dispatch_context(cx).contains("Terminal"));
-        });
-    }
-
-    #[gpui::test]
-    async fn agent_thread_search_preserves_the_active_result_when_output_arrives(
-        cx: &mut TestAppContext,
-    ) {
-        let (project, _workspace, window_handle) = init_test_with_window(cx).await;
-        let (_, terminal, terminal_view) =
-            add_display_only_terminal(&project, window_handle, true, cx);
-        let matches = vec![
-            Range::new(Point::new(0, 0), Point::new(0, 5)),
-            Range::new(Point::new(1, 0), Point::new(1, 5)),
-        ];
-        let token = SearchToken::new(1);
-
-        window_handle
-            .update(cx, |_, window, cx| {
-                terminal.update(cx, |terminal, cx| {
-                    terminal.write_output(b"needle one\nneedle two\n", cx);
-                });
-                terminal_view.update(cx, |terminal_view, cx| {
-                    terminal_view.set_agent_thread(true, cx);
-                    terminal_view.update_matches(&matches, Some(0), token, window, cx);
-                    terminal_view.activate_match(0, &matches, token, window, cx);
-                });
-                terminal.update(cx, |terminal, cx| terminal.sync(window, cx));
-
-                terminal.update(cx, |terminal, cx| {
-                    terminal.write_output(b"more output\n", cx);
-                    terminal.sync(window, cx);
-                });
-
-                terminal_view.update(cx, |terminal_view, cx| {
-                    assert_eq!(
-                        terminal_view.active_match_index(
-                            Direction::Next,
-                            &matches,
-                            token,
-                            window,
-                            cx,
-                        ),
-                        Some(0)
-                    );
-                });
-            })
-            .expect("failed to update terminal window");
-    }
-
     /// Creates a worktree with 1 file /root.txt and returns the project, workspace, and window handle.
     async fn init_test_with_window(
         cx: &mut TestAppContext,
@@ -2974,8 +6376,9 @@ mod tests {
         let project = cx.update(|cx| {
             Project::remote(
                 remote_client,
-                params.http_client.clone(),
+                params.client.clone(),
                 params.node_runtime.clone(),
+                params.user_store.clone(),
                 params.languages.clone(),
                 params.fs.clone(),
                 false,
@@ -3066,7 +6469,7 @@ mod tests {
         let entry = cx
             .update(|cx| {
                 wt.update(cx, |wt, cx| {
-                    wt.create_entry(RelPath::empty().into(), is_dir, None, cx)
+                    wt.create_entry(RelPath::empty_arc(), is_dir, None, cx)
                 })
             })
             .await
@@ -3208,6 +6611,8 @@ mod tests {
                             entry_id: second_entry.id,
                         },
                     ]),
+                    source_pane: None,
+                    active_selection_is_file: true,
                 };
                 assert_drop_writes_to_terminal(
                     &active_pane,
@@ -3230,69 +6635,6 @@ mod tests {
                     window,
                     cx,
                 );
-            })
-            .unwrap();
-    }
-
-    #[gpui::test]
-    async fn title_changed_updates_center_terminal_tab(cx: &mut TestAppContext) {
-        let (project, _workspace, window_handle) = init_test_with_window(cx).await;
-        let (_pane, terminal, terminal_view) =
-            add_display_only_terminal(&project, window_handle, false, cx);
-
-        let events = Rc::new(RefCell::new(Vec::new()));
-        let _subscription = terminal_view.update(cx, |_, cx| {
-            cx.subscribe(&terminal_view, {
-                let events = events.clone();
-                move |_, _, event: &ItemEvent, _| events.borrow_mut().push(*event)
-            })
-        });
-
-        terminal.update(cx, |_, cx| cx.emit(Event::TitleChanged));
-        cx.run_until_parked();
-
-        assert!(events.borrow().contains(&ItemEvent::UpdateTab));
-    }
-
-    #[gpui::test]
-    async fn bell_marks_background_center_terminal_tab_without_stealing_focus(
-        cx: &mut TestAppContext,
-    ) {
-        let (project, _workspace, window_handle) = init_test_with_window(cx).await;
-        let (active_pane, terminal, terminal_view) =
-            add_display_only_terminal(&project, window_handle, false, cx);
-
-        let focused_item = window_handle
-            .update(cx, |_, window, cx| {
-                let focused_item = cx.new(|cx| TestItem::new(cx).with_label("editor"));
-                active_pane.update(cx, |pane, cx| {
-                    pane.add_item(Box::new(focused_item.clone()), true, true, None, window, cx);
-                });
-                focused_item
-            })
-            .unwrap();
-        cx.run_until_parked();
-
-        let events = Rc::new(RefCell::new(Vec::new()));
-        let _subscription = terminal_view.update(cx, |_, cx| {
-            cx.subscribe(&terminal_view, {
-                let events = events.clone();
-                move |_, _, event: &ItemEvent, _| events.borrow_mut().push(*event)
-            })
-        });
-
-        terminal.update(cx, |_, cx| cx.emit(Event::Bell));
-        cx.run_until_parked();
-
-        assert!(events.borrow().contains(&ItemEvent::UpdateTab));
-
-        window_handle
-            .update(cx, |_, window, cx| {
-                let active_item = active_pane.read(cx).active_item().unwrap();
-                assert_eq!(active_item.item_id(), focused_item.entity_id());
-                assert!(terminal_view.read(cx).has_bell());
-                assert!(terminal_view.read(cx).is_dirty(cx));
-                assert!(!terminal_view.read(cx).focus_handle(cx).is_focused(window));
             })
             .unwrap();
     }
@@ -3355,7 +6697,7 @@ mod tests {
             .unwrap();
 
         terminal_view.update(cx, |view, cx| {
-            view.set_custom_title(Some("frontend".to_string()), cx);
+            view.set_custom_title(Some("  frontend  ".to_string()), cx);
             assert_eq!(view.custom_title(), Some("frontend"));
         });
     }
@@ -3430,81 +6772,6 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn task_terminals_are_excluded_from_pane_serialization(cx: &mut TestAppContext) {
-        cx.executor().allow_parking();
-
-        let (project, workspace) = init_test(cx).await;
-
-        // A plain shell terminal is a normal, restorable pane item.
-        let shell = project
-            .update(cx, |project, cx| project.create_terminal_shell(None, cx))
-            .await
-            .unwrap();
-        let shell_view = cx
-            .add_window(|window, cx| {
-                TerminalView::new(
-                    shell,
-                    workspace.downgrade(),
-                    None,
-                    project.downgrade(),
-                    window,
-                    cx,
-                )
-            })
-            .root(cx)
-            .unwrap();
-        shell_view.update(cx, |view, cx| {
-            assert!(
-                view.should_serialize_in_pane(cx),
-                "shell terminals should be recorded in the pane layout"
-            );
-        });
-
-        // A task-backed terminal (e.g. an agent-thread session) is relaunched
-        // by its own restore path, so it must not be recorded in the pane
-        // layout or it resurfaces as a ghost shell terminal on the next start.
-        #[cfg(windows)]
-        let (command, args) = (
-            Some("cmd.exe".to_string()),
-            vec!["/S".to_string(), "/C".to_string(), "exit 0".to_string()],
-        );
-        #[cfg(not(windows))]
-        let (command, args) = (Some("true".to_string()), Vec::new());
-        let task = project
-            .update(cx, |project, cx| {
-                project.create_terminal_task(
-                    task::SpawnInTerminal {
-                        command,
-                        args,
-                        ..task::SpawnInTerminal::default()
-                    },
-                    cx,
-                )
-            })
-            .await
-            .unwrap();
-        let task_view = cx
-            .add_window(|window, cx| {
-                TerminalView::new(
-                    task,
-                    workspace.downgrade(),
-                    None,
-                    project.downgrade(),
-                    window,
-                    cx,
-                )
-            })
-            .root(cx)
-            .unwrap();
-        task_view.update(cx, |view, cx| {
-            assert!(
-                !view.should_serialize_in_pane(cx),
-                "task terminals must be excluded from the pane layout"
-            );
-        });
-    }
-
-    #[gpui::test]
     async fn test_tab_content_uses_custom_title(cx: &mut TestAppContext) {
         cx.executor().allow_parking();
 
@@ -3539,6 +6806,176 @@ mod tests {
             view.set_custom_title(None, cx);
             let text = view.tab_content_text(0, cx);
             assert_ne!(text.as_ref(), "my-server");
+        });
+    }
+
+    async fn draw_standalone_terminal(
+        output: &[u8],
+        cx: &mut TestAppContext,
+    ) -> (gpui::Bounds<Pixels>, gpui::Size<Pixels>) {
+        let (project, workspace) = init_test(cx).await;
+        let terminal = cx.new(|cx| {
+            terminal::TerminalBuilder::new_display_only(
+                CursorShape::default(),
+                terminal::terminal_settings::AlternateScroll::On,
+                None,
+                0,
+                cx.background_executor(),
+                PathStyle::local(),
+            )
+            .subscribe(cx)
+        });
+        terminal.update(cx, |terminal, cx| {
+            terminal.write_output(output, cx);
+        });
+
+        let (terminal_view, cx) = cx.add_window_view(|window, cx| {
+            TerminalView::new(
+                terminal.clone(),
+                workspace.downgrade(),
+                None,
+                project.downgrade(),
+                window,
+                cx,
+            )
+        });
+
+        let draw_size = gpui::size(px(400.), px(201.));
+        cx.simulate_resize(draw_size);
+        cx.draw(gpui::Point::default(), draw_size, |_, _| {
+            terminal_view.clone().into_any_element()
+        });
+        cx.run_until_parked();
+        cx.draw(gpui::Point::default(), draw_size, |_, _| {
+            terminal_view.clone().into_any_element()
+        });
+
+        let bounds = terminal.read_with(cx, |terminal, _| {
+            terminal.last_content().terminal_bounds.bounds
+        });
+        (bounds, draw_size)
+    }
+
+    #[gpui::test]
+    async fn test_inline_terminal_displays_all_of_its_lines(cx: &mut TestAppContext) {
+        let (project, workspace) = init_test(cx).await;
+        let terminal = cx.new(|cx| {
+            terminal::TerminalBuilder::new_display_only(
+                CursorShape::default(),
+                terminal::terminal_settings::AlternateScroll::On,
+                None,
+                0,
+                cx.background_executor(),
+                PathStyle::local(),
+            )
+            .subscribe(cx)
+        });
+        let (terminal_view, cx) = cx.add_window_view(|window, cx| {
+            let mut terminal_view = TerminalView::new(
+                terminal.clone(),
+                workspace.downgrade(),
+                None,
+                project.downgrade(),
+                window,
+                cx,
+            );
+            terminal_view.set_embedded_mode(None, cx);
+            terminal_view
+        });
+
+        for _ in 1..=20 {
+            terminal.update(cx, |terminal, cx| {
+                terminal.write_output(b"line\n", cx);
+            });
+            cx.draw(
+                gpui::Point::default(),
+                gpui::size(px(400.), px(100.)),
+                |_, _| terminal_view.clone().into_any_element(),
+            );
+            terminal.read_with(cx, |terminal, _| {
+                assert_eq!(terminal.viewport_lines(), terminal.total_lines());
+            })
+        }
+    }
+
+    #[gpui::test]
+    async fn test_short_standalone_terminal_stays_top_anchored_on_resize(cx: &mut TestAppContext) {
+        let (bounds, _) = draw_standalone_terminal(b"$ ", cx).await;
+        assert_eq!(bounds.origin.y, px(0.));
+    }
+
+    #[gpui::test]
+    async fn test_full_standalone_terminal_stays_bottom_anchored_on_resize(
+        cx: &mut TestAppContext,
+    ) {
+        let (bounds, draw_size) = draw_standalone_terminal(
+            b"one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n",
+            cx,
+        )
+        .await;
+        assert!(bounds.origin.y > px(0.));
+        assert_eq!(bounds.bottom(), draw_size.height);
+    }
+
+    #[gpui::test]
+    async fn test_short_alt_screen_stays_bottom_anchored_on_resize(cx: &mut TestAppContext) {
+        let (bounds, draw_size) = draw_standalone_terminal(b"\x1b[?1049h$ ", cx).await;
+        assert!(bounds.origin.y > px(0.));
+        assert_eq!(bounds.bottom(), draw_size.height);
+    }
+
+    #[gpui::test]
+    async fn test_inline_terminal_shrinks_after_clear(cx: &mut TestAppContext) {
+        let (project, workspace) = init_test(cx).await;
+        let terminal = cx.new(|cx| {
+            terminal::TerminalBuilder::new_display_only(
+                CursorShape::default(),
+                terminal::terminal_settings::AlternateScroll::On,
+                None,
+                0,
+                cx.background_executor(),
+                PathStyle::local(),
+            )
+            .subscribe(cx)
+        });
+        let (terminal_view, cx) = cx.add_window_view(|window, cx| {
+            let mut terminal_view = TerminalView::new(
+                terminal.clone(),
+                workspace.downgrade(),
+                None,
+                project.downgrade(),
+                window,
+                cx,
+            );
+            terminal_view.set_embedded_mode(None, cx);
+            terminal_view
+        });
+
+        for _ in 1..=20 {
+            terminal.update(cx, |terminal, cx| {
+                terminal.write_output(b"line\n", cx);
+            });
+            cx.draw(
+                gpui::Point::default(),
+                gpui::size(px(400.), px(100.)),
+                |_, _| terminal_view.clone().into_any_element(),
+            );
+        }
+        terminal.read_with(cx, |terminal, _| {
+            assert_eq!(terminal.total_lines(), 21);
+        });
+
+        terminal.update(cx, |terminal, _| terminal.clear());
+        for _ in 1..=2 {
+            cx.draw(
+                gpui::Point::default(),
+                gpui::size(px(400.), px(100.)),
+                |_, _| terminal_view.clone().into_any_element(),
+            );
+        }
+        terminal.read_with(cx, |terminal, _| {
+            assert_eq!(terminal.total_lines(), 1);
+            assert_eq!(terminal.viewport_lines(), 1);
         });
     }
 

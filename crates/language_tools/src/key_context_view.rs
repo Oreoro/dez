@@ -1,7 +1,6 @@
 use gpui::{
     Action, App, AppContext as _, Entity, EventEmitter, FocusHandle, Focusable,
     KeyBindingContextPredicate, KeyContext, Keystroke, MouseButton, Render, Subscription, Task,
-    actions,
 };
 use itertools::Itertools;
 use serde_json::json;
@@ -12,14 +11,7 @@ use ui::{
     h_flex, px, v_flex,
 };
 use workspace::{Item, SplitDirection, Workspace};
-
-actions!(
-    dev,
-    [
-        /// Opens the key context view for debugging keybindings.
-        OpenKeyContextView
-    ]
-);
+use zed_actions::dev::OpenKeyContextView;
 
 pub fn init(cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _, _| {
@@ -82,7 +74,7 @@ impl KeyContextView {
                         "".to_string()
                     };
                     let mut name = binding.action().name();
-                    if name == "dez::NoAction" {
+                    if name == "zed::NoAction" {
                         name = "(null)"
                     }
 
@@ -135,7 +127,7 @@ impl KeyContextView {
         if let Some(last_action) = a {
             last_action.partial_eq(b)
         } else {
-            b.name() == "dez::NoAction"
+            b.name() == "zed::NoAction"
         }
     }
 }
@@ -147,6 +139,10 @@ impl Item for KeyContextView {
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         "Keyboard Context".into()
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
     }
 
     fn can_split(&self) -> bool {
@@ -196,56 +192,39 @@ impl Render for KeyContextView {
                     });
                 }),
             )
-            .child(Label::new(localization::text(cx, "key-context-title")).size(LabelSize::Large))
-            .child(Label::new(localization::text(
-                cx,
-                "key-context-description",
-            )))
+            .child(Label::new("Keyboard Context").size(LabelSize::Large))
+            .child(Label::new("This view shows the current context stack for creating custom key bindings in Dez. After a shortcut is triggered, it lists every eligible context and identifies the one that matched."))
             .child(
                 h_flex()
                     .mt_4()
                     .gap_4()
                     .child(
-                        Button::new(
-                            "open_documentation",
-                            localization::text(cx, "key-context-open-documentation"),
-                        )
-                        .style(ButtonStyle::Filled)
-                        .on_click(|_, _, cx| {
-                            cx.open_url(
-                                "https://github.com/Oreoro/dez/blob/main/docs/src/key-bindings.md",
-                            )
-                        }),
+                        Button::new("open_documentation", "Open Documentation")
+                            .style(ButtonStyle::Filled)
+                            .on_click(|_, _, cx| cx.open_url("https://zed.dev/docs/key-bindings")),
                     )
                     .child(
-                        Button::new(
-                            "view_default_keymap",
-                            localization::text(cx, "key-context-view-default-keymap"),
-                        )
-                        .style(ButtonStyle::Filled)
-                        .key_binding(ui::KeyBinding::for_action(
-                            &dez_actions::OpenDefaultKeymap,
-                            cx,
-                        ))
-                        .on_click(|_, window, cx| {
-                            window
-                                .dispatch_action(dez_actions::OpenDefaultKeymap.boxed_clone(), cx);
-                        }),
+                        Button::new("view_default_keymap", "View Default Keymap")
+                            .style(ButtonStyle::Filled)
+                            .key_binding(ui::KeyBinding::for_action(
+                                &zed_actions::OpenDefaultKeymap,
+                                cx
+                            ))
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(zed_actions::OpenDefaultKeymap.boxed_clone(), cx);
+                            }),
                     )
                     .child(
-                        Button::new(
-                            "edit_your_keymap",
-                            localization::text(cx, "key-context-edit-keymap"),
-                        )
-                        .style(ButtonStyle::Filled)
-                        .key_binding(ui::KeyBinding::for_action(&dez_actions::OpenKeymapFile, cx))
-                        .on_click(|_, window, cx| {
-                            window.dispatch_action(dez_actions::OpenKeymapFile.boxed_clone(), cx);
-                        }),
+                        Button::new("edit_your_keymap", "Edit Keymap File")
+                            .style(ButtonStyle::Filled)
+                            .key_binding(ui::KeyBinding::for_action(&zed_actions::OpenKeymapFile, cx))
+                            .on_click(|_, window, cx| {
+                                window.dispatch_action(zed_actions::OpenKeymapFile.boxed_clone(), cx);
+                            }),
                     ),
             )
             .child(
-                Label::new(localization::text(cx, "key-context-current-stack"))
+                Label::new("Current Context Stack")
                     .size(LabelSize::Large)
                     .mt_8(),
             )
@@ -265,76 +244,47 @@ impl Render for KeyContextView {
                     Label::new(format!("{} {}", primary, secondary)).ml(px(12. * (i + 1) as f32))
                 })
             })
-            .child(
-                Label::new(localization::text(cx, "key-context-last-keystroke"))
-                    .mt_4()
-                    .size(LabelSize::Large),
-            )
+            .child(Label::new("Last Keystroke").mt_4().size(LabelSize::Large))
             .when_some(self.pending_keystrokes.as_ref(), |el, keystrokes| {
                 el.child(
-                    Label::new(localization::tr!(
-                        cx,
-                        "key-context-waiting-input",
-                        keystrokes = keystrokes.iter().map(|k| k.unparse()).join(" ")
+                    Label::new(format!(
+                        "Waiting for more input: {}",
+                        keystrokes.iter().map(|k| k.unparse()).join(" ")
                     ))
                     .ml(px(12.)),
                 )
             })
             .when_some(self.last_keystrokes.as_ref(), |el, keystrokes| {
-                el.child(
-                    Label::new(localization::tr!(
-                        cx,
-                        "key-context-typed",
-                        keystrokes = keystrokes.as_ref()
-                    ))
-                    .ml_4(),
-                )
-                .children(
-                    self.last_possibilities
-                        .iter()
-                        .map(|(name, predicate, state)| {
-                            let (text, color) = match state {
-                                Some(true) => (
-                                    localization::text(cx, "key-context-match"),
-                                    ui::Color::Success,
-                                ),
-                                Some(false) => (
-                                    localization::text(cx, "key-context-low-precedence"),
-                                    ui::Color::Hint,
-                                ),
-                                None => (
-                                    localization::text(cx, "key-context-no-match"),
-                                    ui::Color::Error,
-                                ),
-                            };
-                            h_flex()
-                                .gap_2()
-                                .ml_8()
-                                .child(div().min_w(px(200.)).child(Label::new(name.clone())))
-                                .child(Label::new(predicate.clone()))
-                                .child(Label::new(text).color(color))
-                        }),
-                )
+                el.child(Label::new(format!("Typed: {}", keystrokes)).ml_4())
+                    .children(
+                        self.last_possibilities
+                            .iter()
+                            .map(|(name, predicate, state)| {
+                                let (text, color) = match state {
+                                    Some(true) => ("(match)", ui::Color::Success),
+                                    Some(false) => ("(low precedence)", ui::Color::Hint),
+                                    None => ("(no match)", ui::Color::Error),
+                                };
+                                h_flex()
+                                    .gap_2()
+                                    .ml_8()
+                                    .child(div().min_w(px(200.)).child(Label::new(name.clone())))
+                                    .child(Label::new(predicate.clone()))
+                                    .child(Label::new(text).color(color))
+                            }),
+                    )
             })
             .when_some(key_equivalents, |el, key_equivalents| {
-                el.child(
-                    Label::new(localization::text(cx, "key-context-equivalents"))
-                        .mt_4()
-                        .size(LabelSize::Large),
-                )
-                .child(Label::new(localization::text(
-                    cx,
-                    "key-context-equivalents-description",
-                )))
-                .children(key_equivalents.iter().sorted().map(|(key, equivalent)| {
-                    Label::new(localization::tr!(
-                        cx,
-                        "key-context-equivalent-format",
-                        key = key.to_string(),
-                        equivalent = equivalent.to_string()
-                    ))
-                    .ml_8()
-                }))
+                el.child(Label::new("Key Equivalents").mt_4().size(LabelSize::Large))
+                    .child(Label::new("Shortcuts defined using some characters have been remapped so that shortcuts can be typed without holding option."))
+                    .children(
+                        key_equivalents
+                            .iter()
+                            .sorted()
+                            .map(|(key, equivalent)| {
+                                Label::new(format!("cmd-{} => cmd-{}", key, equivalent)).ml_8()
+                            }),
+                    )
             })
     }
 }

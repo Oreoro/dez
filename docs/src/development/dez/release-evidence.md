@@ -1,0 +1,2619 @@
+# Dez Release Evidence
+
+This log records direct evidence for the consolidated release gate. A source
+claim is not a runtime claim, and an unchecked scenario remains unverified.
+The [v0.4 Readiness](./v0.4-readiness.md) contract defines the active source and
+exact-artifact lane. The [Native Surface Contract](./surface-contract.md)
+defines the interface, while the preserved [v0.2 Workspace
+Polish](./v0.2-workspace-polish.md) and [v0.1 Product
+Hardening](./v0.1-product-hardening.md) documents retain the ownership and
+release foundations. Historical artifacts below do not validate a newer source
+tree.
+
+## 2026-08-01: native terminal-agent workflow polish
+
+Commit `596a651e99c9f961e24efe1483d9eb228830d73f` is the exact implementation
+candidate for this source-only product pass. It adds distinct native Start and
+Continue actions for Codex, Claude Code, and OpenCode across the pane Add
+control, File, Workspace Options, and Command Palette; corrects the external
+cmux handoff to `cmux open <path>`; exposes Zed's native task launcher in the
+Add menu; and centralizes the configured-terminal label used by navigation.
+The public guide, Settings copy, product strategy, active Workspace contract,
+and permanent decisions now describe the same Workspace → start or continue →
+supervise → inspect → review loop and preserve external process ownership.
+
+The following non-compiling checks passed for that exact implementation tree:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- Prettier checks for every changed current/public Markdown document; and
+- `git diff --check`.
+
+No local compilation, test suite, application launch, or visual inspection was
+run. No remote build workflow was dispatched. Compilation, tests, optimized
+packaging, signing, notarization, protected-folder behavior, provider TUI
+interaction, multiplexer attachment, and exact-artifact inspection remain open
+remote/runtime gates. This ledger-only follow-up does not change application,
+helper, workflow, manifest, or lockfile inputs.
+
+## 2026-08-01: v0.2.2 continued source polish
+
+Commit `56dbcaf1532dbcccdc9b5be2253af85b4a2764d8` is the exact
+implementation candidate for this source-only polish pass. It refines Home and
+Main Work Area navigation, removes the duplicate active-Workspace terminal
+launcher, makes the File-menu default-terminal label truthful and live-updating,
+adds the explicit cmux handoff beside running-session discovery, queues a Retry
+requested during active discovery, and uses Herdr's JSON session registry rather
+than guessed configuration-directory sockets. Public and maintainer
+documentation now follows the same start or resume → supervise → inspect or
+review story and distinguishes native terminal TUIs from external multiplexer
+ownership.
+
+The following non-compiling checks passed for that exact implementation tree:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --locked --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `jq empty assets/dez/codex-hooks.json`;
+- Prettier checks for every changed current/public Markdown document; and
+- `git diff --check`.
+
+No local or remote compilation, test suite, optimized package, signature,
+notarization, application launch, protected-folder recovery, multiplexer
+attachment, or rendered visual inspection was run for this commit. No workflow
+was dispatched for this candidate. Those runtime and artifact gates remain
+open; older runs do not validate this source tree.
+
+### Cancelled previous-head Preview run 30692700499
+
+[GitHub Actions run 30692700499](https://github.com/Oreoro/dez/actions/runs/30692700499)
+targeted earlier commit `9bab017847481a18cb8eba19c0af3e0438c3282b`.
+The Apple M2 target check and Dez source and bundle guards passed. At the user's
+request, the run was cancelled while the optimized application compilation step
+was still active. Packaging and artifact upload were skipped, and the run
+produced no candidate artifact.
+
+That cancelled run proves only its successful target and source-guard stages.
+It does not prove compilation for its own head and provides no evidence for the
+newer implementation commit recorded above.
+
+## 2026-08-01: v0.2.2 corrected source candidate
+
+Commit `8c1bef490f0ae78c9c55e4a76dce14baf257be59` is the exact corrected
+v0.2.2 implementation candidate. It changes the terminal constructed for shell
+activation to a mutable binding, as required by the feedback-aware terminal
+write path. The following source-only checks passed after that correction:
+
+- `cargo fmt --all -- --check`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract; and
+- `git diff --check`.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario,
+multiplexer attachment, or rendered visual inspection was run for this commit.
+Those gates remain assigned to GitHub Actions and exact-artifact inspection.
+This ledger-only follow-up does not change application, helper, workflow,
+manifest, or lockfile inputs.
+
+### Rejected exact-head Preview run 30691903040
+
+[GitHub Actions run 30691903040](https://github.com/Oreoro/dez/actions/runs/30691903040)
+targeted commit `0efab5b719331a9a7284750319ff5d1456628649`. The Apple M2
+target check and Dez source and bundle guards passed. Optimized compilation
+then failed in `terminal` with Rust error `E0596`: the shell-activation
+`Terminal` binding was immutable after `write_to_pty` began requiring mutable
+access for visible hosted-input rejection state.
+
+Packaging and artifact upload were skipped, and the run produced no artifact.
+The binding is corrected in exact implementation commit
+`8c1bef490f0ae78c9c55e4a76dce14baf257be59`. Evidence from the rejected run is
+not promoted beyond its successful target and source-guard stages.
+
+## 2026-08-01: v0.2.2 refined source candidate
+
+Commit `b5b1c5db0896d59c7b3e940d3c0d75100b4e2909` is the exact refined
+v0.2.2 implementation candidate. It consolidates native Workspace navigation,
+grant-only protected-folder recovery, stable terminal-Host ownership, bounded
+terminal and multiplexer transport, visible retry and input-rejection states,
+release policy, and current product documentation. The following source-only
+checks passed before that commit was recorded:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --locked --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `jq empty assets/dez/codex-hooks.json`;
+- `git diff --check`; and
+- Prettier checks for every changed YAML and current/public Markdown document.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario,
+multiplexer attachment, workflow dispatch, or rendered visual inspection was
+run for this commit. Compilation, tests, runtime behavior, packaging, signing,
+and exact-artifact evidence remain assigned to GitHub Actions and candidate
+inspection. Older Preview and source records below do not validate this newer
+source tree. This ledger-only follow-up does not change application, helper,
+workflow, manifest, or lockfile inputs.
+
+## 2026-08-01: v0.2.2 source candidate
+
+Commit `262fcc4c7516bd65cd464681ffecadc80d1f5d8b` is the exact v0.2.2
+implementation candidate. The following source-only checks passed before that
+commit was recorded:
+
+- `cargo fmt --all -- --check`;
+- `cargo metadata --locked --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `jq empty assets/dez/codex-hooks.json`;
+- `git diff --check`; and
+- Prettier checks for every changed YAML, JSON, and current/public Markdown
+  document.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario,
+workflow dispatch, or rendered visual inspection was run for this commit.
+Compilation, runtime, packaging, signing, and exact-artifact evidence remain
+assigned to GitHub Actions and candidate inspection. Older Preview and source
+records below do not validate this newer source tree. This ledger-only
+follow-up does not change application, helper, workflow, manifest, or lockfile
+inputs.
+
+## 2026-08-01: v0.2.1 source candidate
+
+Commit `3e395267517eadc255889a80683de9ff6372f139` is the exact v0.2.1
+implementation candidate. The following source-only checks passed before that
+commit was recorded:
+
+- `cargo fmt --all -- --check`;
+- `bash -n script/dez-identity-check`;
+- `bash script/dez-identity-check`, including the Dez theme contract;
+- `git diff --check`; and
+- Prettier checks for every changed current/public Markdown document.
+
+No local compilation, test suite, optimized package, signature, notarization,
+application launch, protected-folder recovery, terminal-survival scenario, or
+rendered visual inspection was run for this commit. Those gates remain assigned
+to GitHub Actions and exact-artifact inspection. The historical `0.2.0` Preview
+below does not validate this newer source tree. This ledger-only follow-up does
+not change application, helper, workflow, manifest, or lockfile inputs.
+
+## 2026-07-31: packaged v0.2 navigation baseline
+
+[GitHub Actions run 30623841946](https://github.com/Oreoro/dez/actions/runs/30623841946)
+targeted commit `a21ad2b62a47beaf0d13e03208f3d1ab095d8435` and completed
+the Apple M2 Preview lane in 1 hour 17 minutes. Source and bundle guards,
+optimized arm64 compilation, DMG verification, bundle identity, executable
+architecture, deep ad-hoc signature, packaged app/CLI/terminal-Host entry
+points, the `0.2.0` runtime version, portable checksum, and artifact upload all
+passed.
+
+GitHub artifact `8792258542` is named
+`Dez-preview-macOS-M2-a21ad2b62a47beaf0d13e03208f3d1ab095d8435`, is
+145,156,781 bytes, and reports archive SHA-256 digest
+`337c1f45ece29aa46d0811d203d1f714eddfbe8b6464626071ad691b3ae69442`.
+It is an ad-hoc-signed Preview, not a signed or notarized v0.2 release.
+That archive digest is not the DMG checksum. The workflow generated and checked
+`SHA256SUMS.txt` inside the artifact, but this ledger did not separately record
+its DMG value; a future release record must preserve both values explicitly.
+
+This proves compilation and packaging for that exact historical baseline.
+It does not prove any later source commit, including Workspace-access and
+multiplexer-reconciliation changes. It also does not prove interactive first
+launch, protected-folder recovery, terminal survival or attachment, keyboard
+and screen-reader behavior, or rendered light/dark/reduced-transparency layouts.
+
+## 2026-07-31: rejected native-navigation compile baseline
+
+[GitHub Actions run 30621006062](https://github.com/Oreoro/dez/actions/runs/30621006062)
+targeted commit `2c7d72039cf2db115837c8f2ad59c8ad0bb1f522`. The Apple M2
+target check and Dez source and bundle guards passed. The optimized application
+build then failed before packaging, so this run produced no candidate artifact.
+
+The compiler found two concrete defects: `installation_required` passed a
+borrowed `Option` predicate to a consuming `Result::map`, and generated Terminal
+Host identity formatting passed the `IdType` wrapper where a displayable ID was
+required. The follow-up source patch uses an owning closure, formats the stored
+installation ID explicitly, and removes an unused legacy-session payload that
+the same compile reported as dead code.
+
+This rejected run is compile diagnostics, not positive artifact evidence. The
+corrections were subsequently compiled and packaged by the exact-head Preview
+baseline recorded above.
+
+## 2026-07-31: real native Home tab and navigation routes
+
+Fresh, fallback, and explicit New Window flows now insert the existing
+`WelcomePage` as a real Main Work Area Item instead of presenting it only as an
+untitled empty-pane placeholder. The Item is labeled **Home**, uses a native
+icon, and forces the inherited single-tab bar to remain visible, so Home and
+the adjacent Add control share the same native tab strip as files, terminals,
+diffs, and tools.
+
+The Add menu reuses existing Zed actions to reopen Home, open Recent
+Workspaces, start the configured terminal, open the Built-in Agent, create or find
+files, reveal Files/Git/Debug, and search the Workspace or its symbols. No
+custom history, tab, search, or Workspace picker was introduced.
+
+This is source evidence only. Formatting, diff hygiene, shell syntax, identity,
+and remote source guards can validate the patch. Runtime appearance, keyboard
+focus, first launch, close/reopen, and Add-menu behavior remain open until the
+exact candidate package is inspected.
+
+## 2026-07-30: bounded Workspace navigation labels
+
+The active v0.2 source-polish lane now gives a multi-root Workspace one bounded
+visible identity: its first root plus the number of roots. The unabridged root
+list remains in search, the header tooltip, and the accessibility label.
+Workspace overview counts name sessions explicitly, and agent provider/state
+metadata renders below the primary terminal or Session title through the native
+ThreadItem layout.
+
+This is source evidence only. Formatting, diff hygiene, shell syntax, theme,
+identity, and the remote source guard may validate the patch, but no local
+application build or visual claim is recorded here. Runtime and visual proof
+remain open for the exact candidate artifact.
+
+## 2026-07-30: native Home launcher and empty tab frame
+
+The active source lane removes Home's persistent workflow strip and provider
+promotion. Home is top-anchored, states the product loop once, and moves
+directly into native Workspace actions and Recent Workspaces. Multi-root recent
+rows use a bounded first-root identity while preserving every compact path in
+row metadata. Empty Dez Main Work Areas now keep the native tab strip and its
+adjacent Add control visible even before the first Item opens.
+
+This is source evidence only. Runtime tab focus, Add-menu placement, narrow
+layout, light/dark appearance, and first-launch behavior remain open for the
+exact candidate artifact.
+
+## Historical v0.0.3 candidate status {#v0-0-3-candidate-status}
+
+The package version and source release train at that checkpoint identified
+v0.0.3. No packaged artifact from that checkpoint proves the active source tree. The successful macOS action
+for rejected candidate `v0.0.3-rc5` predates the current stable Workspaces
+navigator, contextual right-side Workspace Tools, Main Work Area tab routing,
+balanced density, centered onboarding, and explicit Agent Session status
+changes. It is historical compile and bundle evidence only.
+
+The active candidate may advance only when its exact commit is recorded here
+with source, compile, bundle, launch, restart, terminal survival, reattach,
+responsive layout, Lumin material, keyboard, accessibility, and coexistence
+evidence.
+
+### Upstream provenance refresh
+
+On 2026-07-28, `upstream/main` was refreshed before freezing the v0.0.3
+candidate:
+
+- audited Dez checkpoint: `82119a005e704a7cb7a4681ccd42231bc94aeaf9`;
+- upstream Zed head: `8e4e5a39eed932d943cb7a3e7078885b75d1ea54`;
+- shared merge base: `b0f145f4aec671970340a528cb8197181e969e8c`;
+- audited divergence: 762 Dez-side commits and 63 upstream-side commits.
+
+The read-only merge rehearsal produced eight conflict groups:
+
+- dependency resolution: `Cargo.lock`;
+- Dez defaults and public appearance documentation:
+  `assets/settings/default.json` and `docs/src/visual-customization.md`;
+- inherited Agent behavior:
+  `crates/agent_ui/src/agent_panel.rs` and
+  `crates/agent_ui/src/conversation_view/elicitation.rs`;
+- preview, terminal, and shell ownership:
+  `crates/markdown_preview/src/markdown_preview_view.rs`,
+  `crates/terminal_view/src/terminal_panel.rs`, and
+  `crates/workspace/src/workspace.rs`.
+
+Those conflicts touch the exact UI, terminal, and pane contracts being
+hardened. Pulling them unreviewed into the release checkpoint would expand the
+candidate and invalidate the current audit. They are intentionally deferred to
+the next upstream-parity branch.
+
+The next exact candidate is `v0.0.3-rc6`. On 2026-07-29 its pre-freeze source
+passed `cargo fmt --all -- --check`, `git diff --check`, locked offline Cargo
+metadata resolution, Node and shell syntax checks, `dez-theme-check`, and the
+full `dez-identity-check`. Those checks cover the stable Workspaces navigator,
+native work-tab ownership, mutually exclusive right-side Workspace Tools and
+Built-in Agent, centered responsive Home, Lumin transparency budgets, and
+terminal-agent state vocabulary.
+
+This is source evidence only. The Actions build manifest must name the same
+commit as the annotated `v0.0.3-rc6` tag target; branch names or historical
+successful runs are not accepted as identity evidence. Compile, bundle,
+launch, restart, terminal survival, reattach, responsive layout, and visual
+matrix gates remain open until that exact artifact is inspected.
+
+### Rejected candidates
+
+`v0.0.3-rc1` resolved to
+`45e3d2a90ca35284b38e53b397581b3a2b1114b5`. GitHub Actions run
+`30344835485` passed the source and bundle guards, then failed while compiling
+`workspace`: `InvalidItemView` assigned an accessibility role after becoming
+a stateful element without importing `StatefulInteractiveElement`. Packaging
+and runtime verification were correctly skipped. The missing trait import is
+fixed in `v0.0.3-rc2`; no evidence from rc1 is promoted beyond source checks.
+
+`v0.0.3-rc2` resolved to
+`4c7c6b8094668bc9245f51ae8d36eaef1c07f63c`. GitHub Actions run
+`30346678382` passed the earlier compile stage, then failed while compiling
+`sidebar`: the Session Rail used the public `detect_terminal_agent_kind`
+helper without importing it. Packaging and runtime verification were correctly
+skipped. The missing import is fixed in `v0.0.3-rc3`; no evidence from rc2 is
+promoted beyond source checks.
+
+`v0.0.3-rc3` resolved to
+`6632720293f9d75302bf9fd888451869e4c21a1e`. GitHub Actions run
+`30349983005` compiled and packaged the arm64 app successfully. Local
+exact-artifact inspection confirmed version `0.0.3`, the expected commit,
+arm64 executables, deep ad-hoc signature validity, and matching DMG and
+executable hashes. Runtime inspection then exposed two stop-ship defects:
+
+- revealing a Main Work Area destination while Sessions was open panicked in
+  `workspace::MultiWorkspace::apply_close_sidebar` because
+  `schedule_close_dez_sessions_for_main_work_area_destination` used
+  `Context::defer_in`, reacquired the active `Workspace`, and then updated the
+  same retained Workspace through the parent;
+- `SHA256SUMS.txt` stored the runner's internal artifact path, so
+  `shasum -c SHA256SUMS.txt` failed after download even though the DMG hash
+  itself matched.
+
+The exact panic was observed with a fresh isolated user-data directory; the
+separate terminal Host remained alive after the GUI process exited. rc4 moves
+the sidebar close to a Window-level deferral and emits plus verifies a portable
+checksum entry. No runtime evidence from rc3 is promoted to the final
+candidate.
+
+`v0.0.3-rc4` resolved to
+`63ab2e565e898a85537d5fbf386e9f2759da33c4`. GitHub Actions run
+`30355776073` compiled, packaged, self-verified the portable checksum, and
+uploaded the candidate successfully. The downloaded checksum, manifest,
+version, architecture, deep ad-hoc signature, app, CLI, and terminal Host
+checks all passed locally. Launching that exact artifact with the isolated rc3
+profile then exposed a second startup re-entrancy panic:
+`Sidebar::reconcile_restored_sessions_visibility` used
+`Context::defer_in`, held the Sidebar lease, and called
+`MultiWorkspace::reconcile_restored_sidebar_visibility`, which read the same
+Sidebar focus handle. rc5 computes restoration truth before deferral and
+schedules only the parent reconciliation through the Window. The rc4 terminal
+Host again remained alive after the GUI panic. No runtime evidence from rc4 is
+promoted to the final candidate.
+
+`v0.0.3-rc5` resolved to
+`b4d942a54de1c732483ea1237ffcb145dd0eb292`. GitHub Actions
+[run 30359680607](https://github.com/Oreoro/dez/actions/runs/30359680607)
+and job `90276079735` completed the source guards, optimized arm64 build,
+bundle verification, packaging, and artifact upload. Artifact `8690205342`,
+named
+`Dez-macOS-M2-b4d942a54de1c732483ea1237ffcb145dd0eb292`, has GitHub digest
+`sha256:8670b640788aa7964799ef793c448dcd1c9782582d191ffa11be5a2584fb2acf`.
+This proves that exact source compiled and packaged.
+
+Visual runtime review rejected rc5. Its Navigator collapsed into a tiny,
+ambiguous strip; Files/Git navigation and movable work tabs looked like one
+undifferentiated tab model; the empty Main Work Area left most of the viewport
+blank; and Agent Terminal rows did not communicate provider and
+human-intervention state strongly enough. Those are stop-ship product defects,
+not cosmetic release-note issues. The superseding source introduces one
+stable Workspaces navigator, keeps Files/Git/Outline/Debug and Built-in Agent in
+one contextual right slot, routes file, commit, diff, review, and terminal work
+into the native draggable Main Work Area tab strip, centers the first-run
+action cluster, hides advanced layout recipes from default chrome, uses
+balanced default density, and maps terminal runtime and agent truth to native
+row statuses. No rc5 Runtime evidence is promoted to the next candidate.
+
+The shell intentionally borrows Herdr's low-noise semantic session list without
+embedding a second terminal multiplexer: Workspaces summarizes actors and
+attention, native work tabs retain drag/reorder/preview behavior, and the real
+PTY remains full size in the Main Work Area. Files and Git are scoped to the
+active Workspace rather than competing with Workspaces for the same navigation
+slot.
+
+### Multiplexer boundary
+
+v0.0.3 detects Codex, Claude Code, OpenCode, Herdr, and other supported agent
+processes when they run inside a Dez Agent Terminal. Dez-owned terminals remain
+the only interactive, recoverable sessions promised by this release.
+
+Detached tmux discovery and control, and Herdr socket orchestration, are
+intentionally deferred until the hardening gates pass. A later adapter may use
+tmux control mode and Herdr's local socket API, but it must distinguish
+observation, attachment, input ownership, and process termination instead of
+presenting an external process as a Dez-owned session.
+
+## v0.0.2 parity build evidence {#v0-0-2-parity-build-evidence}
+
+On 2026-07-24, the parity branch incorporated upstream target
+`b0f145f4aec671970340a528cb8197181e969e8c` from Dez checkpoint
+`4cbe99da2263e781f7aa8725e4dc67ea3d05afc3` in two-parent merge
+`6eabc1961e20c684edce44439c95f6d3c22f82a7`. The locked macOS arm64 build
+completed for the application and terminal host:
+
+```sh
+LK_CUSTOM_WEBRTC="$PWD/target/dez-build-deps/webrtc-custom/mac-arm64-release" \
+  cargo build --locked --profile dev \
+  --config 'profile.dev.debug=0' \
+  --config 'profile.dev.incremental=false' \
+  --config 'profile.dev.codegen-units=1' \
+  --config 'profile.dev.split-debuginfo="off"' \
+  --config 'profile.dev.build-override.debug=0' \
+  --config 'profile.dev.build-override.codegen-units=1' \
+  --config 'profile.dev.build-override.split-debuginfo="off"' \
+  -p zed --bin dez -p dez_terminal_host --bin dez-terminal-host -j1
+```
+
+The custom WebRTC path is a local extraction of the workspace-pinned
+`webrtc-0001d84-4` macOS arm64 release archive. `unzip -t` reported no errors
+before it was used. It avoids a build-script response-body timeout and does not
+change the locked Rust dependency graph.
+
+| Artifact                         | Type                           | Size | SHA-256                                                            |
+| -------------------------------- | ------------------------------ | ---- | ------------------------------------------------------------------ |
+| `target/debug/dez`               | Mach-O 64-bit arm64 executable | 1.0G | `5e032fd154165c7fc3fba63a52b27f97e1a34d4a2cde31c2e204a538e7600990` |
+| `target/debug/dez-terminal-host` | Mach-O 64-bit arm64 executable | 18M  | `35acd45896a00bdf3be8a40fd1e6daf626ca584a3e60e6c905fa0cbd67cc6c0d` |
+
+`cargo fmt --all -- --check`, `./script/dez-identity-check`, locked offline
+metadata resolution, shell syntax checks, merge-marker inspection, and
+`git diff --check` pass. Neither built binary was launched, so this is compiled
+evidence only. Runtime, bundle, signing, restart, and release claims remain
+open.
+
+## Frozen source and historical artifacts {#frozen-source-and-intended-artifacts}
+
+- Protocol 4 app and Host build commit: `d0b0d9a908`
+- Corrected shell bundle source: `679cdc28445c824482923bdfdfd8463927f9a337`
+- Durable viewport test source: `a91b04809ce0fa9d26407bc1685726ef36a0f03f`
+- Terminal-first empty-workspace source: `e4fbc22a3a`
+- Honest Session Rail zero-state source: `d9688490ad`
+- Calm zero-session rail geometry source: `1ebb7c79d4`
+- Reachable isolated CLI installer source: `704314cc92`
+- Initial terminal-scope evidence source: `7a20dc1d19`
+- Live background viewport attachment source: `962b611605`
+- Durable empty-fallback Workspace source: `e9a595fcff`
+- Shared-App-Session New Window proof source: `2334fbdcfc`
+- Queued-open startup barrier source: `47e769da5d`
+- Failed-restore durable truth source: `d10d90648d`
+- Actionable failed-restore notice source: `31cc1b1205`
+- Persistent Session Rail recovery source: `fbf8443359`
+- Zed coexistence endpoint isolation source: `c101fe6a43`
+- Dez-only onboarding chrome source: `699cbd1bc8`
+- Neutral getting-started agent icon source: `869cddcce0`
+- Single-action empty Session Rail source: `4e6292ff0a`
+- Compact Session Rail start-state source: `d53cd5d656`
+- Terminal-focused Workspace status source: `05df05d282`
+- Unified terminal lifecycle interaction source: `c83b56b5aa`
+- Dead terminal startup setting removal source: `222c658123`
+- Keyboard-visible Session row actions source: `f0e817669a`
+- Unified terminal Surface lifecycle language source: `7f8fd167c2`
+- Precise terminal tab identity metadata source: `88948b869a`
+- Self-labeling default Session Rail footer source: `b43503e3fe`
+- Compact labeled Session Rail utility sizing source: `ef35bf40a7`
+- Deduplicated Session Rail footer source: `a9b1a961c0`
+- Unified Session Rail Workspace vocabulary source: `ff91b34a81`
+- Workspace-scoped zero-session creation source: `4fc53b860f`
+- Clear Session Rail utility actions source: `8bcd11f4b6`
+- Dead Session Rail settings removal source: `ad59a60926`
+- Inherited cloud settings removal source: `a20074de26`
+- Upstream prediction-data control removal source: `2435348289`
+- Dez command namespace and settings-link source: `f89f55868c`
+- Inherited collaboration command filter source: `f40877d4ab`
+- Neutral Codex session glyph source: `526218a972`
+- Deliberate Codex onboarding setup source: `bb0cf408b4`
+- Explicit Workspace review evidence source: `a8ce563373`
+- Persistent selected Workspace evidence source: `e101b63e43`
+- State-aware review evidence tab menu source: `f535c5e6ae`
+- Terminal restore evidence reconciliation source: `0e6507756e`
+- Live hosted-terminal evidence lifecycle source: `ea2bb18453`
+- Workspace evidence mutation boundary source: `0f8740b1a1`
+- Pending Workspace evidence isolation source: `af232402f5`
+- Durable terminal Workspace ownership source: `a4047d95c0`
+- Live and persisted Workspace evidence isolation source: `6f2061d2c7`
+- Workspace-scoped Session Rail branch source: `27279ca542`
+- Viewport-scoped project settings source: `a2d733eea3`
+- Settings viewport-switch refresh source: `498f94a525`
+- Debug pane-Surface routing source: `5efa0398ad`
+- Terminal compatibility-Surface routing source: `1f186f9b8c`
+- Workspace launch-surface vocabulary source: `e4f1e341c9`
+- Workspace-tools and Files vocabulary source: `6f1562847e`
+- Recent and remote Workspace vocabulary source: `f6aea3e013`
+- Recent-work and Restricted Mode vocabulary source: `b749a25619`
+- Developer-tool and Files-settings vocabulary source: `0e2c0dcae3`
+- Upstream recovery/promotion cleanup source: `e969abda4a`
+- Retained recovery-state Workspace grammar source: `0607771783`
+- Zero-session Session Rail hierarchy source: `2092acd453`
+- Terminal-first Session Rail creation source: `57290c27c3`
+- Workspace closure parity and scope source: `633dcc4bec`
+- Restored textual attention source: `7893762cd5`
+- Bounded Host evidence-gap source: `bd36afd3f4`
+- Retained-command redaction and Evidence settings source: `b39eedf724`
+- Secret CLI-flag redaction source: `9323af8008`
+- URL-credential redaction and file-target disclosure source: `80ff1df75f`
+- Session Rail accessible hierarchy source: `c47637c2ac`
+- Session scope and result announcement source: `7e91f00b69`
+- Recovery-callout urgency semantics source: `e28b78ed57`
+- Session Rail hit-target normalization source: `a90fae5873`
+- Session Rail active-descendant focus source: `f6318ea907`
+- Legacy icon-mode fallback source: `9930e86677`
+- Responsive terminal-first onboarding source: `4a102fc50e`
+- Fork telemetry isolation source: `933e3f515f`
+- Disabled updater-setting cleanup source: `2680937952`
+- Collaboration Panel settings cleanup source: `9239006d4b`
+- Accessible Session Rail shortcut source: `33f7ff5893`
+- Local-first provider-authentication gate source: `2fc5226a51`
+- Upstream edit-prediction UI isolation source: `cc2509e8b8`
+- Upstream prediction command-filter isolation source: `b909b31d45`
+- Crash recovery identity and opt-in source: `aab0e5f2f2`
+- Collaboration shortcut and call-chrome isolation source: `0ddf84161e`
+- Dez CLI and skill-import guidance source: `2efbf166b7`
+- Frozen workspace lock repair source: `c3dfb7aa79`
+- Callout accessibility compile repair source: `5a25a72f92`
+- Callout stateful-role compile repair source: `42ff77e99c`
+- Host snapshot transport import repair source: `1ed2ff814a`
+- Host snapshot Workspace ownership repair source: `4369bb1f3b`
+- Prediction-provider normalization export source: `af8ecad961`
+- Session Rail stateful landmark repair source: `9ed0e1aaaf`
+- Onboarding stateful landmark repair source: `2452d3b4ec`
+- Lumin and JetBrains visual-default source: `67001bf0ef`
+- Deliberate terminal-termination source: `7664c6e59b`
+- Workspace header control-identity source: `e0e8f119e0`
+- Region-owned pane-chrome source: `1c87220109`
+- Quiet Session Switcher source: `79e87f2351`
+- Terminal title-fidelity source: `e28314a893`
+- Packaging and permission-copy foundation: `ce11c4ed3d`
+- Inside-out local bundle signing: `fcd1d06564`
+- Post-build lint compatibility commit: `3ad224dfd6`
+- Integration merge: `2be63cfea347006e407934754086bbef62d482c2`
+- Incorporated upstream: `9d0ef37a25711c00bf6d1ba1142e9de4f4a122a9`
+- `Cargo.lock` SHA-256:
+  `830aca0d0439bf3d58ea2832fe1930c1f0b84fa0bce90bfdd078c59591c6a4df`
+- Toolchain: `rustc 1.95.0 (59807616e 2026-04-14)`,
+  `cargo 1.95.0 (f2d3ce0bd 2026-03-21)`, host
+  `aarch64-apple-darwin`
+- Historical development executable:
+  `/Users/test/Documents/zed 3.0/target/debug/dez`
+- Historical terminal Host helper:
+  `/Users/test/Documents/zed 3.0/target/debug/dez-terminal-host`
+- Historical development CLI:
+  `/Users/test/Documents/zed 3.0/target/debug/cli`
+- Historical development bundle:
+  `/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app`
+- Legacy untracked artifact excluded from all evidence:
+  `/Users/test/Documents/zed 3.0/dist/Superzed.app`
+
+The initial gate launched only the intended raw `target/debug/dez`. A later
+gate launched the matching `Dez Dev.app` through LaunchServices. Before the
+public source push, the regenerable `target` directory and excluded `dist`
+artifact were removed. The excluded Superzed artifact was never opened. A new
+runtime gate must rebuild and identify a fresh exact candidate.
+
+## Build evidence {#build-evidence}
+
+The original app and helper completed together, warning-free, in 25 minutes 31
+seconds. On 2026-07-23, the candidate through source commit `2452d3b4ec`
+completed from a clean target with the same locked, storage-constrained
+profile:
+
+```sh
+cargo build --locked --profile dev \
+  --config 'profile.dev.debug=0' \
+  --config 'profile.dev.incremental=false' \
+  --config 'profile.dev.codegen-units=1' \
+  --config 'profile.dev.split-debuginfo="off"' \
+  --config 'profile.dev.build-override.debug=0' \
+  --config 'profile.dev.build-override.codegen-units=1' \
+  --config 'profile.dev.build-override.split-debuginfo="off"' \
+  -p zed --bin dez -p dez_terminal_host --bin dez-terminal-host -j1
+```
+
+The CLI completed separately in 2m12s with the same locked, non-incremental,
+single-codegen-unit profile. The captured unsigned candidate artifacts are
+arm64 Mach-O files:
+
+| Artifact            | Size | SHA-256                                                            |
+| ------------------- | ---- | ------------------------------------------------------------------ |
+| `target/debug/dez`  | 1.0G | `359c9d7bdb74d364ded8e4f2109d0e96824231d3c3b5c04a061fc39571bf8c75` |
+| `target/debug/cli`  | 12M  | `a3f293b360da74bb06971f6bb09fce3bc7cc91506700fb4a1be5fefbbce13d45` |
+| `dez-terminal-host` | 18M  | `54895fe7d27e74da5f6a429ce4b8b8f296a17be735b11b532b87f8757603b422` |
+
+The raw app, CLI, and helper matched the hashes above at capture time and were
+later removed with the regenerable Cargo target directory. No Dez or Superzed
+process was running during the clean build or artifact capture.
+
+## Debug bundle and coexistence evidence {#debug-bundle-and-coexistence-evidence}
+
+`script/bundle-mac -d` now reuses a complete host debug artifact set, restores
+the temporary manifest on bundler failure, works around the pinned bundler's
+invalid terminal-colour failure through its plain-output path, omits the
+release-only remote server, and creates the bundle without a second app build.
+Local ad-hoc signing now signs nested executables inside-out before sealing the
+app, matching the reliable release ordering instead of relying on one fragile
+`codesign --deep` pass.
+
+The resulting 1.0G bundle passed `codesign --verify --deep --strict` and has:
+
+- bundle identifier `dev.dez.Dez-Dev`;
+- display and bundle name `Dez Dev`;
+- version `0.0.1`;
+- executable `dez`;
+- only the `dez-dev` URL scheme;
+- arm64 `dez`, `cli`, `dez-terminal-host`, and bundled `git` executables;
+- the required document icon and Dez document labels;
+- an ad-hoc local signature with no team identifier;
+- ad-hoc CDHash `f425b98dce718f551184824bc19d08f5b1cbd259`;
+- privacy prompt copy that identifies a developer tool launched from Dez
+  instead of ambiguously claiming that “an application in Dez” requested data.
+
+Signed bundle-executable SHA-256 values are:
+
+| Bundle executable   | SHA-256                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| `dez`               | `39792d9e32a0f016113d888e12ee4c7e8a3ac3655bb8d68537d7e3cea636ee38` |
+| `cli`               | `c6a37b8aaedc6d222c957ce48f8b6925beaaead926182e8981a26307718e147b` |
+| `dez-terminal-host` | `c8cc53a726a895a4e6604112816d38d4ad479605999ba8463e4794199ed45e81` |
+| `git`               | `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292` |
+
+The signed copies differ byte-for-byte from the raw Cargo outputs because the
+ad-hoc signing step rewrites Mach-O signatures. The 1.0G candidate built from
+source through `2452d3b4ec` passes deep strict signature verification. Static
+identity checks pass.
+No official Zed installation or CLI was present in the inspected system app and
+command locations, so installed coexistence cannot be demonstrated and remains
+open; no alternate application was launched during that audit.
+
+Commit `c101fe6a43` closes the source-level endpoint collisions found during the
+coexistence audit. macOS Dez channels now use bases
+45737/45837/45937/46037 before per-user offsets rather than official Zed's
+43737 range. Linux app and CLI use the product-isolated
+`dez-{channel}.sock`. Linux and Windows CLI discovery now fails clearly when a
+matching Dez executable is absent instead of silently launching a neighboring
+official Zed binary. Identity checks enforce all three boundaries, and
+`cargo check --locked -p cli --bin cli -j1` passes in 1m22s. Installed
+side-by-side proof is still not claimed because no official Zed installation
+exists in the inspected locations.
+
+Commit `699cbd1bc8` removes the remaining upstream onboarding entry points from
+Dez chrome. Title-bar promotion banners and Return to Onboarding render only
+for official Zed. Dez Help exposes **Workspace Guide**, and the optional
+welcome surface uses Open Workspace, Recent Workspaces, and supervision copy
+that names worktree isolation and review evidence. Follow-up `869cddcce0`
+replaces its Zed Assistant glyph with the neutral Robot icon and adds an
+identity regression guard. Formatting, diff, and identity checks pass;
+compiled and rendered proof remains open.
+
+The v0.1 UI-polish branch further reduces Home to native rows on the Main Work
+Area canvas. Primary Workspace actions and Recent Workspaces are separated by
+one structural divider rather than rounded panel cards, while supported
+terminal agents appear as a single muted capability line instead of an icon
+strip. Source guards preserve the responsive wide/narrow hierarchy; exact
+artifact rendering remains part of the pending macOS visual matrix.
+
+## Runtime evidence {#runtime-evidence}
+
+The exact raw executable was launched with
+`DEZ_EXPERIMENTAL_TERMINAL_HOST=1`. The first runtime pass found and then drove
+two real fixes: stale onboarding actions no longer make the built-in keymap
+panic, and `auto_connect = false` now prevents eager cloud-provider
+authentication. The final launch emitted neither failure.
+
+The app launched the exact sibling helper at
+`target/debug/dez-terminal-host`. The accepted v0.0.1 compatibility boundary
+uses `/Users/test/.local/state/Superzed/terminal-host`; the directory was mode
+`0700`, and `auth.token` and `local.sock` were mode `0600`.
+
+Host survival and reuse were observed directly:
+
+1. GUI PID `48519` connected to helper PID `48768`.
+2. After `SIGTERM` to the GUI, helper PID `48768` stayed alive and reparented
+   to PID 1 with the same socket and Host identity.
+3. Relaunching the exact GUI as PID `50092` reused helper PID `48768`; exactly
+   one helper existed and Host ID
+   `d9670db8-e498-5537-a9d8-f99ad098f4aa` remained unchanged.
+
+This proves Host-process survival and reuse. It does **not** by itself prove the
+complete terminal acceptance scenario.
+
+The desktop later became available and exposed a blocking macOS shell defect:
+the Session Rail occupied the whole client area, covered the welcome/editor
+surface, and clipped the lower workspace chrome. The client-decoration render
+branch had absolute positioning with both horizontal edges pinned and no
+explicit rail width. Commit `36d8024280` gives that branch an explicit width,
+anchors only the active edge, and replaces the cramped empty-project row with a
+vertical empty state and full-width New Terminal action. Follow-up work
+preserves recorded terminal dimensions for every replay fragment, keeps durable
+Workspace identity after the last viewport closes, projects ordinary live
+shells into the Session Rail, and constrains footer content to one line.
+
+A later screenshot of the running signed bundle exposed a separate compact-mode
+contract mismatch. `WorkspaceSidebar::width` reserved the capped 240 px width,
+but the root render element still painted at the stored 300 px width in both
+decoration branches. The clipped 60 px explains the crushed header, rows, and
+footer in that screenshot. Commit `79f69b273c` resolves the width once and uses
+it for painting as well as reservation, with compact, detailed, and icon-mode
+regression assertions. Formatting and diff checks pass. Its focused test build
+was attempted but not completed: reconstructing the deleted Cargo source cache
+twice exhausted the remaining volume before the large test link, so no test
+pass is claimed. The corrected source now compiles in the complete app and is
+present in the signed bundle; rendered proof remains open.
+
+The supplied screenshot file is timestamped 2026-07-22 20:10:35. The exact
+currently running bundle executable was written at 2026-07-23 01:10:19 and its
+PID `85053` started at 01:10:50. The screenshot therefore predates the current
+process by about five hours: it is valid defect evidence but cannot establish
+the current bundle's rendered state.
+
+A read-only string fingerprint separates the artifacts further. The screenshot
+visibly says `0 sessions · caught up`, which is absent from PID `85053`'s exact
+executable. That executable contains **No sessions yet**, **No sessions in this
+workspace**, **Project ready**, and **Command Search**, but does not contain the
+later **Start a session** or **Workspace ready** source. There are therefore
+three distinct generations: the supplied screenshot, the stale running bundle,
+and the source tree recorded in that entry. None may be substituted for rendered
+proof of another.
+
+The screenshot also showed a loaded project with a completely blank center.
+The render decision checked `should_display_welcome_page` before checking for a
+visible worktree, so a legacy/restored tabbed pane with the flag unset returned
+an empty placeholder. Commit `4829f6b052` gives a loaded project priority and
+renders the existing Workspace ready surface with Find File, New File, and New
+Terminal actions; no-worktree welcome suppression retains its old meaning. A
+focused model assertion covers both cases, but it shares the unfinished
+storage-bound test target and is not recorded as passing.
+
+The stale bundle log supplied a separate runtime finding: inherited user
+settings could still start the upstream Zed websocket, LiveKit reconnection,
+and Zed-hosted edit prediction even though Dez defaults `auto_connect` to false
+and hides collaboration/account chrome. Commit `1d5c03d88b` gates automatic
+cloud authentication and eager Collab-panel construction to the official Zed
+product, and treats inherited Zed/Mercury prediction providers as unavailable
+in Dez while retaining explicit Copilot, Codestral, Ollama, and compatible API
+providers. Commit `9318b270d9` adds static identity-policy checks for all of
+these boundaries. The checks pass. The corrected bundle remained alive for the
+recorded runtime soak with no established or listening TCP socket, closing the
+quiet local-launch runtime gate.
+
+The screenshot's footer also exposed an independent flex-layout failure:
+project identity and worktree/branch controls were nominally truncating, but
+their parent row did not give them bounded shrink regions. Commit `0d8496969f`
+wraps both groups in minimum-width-zero, flexible, overflow-hidden containers
+and keeps the Git group bounded to the row width. Formatting and diff checks
+pass. The complete app build now contains the change; narrow-width render audit
+remains open.
+
+The same footer rendered Command Search in a dedicated row immediately above a
+second icon utility bar. Commit `abc4f8bedb` removes that stacked Dez-only
+chrome, keeps Command Search as an accessible icon in the existing utility bar,
+suppresses the unowned upstream update surface, and renders the Canvas prefix
+indicator row only while prefix mode is active. Official Zed retains its prior
+workspace-bar behavior. Formatting and diff checks pass, and the complete app
+build contains the change; render proof remains open.
+
+The supplied zero-session screenshot also makes the remaining density problem
+plain: even after correcting reservation versus painting, compact mode itself
+allowed only 240 px, while the rail still carried named creation, scope, search,
+project, and utility controls. Commit `1ebb7c79d4` raises the compact cap to
+280 px and the user-resize floor to 240 px. At zero sessions it omits the inert
+All 0 / Attention 0 scope row and search field; a pre-existing query remains
+visible so it can be cleared. The focused visibility assertion is authored and
+a clean `cargo check --locked -p sidebar --lib -j1` passes in 14m34s. No
+rendered claim is inferred from that source check.
+
+Follow-up `4e6292ff0a` first removed the empty rail's duplicate creation
+hierarchy. Later overview work restored the persistent rail title and status
+without restoring its zero-session creation action. Commit `d53cd5d656`
+finishes the current composition: the overview owns **No sessions yet**; the
+compact start block has no repeated title or decorative card; and one filled
+**New Terminal** action is paired with an outlined **Open Workspace…**
+alternative. Authored model assertions and identity guards freeze the handoff.
+Formatting, diff, and identity checks pass; compilation and rendered proof
+remain in the consolidated gate.
+
+Commit `a9b1a961c0` removes the second project/branch identity row from Dez's
+Session Rail footer. Project identity remains in the rail's project headers;
+Restricted Mode and embedded cross-platform application menus can still open
+the footer row when they carry essential content, and official Zed retains its
+upstream behavior. Two focused model tests and an identity guard cover those
+product and safety boundaries. Formatting, diff, and identity checks pass;
+compile and rendered proof remain deferred.
+
+Commit `ff91b34a81` normalizes the remaining user-facing rail vocabulary around
+Workspace: Remote Workspace, Workspace Options, focus/open-new-window actions,
+Open Workspace, and Open Workspace Rules. Internal upstream `Project` types
+and action identifiers are unchanged. The bottom entry now uses a Folder Open
+glyph rather than an add-project glyph. An identity rejection prevents the old
+mixed labels from returning. Formatting, diff, and identity checks pass;
+rendered proof remains deferred.
+
+Commit `4fc53b860f` removes the last zero-session duplicate from the screenshot's
+open-Workspace state. At zero sessions, each Workspace group owns its scoped
+New Terminal action and the global overview omits its competing copy. After a
+session exists, the overview creation shortcut returns. The full no-Workspace
+activation surface remains unchanged. An authored model assertion and identity
+guard cover the count transition. Formatting, diff, and identity checks pass;
+compile and rendered proof remain deferred. This paragraph records that
+commit's exact behavior; the later 2026-07-26 populated-state ownership slice
+supersedes the shortcut return for Dez while retaining official Zed
+compatibility.
+
+Commit `8bcd11f4b6` aligns the remaining rail utilities with their actual scope.
+The clock is Agent History rather than generic Thread History, the command icon
+uses Command Palette consistently in its accessible name and tooltip, and New
+File/Open expose explicit accessible labels plus action-aware shortcut
+tooltips. An identity rejection freezes the visible utility names. Formatting,
+diff, and identity checks pass; compiled interaction proof remains deferred.
+
+Commit `ad59a60926` removes five now-inert Session Rail Chrome controls from
+Dez's Settings UI: branch status, branch name, worktree name, duplicate project
+identity, and the upstream onboarding banner. Their schema remains readable for
+upstream/legacy compatibility. Files Pane, application menus, and Linux window
+button layout remain exposed because they still affect rendered behavior. A
+focused model test covers the full allow/remove set and an identity guard
+freezes product gating. Formatting, diff, and identity checks pass; compiled
+Settings UI proof remains deferred.
+
+Commit `a20074de26` removes the inherited Calls/Collaboration page from Dez's
+graphical Settings and reduces Network to the live proxy control. There is no
+longer a GUI path to re-enable inherited Zed auto-connect or edit its
+collaboration server; the keys remain readable for compatibility and official
+Zed keeps its full presentation. Attention copy also stops referring to the
+removed workspace bar. A focused product-boundary model test and identity
+guards cover these gates. Formatting, diff, and identity checks pass; compiled
+Settings UI proof remains deferred.
+
+Commit `2435348289` removes upstream Zed Edit Predictions data collection from
+Dez's graphical agent settings because the fork already disables its
+Zed/Mercury providers. Provider setup now describes explicit providers and
+states that Dez does not enable upstream Zed-hosted providers. The compatibility
+key remains parseable and official Zed retains the control. The same focused
+product-boundary test and an identity guard cover the filter. Formatting, diff,
+and identity checks pass; compiled Settings UI proof remains deferred.
+
+Commit `f89f55868c` productizes command and settings-link presentation without
+breaking upstream action/keymap compatibility. Internal `zed::…` actions now
+display as `dez: …` in the Command Palette, keymap editor, and which-key UI.
+Settings copy links use the active release channel's canonical `dez-dev`,
+`dez-nightly`, `dez-preview`, or `dez` scheme, and URL registration consumes
+that same release-channel method. Legacy `zed://` remains input-only
+compatibility. Focused model assertions cover productization and every channel;
+formatting, diff, lockfile, and identity checks pass. Compiled interaction proof
+remains deferred.
+
+Commit `f40877d4ab` removes the remaining dead collaboration actions from Dez's
+Command Palette at product initialization. The `collab` namespace stays
+registered for action/keymap compatibility and remains visible in official
+Zed; Dez filters only its presentation. A focused product-boundary assertion
+and identity guard cover the gate. Formatting, diff, and identity checks pass;
+compiled palette proof remains deferred.
+
+Commit `526218a972` removes the Zed Assistant glyph from Codex sessions in both
+the Session Rail and keyboard switcher. Codex remains identifiable by its
+label, actor metadata, and neutral Robot glyph. A directory-wide identity
+rejection prevents the upstream logo from returning to either rail surface.
+Formatting, diff, and identity checks pass; rendered proof remains deferred.
+
+Commit `bb0cf408b4` adds a deliberate Codex structured-evidence setup action to
+the first-run workflow. **Copy Codex Hook** copies the exact bundled JSON,
+states that Dez does not install or modify hooks, precedes New Terminal in
+keyboard order, and retains the close/detach/terminate plus Host-persistence
+explanation. An identity guard freezes the reachable setup action. Formatting,
+diff, and identity checks pass; rendered onboarding proof remains deferred.
+
+Commit `a8ce563373` adds explicit user-selected review evidence to the
+Workspace-owned EvidenceSet. Command Palette actions add, remove, or clear the
+selection; file-tab context actions use the same owner. Selected paths retain
+stable user-selection provenance after passive open-file recomputation and tab
+closure, are bounded at 128 with visible no-op/capacity feedback, and project
+as Selected path in Review Briefs while suppressing a duplicate Open file row.
+Focused model tests are authored. Formatting, diff, and identity checks pass;
+no compile, bundle, launch, or rendered interaction claim is made here.
+
+Commit `e101b63e43` makes those explicit selections restart-durable through an
+additive Workspace database column. Add/remove/clear schedules the normal
+Workspace serialization path; restore rehydrates only selected paths and gives
+them the current Workspace Host classification. Passive roots, open tabs, and
+terminal observations are not serialized as user choices. A focused database
+round-trip test is authored. Formatting, diff, and identity checks pass; no
+compiled restart claim is made here.
+
+Commit `f535c5e6ae` makes the file-tab evidence action state-aware. The active
+Workspace EvidenceSet selects exactly one Add or Remove menu action instead of
+showing contradictory choices together; separate Command Palette actions keep
+the keyboard path explicit. Formatting, diff, and identity checks pass;
+rendered menu proof remains deferred.
+
+Commit `0e6507756e` reconciles last-known terminal cwd evidence during saved
+hosted-session restore. A failed attach records the cwd under the original
+Session as Unresolved, Review Briefs state that reattachment is required, and
+a successful attach replaces it with Current Host truth. A focused model test
+is authored. Formatting, diff, and identity checks pass; transient in-place
+transport-loss and compiled restart proof remain open.
+
+Commit `ea2bb18453` observes the authoritative Host snapshot revision from each
+hosted TerminalView. Attached, Starting, and Detached map to Current Workspace
+evidence; Reconnecting, Missing, and Incompatible map to Unresolved; Exited
+maps to Stale; and snapshot cwd changes update the same Session-owned record.
+The policy does not equate transport loss with process exit. A focused mapping
+test is authored. Formatting, diff, and identity checks pass; compiled
+reconnect proof remains deferred.
+
+Commit `0f8740b1a1` makes authoritative EvidenceSet mutation crate-private.
+Downstream search, Git, settings, conversation, and review consumers retain
+immutable record access but cannot attach roots, replace open files, reconcile
+terminal scope, or invent user selections directly. Formatting, diff, and
+identity checks pass; this is a source ownership gate rather than a runtime
+claim.
+
+Commit `af232402f5` replaces the shared provisional `workspace:pending`
+evidence prefix with a stable UUID-backed namespace per Workspace EvidenceSet.
+Two not-yet-persisted Workspaces showing the same path therefore cannot emit
+colliding evidence record IDs. A focused same-path model test is authored;
+formatting, diff, and identity checks pass.
+
+Commit `a4047d95c0` adds an optional durable Workspace ID to terminal Host
+snapshots and metadata updates. TerminalView associates both in-process and
+helper-owned Sessions after they enter a durable Workspace; Session Rail
+prefers the exact owner before cwd matching. Older snapshots deserialize with
+no owner and retain the conservative fallback. Host-model, compatibility, and
+integrated two-Workspace/same-cwd resolution tests are authored. Formatting,
+diff, and identity checks pass; compiled detach/reattach proof remains open.
+
+Commit `6f2061d2c7` adds direct isolation tests at both ownership boundaries.
+Two same-path live Workspace entities retain different terminal Session cwd
+records and record IDs. Two durable Workspaces retain independent selected
+evidence, and clearing one database row leaves the other unchanged. Formatting,
+diff, and identity checks pass; the focused tests are authored but not claimed
+as compiled in this deferred-build slice.
+
+Commit `27279ca542` removes Session Rail's global last-writer-wins branch map.
+Open terminal and agent rows now derive branch metadata from their owning
+Workspace repository snapshot. Closed historical rows use only an
+unambiguous cross-Workspace fallback; if open Workspaces report different
+branches for the same worktree path, the historical row omits the branch. A
+focused conflict regression is authored. Formatting, diff, and identity checks
+pass; no Rust test or application binary was executed.
+
+Commit `a2d733eea3` scopes graphical project settings to the MultiWorkspace
+that opened the Settings window. Project-file discovery, restricted-mode
+lookup, file opening, and writes no longer search unrelated application
+windows; if the originating viewport disappears, the resolver returns no
+projects instead of widening scope globally. User settings retain their
+application-global meaning. Two cross-window regressions are updated.
+Formatting, diff, and identity checks pass; compilation remains deferred.
+
+Follow-up `498f94a525` refreshes the scoped project-file inventory before the
+application's single Settings window applies a target from a newly originating
+MultiWorkspace. Without that refresh, the resolver was scoped correctly but
+the window could retain stale file rows from its prior viewport long enough to
+select the wrong target. The cross-window regression now proves replacement in
+both directions. Formatting, diff, and identity checks pass; compilation
+remains deferred.
+
+Commits `5efa0398ad` and `1f186f9b8c` close the default-shell reachability gap
+for registered dock panels. With legacy docks hidden, Debug and the
+compatibility Terminal Panel join Project, Git, and Outline as ordinary tabs in
+the Project-tool pane; Agent remains in its dedicated pane. New Terminal still
+opens an ordinary center Surface, and enabling legacy docks retains upstream
+placement. A focused routing regression covers all surviving developer-tool
+panel keys and unknown-key rejection. Formatting, diff, and identity checks
+pass; compilation and rendered toggle proof remain deferred.
+Commit `ad2fdcf766` later supersedes the Terminal Panel portion of this product
+decision: the compatibility implementation remains upstream-syncable, but Dez
+no longer presents it as a menu, command, keybinding, or setting. Files, Git,
+Outline, and Debug remain Workspace tools; terminals remain center Surfaces.
+
+Commit `e4f1e341c9` makes the center launch and empty tool-pane recovery copy
+use the same Workspace vocabulary as the Session Rail and Settings. Internal
+upstream Project/Panes types remain untouched. A static identity rejection
+prevents the old mixed copy from returning. Formatting, Bash syntax, diff, and
+identity checks pass; rendered proof remains deferred.
+
+Commit `6f1562847e` separates compatible internal names from the Dez shell's
+visible hierarchy. The pane containing Files, Git, Outline, Debug, and
+Terminals is labeled **Workspace tools**; the file tree is **Files** in its tab,
+empty state, tooltip, reveal action, preview setting, and panel settings. Legacy
+dock controls explicitly describe their compatibility-only effect. Official
+Zed keeps Project Panel copy through product branches. Cargo metadata,
+formatting, Bash syntax, diff, and identity checks pass; compilation and
+rendered proof remain deferred.
+
+Commit `f6aea3e013` extends the product-specific vocabulary boundary into the
+title bar, recent-work picker, remote-work controls, and Agent History picker.
+Dez uses **Open Recent Workspace**, **Recent Workspaces**, **Remote Workspace**,
+and Workspace-specific remove/delete copy; official Zed keeps Project labels.
+Focused label assertions and the identity guard cover the branch. Formatting,
+Bash syntax, diff, and identity checks pass; compilation and rendered proof
+remain deferred.
+
+Commit `b749a25619` extends that boundary through recent-work search, empty,
+open/move/remove, multi-root, Dev Container, and failure states as well as the
+Files root menu and Restricted Mode. Dez now explains Workspace trust scope and
+configured-tool restrictions without renaming compatible `.zed` settings paths
+or upstream action/type identifiers. Official Zed keeps its Project copy.
+Focused label assertions and identity guards are authored; formatting, Bash
+syntax, diff, and identity checks pass. Compilation and rendered proof remain
+deferred.
+
+Commit `0e2c0dcae3` carries Workspace and Files vocabulary through remote
+search/errors, Agent History, pane search, review-evidence prompts, agent
+rules/checkpoints, skills, MCP/external-agent empty states, scoped Settings,
+status controls, and all visible Files settings descriptions. Official Zed copy
+and internal action/schema identifiers remain compatible. Formatting, Bash
+syntax, diff, and identity checks pass; compilation and rendered proof remain
+deferred.
+
+Commit `e969abda4a` fixes three reachable stale-product boundaries. The
+unsupported-GPU dialog identifies Dez, uses `DEZ_ALLOW_EMULATED_GPU`, explicitly
+attributes its upstream rendering guide, and removes placeholder copy. The
+Command Palette hides inherited collaboration, feedback, account, docs, status,
+and merchandise commands while Help retains explicit upstream references. A
+database-load failure now says files are untouched, identifies Workspace/Session
+state risk, and opens local logs instead of an upstream issue form. Authored
+product-branch assertions and identity guards pass with formatting and diff
+checks; compilation and interaction proof remain deferred.
+
+Commit `0607771783` completes the source-level Workspace grammar in retained
+disconnected, follow/join, shared-agent, and multi-root collaboration recovery
+states. Product branches retain official Zed wording and internal compatibility
+types remain unchanged. Identity, formatting, Bash syntax, and diff checks pass;
+rendered proof remains deferred.
+
+Commit `2092acd453` replaced the supplied screenshot's redundant zero-session
+hierarchy in the source at that commit. The rail was named **Session Rail**, its empty
+summary reports ready Workspace count, and each empty Workspace has one scoped
+New Terminal action whose accessible name includes that Workspace. Authored
+copy/visibility assertions and the identity guard pass; compilation and rendered
+proof remain deferred.
+
+Commit `57290c27c3` makes Session Rail creation terminal-first across the
+Workspace plus control, multi-worktree picker, and macOS/Linux/Windows/Vim
+default bindings. Pane-native agent creation remains explicitly available as
+**New Agent Thread** in Workspace options. An authored target assertion and
+identity guards pass; compiled keyboard/pointer proof remains deferred.
+
+Commit `633dcc4bec` adds a keyboard-addressable **Close Worktree from Window**
+submenu matching the existing hover control, preserves multi-root worktree
+scope in accessible labels, and names whole-group removal **Remove Workspace
+from Window**. Authored label assertions and identity guards pass; compiled
+keyboard/pointer proof remains deferred.
+
+Commit `7893762cd5` composes active persisted attention into Saved, Detached,
+Reconnecting, Missing, Incompatible, and Exited state text when no live adapter
+snapshot exists. This preserves transport truth and removes reliance on a
+warning color/icon. Authored state assertions and the identity guard pass;
+rendered accessibility proof and durable activity/review recovery remain open.
+
+Commit `bd36afd3f4` adds a serialized Host `events_truncated` boundary, retains
+it across detach/list/reattach, qualifies the Session Rail's evidence summary as
+**partial**, and records the bounded-history eviction in Review Brief risks. An
+authored 40-event lifecycle assertion and identity guards pass; actual helper
+process/GUI restart and rendered review proof remain deferred.
+
+Commit `b39eedf724` applies shared secret-environment redaction before Codex
+command evidence is bounded and retained. The Evidence page now truthfully
+states that the metadata database holds local identity/attention rather than
+transcripts or structured activity, which returns only from the same live Host
+Session. An authored redaction assertion and identity guards pass; compiled
+hook-flow proof and broader redaction remain open.
+
+Commit `9323af8008` extends the shared redactor to explicit secret-suffixed CLI
+flags in spaced and equals forms, with ordinary options preserved. Authored
+utility and Host-ingestion assertions plus identity guards pass; compiled
+hook-flow proof remains deferred.
+
+Commit `80ff1df75f` redacts URL userinfo passwords and secret-suffixed query
+parameters from retained commands while preserving host/path structure. The
+Evidence page explicitly discloses that bounded file targets remain verbatim
+for review navigation. Authored utility/Host assertions and identity guards
+pass; compiled hook-flow proof remains deferred.
+
+Commit `c47637c2ac` adds a named accessible list around Session Rail rows and
+exposes non-sticky Workspace headers as selected/expanded list items with
+ready/running and attention text. Sticky visual copies omit accessibility
+semantics to prevent duplicate announcements. Authored copy assertions and
+identity guards pass; platform accessibility-tree proof remains deferred.
+
+Commit `7e91f00b69` names the Session scope and search regions, gives changing
+totals and empty/caught-up results status semantics, and separates stable scope
+control names from toggle state and action descriptions. Authored copy
+assertions and identity guards pass; platform announcement timing remains
+deferred.
+
+Commit `e28b78ed57` maps informational/success callouts to accessibility status
+and warning/error callouts to alert. This includes the durable Host startup and
+failed Workspace-restoration recovery surfaces. Authored role assertions and
+identity guards pass; platform announcement timing remains deferred.
+
+Commit `a90fae5873` aligns compact Workspace headers with their 28 px hover
+controls and raises primary creation, scope, Host-detail, and Workspace-recovery
+actions from 18 px compact buttons to the shared medium target. Identity guards
+pass; rendered density and zoom proof remains deferred.
+
+Commit `f6318ea907` reports the keyboard-focused Workspace header or Session row
+as the active accessibility descendant while the Session Rail retains real
+keyboard focus. Source inspection also confirms that GPUI renders one static
+frame for repeated animations when Dez resolves reduced motion. Identity guards
+pass; platform focus and motion proof remains deferred.
+
+Commit `9930e86677` supersedes the unfinished 56 px icon presentation for Dez
+v0.0.1. The legacy configuration value remains readable but resolves to compact,
+the smallest layout capable of presenting the full hierarchy and controls
+without clipping. The earlier icon width assertion remains historical evidence
+for the old contract; the current width and identity guards cover the safe
+fallback. Rendered compact proof remains deferred.
+
+Commit `4a102fc50e` exposes the terminal-first workflow and Start/Watch/Review
+steps as named accessibility structures. The safety explanation now precedes a
+wrapping action row, and Copy Codex Hook/New Terminal use 28 px targets. Identity
+guards pass; rendered zoom and narrow-window proof remains deferred.
+
+Commit `933e3f515f` forces diagnostics and metrics false for non-Zed builds
+before events can queue or upload to the inherited upstream endpoint. Dez
+onboarding and Settings no longer offer those misleading opt-ins; Anthropic
+retention remains a distinct model-request control. Authored source assertions
+and identity guards pass; compiled network proof remains deferred.
+
+Commit `2680937952` hides the inert Auto Update section for Dez because the
+fork updater is disabled and defaults off. Compatibility parsing and official
+Zed UI remain intact. Authored source assertions and identity guards pass;
+rendered Settings proof remains deferred.
+
+Commit `9239006d4b` removes button, dock, and width settings for the already
+removed Dez Collaboration Panel. Compatibility parsing and official Zed UI
+remain intact. Identity guards pass; rendered Settings proof remains deferred.
+
+Commit `33f7ff5893` adds non-visual shortcut metadata to shared text/icon
+buttons, then exposes Shift+A on Session scope and Shift+V on Review Brief
+controls. Identity guards pass; platform announcement proof remains deferred.
+
+Commit `2fc5226a51` requires official Zed identity plus explicit auto-connect
+before eagerly authenticating all language-model providers. Legacy fork settings
+cannot trigger that startup network pass. Authored source assertions and
+identity guards pass; compiled network proof remains deferred.
+
+Commit `cc2509e8b8` aligns edit-prediction presentation with that runtime
+boundary. In Dez, legacy Zed and Mercury selections normalize to no provider
+before the status item renders; both disappear from the provider picker and the
+Mercury setup card is absent. Official Zed and explicit Copilot, Codestral,
+Ollama, and compatible API paths remain unchanged. Focused source assertions
+and identity guards pass; rendered Settings/status proof remains deferred.
+
+Commit `b909b31d45` closes the command-palette ordering gap: Agent UI filter
+refreshes now preserve the non-Zed hide for Zed Predict onboarding and treat
+legacy Zed/Mercury selections as no provider when deciding whether prediction
+commands are available. Supported explicit providers and official Zed behavior
+remain unchanged. Focused source assertions and identity guards pass; rendered
+command-palette proof remains deferred.
+
+Commit `aab0e5f2f2` isolates crash recovery from inherited upstream release
+configuration. A compiled Zed minidump endpoint no longer enables the handler
+for ordinary Dez launches; local fork minidumps require explicit
+`DEZ_GENERATE_MINIDUMPS=1|true`. Startup and duplicate-instance messages, crash
+metadata, and temporary handler artifacts identify Dez. Official Zed behavior
+is unchanged. Focused source assertions and identity guards pass; compiled
+crash/recovery proof remains deferred.
+
+Commit `0ddf84161e` removes the keyboard and title-bar remnants of inherited
+collaboration. Every loaded keymap source in Dez—default, base, Vim, generated,
+override, and user—is filtered for channel/collaboration namespaces and the
+follow-collaborator action, preventing removed handlers from consuming chords.
+Call chrome is official-Zed-only. Focused source assertions and identity guards
+pass; compiled key-routing and rendered title-bar proof remain deferred.
+
+Commit `2efbf166b7` corrects the remaining outward Settings/import guidance.
+Dez now teaches `dez <path>` for default-open behavior and the skill URL
+importer describes its `GITHUB_TOKEN` retry without claiming Zed performs it.
+Official Zed retains its CLI copy. Focused source assertions and identity guards
+pass; rendered Settings and skill-creator proof remain deferred.
+
+Commit `c3dfb7aa79` reconciles the locked workspace graph before the consolidated
+build. It adds only the already-declared `util` edge for `dez_terminal_host`
+and `paths` edge for `project_panel`; no package version or registry/source
+entry changed. Full `cargo metadata --locked` resolves and the candidate hash
+above records the resulting lockfile.
+
+The consolidated candidate compile then exposed a missing GPUI `Role` import
+and stateful-element requirement in the shared Callout accessibility slice.
+Commits `5a25a72f92` and `42ff77e99c` import the role and derive a stable
+call-site ID before applying it without changing the authored alert/status
+mapping. The focused `ui` build passes in 2m33s. Both failed full-build attempts
+stopped before replacing any executable.
+
+The resumed consolidated compile then exposed the terminal view importing Host
+snapshot globals from the parent `session_host` module rather than the public
+`session_host::transport` module that defines them. Commit `1ed2ff814a` aligns
+the terminal view with the already-working Session Rail import without changing
+snapshot behavior. Formatting, diff, and identity checks pass; the failed build
+stopped before replacing an executable.
+
+The next compile exposed one ownership conflict: terminal event handling moved
+the weak Workspace handle before hosted snapshot observation could retain it.
+Commit `4369bb1f3b` gives the event closure its own weak Workspace clone,
+preserving path navigation, lifecycle evidence, and Host reconciliation. The
+focused `terminal_view` build passes in 7m36s.
+
+The next consolidated pass exposed three integration-only accessibility and
+provider boundaries. Commit `af8ecad961` re-exports the already-public,
+tested Dez prediction-provider normalization used by Settings UI. Commit
+`9ed0e1aaaf` gives the Session Rail status, scope, search, and list landmarks
+stable element IDs before applying their GPUI roles. Commit `2452d3b4ec` does
+the same for the terminal-first onboarding region, step list, and list items.
+The clean authoritative app/helper build and separate CLI build pass through
+`2452d3b4ec`.
+
+The previous `Dez Dev.app` was registered and launched as launchd child PID
+`85053`, with `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, through its exact bundle path.
+At that time, `lsof` resolved its text executable to
+`/Users/test/Documents/zed 3.0/target/debug/bundle/osx/Dez Dev.app/Contents/MacOS/dez`.
+That process is no longer running. The candidate through `2452d3b4ec` was
+rebuilt and statically audited but had not yet been launched; this historical
+launch is not used as render proof for that candidate or newer source.
+
+Commits `a91b04809c`, `e4fbc22a3a`, `d9688490ad`, `704314cc92`,
+`7a20dc1d19`, `962b611605`, `1ebb7c79d4`, `e9a595fcff`, `2334fbdcfc`,
+`47e769da5d`, `d10d90648d`, `31cc1b1205`, `fbf8443359`, `c101fe6a43`,
+`699cbd1bc8`, `869cddcce0`, `4e6292ff0a`, `a9b1a961c0`, `ff91b34a81`,
+`4fc53b860f`, `8bcd11f4b6`, `ad59a60926`, `a20074de26`, `2435348289`, and
+`f89f55868c`, `f40877d4ab`, `526218a972`, `bb0cf408b4`, `a8ce563373`,
+`e101b63e43`, `f535c5e6ae`, `0e6507756e`, `ea2bb18453`, `0f8740b1a1`,
+`af232402f5`, `a4047d95c0`, and `6f2061d2c7` were newer than that historical
+bundle. They are included in the candidate recorded through `2452d3b4ec`.
+The first passes all nine focused Session tests, including duplicate viewport
+replacement without reordering or membership loss. The second makes Project
+ready terminal-first, prevents New Window and startup fallback paths from
+covering Dez's actionable launch surface with an unsolicited blank editor, and
+cleans the public CLI help while keeping the legacy alias hidden for
+compatibility. The full `zed --bin dez` source check and rebuilt CLI pass, but
+these changes require the next consolidated app rebuild and rendered audit.
+The later Session Rail slices replace the misleading zero-session caught-up
+state and ambiguous creation copy, increase compact width, and suppress inert
+zero-count scope and search controls. Their model assertions are authored. The
+focused unit-test invocation remains unclaimed because its first clean-profile
+attempt exhausted storage before reaching the test; after clearing only
+regenerable Cargo caches, a clean focused sidebar library check passes.
+
+The latest source also exposes Install CLI for Dez while retaining
+`/usr/local/bin/dez` as the only global target. Its Linux guidance and CLI
+launch-handshake errors identify Dez, and the official-Zed compatibility branch
+refuses to manage the upstream command. Static and compile gates pass; the
+installation interaction remains a manual release gate.
+
+Commit `7a20dc1d19` additionally seeds a new terminal's initial working
+directory into Workspace evidence before the first PTY event. This closes a
+source-level gap where an idle new shell could open a review brief without cwd
+scope. Full Dez source checks pass; runtime review and restoration proof remain
+open.
+
+Commit `962b611605` connects live background Workspace registration to the
+durable viewport records without changing active selection. Repeat attachment
+is idempotent and a second viewport does not duplicate global membership. All
+ten focused Session tests and the workspace library compile gate pass; shared
+live entity and consolidated restart proof remain open.
+
+Commit `e9a595fcff` closes a separate empty-Workspace ownership gap. Removing
+the final project group or closing the last project-backed Workspace previously
+constructed its fallback with no database ID, making the visible empty state
+ineligible for durable membership or serialization. Both paths now allocate an
+ID before construction; normal registration makes the replacement a global App
+Session member and activation selects it in the same viewport. The existing
+persistence regression asserts identity, membership, and selection. The
+production `cargo check --locked -p workspace --lib -j1` passes in 5m08s; the
+expanded all-tests metadata check is not claimed because it was stopped at the
+storage safety floor before returning a code result.
+
+Commit `2334fbdcfc` upgrades the existing headless New Window regression to use
+one real AppState for the original and newly opened MultiWorkspace. It asserts
+distinct OS-window viewport IDs, distinct Workspace database IDs, membership
+of both identities in the same App Session entity, and the correct active
+selection per viewport. The same slice replaces a stale test-only bottom-dock
+call with the supported flexible side-dock assertion. A full
+`cargo check --locked -p workspace --tests -j1` passes with one unrelated
+dead-code warning. Direct execution of the single test was attempted but
+cancelled during sustained codegen/I/O saturation, so no executed-test or GUI
+runtime claim is made.
+
+Commit `47e769da5d` extracts the continuing open listener's restoration gate
+into a named ordered dispatcher. Queued requests cannot dispatch until startup
+signals completion, then retain arrival order and continue flowing. The signal
+is completion-based because both successful restoration and visible
+failure-fallback handling must release queued user intent. A focused regression
+is authored for retention and ordering. Formatting, diff, and identity gates
+pass; a cold `cargo check --locked -p zed --bin dez -j1` was stopped at the
+3.4 GiB free-space safety floor before producing a code result. Only generated
+artifacts from that attempt were removed. No compile, executed-test, bundle, or
+runtime claim is inferred.
+
+Commit `d10d90648d` makes failed restoration visible in durable ownership
+state. When a database-backed Workspace window cannot materialize, startup
+initially marks that identity unresolved while preserving its global order and
+viewport placement for future retry or explicit removal. Commit `fbf8443359`
+refines that state to the distinct durable `RestoreFailed` variant so an
+identity merely skipped by the active restore policy never raises a false
+failure warning.
+
+Commit `31cc1b1205` makes the failed-restore notification persistent and
+actionable. Its concise copy exposes **Open Dez log**, uses one stable
+notification identity to avoid duplicate stacks, and falls back to the durable
+empty recovery Workspace when the active-window toast update itself fails.
+Formatting, diff, and identity gates pass. Full Dez compilation and rendered
+interaction proof remain open.
+
+Commit `fbf8443359` projects only `RestoreFailed` identities into a persistent
+Session Rail warning with **Open Recent** and **Dismiss** actions. Dismiss removes
+the unresolved App Session reference while leaving recent-workspace storage
+untouched. The failure state survives reconciliation until real resolution or
+explicit removal. All 12 focused Session tests pass in 4.89s; the offline
+lockfile update adds only the direct Sidebar -> Session dependency. Formatting,
+diff, and identity gates pass. A focused Sidebar library check was stopped at
+the 3.4 GiB free-space floor while compiling inherited audio/WebRTC
+dependencies, before the final crate returned a result; only artifacts from
+that attempt were removed. Compiled UI and rendered interaction claims remain
+open.
+
+The packaged helper also accepted a direct authenticated protocol 4 exercise.
+Host ID `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
+`040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`, emitted 88
+bounded replay chunks, resized from 80x24 to 132x41, retained both dimensions
+and both before/after markers in replay, and ended in explicit `Detached` state
+at sequence 88. This proves the packaged protocol boundary, PTY ownership,
+resize retention, and detach truth. It does not prove GUI-exit reattachment;
+that scenario still requires the unlocked UI and a graceful application quit.
+
+## Automated gates {#automated-gates}
+
+- [x] `cargo fmt --all -- --check`
+- [x] `git diff --check`
+- [x] `cargo metadata --offline --no-deps --format-version 1`
+- [x] `./script/dez-identity-check`, including false cloud auto-connect
+      defaults, the product-level automatic-connection gate, upstream
+      prediction-provider gates, lazy Collab-panel construction, terminal-first
+      empty-workspace seeding, and public CLI branding
+- [x] `bash -n script/bundle-mac`
+- [x] Focused Prettier checks for the canonical Dez documentation slices
+- [x] Focused tests: 15 terminal client/model tests, 8 Host/helper tests, and
+      three Session Rail terminal lifecycle tests
+- [x] Ten focused App Session tests covering durable ordering, reconciliation,
+      duplicate viewport replacement, multi-viewport membership, one-copy
+      removal, live idempotent attachment, legacy migration, and serialization
+      round trips
+- [x] Full `cargo check -p zed --bin dez` with the recorded locked,
+      storage-constrained dev profile after the terminal-first source slice
+- [x] Rebuilt raw CLI help exposes `--dez <PATH>`, uses Dez product copy, and
+      keeps the legacy `--zed` compatibility alias out of public help
+- [x] Plain workspace-shell regression: the Session Rail includes a non-agent
+      terminal as `Live`, leaves its agent classification empty, and selects its
+      active row
+- [x] Post-bundle Session Rail source check: commit `2dd523b6e9` adds the named
+      accessibility landmark and narrow-width truncation, and the focused
+      `sidebar` Cargo check passes with the recorded profile. The corrected
+      signed bundle now contains the source edit; AX-tree inspection is open.
+- [ ] Mode-resolved Session Rail width regression: commit `79f69b273c` makes
+      rendering consume the same compact/icon/detailed width reserved by the
+      workspace and contains assertions for all modes. Formatting and diff
+      checks pass, but the focused test did not finish under the local storage
+      ceiling. The post-fix complete app and bundle build pass; rendered and
+      focused-test proof remain open.
+- [x] Zero-session rail source regression: commit `1ebb7c79d4` expands compact
+      geometry and removes inert zero-count scopes/search without hiding an
+      existing clearable query. The model assertion is authored; formatting,
+      diff, identity, and a clean focused `sidebar` Cargo check pass. Rendered
+      proof remains in the manual gate.
+- [x] Durable empty-fallback production regression: commit `e9a595fcff` gives
+      both final-project replacement paths a database identity before
+      construction. The persistence assertion covers global membership and
+      active viewport selection; formatting, diff, identity, and focused
+      production workspace-library checks pass. Execution of the expanded test
+      remains open under the local storage ceiling.
+- [x] Shared-App-Session New Window source regression: commit `2334fbdcfc`
+      requires two durable viewports and Workspace IDs with one membership set
+      and independent active selections. The complete workspace test
+      configuration compiles. Direct test execution and packaged GUI proof
+      remain open.
+- [ ] Queued-open startup barrier regression: commit `47e769da5d` authors
+      pre-barrier retention, ordered release, and post-barrier delivery
+      coverage. Formatting, diff, and identity gates pass; the cold Dez target
+      check reached the storage floor before compiling the regression, so its
+      executed result and packaged GUI proof remain open.
+- [x] Failed-restore durable resolution regression: commit `d10d90648d`
+      retains ordering while changing only the failed identity; commit
+      `fbf8443359` makes that state distinctly `RestoreFailed`. All 12 focused
+      Session tests pass. Full startup integration remains open.
+- [ ] Actionable failed-restore notice: commit `31cc1b1205` provides a stable
+      non-autohiding toast and direct log action in source. Compiled and
+      rendered click-through proof remains open.
+- [ ] Persistent Session Rail restore-failure recovery: commit `fbf8443359`
+      renders only actual failures with Open Recent and Dismiss actions in
+      source. Its 12 owning state tests pass; the Sidebar library check hit the
+      storage floor before returning a result, and rendered proof remains open.
+- [ ] Restored empty-project launch regression: commit `4829f6b052` makes a
+      loaded project render Workspace ready actions even when an old pane lacks
+      the welcome flag. The assertion is authored and formatting passes; the
+      complete app and bundle build pass, while the shared focused test and
+      rendered interaction remain incomplete.
+- [x] Bounded project-footer compile regression: commit `0d8496969f` gives project
+      identity and Git controls explicit shrink/overflow contracts so their
+      one-line labels can truncate instead of colliding. Formatting, diff, and
+      complete app build checks pass; rendered narrow-width proof remains open.
+- [x] Consolidated footer-utility compile regression: commit `abc4f8bedb` removes the
+      dedicated Dez Command Search row while preserving the action, accessible
+      tooltip, and on-demand prefix indicator. Formatting, diff, and complete
+      app build checks pass; rendered proof remains open.
+- [x] `cargo clippy -p dez_terminal_host --all-targets -- -D warnings` with the
+      recorded storage-constrained dev profile
+- [ ] App-facing modified-crate `cargo clippy` (the full app graph exceeds the
+      remaining local storage budget)
+- [x] Intended app and helper consolidated build
+- [x] Intended CLI build
+- [x] Debug bundle build and static bundle audit
+
+## Runtime and manual gates {#runtime-and-manual-gates}
+
+- [x] Historical intended raw-binary first launch and exact signed-bundle
+      normal launch
+- [ ] Historical `2452d3b4ec` candidate exact signed-bundle launch and process-path
+      verification
+- [ ] Restored and empty-workspace interaction audit (the first full-window
+      overlay, compact-width clipping, blank-center, terminal-first action
+      order, and no-blank-editor startup fixes were compiled into that
+      candidate; fresh interaction and capture remain open)
+- [ ] Offline, failed-Host, and incompatible-Host rendered states
+- [ ] Quiet local-first launch with no Zed websocket, LiveKit room, or
+      Zed-hosted edit-prediction request unless an explicit compatibility action
+      is invoked
+- [ ] Persistent terminal GUI-exit/restart/reattach proof
+- [ ] Structured Codex attention/review/restart proof
+- [ ] Visual state matrix and keyboard/pointer parity
+- [ ] Accessibility tree, focus order, labels, contrast, and reduced-motion audit
+- [ ] Official Zed installed coexistence without scheme, bundle, storage, CLI,
+      or updater takeover. Commit `c101fe6a43` isolates macOS instance ports,
+      Linux sockets, and CLI autodetection in source; installed proof remains
+      open because official Zed is absent here.
+- [x] Local bundle identity, helper inclusion, entitlements, and ad-hoc
+      signature audit
+- [ ] Developer ID signing, notarization, install, launch, and uninstall audit
+
+The approved macOS UI-control path was previously blocked by the locked desktop.
+No alternate screenshot mechanism, AppleScript, or historical binary path was
+used as a substitute. The exact bundle was rebuilt through `2452d3b4ec` and
+statically re-audited; launch of that candidate and fresh rendered inspection
+remain unverified historical gates.
+
+## Known external release dependencies {#known-external-release-dependencies}
+
+Public Developer ID signing and Apple notarization require Dez publisher
+credentials. The ad-hoc local signature proves bundle structure, not public
+notarization. Design-partner testing requires actual target users and remains
+separate from local engineering verification. That candidate was built and
+statically audited through `2452d3b4ec`; it is not running. Launching it on an
+available desktop remained a prerequisite for its visual, interaction,
+accessibility, and GUI-driven hosted-PTY recovery matrix.
+
+## 2026-07-23 source-only terminal and shell recovery
+
+The historical artifacts above are not evidence for the current source. After
+the later running-app reports, the source advanced through:
+
+- `c0de209e28`, which removes the reentrant Workspace mutation path from center
+  terminal creation;
+- `930292ad47`, which keeps a live terminal in the Session Rail when its
+  Workspace has no worktree;
+- `fb2b90e193`, which keeps a terminal tab header visible even when the inherited
+  single-tab auto-hide setting is enabled;
+- `7eca42a56c`, which launches the durable terminal Host in a separate Unix
+  process session;
+- `798df9ec04`, which replaces centered full-rail absence canvases with compact
+  top-anchored states, makes the welcome surface terminal-first, and removes
+  the duplicate global Command Palette control from the rail footer;
+- `7f0da8c04a`, which makes the full-size virtual session list and its empty
+  replacement mutually exclusive and top-aligns the scrollable welcome
+  content; and
+- `dcd38968d3`, which makes unqualified terminal creation center-first,
+  suppresses inherited Zed release-channel migration in Dez, and centralizes
+  official-Zed-compatible native-agent icon identity;
+- `56f7c46db6`, which makes terminal identity available without a local PID,
+  projects truthful lifecycle text into the tab tooltip and accessibility
+  label, calls hosted closure Detach, and keeps termination separate; and
+- `dd2459eef9`, which preserves hosted identity and detach semantics through
+  transient Host registration changes by reading the terminal backing type;
+  and
+- `059656999e`, which reduces compact Session Rail rows to identity, priority
+  evidence, Review Brief, and the contextual lifecycle action, while preserving
+  full row identity in a wrapping tooltip and moving secondary controls to the
+  context menu; and
+- `ad2fdcf766`, which removes the inherited Terminal Panel from Dez's public
+  interaction model and makes every visible New Terminal entry point mean a
+  center tab or split; and
+- `622acd1a61`, which names the Dez View-menu destinations Workspace Tools,
+  Files, Outline, Debug, Agent, and Git without exposing pane/dock
+  implementation details;
+- `d2e2a3992a`, which replaces stacked welcome promotion cards with one concise
+  Start/attention/review summary and restores start actions to the primary
+  hierarchy; and
+- `594296efa8`, which constrains welcome, empty Workspace, and unavailable-tool
+  recovery content to deliberate compact measures and spacing; and
+- `9e14ca2db7`, which gives the Session Rail configuration and recent-Workspace
+  utilities truthful icons, accessible names, tooltips, and command labels; and
+- `72cec1f285`, which makes terminal edit/lifecycle commands and failed-session
+  recovery copy explicit while removing a permanently disabled Agent menu
+  branch; and
+- `218e346ede`, which aligns top-level menus with Workspace vocabulary and
+  consolidates local diagnostics, licenses, and upstream attribution into a
+  deliberate Help hierarchy; and
+- `35c516a5bb`, which replaces inherited implementation namespaces in the Dez
+  Command Palette with Session Rail, Files, Workspace Search, Workspace
+  Symbols, Workspace Tools, and Dez presentation while preserving action
+  identity and official Zed behavior;
+- `be1a20dae1`, which distinguishes detaching an attached center terminal from
+  terminating a Host-only running Session, requires confirmation for the
+  latter, and makes terminal ownership explicit in Session Rail rows; and
+- `ddd7f25f4e`, which gives blank PTY titles a Terminal fallback in the Session
+  Rail instead of rendering an empty row; and
+- `91f738f83b`, which makes the normal-width Session Rail footer self-labeling,
+  keeps its compact icon mode accessible, productizes Workspace search and
+  diagnostics labels, and explains the zero-diagnostic checkmark when a
+  terminal or other non-editor surface is active; and
+- `92e0591811`, which makes Agent Session the consistent Dez name for
+  conversation-backed records and actions across Session Rail, Agent History,
+  feedback, review limitations, and Command Palette while preserving Terminal
+  Session as the terminal-backed computation identity; and
+- `1f3432a211`, which guards explicit accessible names for Agent History's
+  icon-only row and toolbar actions; and
+- `ce770c5eee`, which keeps Workspace Search scoped to the Workspace after it
+  opens and makes the Workspace Diagnostics tab retain its identity alongside
+  check/error/warning status; and
+- `281b6e22c9`, which removes inline shortcut keycaps from constrained empty
+  Workspace launch buttons while preserving their keymaps in tooltips and
+  explicit accessible names; and
+- `be2a8d6ec6`, which gives compact and minimum-detailed Session rows a strict
+  primary hierarchy and restores actor, Host, and worktree context only at
+  440 px, while retaining hidden actor and Host identity in accessibility and
+  tooltip output; and
+- `39c8379f05`, which makes pane-tab panel close/toggle actions hide their
+  Workspace Tools or Agent pane, preserve a visible editor or terminal
+  fallback, restore focus when needed, and persist the resulting layout; and
+- `9615b513d4`, which routes pointer and keyboard deletion of archived Agent
+  Sessions through a critical, named, explicitly irreversible confirmation
+  while preserving archive and restore as reversible actions; and
+- `799147c525`, which keeps Workspace expansion state discoverable without
+  hover, plus `5a64bc9af1`, which records the region ownership and terminal
+  placement contract in permanent Fork Notes; and
+- `6cbdda5405`, which removes stale pane-tab items when their backing Workspace
+  Tool or Agent panel is unregistered and verifies focused-tool toggle closure;
+  and
+- `a95e0a4bb4`, which prevents Dez from routing the inherited Terminal Panel
+  into Workspace Tools while preserving official Zed behavior; and
+- `f863b3e45c`, which keeps the active Workspace's terminal creation action
+  visible, terminal-shaped, and explicitly scoped; and
+- `d1ea4a914f`, which gives external Agent Session import consistent Dez
+  vocabulary, plus `037eebaf02`, which replaces the last visible terminal
+  thread setting label with Terminal Session language; and
+- `d490735631`, which prevents the removed Collaboration Panel from entering
+  Dez Workspace Tools while preserving official Zed compatibility; and
+- `5cf88897ba`, which connects Agent History's visible search to the real query,
+  adds an explicit clear path, and distinguishes no results from empty history;
+  and
+- `d1b2b640de`, which routes Workspace-scoped Session Rail terminal creation to
+  `NewCenterTerminal` in the selected Workspace instead of the inherited Agent
+  terminal-thread path; and
+- `263553d036`, which removes terminal creation from the Dez Agent selector and
+  routes Agent-focused terminal compatibility actions to the same main-area
+  terminal command while preserving official Zed behavior; and
+- `16d1bd16b8`, which hides stale legacy Agent-terminal metadata, routes
+  Host-backed records to main-area attachment, and prevents stale metadata from
+  shadowing live center or Host Sessions; plus `d1f5b2a15a`, which disables
+  retired Agent-terminal auto-restoration and its command-palette action in Dez
+  while preserving official Zed compatibility; and
+- `86775eb7bc`, which records the everyday Workspace/IDE routing model and
+  keeps the active Workspace options action visible and explicitly labeled; and
+- `c625c1f3b4`, which gives Agent title editing an accessible, surface-accurate
+  label: Agent Session in Dez, Thread in official Zed, and Terminal for the
+  retained legacy terminal surface; and
+- `a0f51cbc3a`, which gives unsupported Agent Session mentions product-specific
+  guidance instead of upstream Thread/native-agent language; and
+- `94b27cb2db`, which confirms destructive draft discard from both Session Rail
+  and Agent Session tabs, protects unsent prompt text, and distinguishes draft
+  discard from reversible saved-session archive; and
+- `9ef23f920a`, which names the center-tab plus control **Add to Main Work
+  Area**, describes its file/search/terminal destinations, and removes the
+  remaining mixed Thread vocabulary from Dez's Agent pane while preserving
+  official-Zed wording; and
+- `bf76ab9b63`, which presents thread-backed context references as **Agent
+  Sessions** in Dez while preserving the compatible `@thread` keyword and
+  official-Zed label; and
+- `e064c91b53`, which presents sandbox policy, grant, fallback, and unsandboxed
+  warning scope as the current Agent Session in Dez; and
+- `70dd7e12c6`, which names the Agent menu's real **Agent Settings** and
+  **Toggle Session Rail** destinations; and
+- `4229be7201`, which gives Session switching a named responsive dialog,
+  recent-session count, and interaction guidance, and gives Agent Session
+  search product-specific copy and a Search landmark; plus `ff1d03b8d3`, which
+  aligns the deferred completion-menu expectation; and
+- `07024bf5c0`, which productizes Agent Session clipboard, prerequisite,
+  metadata, and failure notices; and
+- `67a8152db7`, which restores cancelled Session Switcher previews through the
+  original Agent Session, center terminal, Host Session, or compatibility
+  source rather than routing every terminal through Agent; plus `23ae297ef0`,
+  which adds focused center-terminal source coverage; and
+- `745792e28e`, which visibly distinguishes Agent Session from Terminal Session
+  rows and removes inherited Panel and ambiguous Settings terminology from
+  Agent controls; and
+- `a3cf18ce8e`, which keeps the compatible `New thread` storage sentinel
+  internal, presents **New Agent Session** everywhere visible, labels Agent
+  toolbar icons, and gives title retry a retry-shaped control; and
+- `b42be6e0b2`, which explains why pane splitting is unavailable instead of
+  leaving a disabled icon with its enabled tooltip; and
+- `a6ff92643e`, which names worktree removal **Close Worktree from Window**,
+  plus `eb603481d5`, which names the main-area tab-overflow affordance **Switch
+  Surface** and its menu **Surfaces**; and
+- `e09bb2d73b`, which makes the Agent title pencil start Agent Session or
+  terminal title editing, plus `b92e001bb3`, which guards that action wiring;
+  and
+- `ab3f8e0408`, which removes hard-coded upstream Assistant glyphs from the
+  Agent toggle, Agent Session notifications, Agent diff Surface, and profile
+  controls while preserving official Zed identity; and
+- `8da9d0d694`, which gives context-too-large, token-limit, and cross-channel
+  import recovery consistent Agent Session vocabulary and actions; and
+- `f622dad03d`, which replaces sparse project-centric empty states in Dez Files,
+  Git, and Agent with compact, top-anchored Workspace recovery and names Agent
+  zoom **Expand Agent** / **Restore Agent**, plus `b1a20d9b17`, which preserves
+  official Zed's original recovery layout, and `22893a6491`, which declares the
+  Git UI's product-identity dependency; and
+- `cdedb6a23a`, `75fb4bc5c9`, and `ed5750c0ce`, which remove Canvas Layout
+  diagnostics and prefix documentation, curate six v0.0.1 workflow presets,
+  and consolidate saved-layout storage behind **Manage Saved Layouts…**; and
+- `df8864833d`, which makes the curated submenu reachable through the active
+  Workspace's persistent **Workspace Options** control without adding another
+  global chrome row or changing official Zed account behavior; and
+- `c7f73fb0fe` and `c782f2fc63`, which turn the implementation-named Agent Diff
+  into a compact, accessible **Agent Review** workflow with change-oriented
+  decisions, explicit generation status, and a clear return to Agent; and
+- `6223c05368`, which removes inherited Panel terminology from Dez's Outline,
+  Git, and Debug tool controls while preserving official Zed labels; and
+- `deab6cbe8d`, which removes fake Terminal Session actor metadata from ordinary
+  terminal rows and uses concise terminal-specific ownership and lifecycle
+  labels; and
+- `38524c9c01`, which makes the Session Rail/main-work-area boundary explicit
+  in the first-use state, exposes Workspace scanning as an accessible status,
+  and makes automatic trust name its folder and developer-service scope; and
+- `ff63d573ba`, which names the editor destination **Files** and preserves
+  **Canvas Layout** as the Dez layout concept without exposing compatibility
+  Project Panel or dock-backed Panel terminology; and
+- `67001bf0ef`, which makes the attributed Lumin Blur/Lumin Light pair and
+  bundled JetBrains Mono profile consistent between product defaults and first
+  launch, removes stale oversized upstream overrides, and restores restrained
+  structural contrast to translucent dark and light surfaces; and
+- `7664c6e59b`, which routes destructive termination through the selected
+  terminal's controller, hides it when no live process can be terminated,
+  separates it from close/detach, and requires effect-specific critical
+  confirmation; and
+- `e0e8f119e0`, which gives every repeated Workspace **New Terminal** and
+  **Workspace Options** control a visible, object-specific accessibility name
+  and matching tooltip while keeping internal hover-group IDs out of product
+  copy; and
+- `1c87220109`, which assigns add/split/zoom chrome only to the Main Work Area,
+  keeps its add control reachable across focus changes, gives Workspace Tools
+  and Agent persistent named hide controls, and exposes accurate accessibility
+  landmarks for all three regions; and
+- `79e87f2351`, which removes repeated visible type metadata from Dez Session
+  Switcher rows while retaining it in accessibility and tooltips, makes hover
+  non-activating, and exposes the selected row through a named list; and
+- `d53cd5d656`, which removes the Session Rail's repeated empty-state heading
+  and icon card, retains one Main Work Area terminal action, and presents
+  **Open Workspace…** as the secondary first-use path; and
+- `e28314a893`, which carries full terminal titles through every supervision
+  and Host metadata path, normalizes custom names, and makes terminal rename
+  explicit without breaking double-click; and
+- `05df05d282`, which visually names Workspace search when a terminal or other
+  non-editor Surface is active, retains compact editor status, and exposes the
+  global strip as **Workspace status and navigation** rather than conflating it
+  with Session Rail utilities; and
+- `c83b56b5aa`, which makes pointer, context-menu, and selected-row keyboard
+  terminal removal share one lifecycle/confirmation policy, removes internal
+  durability jargon from the critical prompt, and gives the mixed compatibility
+  action truthful Session Rail scope in Dez's Command Palette; and
+- `222c658123`, which hides the inherited Agent-Panel terminal startup setting
+  from Dez because Main Work Area terminals do not consume it, while retaining
+  compatible storage and official-Zed behavior; and
+- `f0e817669a`, which reveals contextual Session Rail controls for keyboard
+  selection as well as pointer hover and makes every visible row control
+  keyboard-focusable; and
+- `7f8fd167c2`, which aligns the terminal Surface with Terminal Session
+  lifecycle language, removes internal durability jargon, and clarifies the
+  Surface landmark, working-directory tooltip, task rerun identity, and
+  unavailable-session recovery destination; and
+- `88948b869a`, which gives terminal tab tooltips explicit Terminal Session
+  ownership plus Working directory, Process ID, and Session ID labels; and
+- `b43503e3fe`, which keeps Agent Tools, History, and Workspaces visible at the
+  default compact Session Rail width while preserving accessible icon mode
+  below it; and
+- `ef35bf40a7`, which gives those three labeled utilities compact padding so
+  they fit the 280 px strip without losing names, icons, or actions.
+- `04fd20133b`, which keeps global **New Terminal** labels concise while naming
+  their active Workspace and Main Work Area destination in explanatory,
+  accessible, and tooltip copy.
+- `2877de2c3a`, which replaces the inherited Dez **Panels** settings hierarchy
+  with **Workspace Tools & Agent**, removes controls that only affect hidden
+  legacy docks, and preserves official Zed's complete upstream settings.
+- `5e6c925fb5`, which removes the remaining hard-coded Thread vocabulary from
+  live Dez Agent Session context, edit, feedback, and Markdown export controls
+  while preserving official Zed and compatible internal syntax.
+- `7fbad3934e`, which guards the existing terminal-specific single-tab header
+  override so shell-emitted prompt status or artwork cannot visually replace
+  the Terminal Surface identity.
+- `83b1c59e07`, which removes Thread, buffer, Panel, and generic status-bar
+  terminology from reachable Dez Agent settings and adds the feedback
+  data-sharing disclosure while preserving official Zed.
+- `2690f62f75`, which exposes the global Session Switcher command truthfully
+  while preserving conventional Main Work Area `Ctrl-Tab` Surface switching
+  and focused Agent/Session Rail cycling; and
+- `d08a9697a9`, which gives held-shortcut and direct-command Session Switcher
+  modes accurate visible and accessible guidance, preserves active-descendant
+  selection, and reports row position and collection size for every mixed
+  Terminal Session / Agent Session entry; and
+- `738df46829`, which removes compatibility-Panel vocabulary from Dez's
+  Outline, Git, Debug, and Agent command namespaces, Outline empty-state
+  guidance, and the Git-review-to-Agent handoff while preserving official Zed;
+  and
+- `03daa99d53`, which replaces the centered generic Outline placeholder with a
+  top-aligned, accessible four-state explanation, a labeled filter, and a
+  direct **Clear Filter** recovery action while preserving official Zed; and
+- `f883f2f8a0`, which presents a clean Git repository as a top-aligned positive
+  status, names its active branch, and offers an explained **Review Branch
+  Changes** action only where a base-branch comparison is relevant; and
+- `579e7448f7`, which turns Git's opened-Workspace/no-repository placeholder
+  into a named top-aligned setup region with one explained primary
+  **Initialize Repository** action while preserving official Zed; and
+- `9c71b58d64`, which turns dubious Git ownership into an explicit warning that
+  names the repository path, global configuration effect, exact trust command,
+  and separate safe-directory documentation path; and
+- `e2b237025d`, which aligns the idle Dez **Debug** region and tab, prioritizes
+  **Start Debug Session**, separates configuration/documentation/adapters, and
+  teaches the editor-gutter breakpoint path through named accessible states;
+  and
+- `8dc53f4077`, which removes duplicate synthetic recovery output and the inert
+  cursor from unavailable terminals, preserves the saved title and concrete
+  failure reason, and makes **Start Fresh Terminal** an explicit separate
+  computation in the Main Work Area; and
+- that source slice, which gives Terminal Session rows the same inline,
+  pointer, context-menu, and selected-row keyboard rename paths as Agent
+  Sessions. It persists custom names across detached Host ownership, updates
+  live Workspace and Agent terminal Surfaces, preserves dynamic shell and agent
+  prefixes, and keeps the extra pencil out of compact rows where lifecycle
+  actions need the space.
+
+For this slice, `cargo fmt --all`, `git diff --check`, and the Dez identity gate
+pass. The touched documentation also passes Prettier. Per the active
+source-first gate, no application build, test binary, bundle, alternate binary,
+or visual launch was performed. Rendered proof for these commits remains open
+and must use the intended Dez artifact when the consolidated build gate resumes.
+
+## 2026-07-26: visible terminal-agent handoff
+
+Current source closes the remaining silent compact/collapsed presentation gap:
+
+- a recognized foreground process keeps the same Main Work Area terminal and
+  Session identity;
+- compact Sessions rows name actor and state, such as **Codex · Running**,
+  instead of hiding the actor beside **Detected · Live**;
+- collapsed Workspace headers show the single running provider or a count of
+  running terminal Agent Sessions;
+- terminal-agent attention contributes to the same header summary as native
+  Agent Sessions; and
+- the transition does not expand a group, move focus, create a panel, display a
+  toast, add an overlay, or attach a duplicate terminal.
+
+Pure source assertions cover compact row presentation and collapsed summary
+copy. The identity gate pins the process-state derivation, header projection,
+and rendered response. Runtime proof remains open until the consolidated Dez
+artifact is rebuilt: exercise shell → Codex → shell with the Workspace group
+expanded and collapsed, then select the row and confirm focus returns to the
+original terminal.
+
+## 2026-07-26: terminal termination failure recovery
+
+Current source no longer treats a failed destructive request as disposable
+feedback:
+
+- the notification names the affected terminal and states that it may still be
+  running;
+- it remains visible until dismissed instead of auto-hiding;
+- **Return to Session** activates the exact preserved terminal metadata,
+  Workspace, and source route;
+- notification identity is terminal-specific, preventing an unrelated failure
+  from silently replacing it; and
+- transport detail remains in logs while public copy omits **Durable session**
+  and Host implementation terminology.
+
+A pure copy assertion and the identity gate pin the message, persistent
+notification, recovery action, and exact activation route. Runtime proof
+requires a controlled failed-termination response in the next consolidated
+artifact; no build, test binary, alternate binary, or visual launch was
+performed for this source slice.
+
+## 2026-07-26: Settings workflow hierarchy
+
+Current source makes the graphical Settings window explain Dez before exposing
+the inherited IDE surface:
+
+- Workspace & Privacy, Workspaces & Terminals, Agents, Attention, and Evidence are
+  the first five root pages;
+- Appearance and the retained editor, language, layout, Git, network, and
+  advanced pages follow without losing compatibility settings;
+- Workspaces placement and startup visibility are configured under Workspaces &
+  Terminals instead of Agent
+  providers;
+- nonfunctional inherited sidebar-chrome controls are hidden;
+- Workspace Tools owns the contextual Files, Outline, Git, and Built-in Agent
+  settings;
+- Agent configuration starts with Agent Runtime & Providers and uses the public
+  **Disable Agent Features** label; and
+- official Zed keeps its existing page order and upstream labels.
+
+Pure source assertions cover the product order. The identity gate pins the
+sort, the relocated Sessions control, and the Agent copy. No build, test binary,
+alternate binary, or visual launch was performed. Rendered Settings navigation
+remains part of the later consolidated artifact check.
+
+## 2026-07-26: compact Lumin chrome audit
+
+The installed Dez window inspected for this entry was older than the source
+recorded here. It rendered idle Workspace rows and opened Workspace Tools beside
+an empty Main Work Area. Those observations are not evidence against those
+source fixes: that source omits idle rows and starts fresh Workspaces with the
+Main Work Area as the only primary region.
+
+The Lumin path itself is complete in source. Both Lumin Light and Lumin Blur
+request blurred window backgrounds; macOS supplies one under-window material,
+behind-window blending, and active-state tracking. Translucent panel, editor,
+terminal, toolbar, tab, status, and elevated layers remain bounded by the theme
+gate across representative warm, cool, light, and dark backdrops.
+
+This slice changes the fresh and recovery profile to compact Canvas density.
+The 14 px UI/editor/Agent/terminal baseline and control targets remain intact;
+only surplus padding contracts. Theme and identity checks pin the default,
+first-run, and recovery paths. No build, test binary, or alternate binary was
+launched, so rendered compact-density proof remains open.
+
+## 2026-07-26: public shell and glass-opacity audit
+
+Current source removes the staff-only **Advanced** instrumentation page from
+ordinary Dez Settings navigation. Official Zed still exposes the upstream page,
+and staff builds with feature flag overrides retain both Feature Flags and the
+Performance Profiler. The underlying settings keys and commands remain
+compatible.
+
+Lumin Light and Lumin Blur keep the existing native macOS under-window
+material, behind-window blending, and active-state tracking. Their structural
+layers now use a stricter opacity ceiling so stacked root, title/status,
+Sessions, auxiliary, editor, terminal, toolbar, and tab-strip materials do not
+erase the backdrop. Elevated menus and feedback retain their denser legibility
+range.
+
+The source theme gate passes after compositing the updated layers over
+representative dark, neutral, cool, warm, and light backdrops. It still checks
+text and syntax contrast, focus and structural boundaries, active/selected
+controls, scrollbars, and editor-line visibility. The identity gate also pins
+the public Settings policy.
+
+No build, test binary, alternate binary, or new application launch was
+performed. The inspected installed Dez remains older than this source. Rendered
+proof of the opacity change and Settings root remains open for the consolidated
+build.
+
+## 2026-07-26: coherent View-menu hierarchy
+
+Current source aligns the application View menu with the Dez shell:
+
+- **Workspaces** and the Built-in Agent remain separate regions;
+- **Workspace Tools** owns Files, Outline, Git, Debug, and one
+  **Toggle Workspace Tools** action;
+- **Editor Layout** remains the owner of Main Work Area split commands; and
+- **Diagnostics** remains separate from drawer content.
+
+Official Zed retains its upstream Project Tab/Panel and Terminal Panel
+hierarchy. No actions or compatible implementation are removed.
+
+A pure source assertion pins the product split. The identity gate pins the
+submenu, its visibility action, all four Workspace Tools modes, and the
+separate Agent, Editor Layout, and Diagnostics destinations.
+
+No build, test binary, alternate binary, or new visual launch was performed.
+Rendered pointer, keyboard, idempotent reveal, dismissal, and focus-return proof
+remains open for the consolidated build.
+
+## 2026-07-29: source-aware remote build reuse
+
+GitHub Actions run
+[`30472063584`](https://github.com/Oreoro/dez/actions/runs/30472063584)
+passed setup, target, and source guards and entered compilation for exact source
+`36bee432d054e99e5cdd3a536f15c51d7deb1b49`, then was cancelled externally.
+It is not compile, package, runtime, or release evidence.
+
+The macOS workflow now restores and saves only Cargo fingerprints, build-script
+outputs, and dependency artifacts keyed by Rust toolchain, lockfile, source
+commit, workflow run, and attempt. A compatible earlier source cache can
+shorten later builds while Cargo recompiles changed crates. Canonical release
+executable paths, Dez.app, DMG, signature results, runtime smoke output,
+manifest, installation copy, and checksum remain outside the cache and are
+regenerated and verified for every candidate. Restore and save are explicitly
+non-blocking, so cache availability cannot replace or prevent exact packaging.
+
+Formatting, shell syntax, diff, and identity checks are the only local
+verification for this change. Exact compile, package, and rendered evidence
+remain open until the updated workflow completes.
+
+## 2026-07-29: native first-run surface
+
+Fresh Dez settings now keep Files closed alongside Workspaces so the Main Work
+Area remains the first-run owner. The setup path no longer toggles Zed's
+inherited left dock, and the native work tab is named **Set Up Dez** instead of
+the generic **Onboarding**. The visible Files startup setting now describes
+Workspace behavior without exposing the underlying legacy dock vocabulary.
+
+Pure product assertions and identity guards pin the Dez/Zed split. Formatting,
+shell syntax, diff, and identity checks are the only local verification for
+this slice; the current remote build predates it, so rendered first-run proof
+requires the next exact candidate.
+
+The same source checkpoint removes **Floating Attention Popups** from Dez
+Settings and makes the legacy flag inert in Dez release builds. Attention
+remains available through Workspaces, pane state, accessibility announcements,
+native window attention, and configured notifications. Official Zed behavior
+and test-only exercise of the inherited popup implementation remain unchanged.
+
+The visual-reference pass keeps its calm density, quiet separators,
+low-contrast selection, central-work emphasis, and contextual-inspector
+hierarchy, but maps them only onto native Zed regions. It removes the remaining
+framed Settings glyph from **Set Up Dez** and explicitly rejects the reference's
+custom mode switcher, chat shell, permanent inspector, and non-native tab model.
+
+## 2026-07-26: integrated Agent provider setup
+
+The reachable Dez provider setup no longer uses the inherited nested
+onboarding-card treatment. It now sits in normal flow on the Agent pane
+material with one bottom divider. It does not repaint the translucent panel
+background, add an elevated frame, introduce another glass layer, or place an
+absolute gradient over the content. Provider status, configuration, and
+**Start Agent Session** behavior are unchanged.
+
+Official Zed retains the shared elevated onboarding card. A source guard pins
+the product split and rejects a direct panel-background repaint around the Dez
+setup.
+
+No build, test binary, alternate binary, or visual launch was performed.
+Rendered Lumin Light/Blur, compact-width, focus-order, and provider-state proof
+remains open for the consolidated build.
+
+## 2026-07-31: Workspace access and durable terminal ownership
+
+Current source makes `/Applications` installation a prerequisite for
+Workspace restoration and durable-terminal startup. The install path uses the
+native prompt and Home surface; the previous custom installation overlay,
+remembered bypass, and temporary-host startup path are removed.
+
+The terminal Host now exposes one generated endpoint containing its generation,
+socket path, and token-file path. The generation also participates in the
+stable Host ID, and terminal hooks receive the endpoint from the authenticated
+connection. Persisted records owned by an older Host remain visible as
+**Legacy · Access blocked**. Replacement-shell creation does not modify the
+legacy process; explicit termination retains the native confirmation gate and
+contacts only known legacy endpoints.
+
+Local Workspace roots are read-preflighted before restore. Permission failures
+become one root-aggregated native access state. Workspace Search deduplicates
+denied-root diagnostics and cancels active work through the GPUI quit
+subscription. Herdr and tmux attach terminals retain rerun, expose a manual
+**Retry Attach** action after failure, and refresh discovery after completion.
+Raw non-agent Herdr terminals are represented as **Available**.
+
+Source after the packaged baseline also reconciles tmux, Herdr, and cmux
+independently. A failed or timed-out source preserves only its own rows as
+**last known**, an authoritative successful empty scan removes them, and stale
+selection refreshes before attach. This is source evidence only: the packaged
+Preview above predates these changes and supplies no runtime proof for them.
+
+The macOS workflow now defaults to a Preview artifact and labels ad-hoc output
+as not being a v0.2 release. Stable selection fails when any signing or
+notarization secret is absent and validates Developer ID authority,
+TeamIdentifier, Gatekeeper acceptance, and the stapled notarization ticket
+before upload.
+
+Only formatting, shell syntax, diff, and source-identity checks are permitted
+locally for this slice. Exact compilation, focused tests, optimized packaging,
+signing, notarization, and artifact validation remain remote evidence gates.
+
+## 2026-08-01: stable Agent and Subagent identity
+
+Source commit `ecc2b9206e` adds an original, product-scoped icon pair for the
+built-in Dez Agent and its Subagents. Agent creation, draft Agent tabs, native
+Agent Sessions, subagent title bars, permission rows, output boundaries, and
+tool cards now share that identity contract. Recognized terminal agents retain
+their provider marks rather than being recolored or assigned decorative random
+avatars.
+
+Workspaces now presents running, waiting, attention, and error state as a small
+semantic indicator without replacing the underlying Dez or provider identity.
+The official Zed product path retains its upstream Agent marks and active-state
+presentation. Subagents remain parent-scoped and are not projected as duplicate
+top-level Workspaces rows.
+
+Source-only verification completed for the exact feature commit:
+
+- `cargo fmt --all`;
+- `xmllint --noout assets/icons/dez_agent.svg assets/icons/dez_subagent.svg`;
+- `cargo metadata --no-deps --format-version 1`;
+- `bash -n script/dez-identity-check`;
+- `./script/dez-identity-check`; and
+- `git diff --check`.
+
+No local build, test binary, app launch, package, or visual runtime was created.
+Rendered light/dark theme, compact-width, high-contrast, animation, and focus
+proof remains an exact remote-candidate and installed-runtime gate.
+
+## 2026-08-02: activation-only Workspace Layout
+
+The active Workspace now contains a native **Layout** projection of its real
+panes and tabs. Layout is hidden when one tab would make it redundant and while
+Workspace search owns the list. With multiple tabs it names the owning pane and
+marks the focused pane in text, including single-pane Workspaces.
+
+Layout rows only activate their existing native tab. Close, middle-click close,
+pin, reorder, drag, split, preview, and unsaved-work decisions remain owned by
+the native pane and tab strip. Dirty and pinned facts remain visible without
+becoming duplicate controls. Official Zed retains its inherited Sessions and
+tab behavior.
+
+Source-only verification for this slice consists of Rust formatting, the Dez
+identity guard, shell syntax, and diff hygiene. No local compilation, test
+binary, app launch, package, or visual runtime is evidence for this change;
+GitHub Actions remains responsible for the exact-candidate build and tests.
+
+## 2026-08-02: annotated Workspace workflow and bounded Activity
+
+The repository now owns a Dez Workspace design skill and an authoritative
+annotated workflow wireframe. The reviewed monochrome sheet covers Home,
+focused multi-pane work, navigation without content-covering overlays, return
+recap, and terminal/access recovery. Its ASCII companion records native owner,
+action, invariant, and failure behavior for every numbered callout.
+
+The implemented slice separates native navigation from supervision. **Layout**
+continues to activate the real pane/tab entities. **Activity** now retains only
+active, running, waiting, failed, reconnecting, missing, incompatible,
+resumable, unread, or review-ready work. Inactive completed Agent Sessions stay
+available in Agent History; inactive idle or exited terminals remain reachable
+through Layout or their native tab without cluttering Activity. Completed
+external multiplexer work is likewise absent from the live projection.
+
+Expanded Workspaces with projected rows now visibly nest those rows beneath an
+**Activity** heading. Search, empty states, scope controls, overview copy, and
+accessibility labels use Workspaces-and-Activity language while preserving
+official Zed's inherited Sessions behavior. Source policy assertions and the
+identity guard pin the product split.
+
+Local evidence for this slice is limited to skill validation, Rust formatting,
+shell syntax, source identity, and diff hygiene. No local compilation, test
+binary, app launch, package, or installed-runtime claim is permitted. Exact
+compilation, tests, packaging, and rendered validation remain GitHub Actions
+and installed-candidate gates.
+
+## 2026-08-03: Apple M2 Preview baseline and shared chrome density
+
+GitHub Actions run
+[`30819926966`](https://github.com/Oreoro/dez/actions/runs/30819926966)
+completed for exact source `cdd4dcab1e616ddb70cad18691959179211fdfcf`.
+The optimized Apple M2 build, packaged entry-point checks, and artifact upload
+all passed. Artifact `Dez-preview-macOS-M2-cdd4dcab1e616ddb70cad18691959179211fdfcf`
+reported:
+
+- `Dez: v0.4.0+preview.91.cdd4dcab1e616ddb70cad18691959179211fdfcf
+(Dez Preview)` from the packaged application;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, and version
+  `0.4.0`;
+- packaged `dez`, `cli`, `dez-terminal-host`, and Git helper executables; and
+- DMG checksum
+  `5f6a6e5deef02772a5ae127cd46eb43c986254a0be0790128c0f14a1ece5e064`.
+
+The manifest explicitly identifies the artifact as an ad-hoc signed Preview,
+not a notarized Stable release. Its runtime smoke proves packaged entry points
+and identity, not the complete installed UI, permission, terminal restoration,
+or visual acceptance matrix.
+
+Later source commits `6b6ef7944e`, `f2399aa569`, and `294d847114` make native
+pane, Workspace navigation, and status controls consume the shared Compact,
+Balanced, and Spacious metrics. Compact tab controls no longer exceed their
+24 px strip; Open rows and the labeled Workspaces recovery control scale with
+their owning chrome.
+
+GitHub Actions run
+[`30829212334`](https://github.com/Oreoro/dez/actions/runs/30829212334)
+subsequently completed for exact density source
+`294d8471145d5721bceb77ddc2439fff604f81a7`. Target and Dez source guards,
+the optimized Apple M2 build, package verification, and upload all passed.
+Artifact
+`Dez-preview-macOS-M2-294d8471145d5721bceb77ddc2439fff604f81a7`
+reported:
+
+- `Dez: v0.4.0+preview.93.294d8471145d5721bceb77ddc2439fff604f81a7
+(Dez Preview)` from the packaged entry-point smoke test;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2` and release thin LTO,
+  one code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  and build `20260803.165857`;
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables; and
+- DMG checksum
+  `3fc1dca44b2c63356e27162be6cb619baadc91f4f70cba54d9b7025aa8e37819`.
+
+An independent downloaded-artifact audit matched the published SHA-256,
+verified the DMG partition checksums, mounted it read-only, and passed
+`codesign --verify --deep --strict`. The bundle is ad-hoc signed with no Team
+Identifier. The auditing Mac reported `override=security disabled`, so its
+local `spctl` acceptance is not Gatekeeper or Stable-release evidence. No
+downloaded application was installed or launched during this audit.
+
+This exact artifact now proves compilation, optimization, package structure,
+identity, architecture, helper inclusion, entry-point smoke, and ad-hoc
+signature integrity for the density source. It does not yet prove installed
+Home, Workspaces, pane tabs, adjacent Add, Settings, permission, terminal-host,
+tmux, Herdr, cmux, restart, keyboard, accessibility, or visual behavior. Those
+remain installed-runtime gates, and the Preview is not promoted as Stable.
+
+## 2026-08-03: running-session reveal candidate
+
+Source commit `fe4a48cf86307bdb7ffce447329638c878fafab0` corrects the
+Workspace projection without introducing a second navigation model. **Browse
+Running Sessions…** expands matching tmux, Herdr, and cmux groups both from the
+current discovery snapshot and after an in-flight refresh completes. A
+Workspace with one open item omits the redundant **Open** projection because
+the native tab strip remains the authoritative control; Workspaces continues
+to project multiple open tabs and panes when they provide useful navigation.
+
+GitHub Actions run
+[`30836170113`](https://github.com/Oreoro/dez/actions/runs/30836170113)
+completed successfully for that exact source in 1 hour 5 minutes. The Apple M2
+target guard, complete source and bundle guard, optimized application build,
+package verification, and artifact upload all passed. GitHub artifact
+`8866797253`, named
+`Dez-preview-macOS-M2-fe4a48cf86307bdb7ffce447329638c878fafab0`, is
+145,625,654 bytes and expires on 2026-08-17. Its manifest and packaged smoke
+reported:
+
+- `Dez: v0.4.0+preview.95.fe4a48cf86307bdb7ffce447329638c878fafab0
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.182255`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+The downloaded artifact's portable DMG SHA-256 is
+`d410cab8b445374c43d6f5ccb00f52198f0a694b1a324cf99bf4adf0f1774c70`.
+`hdiutil verify` passed every partition checksum. An independent read-only
+mount reproduced all four executable hashes from the manifest, and
+`codesign --verify --deep --strict` validated the complete application bundle.
+Its application Code Directory hash is
+`2653388d4229239fa4639998d0e3cea41e45d4f3`. The signature remains ad-hoc,
+has no Team Identifier, and is not notarized. The auditing Mac reported
+`override=security disabled`, so local `spctl` acceptance is not Gatekeeper or
+Stable-release evidence.
+
+No local compilation or tests were run for this candidate. The downloaded
+application was not installed or launched. Installed-runtime validation still
+must prove that running-session browsing reveals the expected rows, a one-tab
+Workspace remains uncluttered, native tabs and adjacent Add remain intact,
+the status bar is visible, protected-folder access is requested once, tmux and
+Herdr attach and Retry behave correctly, cmux hands off externally, durable
+terminal ownership survives restart, and keyboard and accessibility flows
+remain native. Until those checks pass, this artifact is a Preview candidate,
+not a v0.4 Stable release.
+
+## 2026-08-04: running-session discovery states and Apple M2 Preview
+
+Source commit `3c9cb14f11bc6795c9595c42eb88202c8c3eeec8` makes **Other
+Running Sessions** a keyboard-operable native disclosure and gives an explicit
+**Browse Running Sessions…** request a bounded result even when discovery
+returns no unmatched rows. The result distinguishes checking, access-required,
+failed, and all-sessions-already-in-Workspaces states. Failed or uninitialized
+discovery exposes a native **Retry** or **Refresh** action; the normal collapsed
+Workspace view still omits an empty external-session footer. The Main Work Area
+uses the same **Browse Running Sessions** noun.
+
+GitHub Actions run
+[`30842790884`](https://github.com/Oreoro/dez/actions/runs/30842790884)
+passed the Apple M2 target guard and complete Dez source/bundle guard for that
+exact source, then rejected the candidate during optimized compilation. The
+sidebar empty-state spinner returned `AnimationElement<Icon>` from a conditional
+builder that required `Icon` (`E0308` at `crates/sidebar/src/sidebar.rs:17692`).
+Packaging and upload were skipped, so the run produced no candidate artifact.
+
+Commit `ad6614dcaa206cd757d8fc069999b5c38f6021bd` fixes that concrete error by
+erasing the animated and static branches to the same native element type. The
+refresh indicator also respects Dez's reduced-motion setting. Source-only Rust
+formatting, shell syntax, full and source-only Dez identity checks, and diff
+hygiene passed locally. No local compilation or test binary was run.
+
+GitHub Actions run
+[`30847239718`](https://github.com/Oreoro/dez/actions/runs/30847239718)
+completed successfully for the repair source. The Apple M2 target guard, Dez
+source/bundle guard, optimized application build, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8871132314`,
+named
+`Dez-preview-macOS-M2-ad6614dcaa206cd757d8fc069999b5c38f6021bd`, is
+145,633,005 bytes and expires on 2026-08-17. Its manifest and packaged smoke
+reported:
+
+- `Dez: v0.4.0+preview.97.ad6614dcaa206cd757d8fc069999b5c38f6021bd
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.205530`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the portable DMG SHA-256
+`8151628d85d065ab51a63e67ed122a81118ab54a027b83f0cf6a0ba0d58e79f8`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+all four executable hashes from the build manifest and
+`codesign --verify --deep --strict` validated the complete bundle. The
+application Code Directory hash is
+`19e99e876282542107b2b6e6f1b9166ff68b15a7`. The signature is ad-hoc, has no
+Team Identifier, and is not notarized. The image was detached after inspection;
+the downloaded application was not installed or launched.
+
+This exact artifact proves compilation, optimization, package structure,
+identity, architecture, helper inclusion, entry-point smoke, and ad-hoc
+signature integrity for the running-session discovery polish. Installed-runtime
+validation must still prove Home and Workspace restoration, one-time protected
+folder access, native pane tabs and adjacent Add, status-line visibility,
+keyboard and screen-reader disclosure, bounded empty and failure results, tmux
+and Herdr attach/Retry, cmux handoff, and durable terminal ownership across a
+restart. Until those checks pass—and a Stable artifact is Developer ID signed
+and notarized—this remains a Preview candidate rather than a v0.4 Stable
+release.
+
+## 2026-08-04: Workspace Layout noun and accessible Running Sessions Preview
+
+Source commit `bad2c9876b9cc861b28c7bc3bdf3300d38abbd16` restores
+**Layout** as the final noun for the active Workspace's activation-only native
+pane/tab projection. It replaces the regressed **Open** label without changing
+pane ownership, tab lifecycle, split behavior, or the adjacent Add control.
+The nested **Running Sessions** disclosure now announces expanded state,
+natural singular or plural counts, and the number of sessions needing
+attention instead of relying on color.
+
+GitHub Actions run
+[`30853792138`](https://github.com/Oreoro/dez/actions/runs/30853792138)
+completed successfully for that exact source in 1 hour 4 minutes 17 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8873261829`,
+named
+`Dez-preview-macOS-M2-bad2c9876b9cc861b28c7bc3bdf3300d38abbd16`, is
+145,573,586 bytes, expires on 2026-08-17, and has archive digest
+`3e7f90d925099c1bf47edc47a22bfc507587b6d938619dbe0a7b5772a8545a64`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.98.bad2c9876b9cc861b28c7bc3bdf3300d38abbd16
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.221725`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive digest
+and the portable DMG SHA-256
+`53e263e8192de18e7c6df5e6760295980558471b145368106fb487d8944813de`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `012c4a079bb3f3dc3165dd6239ef32d51cb50a2ca95eb8611203b6a990420364`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`bb14ebabe5f14b1510986a42f1151fbc06f067e0`. The signature is ad-hoc, has no
+Team Identifier, and has no stapled notarization ticket. The auditing Mac
+reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and complete source identity
+checks. Installed-runtime validation must still prove the Layout label and
+activation flow, Running Sessions keyboard and screen-reader behavior, Home
+and Workspace restoration, one-time protected-folder access, native pane tabs
+and adjacent Add, status-line visibility, tmux and Herdr attach/Retry, cmux
+handoff, and durable terminal ownership across a restart. Until those checks
+pass—and a Stable artifact is Developer ID signed and notarized—this remains a
+Preview candidate rather than a v0.4 Stable release.
+
+## 2026-08-04: bounded Workspace Activity Preview
+
+Source commit `fe2f2a8a6b714feed9bb759cf532a600e91b42c3` names the
+active Workspace's bounded live projection **Activity** instead of the broad
+**Sessions** inventory noun. Existing authoritative lifecycle filters remain
+unchanged: current active, running, actionable, recoverable, or review-ready
+work appears in Activity; idle open content remains in **Layout**; inactive
+completed Agent Sessions remain in Agent History; and externally discovered
+work remains behind the explicit **Running Sessions** disclosure. Official
+Zed's existing Activity wording is preserved.
+
+GitHub Actions run
+[`30859189967`](https://github.com/Oreoro/dez/actions/runs/30859189967)
+completed successfully for that exact source in 1 hour 19 minutes 55 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8875443215`,
+named
+`Dez-preview-macOS-M2-fe2f2a8a6b714feed9bb759cf532a600e91b42c3`, is
+145,632,710 bytes, expires on 2026-08-17, and has archive digest
+`eeebe20ea98645282c6379221fda4f8b7ccf555d2e04fb434327cd2f6c787160`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.99.fe2f2a8a6b714feed9bb759cf532a600e91b42c3
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260803.235756`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive byte
+count and digest. The portable DMG SHA-256 is
+`f20dc5b881581ec996b01ac88b80bffadbc6397364b3a5ee53475de6e74633c7`,
+and `hdiutil verify` passed every partition checksum. A read-only mount
+reproduced the manifest's executable hashes:
+
+- `dez`: `4a6d26ec617a8f766a45a6ad77227f37e7ae9b183fb06a6ad5f19b1413aa80ed`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`7f9dce0c7112999394f8f4587915e068fc31f298`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The auditing
+Mac reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Installed-runtime validation must still prove the Activity heading and
+bounded-row behavior, Layout activation, Running Sessions disclosure, Home and
+Workspace restoration, one-time protected-folder access, native pane tabs and
+adjacent Add, status-line visibility, tmux and Herdr attach/Retry, cmux handoff,
+and durable terminal ownership across a restart. Until those checks pass—and a
+Stable artifact is Developer ID signed and notarized—this remains a Preview
+candidate rather than a v0.4 Stable release.
+
+## 2026-08-04: focused fresh Workspace Preview
+
+Source commit `1f05173dc72c15ec48a15e78e2647b451ddd7c6d` aligns the
+bundled Files startup default with the existing first-run profile. A fresh
+Workspace now begins in the Main Work Area instead of automatically opening a
+second Files column. Restored layouts and the explicit **Open Files
+Automatically** preference remain authoritative. The graphical setting names
+that result and explains the focused off state without inherited panel
+language.
+
+GitHub Actions run
+[`30864911736`](https://github.com/Oreoro/dez/actions/runs/30864911736)
+completed successfully for that exact source in 1 hour 5 minutes 8 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8876946905`,
+named
+`Dez-preview-macOS-M2-1f05173dc72c15ec48a15e78e2647b451ddd7c6d`, is
+145,631,741 bytes, expires on 2026-08-18, and has archive digest
+`4fdbc13b043e12ae1c06506bf1671ba82de58bc9a1821cd13308dbca50b87664`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.100.1f05173dc72c15ec48a15e78e2647b451ddd7c6d
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260804.011715`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit matched the published archive byte
+count and digest. The portable DMG SHA-256 is
+`b9e714f93282182256e0e10ee71ba746fddec3ba1c55af2450f7fe3d19fb472f`;
+`hdiutil` verified every partition checksum while attaching it read-only. The
+mounted application reproduced the manifest's executable hashes:
+
+- `dez`: `42e80396dcbe44dec1168bc9e3ba98204ad84690618c6a03f1b099068815c7ea`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`d4141ecf3b8e9411ef79ddafabf1bd67425dbd6f`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The disk image
+was detached after inspection; the downloaded application was not installed
+or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Installed-runtime validation must still prove a fresh Workspace opens
+without an unsolicited Files column, the explicit Files preference and restored
+layouts still open it, Activity and Layout navigation, Home and Workspace
+restoration, one-time protected-folder access, native pane tabs and adjacent
+Add, status-line visibility, tmux and Herdr attach/Retry, cmux handoff, and
+durable terminal ownership across a restart. Until those checks pass—and a
+Stable artifact is Developer ID signed and notarized—this remains a Preview
+candidate rather than a v0.4 Stable release.
+
+## 2026-08-04: final Workspace navigation-copy Preview
+
+Source commit `ed65b9fe889bd08bf47557aafdb90f6f3b0c800e` completes the
+public Workspace navigation vocabulary around activation-only **Layout** and
+bounded **Activity**. Empty Workspaces now says **No Workspace is open** and
+names a folder or repository as the required context. Public guides no longer
+teach the superseded **Open Tabs & Tools** or **Open/Sessions** hierarchy and no
+longer assign close or middle-click lifecycle to Workspaces; the native tab
+strip remains authoritative.
+
+GitHub Actions run
+[`30869297252`](https://github.com/Oreoro/dez/actions/runs/30869297252)
+completed successfully for that exact source in 54 minutes 14 seconds. The
+Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8878203066`,
+named
+`Dez-preview-macOS-M2-ed65b9fe889bd08bf47557aafdb90f6f3b0c800e`, is
+145,582,099 bytes, expires on 2026-08-18, and has archive digest
+`7e117a3a2b8ade48f3a7d3bbc2357308aa183778fe659afec524139d05c8fd3a`.
+Its manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.101.ed65b9fe889bd08bf47557aafdb90f6f3b0c800e
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260804.023014`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit reproduced the packaged DMG SHA-256
+`7a021a80836710bcb443d7306d9296f8db69f56ee7a4baf070586d2971fb521e`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `1642d17605df6404bfacec09fa670e1eb23f43226e1504101fd707aaede4b586`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`857948415d8ccfe4c44f52cb2e97143c1405e002`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The auditing
+Mac reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Installed-runtime validation must still prove the final empty
+Workspaces copy, Layout and Activity behavior, Home and Workspace restoration,
+one-time protected-folder access, native pane tabs and adjacent Add, status-line
+visibility, tmux and Herdr attach/Retry, cmux handoff, and durable terminal
+ownership across a restart. Until those checks pass—and a Stable artifact is
+Developer ID signed and notarized—this remains a Preview candidate rather than
+a v0.4 Stable release.
+
+## 2026-08-04: density-aligned Workspace chrome Preview
+
+Source commit `bed02b1238426b4edb471ab9a34b62a2088cd968` completes the
+shared density contract for native Workspace navigation. Compact, Balanced,
+and Spacious now drive the Workspaces title row, search row, search and dismiss
+marks, existing Workspace controls, Layout rows, native pane tabs, and the
+labeled status-bar destination instead of leaving the Workspaces title and
+search chrome at a fixed balanced height. Zed retains its upstream balanced
+Session Rail behavior.
+
+GitHub Actions run
+[`30876564794`](https://github.com/Oreoro/dez/actions/runs/30876564794)
+completed successfully for that exact source in 1 hour 16 minutes 20 seconds.
+The Apple M2 target guard, complete Dez source and bundle guard, optimized
+application build, release-intermediate save, launchable bundle verification,
+DMG packaging, and artifact upload all passed. GitHub artifact `8881056181`,
+named
+`Dez-preview-macOS-M2-bed02b1238426b4edb471ab9a34b62a2088cd968`, is
+145,634,026 bytes, expires on 2026-08-18, and has archive digest
+`da3410e430c2f5f954652b66f1f97470ecdbed53cb30531b9408a519cd639942`.
+Streaming the published archive independently reproduced that digest. Its
+manifest and packaged entry-point smoke reported:
+
+- `Dez: v0.4.0+preview.102.bed02b1238426b4edb471ab9a34b62a2088cd968
+(Dez Preview)`;
+- `aarch64-apple-darwin` with `target_cpu=apple-m2`, release thin LTO, one
+  code-generation unit, and stripped binaries;
+- bundle name `Dez Preview`, identifier `dev.dez.Dez-Preview`, version `0.4.0`,
+  build `20260804.051900`, and URL scheme `dez-preview`; and
+- arm64 `dez`, `cli`, `dez-terminal-host`, and Git helper executables.
+
+An independent downloaded-artifact audit reproduced the packaged DMG SHA-256
+`ceb5b1dff2eb2d7ca399f42c8ce766c83dc8b50b45e89e58dc41fce535317b7e`.
+`hdiutil verify` passed every partition checksum. A read-only mount reproduced
+the manifest's executable hashes:
+
+- `dez`: `a63ad39cf6291829f95e9ecc9d0f52a59f447e883cc5689ed86bc0fb380e09b3`;
+- `cli`: `c2b87dc717f1a0793a5cfee927148c66af676426aff605a25f064a35bb32ec16`;
+- `dez-terminal-host`:
+  `80c1a22ac17ae1ec8df2fdbb6577441eee4bb54d7ba7fb6214922731d6172309`;
+  and
+- Git helper:
+  `912c2a6b9beff14004fcf20c7651e06f557523a6215c006b403875e59e13a292`.
+
+`codesign --verify --deep --strict` validated the mounted bundle. Its
+application Code Directory hash is
+`34898b6f6436e169cd1c96dfceb9ebef4c4f1fb6`. The signature is ad-hoc,
+has no Team Identifier, and has no stapled notarization ticket. The auditing
+Mac reported `override=security disabled`, so local `spctl` acceptance is not
+Gatekeeper or Stable-release evidence. The disk image was detached after
+inspection; the downloaded application was not installed or launched.
+
+No local compilation or test binary was run. Local verification was limited to
+Rust formatting, shell syntax, diff hygiene, and source-only Dez identity
+checks. Follow-up public-copy, wireframe, cmux command-contract, and identity
+guard corrections do not change the packaged runtime validated at the source
+commit above. Installed-runtime validation must still prove Compact, Balanced,
+and Spacious Workspace chrome, Layout and Activity behavior, Agent and
+Subagent marks, Home and Workspace restoration, one-time protected-folder
+access, native pane tabs and adjacent Add, status-line visibility, tmux and
+Herdr attach/Retry, both cmux handoff routes, and durable terminal ownership
+across a restart. Until those checks pass—and a Stable artifact is Developer ID
+signed and notarized—this remains a Preview candidate rather than a v0.4 Stable
+release.
+
+## 2026-08-06: installed Lumin contrast correction
+
+Installed Preview `v0.4.0+preview.123` at source
+`2b3a66243a52b9888e6735e25275ee4a831fe768` preserved the intended native
+ownership: Home and Settings remained ordinary tabs or windows, Workspaces
+projected Layout and Activity, the native tab strip kept the adjacent Add
+control, and the status line remained visible. It also exposed a shared visual
+defect that source-only opacity checks had not caught. Against the active macOS
+desktop material, the Main Work Area, Workspaces, and Settings composited to a
+middle gray while muted labels and metadata nearly disappeared.
+
+The follow-up source keeps one native under-window material and no nested blur
+surfaces. It deepens the translucent dark structural layers, raises muted and
+placeholder text and icon roles, preserves neutral selection, and promotes the
+primary Workspace name to the small interface role even at Compact density.
+Section labels and metadata remain compact so hierarchy comes from type role,
+not extra chrome. The source theme gate now includes white, blue-gray, and warm
+light desktop backdrops for the dark blurred variant instead of validating it
+only over dark samples.
+
+No local build or test binary was run for this correction. The next exact-SHA
+Preview must prove the revised Lumin Blur hierarchy across Home, Workspaces,
+Settings, native tabs, terminal/editor content, and the status line before this
+entry can be treated as installed-runtime validation.
+
+GitHub Actions run
+[`31080153666`](https://github.com/Oreoro/dez/actions/runs/31080153666)
+for the preceding quit-persistence source stopped before tests or packaging
+because its new GPUI test called `VisualTestContext::update` with the
+one-argument `TestAppContext` closure shape. The follow-up source corrects that
+test-harness arity only; the background-queue persistence implementation is
+unchanged. The failed run produced no application artifact.

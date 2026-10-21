@@ -1,7 +1,6 @@
 use anyhow::{Result, anyhow};
 use collections::{HashMap, HashSet};
 use command_palette_hooks::{CommandInterceptItem, CommandInterceptResult};
-use dez_actions::{OpenDocs, RevealTarget};
 use editor::{
     Bias, Editor, EditorSettings, SelectionEffects, ToPoint,
     actions::{SortLinesCaseInsensitive, SortLinesCaseSensitive},
@@ -39,6 +38,7 @@ use util::{
 };
 use workspace::{Item, SaveIntent, Workspace, notifications::NotifyResultExt};
 use workspace::{SplitDirection, notifications::DetachAndPromptErr};
+use zed_actions::{OpenDocs, RevealTarget};
 
 use crate::{
     ToggleMarksView, ToggleRegistersView, Vim, VimSettings,
@@ -338,24 +338,13 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
     });
 
     Vim::action(editor, cx, |_, _: &ArgumentRequired, window, cx| {
-        let message = localization::text(cx, "vim-argument-required");
-        let cancel = localization::text(cx, "common-cancel");
         let _ = window.prompt(
             gpui::PromptLevel::Critical,
-            &message,
+            "Argument required",
             None,
-            &[gpui::PromptButton::cancel(cancel)],
+            &["Cancel"],
             cx,
         );
-    });
-
-    Vim::action(editor, cx, |vim, _: &ShellCommand, window, cx| {
-        let Some(workspace) = vim.workspace(window, cx) else {
-            return;
-        };
-        workspace.update(cx, |workspace, cx| {
-            command_palette::CommandPalette::toggle(workspace, "'<,'>!", window, cx);
-        })
     });
 
     Vim::action(editor, cx, |vim, action: &VimSave, window, cx| {
@@ -364,19 +353,17 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                 let Some(range) = range.buffer_range(vim, editor, window, cx).ok() else {
                     return;
                 };
-                let Some((line_ending, encoding, has_bom, text, whole_buffer)) =
-                    editor.buffer().update(cx, |multi, cx| {
-                        Some(multi.as_singleton()?.update(cx, |buffer, _| {
-                            (
-                                buffer.line_ending(),
-                                buffer.encoding(),
-                                buffer.has_bom(),
-                                buffer.as_rope().slice_rows(range.start.0..range.end.0 + 1),
-                                range.start.0 == 0 && range.end.0 + 1 >= buffer.row_count(),
-                            )
-                        }))
-                    })
-                else {
+                let Some((line_ending, encoding, has_bom, text, whole_buffer)) = editor.buffer().update(cx, |multi, cx| {
+                    Some(multi.as_singleton()?.update(cx, |buffer, _| {
+                        (
+                            buffer.line_ending(),
+                            buffer.encoding(),
+                            buffer.has_bom(),
+                            buffer.as_rope().slice_rows(range.start.0..range.end.0 + 1),
+                            range.start.0 == 0 && range.end.0 + 1 >= buffer.row_count(),
+                        )
+                    }))
+                }) else {
                     return;
                 };
 
@@ -388,15 +375,11 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                         .as_singleton()
                         .and_then(|buffer| buffer.read(cx).file())
                     else {
-                        let title = localization::text(cx, "vim-no-file-name");
-                        let detail =
-                            localization::text(cx, "vim-partial-buffer-requires-file-name");
-                        let cancel = localization::text(cx, "common-cancel");
                         let _ = window.prompt(
                             gpui::PromptLevel::Warning,
-                            &title,
-                            Some(&detail),
-                            &[gpui::PromptButton::cancel(cancel)],
+                            "No file name",
+                            Some("Partial buffer write requires file name."),
+                            &["Cancel"],
                             cx,
                         );
                         return;
@@ -416,25 +399,17 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                                         window,
                                         cx,
                                     )
-                                    .detach_and_prompt_err(
-                                        &localization::text(cx, "vim-failed-to-save"),
-                                        window,
-                                        cx,
-                                        |_, _, _| None,
-                                    );
+                                    .detach_and_prompt_err("Failed to save", window, cx, |_, _, _| None);
                             });
                         }
                         return;
                     }
                     if Some(SaveIntent::Overwrite) != action.save_intent {
-                        let title = localization::text(cx, "vim-use-bang-to-write-partial-buffer");
-                        let detail = localization::text(cx, "vim-partial-buffer-requires-bang");
-                        let cancel = localization::text(cx, "common-cancel");
                         let _ = window.prompt(
                             gpui::PromptLevel::Warning,
-                            &title,
-                            Some(&detail),
-                            &[gpui::PromptButton::cancel(cancel)],
+                            "Use ! to write partial buffer",
+                            Some("Overwriting the current file with selected buffer content requires '!'."),
+                            &["Cancel"],
                             cx,
                         );
                         return;
@@ -455,28 +430,17 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                             return;
                         };
 
-                        let rx = (worktree.entry_for_path(&path).is_some()
-                            && Some(SaveIntent::Overwrite) != action.save_intent)
-                            .then(|| {
-                                let title = localization::tr!(
-                                    cx,
-                                    "vim-file-exists",
-                                    path = path.display(path_style)
-                                );
-                                let detail = localization::text(cx, "vim-file-exists-description");
-                                let replace = localization::text(cx, "vim-replace");
-                                let cancel = localization::text(cx, "common-cancel");
-                                window.prompt(
-                                    gpui::PromptLevel::Warning,
-                                    &title,
-                                    Some(&detail),
-                                    &[
-                                        gpui::PromptButton::ok(replace),
-                                        gpui::PromptButton::cancel(cancel),
-                                    ],
-                                    cx,
-                                )
-                            });
+                        let rx = (worktree.entry_for_path(&path).is_some() && Some(SaveIntent::Overwrite) != action.save_intent).then(|| {
+                            window.prompt(
+                                gpui::PromptLevel::Warning,
+                                &format!("{path:?} already exists. Do you want to replace it?"),
+                                Some(
+                                    "A file or folder with the same name already exists. Replacing it will overwrite its current contents.",
+                                ),
+                                &["Replace", "Cancel"],
+                                cx
+                            )
+                        });
                         let filename = filename.clone();
                         cx.spawn_in(window, async move |this, cx| {
                             if let Some(rx) = rx
@@ -486,26 +450,12 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                             }
 
                             let _ = this.update_in(cx, |worktree, window, cx| {
-                                let Some(path) =
-                                    RelPath::new(Path::new(&filename), path_style).ok()
-                                else {
+                                let Some(path) = RelPath::new(Path::new(&filename), path_style).ok() else {
                                     return;
                                 };
                                 worktree
-                                    .write_file(
-                                        path.into_arc(),
-                                        text.clone(),
-                                        line_ending,
-                                        encoding,
-                                        has_bom,
-                                        cx,
-                                    )
-                                    .detach_and_prompt_err(
-                                        &localization::text(cx, "vim-failed-to-write-lines"),
-                                        window,
-                                        cx,
-                                        |_, _, _| None,
-                                    );
+                                    .write_file(path.into_arc(), text.clone(), line_ending, encoding, has_bom, cx)
+                                    .detach_and_prompt_err("Failed to write lines", window, cx, |_, _, _| None);
                             });
                         })
                         .detach();
@@ -523,12 +473,7 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                             window,
                             cx,
                         )
-                        .detach_and_prompt_err(
-                            &localization::text(cx, "vim-failed-to-save"),
-                            window,
-                            cx,
-                            |_, _, _| None,
-                        );
+                        .detach_and_prompt_err("Failed to save", window, cx, |_, _, _| None);
                 });
             }
             return;
@@ -548,12 +493,11 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                 })
             else {
                 // TODO implement save_as with absolute path
-                Task::ready(Err::<(), _>(anyhow!(localization::text(
-                    cx,
-                    "vim-cannot-save-absolute-path"
-                ))))
+                Task::ready(Err::<(), _>(anyhow!(
+                    "Cannot save buffer with absolute path"
+                )))
                 .detach_and_prompt_err(
-                    &localization::text(cx, "vim-failed-to-save"),
+                    "Failed to save",
                     window,
                     cx,
                     |_, _, _| None,
@@ -564,22 +508,17 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
             if project.read(cx).entry_for_path(&project_path, cx).is_some()
                 && action.save_intent != Some(SaveIntent::Overwrite)
             {
-                let title = localization::tr!(
-                    cx,
-                    "vim-file-exists",
-                    path = project_path.path.display(path_style)
-                );
-                let detail = localization::text(cx, "vim-file-exists-description");
-                let replace = localization::text(cx, "vim-replace");
-                let cancel = localization::text(cx, "common-cancel");
                 let answer = window.prompt(
                     gpui::PromptLevel::Critical,
-                    &title,
-                    Some(&detail),
-                    &[
-                        gpui::PromptButton::ok(replace),
-                        gpui::PromptButton::cancel(cancel),
-                    ],
+                    &format!(
+                        "{} already exists. Do you want to replace it?",
+                        project_path.path.display(path_style)
+                    ),
+                    Some(
+                        "A file or folder with the same name already exists. \
+                        Replacing it will overwrite its current contents.",
+                    ),
+                    &["Replace", "Cancel"],
                     cx,
                 );
                 cx.spawn_in(window, async move |editor, cx| {
@@ -590,24 +529,14 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                     let _ = editor.update_in(cx, |editor, window, cx| {
                         editor
                             .save_as(project, project_path, window, cx)
-                            .detach_and_prompt_err(
-                                &localization::text(cx, "vim-failed-to-save"),
-                                window,
-                                cx,
-                                |_, _, _| None,
-                            );
+                            .detach_and_prompt_err("Failed to :w", window, cx, |_, _, _| None);
                     });
                 })
                 .detach();
             } else {
                 editor
                     .save_as(project, project_path, window, cx)
-                    .detach_and_prompt_err(
-                        &localization::text(cx, "vim-failed-to-save"),
-                        window,
-                        cx,
-                        |_, _, _| None,
-                    );
+                    .detach_and_prompt_err("Failed to :w", window, cx, |_, _, _| None);
             }
         });
     });
@@ -645,13 +574,11 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
 
     Vim::action(editor, cx, |vim, action: &DeleteMarks, window, cx| {
         fn err(s: String, window: &mut Window, cx: &mut Context<Editor>) {
-            let title = localization::tr!(cx, "vim-invalid-argument", argument = s);
-            let cancel = localization::text(cx, "common-cancel");
             let _ = window.prompt(
                 gpui::PromptLevel::Critical,
-                &title,
+                &format!("Invalid argument: {}", s),
                 None,
-                &[gpui::PromptButton::cancel(cancel)],
+                &["Cancel"],
                 cx,
             );
         }
@@ -805,13 +732,11 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
 
             cx.spawn_in(window, async move |editor, cx| {
                 if let Some(task) = task {
-                    text.push_str(
-                        &task
-                            .await
-                            .log_err()
-                            .map(|loaded_file| loaded_file.text)
-                            .unwrap_or_default(),
-                    );
+                    if let Some(loaded_file) = task.await.log_err() {
+                        for chunk in loaded_file.text.chunks() {
+                            text.push_str(chunk);
+                        }
+                    }
                 }
 
                 if !text.is_empty() && !is_end_of_file {
@@ -844,7 +769,7 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
         let keystrokes = action
             .command
             .chars()
-            .map(|c| Keystroke::parse(&c.to_string()).unwrap())
+            .filter_map(|c| Keystroke::parse(&c.to_string()).ok())
             .collect();
         vim.switch_mode(Mode::Normal, true, window, cx);
         if let Some(override_rows) = &action.override_rows {
@@ -908,8 +833,8 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
                         {
                             let last_sel = editor.selections.disjoint_anchors_arc();
                             editor.modify_transaction_selection_history(tx_id, |old| {
-                                old.0 = old.0.get(..1).unwrap_or(&[]).into();
-                                old.1 = Some(last_sel);
+                                old.undo = old.undo.get(..1).unwrap_or(&[]).into();
+                                old.redo = Some(last_sel);
                             });
                         }
                     });
@@ -1690,7 +1615,7 @@ fn generate_commands(_: &App) -> Vec<VimCommand> {
         .bang(workspace::CloseAllItemsAndPanes {
             save_intent: Some(SaveIntent::Overwrite),
         }),
-        VimCommand::new(("cq", "uit"), dez_actions::Quit),
+        VimCommand::new(("cq", "uit"), zed_actions::Quit),
         VimCommand::new(
             ("bd", "elete"),
             workspace::CloseItemInAllPanes {
@@ -1844,8 +1769,10 @@ fn generate_commands(_: &App) -> Vec<VimCommand> {
         VimCommand::str(("L", "explore"), "project_panel::ToggleFocus"),
         VimCommand::str(("S", "explore"), "project_panel::ToggleFocus"),
         VimCommand::str(("Ve", "xplore"), "project_panel::ToggleFocus"),
-        VimCommand::str(("te", "rm"), "terminal_panel::Toggle"),
-        VimCommand::str(("T", "erm"), "terminal_panel::Toggle"),
+        VimCommand::str(("te", "rm"), "workspace::NewTerminal"),
+        VimCommand::str(("T", "erm"), "workspace::NewTerminal"),
+        VimCommand::str(("C", "ollab"), "collab_panel::ToggleFocus"),
+        VimCommand::str(("A", "I"), "agent::ToggleFocus"),
         VimCommand::str(("G", "it"), "git_panel::ToggleFocus"),
         VimCommand::str(("D", "ebug"), "debug_panel::ToggleFocus"),
         VimCommand::new(("noh", "lsearch"), search::buffer_search::Dismiss),
@@ -1854,7 +1781,7 @@ fn generate_commands(_: &App) -> Vec<VimCommand> {
         VimCommand::new(("0", ""), StartOfDocument),
         VimCommand::new(("ex", ""), editor::actions::ReloadFile).bang(editor::actions::ReloadFile),
         VimCommand::new(("cpp", "link"), editor::actions::CopyPermalinkToLine).range(act_on_range),
-        VimCommand::str(("opt", "ions"), "dez::OpenDefaultSettings"),
+        VimCommand::str(("opt", "ions"), "zed::OpenDefaultSettings"),
         VimCommand::str(("map", ""), "vim::OpenDefaultKeymap"),
         VimCommand::new(("h", "elp"), OpenDocs),
     ]
@@ -2020,7 +1947,7 @@ pub fn command_interceptor(
                 + if parsed_query.has_bang { "!" } else { "" };
             let space = if parsed_query.has_space { " " } else { "" };
 
-            let string = format!("{}{}{}", &display_string, &space, &parsed_query.args);
+            let string = format!("{}{}{}", display_string, space, parsed_query.args);
             let positions = generate_positions(&string, &(range_prefix.clone() + query));
 
             let results = vec![CommandInterceptItem {
@@ -2142,7 +2069,7 @@ pub(crate) struct OnMatchingLines {
 }
 
 impl OnMatchingLines {
-    // convert a vim query into something more usable by dez.
+    // convert a vim query into something more usable by zed.
     // we don't attempt to fully convert between the two regex syntaxes,
     // but we do flip \( and \) to ( and ) (and vice-versa) in the pattern,
     // and convert \0..\9 to $0..$9 in the replacement so that common idioms work.
@@ -2437,13 +2364,7 @@ impl Vim {
                 .newest_display(&editor.display_snapshot(cx));
             let text_layout_details = editor.text_layout_details(window, cx);
             let (mut range, _) = motion
-                .range(
-                    &snapshot,
-                    start.clone(),
-                    times,
-                    &text_layout_details,
-                    forced_motion,
-                )
+                .range(&snapshot, start, times, &text_layout_details, forced_motion)
                 .unwrap_or((start.range(), MotionKind::Exclusive));
             if range.start != start.start {
                 editor.change_selections(SelectionEffects::no_scroll(), window, cx, |s| {
@@ -2485,7 +2406,7 @@ impl Vim {
                 .selections
                 .newest_display(&editor.display_snapshot(cx));
             let range = object
-                .range(&snapshot, start.clone(), around, None)
+                .range(&snapshot, start, around, None)
                 .unwrap_or(start.range());
             if range.start != start.start {
                 editor.change_selections(SelectionEffects::no_scroll(), window, cx, |s| {
@@ -2611,7 +2532,7 @@ impl ShellExec {
             }
             editor.highlight_rows::<ShellExec>(
                 input_range.clone().unwrap(),
-                cx.theme().status().unreachable_background,
+                |cx| cx.theme().status().unreachable_background,
                 Default::default(),
                 cx,
             );

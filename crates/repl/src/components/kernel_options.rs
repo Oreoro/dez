@@ -206,6 +206,10 @@ impl KernelPickerDelegate {
 impl PickerDelegate for KernelPickerDelegate {
     type ListItem = ListItem;
 
+    fn name() -> &'static str {
+        "kernel picker"
+    }
+
     fn match_count(&self) -> usize {
         self.filtered_entries.len()
     }
@@ -381,22 +385,16 @@ impl PickerDelegate for KernelPickerDelegate {
                                                 )
                                                 .when(*is_recommended, |flex| {
                                                     flex.child(
-                                                        Label::new(localization::text(
-                                                            cx,
-                                                            "repl-recommended",
-                                                        ))
-                                                        .size(LabelSize::XSmall)
-                                                        .color(Color::Accent),
+                                                        Label::new("Recommended")
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Accent),
                                                     )
                                                 })
                                                 .when(!has_ipykernel, |flex| {
                                                     flex.child(
-                                                        Label::new(localization::text(
-                                                            cx,
-                                                            "repl-ipykernel-missing",
-                                                        ))
-                                                        .size(LabelSize::XSmall)
-                                                        .color(Color::Warning),
+                                                        Label::new("ipykernel not installed")
+                                                            .size(LabelSize::XSmall)
+                                                            .color(Color::Warning),
                                                     )
                                                 }),
                                         )
@@ -436,7 +434,7 @@ impl PickerDelegate for KernelPickerDelegate {
                 .p_1()
                 .gap_4()
                 .child(
-                    Button::new("kernel-docs", localization::text(cx, "repl-kernel-docs"))
+                    Button::new("kernel-docs", "Kernel Docs")
                         .end_icon(
                             Icon::new(IconName::ArrowUpRight)
                                 .size(IconSize::Small)
@@ -483,8 +481,7 @@ where
         let picker_view = cx.new(|cx| {
             Picker::list(delegate, window, cx)
                 .list_measure_all()
-                .width(rems(34.))
-                .max_height(Some(rems(24.).into()))
+                .popover()
         });
 
         PopoverMenu::new("kernel-switcher")

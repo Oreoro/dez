@@ -1,13 +1,13 @@
 ---
-title: Building dez for macOS
-description: "Guide to building dez for macOS development."
+title: Building Zed for macOS
+description: "Guide to building zed for macos for Zed development."
 ---
 
-# Building dez for macOS
+# Building Zed for macOS
 
 ## Repository
 
-Clone the [dez repository](https://github.com/Oreoro/dez).
+Clone the [Zed repository](https://github.com/zed-industries/zed).
 
 ## Dependencies
 
@@ -36,9 +36,9 @@ Clone the [dez repository](https://github.com/Oreoro/dez).
   brew install cmake
   ```
 
-## Building dez from Source
+## Building Zed from Source
 
-Once you have the dependencies installed, you can build dez using [Cargo](https://doc.rust-lang.org/cargo/).
+Once you have the dependencies installed, you can build Zed using [Cargo](https://doc.rust-lang.org/cargo/).
 
 For a debug build:
 
@@ -60,52 +60,92 @@ cargo test --workspace
 
 ## Visual Regression Tests
 
-dez includes visual checks that render localized UI previews with the macOS
-Metal renderer. The runner saves narrow and wide screenshots for review.
+Zed includes visual regression tests that capture screenshots of real Zed windows and compare them against baseline images. These tests require macOS with Screen Recording permission.
 
 ### Prerequisites
 
-The visual test runner needs macOS and Metal support. It does not need Screen
-Recording permission because it uses a headless renderer.
+You must grant Screen Recording permission to your terminal:
+
+1. Run the visual test runner once - macOS will prompt for permission
+2. Or manually: System Settings > Privacy & Security > Screen Recording
+3. Enable your terminal app (e.g., Terminal.app, iTerm2, Ghostty)
+4. Restart your terminal after granting permission
 
 ### Running Visual Tests
 
 ```sh
-cargo run -p dez --bin dez_visual_test_runner --features visual-tests
+cargo run -p zed --bin zed_visual_test_runner --features visual-tests
 ```
 
 ### Baseline Images
 
-Screenshots are written to `target/visual_tests/` by default. Set
-`VISUAL_TEST_OUTPUT_DIR` to write them elsewhere.
+Baseline images are stored in `crates/zed/test_fixtures/visual_tests/` but are
+**gitignored** to avoid bloating the repository. You must generate them locally
+before running tests.
 
 #### Initial Setup
 
-Generate the localized previews:
+Before making any UI changes, generate baseline images from a known-good state:
 
 ```sh
-cargo run -p dez --bin dez_visual_test_runner --features visual-tests
+git checkout origin/main
+UPDATE_BASELINE=1 cargo run -p zed --bin zed_visual_test_runner --features visual-tests
+git checkout -
 ```
 
-Review the `chinese-localization-narrow.png` and
-`chinese-localization-wide.png` output files.
+This creates baselines that reflect the current expected UI.
 
 #### Updating Baselines
 
-To write the preview images to a temporary directory:
+When UI changes are intentional, update the baseline images after your changes:
 
 ```sh
-VISUAL_TEST_OUTPUT_DIR=/tmp/dez-visual-tests \
-  cargo run -p dez --bin dez_visual_test_runner --features visual-tests
+UPDATE_BASELINE=1 cargo run -p zed --bin zed_visual_test_runner --features visual-tests
 ```
 
+> **Note:** In the future, baselines may be stored externally. For now, they
+> remain local-only to keep the git repository lightweight.
+
+## Sampling released builds
+
+How to get a symbolicated CPU profile from a released (non-dev) Zed instance.
+Use this when Zed is using a lot of CPU.
+
+Released macOS binaries are stripped of local symbols, so `sample` and Instruments show raw addresses for most frames.
+The debug symbols for every release are archived: `script/bundle-mac` uploads `zed.dwarf` to Sentry before stripping.
+
+### During the incident
+
+- Run `sample Zed 10 -f zed-sample.txt` (adjust the process name for Preview or Nightly).
+- Get the exact build: type {#action zed::About} in the command palette and copy the version and commit.
+
+The `zed-sample.txt` file can be sent to Zed together with the exact version.
+
+### Later
+
+This can be done by Zed staff.
+
+- Find the binary UUID in the `Binary Images` section at the bottom of the sample output.
+- Download the matching `zed.dwarf` from the Sentry project's Debug Files page by searching for that UUID.
+- Resolve the addresses:
+  `atos -o zed.dwarf -l <load address> <address...>`
+  Each unresolved frame in the sample output prints its `load address` and absolute address.
+
+To profile a released build on your own machine with full symbols, download the matching `zed.dwarf`, convert it into a `.dSYM` bundle Spotlight can index, and re-run `sample`:
+
+```sh
+mkdir -p Zed.dSYM/Contents/Resources/DWARF
+cp zed.dwarf Zed.dSYM/Contents/Resources/DWARF/zed
+```
+
+Frames then resolve automatically, including file and line information.
 
 ## Troubleshooting
 
 ### Error compiling metal shaders
 
 ```sh
-error: failed to run custom build command for gpui v0.1.0 (/Users/path/to/dez)`**
+error: failed to run custom build command for gpui v0.1.0 (/Users/path/to/zed)`**
 
 xcrun: error: unable to find utility "metal", not a developer tool or in PATH
 ```
@@ -169,18 +209,18 @@ This error seems to be caused by OS resource constraints. Installing and running
 
 ### Avoiding continual rebuilds
 
-If dez continually rebuilds root crates, you may be opening the dez codebase itself in your development build.
+If Zed continually rebuilds root crates, you may be opening the Zed codebase itself in your development build.
 
 This causes problems because `cargo run` exports a bunch of environment
 variables which are picked up by the `rust-analyzer` that runs in the development
-build of dez. These environment variables are in turn passed to `cargo check`, which
+build of Zed. These environment variables are in turn passed to `cargo check`, which
 invalidates the build cache of some of the crates we depend on.
 
 To avoid this, run the built binary against a different project, for example `cargo run ~/path/to/other/project`.
 
 ### Speeding up verification
 
-If you build dez frequently, macOS may keep verifying new builds, which can add a few seconds to each iteration.
+If you build Zed frequently, macOS may keep verifying new builds, which can add a few seconds to each iteration.
 
 To fix this, you can:
 

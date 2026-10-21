@@ -9,7 +9,7 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
     /// Used for SSH/Git password authentication, to remove the need for netcat as a dependency,
-    /// by having dez act like netcat communicating over a Unix socket.
+    /// by having Zed act like netcat communicating over a Unix socket.
     #[arg(long, hide = true)]
     askpass: Option<String>,
     /// Used for recording minidumps on crashes by having the server run a separate
@@ -22,25 +22,7 @@ struct Cli {
 }
 
 fn main() -> anyhow::Result<()> {
-    let invoked_as_dezctl = std::env::args_os().next().is_some_and(invokes_dezctl);
-
-    // Keep everything dez stores on the remote host under `~/.dez/remote`
-    // (managed agent binaries, db, extensions, languages, logs, server_state,
-    // config) instead of the XDG default `~/.local/share/dez`. This must run
-    // before any path is resolved, and before every dispatch branch below so
-    // the crash-handler subprocess and proxy agree with the server on paths.
-    let remote_data_dir = paths::home_dir().join(".dez").join("remote");
-    paths::set_custom_data_dir(&remote_data_dir.to_string_lossy());
-
-    if invoked_as_dezctl {
-        agent_control_cli::main_with_transport(remote_server::run_remote_control_client);
-        return Ok(());
-    }
-
     let cli = Cli::parse();
-    if let Err(error) = remote_server::install_remote_control_command() {
-        log::warn!("failed to install remote dezctl command: {error:#}");
-    }
 
     if let Some(socket_path) = &cli.askpass {
         askpass::main(socket_path);
@@ -77,23 +59,5 @@ fn main() -> anyhow::Result<()> {
             .write_all(b"usage: remote <run|proxy|version>\n")
             .ok();
         std::process::exit(1);
-    }
-}
-
-fn invokes_dezctl(path: impl AsRef<std::ffi::OsStr>) -> bool {
-    PathBuf::from(path.as_ref())
-        .file_stem()
-        .is_some_and(|stem| stem == "dezctl")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn executable_name_selects_remote_control_mode() {
-        assert!(invokes_dezctl("/remote/version/dezctl"));
-        assert!(invokes_dezctl("dezctl.exe"));
-        assert!(!invokes_dezctl("/remote/version/remote_server"));
     }
 }

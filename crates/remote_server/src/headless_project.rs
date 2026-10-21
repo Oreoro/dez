@@ -1,7 +1,7 @@
 use anyhow::{Context as _, Result, anyhow};
+use client::ProjectId;
 use collections::HashMap;
 use collections::HashSet;
-use futures::AsyncReadExt as _;
 use gpui::TasksIncluded;
 use language::File;
 use lsp::LanguageServerId;
@@ -14,12 +14,17 @@ use http_client::HttpClient;
 use language::{Buffer, BufferEvent, LanguageRegistry, proto::serialize_operation};
 use node_runtime::NodeRuntime;
 use project::{
-    LspStore, LspStoreEvent, ManifestTree, PrettierStore, ProjectEnvironment, ProjectId,
+    AgentRegistryStore, LspStore, LspStoreEvent, ManifestTree, PrettierStore, ProjectEnvironment,
     ProjectPath, ToolchainStore, WorktreeId,
+    agent_server_store::AgentServerStore,
     buffer_store::{BufferStore, BufferStoreEvent},
+    context_server_store::ContextServerStore,
+    debugger::{breakpoint_store::BreakpointStore, dap_store::DapStore},
     git_store::GitStore,
     image_store::ImageId,
-    lsp_store::log_store::{self, GlobalLogStore, LanguageServerKind, LogKind},
+    lsp_store::log_store::{
+        self, GlobalLogStore, LanguageServerKind, LanguageServerLogKey, LogKind,
+    },
     project_settings::SettingsObserver,
     search::SearchQuery,
     task_store::TaskStore,
@@ -30,7 +35,6 @@ use rpc::{
     AnyProtoClient, TypedEnvelope,
     proto::{self, REMOTE_SERVER_PEER_ID, REMOTE_SERVER_PROJECT_ID},
 };
-use sha2::{Digest as _, Sha256};
 use smol::process::Child;
 
 use settings::initial_server_settings_content;
@@ -54,6 +58,10 @@ pub struct HeadlessProject {
     pub buffer_store: Entity<BufferStore>,
     pub lsp_store: Entity<LspStore>,
     pub task_store: Entity<TaskStore>,
+    pub dap_store: Entity<DapStore>,
+    pub breakpoint_store: Entity<BreakpointStore>,
+    pub agent_server_store: Entity<AgentServerStore>,
+    pub context_server_store: Entity<ContextServerStore>,
     pub settings_observer: Entity<SettingsObserver>,
     pub next_entry_id: Arc<AtomicUsize>,
     pub languages: Arc<LanguageRegistry>,
@@ -65,9 +73,6 @@ pub struct HeadlessProject {
     // Local variant is used within LSP store, but that's a separate entity.
     pub _toolchain_store: Entity<ToolchainStore>,
     pub kernels: HashMap<String, Child>,
-    // One host-owned agent thread history index per server process, so
-    // concurrent requests share one refresh and the persisted cache.
-    pub agent_history_index: agent_history::IndexService,
 }
 
 pub struct HeadlessAppState {
@@ -99,6 +104,7 @@ impl HeadlessProject {
         init_worktree_trust: bool,
         cx: &mut Context<Self>,
     ) -> Self {
+        debug_adapter_extension::init(proxy.clone(), cx);
         languages::init(languages.clone(), fs.clone(), node_runtime.clone(), cx);
 
         let worktree_store = cx.new(|cx| {
@@ -134,6 +140,30 @@ impl HeadlessProject {
             let mut buffer_store = BufferStore::local(worktree_store.clone(), cx);
             buffer_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
             buffer_store
+        });
+
+        let breakpoint_store = cx.new(|_| {
+            let mut breakpoint_store =
+                BreakpointStore::local(worktree_store.clone(), buffer_store.clone());
+            breakpoint_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone());
+
+            breakpoint_store
+        });
+
+        let dap_store = cx.new(|cx| {
+            let mut dap_store = DapStore::new_local(
+                http_client.clone(),
+                node_runtime.clone(),
+                fs.clone(),
+                environment.clone(),
+                toolchain_store.read(cx).as_language_toolchain_store(),
+                worktree_store.clone(),
+                breakpoint_store.clone(),
+                true,
+                cx,
+            );
+            dap_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
+            dap_store
         });
 
         let git_store = cx.new(|cx| {
@@ -203,9 +233,30 @@ impl HeadlessProject {
             lsp_store
         });
 
+        AgentRegistryStore::init_global(cx, fs.clone(), http_client.clone());
+
+        let agent_server_store = cx.new(|cx| {
+            let mut agent_server_store = AgentServerStore::local(
+                node_runtime.clone(),
+                fs.clone(),
+                environment.clone(),
+                http_client.clone(),
+                cx,
+            );
+            agent_server_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone(), cx);
+            agent_server_store
+        });
+
+        let context_server_store = cx.new(|cx| {
+            let mut context_server_store =
+                ContextServerStore::local(worktree_store.clone(), None, true, cx);
+            context_server_store.shared(REMOTE_SERVER_PROJECT_ID, session.clone());
+            context_server_store
+        });
+
         cx.subscribe(&lsp_store, Self::on_lsp_store_event).detach();
         language_extension::init(
-            language_extension::LspAccess::ViaLspStore(lsp_store.clone()),
+            language_extension::LspAccess::ViaLspStore(lsp_store.downgrade()),
             proxy.clone(),
             languages.clone(),
         );
@@ -233,24 +284,15 @@ impl HeadlessProject {
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &lsp_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &task_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &toolchain_store);
+        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &dap_store);
+        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &breakpoint_store);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &settings_observer);
         session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &git_store);
+        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &agent_server_store);
+        session.subscribe_to_entity(REMOTE_SERVER_PROJECT_ID, &context_server_store);
 
         session.add_request_handler(cx.weak_entity(), Self::handle_list_remote_directory);
-        session.add_request_handler(cx.weak_entity(), Self::handle_read_remote_file);
         session.add_request_handler(cx.weak_entity(), Self::handle_get_path_metadata);
-        session.add_request_handler(cx.weak_entity(), Self::handle_get_remote_app_data_directory);
-        session
-            .add_stream_request_handler(cx.weak_entity(), Self::handle_stream_agent_thread_history);
-        session.add_request_handler(cx.weak_entity(), Self::handle_extract_agent_transcript);
-        session.add_request_handler(cx.weak_entity(), Self::handle_compute_remote_file_sha256);
-        session.add_request_handler(
-            cx.weak_entity(),
-            Self::handle_create_private_remote_directory,
-        );
-        session.add_request_handler(cx.weak_entity(), Self::handle_set_remote_file_executable);
-        session.add_request_handler(cx.weak_entity(), Self::handle_rename_remote_path);
-        session.add_request_handler(cx.weak_entity(), Self::handle_remove_remote_path);
         session.add_request_handler(cx.weak_entity(), Self::handle_shutdown_remote_server);
         session.add_request_handler(cx.weak_entity(), Self::handle_ping);
         session.add_request_handler(cx.weak_entity(), Self::handle_get_processes);
@@ -292,21 +334,26 @@ impl HeadlessProject {
         LspStore::init(&session);
         TaskStore::init(Some(&session));
         ToolchainStore::init(&session);
+        DapStore::init(&session, cx);
+        // todo(debugger): Re init breakpoint store when we set it up for collab
+        BreakpointStore::init(&session);
         GitStore::init(&session);
-
-        let agent_history_index =
-            agent_history::IndexService::new(fs.clone(), agent_thread_history_cache_root());
+        AgentServerStore::init_headless(&session);
+        ContextServerStore::init_headless(&session);
 
         HeadlessProject {
             next_entry_id: Default::default(),
             session,
             settings_observer,
-            agent_history_index,
             fs,
             worktree_store,
             buffer_store,
             lsp_store,
             task_store,
+            dap_store,
+            breakpoint_store,
+            agent_server_store,
+            context_server_store,
             languages,
             extensions,
             git_store,
@@ -363,13 +410,39 @@ impl HeadlessProject {
                     });
                 }
             }
-            LspStoreEvent::LanguageServerRemoved(id) => {
+            LspStoreEvent::SupplementaryLanguageServerAdded(id, name) => {
                 let log_store = cx
                     .try_global::<GlobalLogStore>()
                     .map(|lsp_logs| lsp_logs.0.clone());
                 if let Some(log_store) = log_store {
                     log_store.update(cx, |log_store, cx| {
-                        log_store.remove_language_server(*id, cx);
+                        log_store.add_language_server(
+                            LanguageServerKind::LocalSsh {
+                                lsp_store: self.lsp_store.downgrade(),
+                            },
+                            *id,
+                            Some(name.clone()),
+                            None,
+                            lsp_store.read(cx).language_server_for_id(*id),
+                            cx,
+                        );
+                    });
+                }
+            }
+            LspStoreEvent::LanguageServerRemoved(id)
+            | LspStoreEvent::SupplementaryLanguageServerRemoved(id) => {
+                let log_store = cx
+                    .try_global::<GlobalLogStore>()
+                    .map(|lsp_logs| lsp_logs.0.clone());
+                if let Some(log_store) = log_store {
+                    let server_key = LanguageServerLogKey::new(
+                        LanguageServerKind::LocalSsh {
+                            lsp_store: self.lsp_store.downgrade(),
+                        },
+                        *id,
+                    );
+                    log_store.update(cx, |log_store, cx| {
+                        log_store.remove_language_server(&server_key, cx);
                     });
                 }
                 self.session
@@ -437,7 +510,7 @@ impl HeadlessProject {
         message: TypedEnvelope<proto::AddWorktree>,
         mut cx: AsyncApp,
     ) -> Result<proto::AddWorktreeResponse> {
-        use rpc::ErrorCodeExt;
+        use client::ErrorCodeExt;
         let fs = this.read_with(&cx, |this, _| this.fs.clone());
         let path = PathBuf::from(shellexpand::tilde(&message.payload.path).to_string());
 
@@ -540,7 +613,7 @@ impl HeadlessProject {
         mut cx: AsyncApp,
     ) -> Result<proto::OpenBufferResponse> {
         let worktree_id = WorktreeId::from_proto(message.payload.worktree_id);
-        let path = RelPath::from_proto(&message.payload.path)?;
+        let path = RelPath::from_unix_str(&message.payload.path)?.into();
         let (buffer_store, buffer) = this.update(&mut cx, |this, cx| {
             let buffer_store = this.buffer_store.clone();
             let buffer = this.buffer_store.update(cx, |buffer_store, cx| {
@@ -569,7 +642,7 @@ impl HeadlessProject {
     ) -> Result<proto::OpenImageResponse> {
         static NEXT_ID: AtomicU64 = AtomicU64::new(1);
         let worktree_id = WorktreeId::from_proto(message.payload.worktree_id);
-        let path = RelPath::from_proto(&message.payload.path)?;
+        let path = RelPath::from_unix_str(&message.payload.path)?;
         let project_id = message.payload.project_id;
         use proto::create_image_for_peer::Variant;
 
@@ -684,7 +757,7 @@ impl HeadlessProject {
         );
 
         let worktree_id = WorktreeId::from_proto(message.payload.worktree_id);
-        let path = RelPath::from_proto(&message.payload.path)?;
+        let path = RelPath::from_unix_str(&message.payload.path)?;
         let project_id = message.payload.project_id;
         let file_id = message.payload.file_id;
         log::debug!(
@@ -792,26 +865,30 @@ impl HeadlessProject {
     }
 
     async fn handle_toggle_lsp_logs(
-        _: Entity<Self>,
+        this: Entity<Self>,
         envelope: TypedEnvelope<proto::ToggleLspLogs>,
         cx: AsyncApp,
     ) -> Result<()> {
         let server_id = LanguageServerId::from_proto(envelope.payload.server_id);
+        let lsp_store = this.read_with(&cx, |this, _| this.lsp_store.downgrade());
         cx.update(|cx| {
             let log_store = cx
                 .try_global::<GlobalLogStore>()
                 .map(|global_log_store| global_log_store.0.clone())
                 .context("lsp logs store is missing")?;
             let toggled_log_kind =
-                match proto::toggle_lsp_logs::LogType::from_i32(envelope.payload.log_type)
+                match proto::toggle_lsp_logs::LogType::try_from(envelope.payload.log_type)
+                    .ok()
                     .context("invalid log type")?
                 {
                     proto::toggle_lsp_logs::LogType::Log => LogKind::Logs,
                     proto::toggle_lsp_logs::LogType::Trace => LogKind::Trace,
                     proto::toggle_lsp_logs::LogType::Rpc => LogKind::Rpc,
                 };
+            let server_key =
+                LanguageServerLogKey::new(LanguageServerKind::LocalSsh { lsp_store }, server_id);
             log_store.update(cx, |log_store, _| {
-                log_store.toggle_lsp_logs(server_id, envelope.payload.enabled, toggled_log_kind);
+                log_store.toggle_lsp_logs(&server_key, envelope.payload.enabled, toggled_log_kind);
             });
             anyhow::Ok(())
         })?;
@@ -1063,7 +1140,7 @@ impl HeadlessProject {
                 }
             });
 
-            while let Some(buffer) = new_matches.next().await {
+            while let Some((buffer, _)) = new_matches.next().await {
                 let _ = buffer_store
                     .update(cx, |this, cx| {
                         this.create_buffer_for_peer(&buffer, REMOTE_SERVER_PEER_ID, cx)
@@ -1138,17 +1215,6 @@ impl HeadlessProject {
         })
     }
 
-    async fn handle_read_remote_file(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::ReadRemoteFile>,
-        cx: AsyncApp,
-    ) -> Result<proto::ReadRemoteFileResponse> {
-        let fs = cx.read_entity(&this, |this, _| this.fs.clone());
-        let expanded = PathBuf::from(shellexpand::tilde(&envelope.payload.path).to_string());
-        let content = fs.load_bytes(&expanded).await?;
-        Ok(proto::ReadRemoteFileResponse { content })
-    }
-
     async fn handle_get_path_metadata(
         this: Entity<Self>,
         envelope: TypedEnvelope<proto::GetPathMetadata>,
@@ -1158,217 +1224,13 @@ impl HeadlessProject {
         let expanded = PathBuf::from(shellexpand::tilde(&envelope.payload.path).to_string());
 
         let metadata = fs.metadata(&expanded).await?;
+        let is_dir = metadata.map(|metadata| metadata.is_dir).unwrap_or(false);
 
         Ok(proto::GetPathMetadataResponse {
             exists: metadata.is_some(),
-            is_dir: metadata.is_some_and(|metadata| metadata.is_dir),
+            is_dir,
             path: expanded.to_string_lossy().into_owned(),
-            mtime: metadata.map(|metadata| metadata.mtime.into()),
-            len: metadata.map(|metadata| metadata.len),
         })
-    }
-
-    async fn handle_get_remote_app_data_directory(
-        _this: Entity<Self>,
-        _envelope: TypedEnvelope<proto::GetRemoteAppDataDirectory>,
-        _cx: AsyncApp,
-    ) -> Result<proto::GetRemoteAppDataDirectoryResponse> {
-        Ok(proto::GetRemoteAppDataDirectoryResponse {
-            path: paths::data_dir().to_string_lossy().into_owned(),
-        })
-    }
-
-    async fn handle_stream_agent_thread_history(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::StreamAgentThreadHistory>,
-        cx: AsyncApp,
-    ) -> Result<impl futures::Stream<Item = Result<proto::AgentThreadHistorySnapshot>>> {
-        use agent_history::{HistoryHost, HistoryKind, LocalHistoryFs};
-
-        const MAX_PROJECT_ROOTS: usize = 256;
-        const MAX_PATH_LEN: usize = 4096;
-
-        let payload = envelope.payload;
-        let kind = HistoryKind::from_id(&payload.kind).context("unsupported agent history kind")?;
-        let path_style = PathStyle::local();
-        anyhow::ensure!(
-            util::paths::is_absolute(&payload.normalized_history_root, path_style),
-            "history root must be absolute"
-        );
-        anyhow::ensure!(
-            payload.normalized_history_root.len() <= MAX_PATH_LEN,
-            "history root path too long"
-        );
-        anyhow::ensure!(
-            payload.project_roots.len() <= MAX_PROJECT_ROOTS,
-            "too many project roots"
-        );
-        for root in &payload.project_roots {
-            anyhow::ensure!(
-                util::paths::is_absolute(root, path_style) && root.len() <= MAX_PATH_LEN,
-                "project root must be an absolute, bounded path"
-            );
-        }
-
-        let (fs, index) = this.read_with(&cx, |this, _| {
-            (this.fs.clone(), this.agent_history_index.clone())
-        });
-        let host = HistoryHost {
-            fs: Arc::new(LocalHistoryFs(fs)),
-            base_dir: PathBuf::from(&payload.normalized_history_root),
-            path_style,
-        };
-        let project_roots = payload
-            .project_roots
-            .iter()
-            .map(PathBuf::from)
-            .collect::<Vec<_>>();
-
-        let (mut response_tx, response_rx) = futures::channel::mpsc::unbounded();
-        cx.background_spawn(async move {
-            use futures::SinkExt as _;
-            if let Some(cached) = index.cached_snapshot(kind, &host, &project_roots).await {
-                if response_tx
-                    .send(Ok(agent_history_snapshot_to_proto(cached)))
-                    .await
-                    .is_err()
-                {
-                    return;
-                }
-            }
-            match index.refresh(kind, &host, &project_roots).await {
-                Ok(fresh) => {
-                    response_tx
-                        .send(Ok(agent_history_snapshot_to_proto(fresh)))
-                        .await
-                        .ok();
-                }
-                Err(error) => {
-                    response_tx.send(Err(error)).await.ok();
-                }
-            }
-        })
-        .detach();
-
-        Ok(response_rx)
-    }
-
-    async fn handle_extract_agent_transcript(
-        this: Entity<Self>,
-        envelope: TypedEnvelope<proto::ExtractAgentTranscript>,
-        cx: AsyncApp,
-    ) -> Result<proto::AgentTranscriptExcerpt> {
-        use agent_history::{DEFAULT_BUDGET, Extraction, HistoryHost, HistoryKind, LocalHistoryFs};
-
-        const MAX_PATH_LEN: usize = 4096;
-
-        let payload = envelope.payload;
-        let kind = HistoryKind::from_id(&payload.kind).context("unsupported agent history kind")?;
-        let path_style = PathStyle::local();
-        anyhow::ensure!(
-            util::paths::is_absolute(&payload.normalized_history_root, path_style),
-            "history root must be absolute"
-        );
-        anyhow::ensure!(
-            payload.normalized_history_root.len() <= MAX_PATH_LEN,
-            "history root path too long"
-        );
-        if let Some(working_dir) = &payload.working_dir {
-            anyhow::ensure!(
-                working_dir.len() <= MAX_PATH_LEN,
-                "working dir path too long"
-            );
-        }
-
-        let (fs, index) = this.read_with(&cx, |this, _| {
-            (this.fs.clone(), this.agent_history_index.clone())
-        });
-        let host = HistoryHost {
-            fs: Arc::new(LocalHistoryFs(fs)),
-            base_dir: PathBuf::from(&payload.normalized_history_root),
-            path_style,
-        };
-
-        let extraction = cx
-            .background_spawn(async move {
-                index
-                    .extract(
-                        kind,
-                        &host,
-                        &payload.session_id,
-                        payload.working_dir.as_deref(),
-                        &DEFAULT_BUDGET,
-                    )
-                    .await
-            })
-            .await?;
-
-        Ok(match extraction {
-            Extraction::Excerpt(excerpt) => agent_transcript_excerpt_to_proto(excerpt),
-            // A readable-but-empty transcript is a normal "no content" result,
-            // not an error.
-            Extraction::Refused(_) => proto::AgentTranscriptExcerpt {
-                found: false,
-                ..Default::default()
-            },
-        })
-    }
-
-    async fn handle_compute_remote_file_sha256(
-        _this: Entity<Self>,
-        envelope: TypedEnvelope<proto::ComputeRemoteFileSha256>,
-        _cx: AsyncApp,
-    ) -> Result<proto::ComputeRemoteFileSha256Response> {
-        let path = PathBuf::from(shellexpand::tilde(&envelope.payload.path).as_ref());
-        Ok(proto::ComputeRemoteFileSha256Response {
-            sha256: compute_file_sha256(&path).await?,
-        })
-    }
-
-    async fn handle_create_private_remote_directory(
-        _this: Entity<Self>,
-        envelope: TypedEnvelope<proto::CreatePrivateRemoteDirectory>,
-        _cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let path = PathBuf::from(shellexpand::tilde(&envelope.payload.path).as_ref());
-        create_private_directory(&path).await?;
-        Ok(proto::Ack {})
-    }
-
-    async fn handle_set_remote_file_executable(
-        _this: Entity<Self>,
-        envelope: TypedEnvelope<proto::SetRemoteFileExecutable>,
-        _cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let path = PathBuf::from(shellexpand::tilde(&envelope.payload.path).as_ref());
-        set_user_executable_permissions(&path).await?;
-        Ok(proto::Ack {})
-    }
-
-    async fn handle_rename_remote_path(
-        _this: Entity<Self>,
-        envelope: TypedEnvelope<proto::RenameRemotePath>,
-        _cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let source = PathBuf::from(shellexpand::tilde(&envelope.payload.source).as_ref());
-        let destination = PathBuf::from(shellexpand::tilde(&envelope.payload.destination).as_ref());
-        commit_staged_file(&source, &destination).await?;
-        Ok(proto::Ack {})
-    }
-
-    async fn handle_remove_remote_path(
-        _this: Entity<Self>,
-        envelope: TypedEnvelope<proto::RemoveRemotePath>,
-        _cx: AsyncApp,
-    ) -> Result<proto::Ack> {
-        let path = PathBuf::from(shellexpand::tilde(&envelope.payload.path).as_ref());
-        remove_remote_path(
-            &path,
-            envelope.payload.recursive,
-            envelope.payload.ignore_if_missing,
-        )
-        .await?;
-        Ok(proto::Ack {})
     }
 
     async fn handle_shutdown_remote_server(
@@ -1502,54 +1364,6 @@ impl HeadlessProject {
     }
 }
 
-/// Where the host-owned agent thread history index persists, shared by a local
-/// dez and `dez-remote-server` running as the same host user. Intentionally
-/// home-relative rather than under `paths::data_dir()` so both processes agree.
-fn agent_thread_history_cache_root() -> PathBuf {
-    util::paths::home_dir()
-        .join(".dez")
-        .join("cache")
-        .join("agent_threads")
-}
-
-fn agent_history_snapshot_to_proto(
-    snapshot: agent_history::Snapshot,
-) -> proto::AgentThreadHistorySnapshot {
-    let freshness = match snapshot.freshness {
-        agent_history::Freshness::Cached => proto::agent_thread_history_snapshot::Freshness::Cached,
-        agent_history::Freshness::Fresh => proto::agent_thread_history_snapshot::Freshness::Fresh,
-    };
-    proto::AgentThreadHistorySnapshot {
-        freshness: freshness as i32,
-        generation: snapshot.generation,
-        entries: snapshot
-            .entries
-            .into_iter()
-            .map(|entry| proto::AgentThreadHistoryEntry {
-                session_id: entry.session_id,
-                title: entry.title,
-                project_root: entry.project_root.to_string_lossy().into_owned(),
-                last_activity_at: Some(entry.last_activity_at.into()),
-            })
-            .collect(),
-    }
-}
-
-fn agent_transcript_excerpt_to_proto(
-    excerpt: agent_history::TranscriptExcerpt,
-) -> proto::AgentTranscriptExcerpt {
-    proto::AgentTranscriptExcerpt {
-        found: true,
-        markdown: excerpt.markdown,
-        degraded: excerpt.degraded,
-        possibly_incomplete: excerpt.possibly_incomplete,
-        malformed_count: excerpt.malformed_count as u32,
-        unknown_count: excerpt.unknown_count as u32,
-        included_turns: excerpt.included_turns as u32,
-        omitted_turns: excerpt.omitted_turns as u32,
-    }
-}
-
 fn prompt_to_proto(
     prompt: &project::LanguageServerPromptRequest,
 ) -> proto::language_server_prompt_request::Level {
@@ -1584,446 +1398,4 @@ fn find_venv_python(working_directory: &str) -> Option<std::path::PathBuf> {
         }
     }
     None
-}
-
-async fn compute_file_sha256(path: &Path) -> Result<String> {
-    let mut file = smol::fs::File::open(path)
-        .await
-        .with_context(|| format!("failed to open {} for hashing", path.display()))?;
-    let mut hasher = Sha256::new();
-    let mut buffer = vec![0; 64 * 1024];
-    loop {
-        let bytes_read = file
-            .read(&mut buffer)
-            .await
-            .with_context(|| format!("failed to read {} while hashing", path.display()))?;
-        if bytes_read == 0 {
-            break;
-        }
-        hasher.update(&buffer[..bytes_read]);
-    }
-    Ok(format!("{:x}", hasher.finalize()))
-}
-
-async fn create_private_directory(path: &Path) -> Result<()> {
-    let mut missing = Vec::new();
-    let mut current = path;
-    while !current.exists() {
-        missing.push(current.to_path_buf());
-        current = current
-            .parent()
-            .with_context(|| format!("{} has no existing ancestor", path.display()))?;
-    }
-
-    for directory in missing.into_iter().rev() {
-        match smol::fs::create_dir(&directory).await {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
-            Err(error) => {
-                return Err(error)
-                    .with_context(|| format!("failed to create {}", directory.display()));
-            }
-        }
-        set_user_private_directory_permissions(&directory).await?;
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-async fn set_user_private_directory_permissions(path: &Path) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt as _;
-
-    smol::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))
-        .await
-        .with_context(|| format!("failed to set private permissions on {}", path.display()))
-}
-
-#[cfg(unix)]
-async fn set_user_executable_permissions(path: &Path) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt as _;
-
-    smol::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))
-        .await
-        .with_context(|| format!("failed to set executable permissions on {}", path.display()))
-}
-
-#[cfg(not(unix))]
-async fn set_user_executable_permissions(_path: &Path) -> Result<()> {
-    Ok(())
-}
-
-#[cfg(not(unix))]
-async fn set_user_private_directory_permissions(_path: &Path) -> Result<()> {
-    Ok(())
-}
-
-async fn commit_staged_file(source: &Path, destination: &Path) -> Result<()> {
-    let source = source.to_path_buf();
-    let destination = destination.to_path_buf();
-    smol::unblock(
-        move || match rename_path_without_overwrite(&source, &destination) {
-            Ok(()) => Ok(()),
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
-                anyhow::bail!("destination {} already exists", destination.display())
-            }
-            Err(error) => Err(error).with_context(|| {
-                format!(
-                    "failed to commit {} to {}",
-                    source.display(),
-                    destination.display()
-                )
-            }),
-        },
-    )
-    .await
-}
-
-#[cfg(any(target_os = "linux", target_os = "android"))]
-fn rename_path_without_overwrite(source: &Path, destination: &Path) -> std::io::Result<()> {
-    use std::{ffi::CString, os::unix::ffi::OsStrExt as _};
-
-    let source_cstring = CString::new(source.as_os_str().as_bytes())?;
-    let destination_cstring = CString::new(destination.as_os_str().as_bytes())?;
-    let result = unsafe {
-        libc::syscall(
-            libc::SYS_renameat2,
-            libc::AT_FDCWD,
-            source_cstring.as_ptr(),
-            libc::AT_FDCWD,
-            destination_cstring.as_ptr(),
-            libc::RENAME_NOREPLACE,
-        )
-    };
-    let result = if result == 0 {
-        Ok(())
-    } else {
-        Err(std::io::Error::last_os_error())
-    };
-    finish_no_replace_rename(source, destination, result)
-}
-
-#[cfg(any(all(test, not(windows)), target_os = "linux", target_os = "android"))]
-fn finish_no_replace_rename(
-    source: &Path,
-    destination: &Path,
-    result: std::io::Result<()>,
-) -> std::io::Result<()> {
-    let error = match result {
-        Ok(()) => return Ok(()),
-        Err(error) => error,
-    };
-    if !matches!(
-        error.raw_os_error(),
-        Some(libc::EINVAL | libc::ENOSYS | libc::EOPNOTSUPP)
-    ) {
-        return Err(error);
-    }
-    if !std::fs::symlink_metadata(source)?.is_dir() {
-        return Err(error);
-    }
-    match std::fs::symlink_metadata(destination) {
-        Ok(_) => {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::AlreadyExists,
-                "destination already exists",
-            ));
-        }
-        Err(destination_error) if destination_error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(destination_error) => return Err(destination_error),
-    }
-    std::fs::rename(source, destination)
-}
-
-#[cfg(target_os = "macos")]
-fn rename_path_without_overwrite(source: &Path, destination: &Path) -> std::io::Result<()> {
-    use std::{ffi::CString, os::unix::ffi::OsStrExt as _};
-
-    let source = CString::new(source.as_os_str().as_bytes())?;
-    let destination = CString::new(destination.as_os_str().as_bytes())?;
-    let result =
-        unsafe { libc::renamex_np(source.as_ptr(), destination.as_ptr(), libc::RENAME_EXCL) };
-    if result == 0 {
-        Ok(())
-    } else {
-        Err(std::io::Error::last_os_error())
-    }
-}
-
-#[cfg(any(
-    windows,
-    not(any(target_os = "linux", target_os = "android", target_os = "macos"))
-))]
-fn rename_path_without_overwrite(source: &Path, destination: &Path) -> std::io::Result<()> {
-    if destination.exists() {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::AlreadyExists,
-            "destination already exists",
-        ));
-    }
-    std::fs::rename(source, destination)
-}
-
-async fn remove_remote_path(path: &Path, recursive: bool, ignore_if_missing: bool) -> Result<()> {
-    let metadata = match smol::fs::metadata(path).await {
-        Ok(metadata) => metadata,
-        Err(error) if ignore_if_missing && error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(());
-        }
-        Err(error) => {
-            return Err(error).with_context(|| format!("failed to inspect {}", path.display()));
-        }
-    };
-
-    if metadata.is_dir() {
-        if recursive {
-            smol::fs::remove_dir_all(path).await
-        } else {
-            smol::fs::remove_dir(path).await
-        }
-    } else {
-        smol::fs::remove_file(path).await
-    }
-    .with_context(|| format!("failed to remove {}", path.display()))
-}
-
-#[cfg(test)]
-mod remote_management_tests {
-    use super::*;
-
-    #[cfg(not(windows))]
-    fn staged_directory() -> (tempfile::TempDir, PathBuf, PathBuf) {
-        let directory = tempfile::tempdir().expect("temporary directory should be created");
-        let source = directory.path().join("staged");
-        let destination = directory.path().join("installed");
-        std::fs::create_dir(&source).expect("staged directory should be created");
-        (directory, source, destination)
-    }
-
-    #[test]
-    fn computes_sha256_without_a_remote_shell_utility() {
-        smol::block_on(async {
-            let directory = tempfile::tempdir().expect("temporary directory should be created");
-            let path = directory.path().join("agent");
-            smol::fs::write(&path, b"dez-managed-agent")
-                .await
-                .expect("fixture should be written");
-
-            let digest = compute_file_sha256(&path)
-                .await
-                .expect("fixture should be hashed");
-
-            assert_eq!(
-                digest,
-                "c7264418e7a99401803d0a9dacfe81035ca29684ae27dabc84bf68f09ac8ddb3"
-            );
-        });
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn creates_a_user_private_directory() {
-        use std::os::unix::fs::PermissionsExt as _;
-
-        smol::block_on(async {
-            let directory = tempfile::tempdir().expect("temporary directory should be created");
-            let path = directory.path().join("agents").join("codex");
-
-            create_private_directory(&path)
-                .await
-                .expect("private directory should be created");
-
-            let mode = std::fs::metadata(&path)
-                .expect("created directory should have metadata")
-                .permissions()
-                .mode()
-                & 0o777;
-            assert_eq!(mode, 0o700);
-        });
-    }
-
-    #[test]
-    fn committing_a_staged_file_preserves_an_existing_destination() {
-        smol::block_on(async {
-            let directory = tempfile::tempdir().expect("temporary directory should be created");
-            let source = directory.path().join("staged");
-            let destination = directory.path().join("installed");
-            smol::fs::write(&source, b"new")
-                .await
-                .expect("staged fixture should be written");
-            smol::fs::write(&destination, b"existing")
-                .await
-                .expect("destination fixture should be written");
-
-            let error = commit_staged_file(&source, &destination)
-                .await
-                .expect_err("existing destination should reject commit");
-
-            assert!(error.to_string().contains("already exists"));
-            assert_eq!(
-                smol::fs::read(&destination)
-                    .await
-                    .expect("destination should remain readable"),
-                b"existing"
-            );
-            assert!(source.exists());
-        });
-    }
-
-    #[test]
-    fn commits_a_staged_directory_without_overwriting() {
-        smol::block_on(async {
-            let directory = tempfile::tempdir().expect("temporary directory should be created");
-            let source = directory.path().join("staged");
-            let destination = directory.path().join("installed");
-            smol::fs::create_dir(&source)
-                .await
-                .expect("staged directory should be created");
-            smol::fs::write(source.join("agent"), b"verified")
-                .await
-                .expect("staged executable should be written");
-
-            commit_staged_file(&source, &destination)
-                .await
-                .expect("staged directory should be committed");
-
-            assert!(!source.exists());
-            assert_eq!(
-                smol::fs::read(destination.join("agent"))
-                    .await
-                    .expect("committed executable should remain readable"),
-                b"verified"
-            );
-        });
-    }
-
-    #[cfg(not(windows))]
-    #[test]
-    fn unsupported_no_replace_rename_falls_back_for_a_directory() {
-        let (_directory, source, destination) = staged_directory();
-        std::fs::write(source.join("agent"), b"verified")
-            .expect("staged executable should be written");
-
-        finish_no_replace_rename(
-            &source,
-            &destination,
-            Err(std::io::Error::from_raw_os_error(libc::EINVAL)),
-        )
-        .expect("unsupported no-replace rename should use the directory fallback");
-
-        assert!(!source.exists());
-        assert_eq!(
-            std::fs::read(destination.join("agent"))
-                .expect("committed executable should remain readable"),
-            b"verified"
-        );
-    }
-
-    #[cfg(not(windows))]
-    #[test]
-    fn unsupported_no_replace_rename_does_not_fall_back_for_a_file() {
-        let directory = tempfile::tempdir().expect("temporary directory should be created");
-        let source = directory.path().join("staged");
-        let destination = directory.path().join("installed");
-        std::fs::write(&source, b"verified").expect("staged file should be written");
-
-        let error = finish_no_replace_rename(
-            &source,
-            &destination,
-            Err(std::io::Error::from_raw_os_error(libc::EINVAL)),
-        )
-        .expect_err("file source should retain the no-replace failure");
-
-        assert_eq!(error.raw_os_error(), Some(libc::EINVAL));
-        assert!(source.exists());
-        assert!(!destination.exists());
-    }
-
-    #[cfg(not(windows))]
-    #[test]
-    fn directory_fallback_rejects_an_existing_destination() {
-        let (_directory, source, destination) = staged_directory();
-        std::fs::write(source.join("agent"), b"verified")
-            .expect("staged executable should be written");
-        std::fs::create_dir(&destination).expect("destination directory should be created");
-
-        let error = finish_no_replace_rename(
-            &source,
-            &destination,
-            Err(std::io::Error::from_raw_os_error(libc::EINVAL)),
-        )
-        .expect_err("existing destination should reject the fallback");
-
-        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
-        assert!(source.exists());
-        assert!(destination.exists());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn directory_fallback_rejects_a_dangling_destination_symlink() {
-        let (_directory, source, destination) = staged_directory();
-        std::os::unix::fs::symlink("missing-target", &destination)
-            .expect("destination symlink should be created");
-
-        let error = finish_no_replace_rename(
-            &source,
-            &destination,
-            Err(std::io::Error::from_raw_os_error(libc::EINVAL)),
-        )
-        .expect_err("destination symlink should reject the fallback");
-
-        assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
-        assert!(source.exists());
-        assert!(std::fs::symlink_metadata(&destination).is_ok());
-    }
-
-    #[cfg(not(windows))]
-    #[test]
-    fn unrelated_no_replace_errors_do_not_use_the_fallback() {
-        let (_directory, source, destination) = staged_directory();
-
-        for error_code in [libc::EACCES, libc::EXDEV] {
-            let error = finish_no_replace_rename(
-                &source,
-                &destination,
-                Err(std::io::Error::from_raw_os_error(error_code)),
-            )
-            .expect_err("unrelated error should not use the fallback");
-            assert_eq!(error.raw_os_error(), Some(error_code));
-        }
-        assert!(source.exists());
-        assert!(!destination.exists());
-    }
-
-    #[cfg(not(windows))]
-    #[test]
-    fn missing_no_replace_syscall_falls_back_for_a_directory() {
-        let (_directory, source, destination) = staged_directory();
-
-        finish_no_replace_rename(
-            &source,
-            &destination,
-            Err(std::io::Error::from_raw_os_error(libc::ENOSYS)),
-        )
-        .expect("missing no-replace syscall should use the directory fallback");
-
-        assert!(!source.exists());
-        assert!(destination.exists());
-    }
-
-    #[cfg(not(windows))]
-    #[test]
-    fn unsupported_no_replace_filesystem_falls_back_for_a_directory() {
-        let (_directory, source, destination) = staged_directory();
-
-        finish_no_replace_rename(
-            &source,
-            &destination,
-            Err(std::io::Error::from_raw_os_error(libc::EOPNOTSUPP)),
-        )
-        .expect("unsupported no-replace filesystem should use the directory fallback");
-
-        assert!(!source.exists());
-        assert!(destination.exists());
-    }
 }

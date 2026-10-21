@@ -11,40 +11,21 @@ pub use darwin::{Child, Command, Stdio};
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000_u32;
 
+pub use gpui_util::new_std_command;
+
 pub fn new_command(program: impl AsRef<OsStr>) -> Command {
     Command::new(program)
 }
 
-#[cfg(target_os = "windows")]
-pub fn new_std_command(program: impl AsRef<OsStr>) -> std::process::Command {
-    use std::os::windows::process::CommandExt;
-
-    let mut command = std::process::Command::new(program);
-    command.creation_flags(CREATE_NO_WINDOW);
-    command
-}
-
-#[cfg(not(target_os = "windows"))]
-pub fn new_std_command(program: impl AsRef<OsStr>) -> std::process::Command {
-    std::process::Command::new(program)
-}
-
-#[cfg(all(not(target_os = "macos"), not(target_os = "windows")))]
+#[cfg(not(target_os = "macos"))]
 pub type Child = smol::process::Child;
-
-#[cfg(target_os = "windows")]
-pub type Child = crate::process::Child;
 
 #[cfg(not(target_os = "macos"))]
 pub use std::process::Stdio;
 
 #[cfg(not(target_os = "macos"))]
 #[derive(Debug)]
-pub struct Command {
-    inner: smol::process::Command,
-    #[cfg(target_os = "windows")]
-    kill_process_tree_on_drop: bool,
-}
+pub struct Command(smol::process::Command);
 
 #[cfg(not(target_os = "macos"))]
 impl Command {
@@ -55,19 +36,14 @@ impl Command {
             use smol::process::windows::CommandExt;
             let mut cmd = smol::process::Command::new(program);
             cmd.creation_flags(CREATE_NO_WINDOW);
-            Self {
-                inner: cmd,
-                kill_process_tree_on_drop: false,
-            }
+            Self(cmd)
         }
         #[cfg(not(target_os = "windows"))]
-        Self {
-            inner: smol::process::Command::new(program),
-        }
+        Self(smol::process::Command::new(program))
     }
 
     pub fn arg(&mut self, arg: impl AsRef<OsStr>) -> &mut Self {
-        self.inner.arg(arg);
+        self.0.arg(arg);
         self
     }
 
@@ -76,16 +52,16 @@ impl Command {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        self.inner.args(args);
+        self.0.args(args);
         self
     }
 
     pub fn get_args(&self) -> impl Iterator<Item = &OsStr> {
-        self.inner.get_args()
+        self.0.get_args()
     }
 
     pub fn env(&mut self, key: impl AsRef<OsStr>, val: impl AsRef<OsStr>) -> &mut Self {
-        self.inner.env(key, val);
+        self.0.env(key, val);
         self
     }
 
@@ -95,73 +71,58 @@ impl Command {
         K: AsRef<OsStr>,
         V: AsRef<OsStr>,
     {
-        self.inner.envs(vars);
+        self.0.envs(vars);
         self
     }
 
     pub fn env_remove(&mut self, key: impl AsRef<OsStr>) -> &mut Self {
-        self.inner.env_remove(key);
+        self.0.env_remove(key);
         self
     }
 
     pub fn env_clear(&mut self) -> &mut Self {
-        self.inner.env_clear();
+        self.0.env_clear();
         self
     }
 
     pub fn current_dir(&mut self, dir: impl AsRef<Path>) -> &mut Self {
-        self.inner.current_dir(dir);
+        self.0.current_dir(dir);
         self
     }
 
     pub fn stdin(&mut self, cfg: impl Into<Stdio>) -> &mut Self {
-        self.inner.stdin(cfg.into());
+        self.0.stdin(cfg.into());
         self
     }
 
     pub fn stdout(&mut self, cfg: impl Into<Stdio>) -> &mut Self {
-        self.inner.stdout(cfg.into());
+        self.0.stdout(cfg.into());
         self
     }
 
     pub fn stderr(&mut self, cfg: impl Into<Stdio>) -> &mut Self {
-        self.inner.stderr(cfg.into());
+        self.0.stderr(cfg.into());
         self
     }
 
     pub fn kill_on_drop(&mut self, kill_on_drop: bool) -> &mut Self {
-        self.inner.kill_on_drop(kill_on_drop);
-        #[cfg(target_os = "windows")]
-        {
-            self.kill_process_tree_on_drop = kill_on_drop;
-        }
+        self.0.kill_on_drop(kill_on_drop);
         self
     }
 
     pub fn spawn(&mut self) -> std::io::Result<Child> {
-        let process = self.inner.spawn()?;
-        #[cfg(target_os = "windows")]
-        {
-            Ok(crate::process::Child::from_process(
-                process,
-                self.kill_process_tree_on_drop,
-            ))
-        }
-        #[cfg(not(target_os = "windows"))]
-        {
-            Ok(process)
-        }
+        self.0.spawn()
     }
 
     pub async fn output(&mut self) -> std::io::Result<std::process::Output> {
-        self.inner.output().await
+        self.0.output().await
     }
 
     pub async fn status(&mut self) -> std::io::Result<std::process::ExitStatus> {
-        self.inner.status().await
+        self.0.status().await
     }
 
     pub fn get_program(&self) -> &OsStr {
-        self.inner.get_program()
+        self.0.get_program()
     }
 }

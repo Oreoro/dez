@@ -26,25 +26,24 @@ pub use crate::repl_settings::ReplSettings;
 pub use crate::repl_store::ReplStore;
 pub use crate::session::Session;
 
-pub const KERNEL_DOCS_URL: &str =
-    "https://github.com/Oreoro/dez/blob/main/docs/src/repl.md#changing-kernels";
+pub const KERNEL_DOCS_URL: &str = "https://zed.dev/docs/repl#changing-kernels";
 
 pub fn init(fs: Arc<dyn Fs>, cx: &mut App) {
-    set_dispatcher(dez_dispatcher(cx));
+    set_dispatcher(zed_dispatcher(cx));
     repl_sessions_ui::init(cx);
     ReplStore::init(fs, cx);
 }
 
-fn dez_dispatcher(cx: &mut App) -> impl Dispatcher {
-    struct DezDispatcher {
+fn zed_dispatcher(cx: &mut App) -> impl Dispatcher {
+    struct ZedDispatcher {
         dispatcher: Arc<dyn PlatformDispatcher>,
     }
 
     // PlatformDispatcher is _super_ close to the same interface we put in
     // async-dispatcher, except for the task label in dispatch. Later we should
     // just make that consistent so we have this dispatcher ready to go for
-    // other crates in dez.
-    impl Dispatcher for DezDispatcher {
+    // other crates in Zed.
+    impl Dispatcher for ZedDispatcher {
         #[track_caller]
         fn dispatch(&self, runnable: Runnable) {
             let (wrapper, task) = async_task::Builder::new()
@@ -70,7 +69,7 @@ fn dez_dispatcher(cx: &mut App) -> impl Dispatcher {
         }
     }
 
-    DezDispatcher {
+    ZedDispatcher {
         dispatcher: cx.background_executor().dispatcher().clone(),
     }
 }

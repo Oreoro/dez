@@ -1,11 +1,9 @@
 use crate::prelude::*;
-use gpui::{
-    AnyElement, App, IntoElement, ParentElement, Rems, RenderOnce, SharedString, Styled, Window,
-    div, rems,
-};
-use theme::ActiveTheme;
-
 use crate::{Color, rems_from_px};
+use gpui::{
+    AnyElement, App, FontWeight, IntoElement, ParentElement, Rems, RenderOnce, SharedString,
+    Styled, Window, div, rems,
+};
 
 /// Extends [`gpui::Styled`] with typography-related styling methods.
 pub trait StyledTypography: Styled + Sized {
@@ -135,10 +133,10 @@ impl TextSize {
         let settings = theme::theme_settings(cx);
 
         match self {
-            Self::Large => rems_from_px(16.),
-            Self::Default => rems_from_px(14.),
-            Self::Small => rems_from_px(12.),
-            Self::XSmall => rems_from_px(10.),
+            Self::Large => rems_from_px(16_f32),
+            Self::Default => rems_from_px(14_f32),
+            Self::Small => rems_from_px(12_f32),
+            Self::XSmall => rems_from_px(10_f32),
             Self::Ui => rems_from_px(settings.ui_font_size(cx)),
             Self::Editor => rems_from_px(settings.buffer_font_size(cx)),
         }
@@ -215,9 +213,10 @@ impl RenderOnce for Headline {
 
         div()
             .font(ui_font)
+            .font_weight(FontWeight::SEMIBOLD)
             .line_height(self.size.line_height())
             .text_size(self.size.rems())
-            .text_color(cx.theme().colors().text)
+            .text_color(self.color.color(cx))
             .child(self.text)
     }
 }

@@ -2,7 +2,7 @@
 
 //! # Theme Settings
 //!
-//! This crate provides theme settings integration for dez,
+//! This crate provides theme settings integration for Zed,
 //! bridging the theme system with the settings infrastructure.
 
 mod schema;
@@ -28,12 +28,15 @@ pub use crate::schema::{
 };
 use crate::settings::adjust_buffer_font_size;
 pub use crate::settings::{
-    BufferLineHeight, FontFamilyName, GitCommitBufferFontSize, IconThemeName, IconThemeSelection,
-    ThemeAppearanceMode, ThemeName, ThemeSelection, ThemeSettings,
-    adjust_git_commit_buffer_font_size, adjust_ui_font_size, adjusted_font_size,
-    appearance_to_mode, clamp_font_size, default_theme, observe_buffer_font_size_adjustment,
-    reset_buffer_font_size, reset_git_commit_buffer_font_size, reset_ui_font_size, set_icon_theme,
-    set_mode, set_theme, setup_ui_font,
+    AgentBufferFontSize, AgentUiFontSize, BufferLineHeight, FontFamilyName,
+    GitCommitBufferFontSize, IconThemeName, IconThemeSelection, MarkdownPreviewFontSize,
+    ThemeAppearanceMode, ThemeName, ThemeSelection, ThemeSettings, adjust_agent_buffer_font_size,
+    adjust_agent_ui_font_size, adjust_git_commit_buffer_font_size,
+    adjust_markdown_preview_font_size, adjust_ui_font_size, adjusted_font_size, appearance_to_mode,
+    buffer_line_height_from_settings, clamp_font_size, default_theme,
+    observe_buffer_font_size_adjustment, reset_agent_buffer_font_size, reset_agent_ui_font_size,
+    reset_buffer_font_size, reset_git_commit_buffer_font_size, reset_markdown_preview_font_size,
+    reset_ui_font_size, set_icon_theme, set_mode, set_theme, setup_ui_font,
 };
 pub use theme::UiDensity;
 
@@ -85,8 +88,12 @@ pub fn init(themes_to_load: LoadThemes, cx: &mut App) {
 
     let mut prev_buffer_font_size_settings = settings.buffer_font_size_settings();
     let mut prev_ui_font_size_settings = settings.ui_font_size_settings();
+    let mut prev_agent_ui_font_size_settings = settings.agent_ui_font_size_settings();
+    let mut prev_agent_buffer_font_size_settings = settings.agent_buffer_font_size_settings();
     let mut prev_git_commit_buffer_font_size_settings =
         settings.git_commit_buffer_font_size_settings();
+    let mut prev_markdown_preview_font_size_settings =
+        settings.markdown_preview_font_size_settings();
     let mut prev_theme_name = settings.theme.name(SystemAppearance::global(cx).0);
     let mut prev_icon_theme_name = settings.icon_theme.name(SystemAppearance::global(cx).0);
     let mut prev_theme_overrides = (
@@ -99,7 +106,10 @@ pub fn init(themes_to_load: LoadThemes, cx: &mut App) {
 
         let buffer_font_size_settings = settings.buffer_font_size_settings();
         let ui_font_size_settings = settings.ui_font_size_settings();
+        let agent_ui_font_size_settings = settings.agent_ui_font_size_settings();
+        let agent_buffer_font_size_settings = settings.agent_buffer_font_size_settings();
         let git_commit_buffer_font_size_settings = settings.git_commit_buffer_font_size_settings();
+        let markdown_preview_font_size_settings = settings.markdown_preview_font_size_settings();
         let theme_name = settings.theme.name(SystemAppearance::global(cx).0);
         let icon_theme_name = settings.icon_theme.name(SystemAppearance::global(cx).0);
         let theme_overrides = (
@@ -117,9 +127,24 @@ pub fn init(themes_to_load: LoadThemes, cx: &mut App) {
             reset_ui_font_size(cx);
         }
 
+        if agent_ui_font_size_settings != prev_agent_ui_font_size_settings {
+            prev_agent_ui_font_size_settings = agent_ui_font_size_settings;
+            reset_agent_ui_font_size(cx);
+        }
+
+        if agent_buffer_font_size_settings != prev_agent_buffer_font_size_settings {
+            prev_agent_buffer_font_size_settings = agent_buffer_font_size_settings;
+            reset_agent_buffer_font_size(cx);
+        }
+
         if git_commit_buffer_font_size_settings != prev_git_commit_buffer_font_size_settings {
             prev_git_commit_buffer_font_size_settings = git_commit_buffer_font_size_settings;
             reset_git_commit_buffer_font_size(cx);
+        }
+
+        if markdown_preview_font_size_settings != prev_markdown_preview_font_size_settings {
+            prev_markdown_preview_font_size_settings = markdown_preview_font_size_settings;
+            reset_markdown_preview_font_size(cx);
         }
 
         if theme_name != prev_theme_name || theme_overrides != prev_theme_overrides {
@@ -189,7 +214,7 @@ pub fn reload_icon_theme(cx: &mut App) {
     cx.refresh_windows();
 }
 
-/// Loads the themes bundled with the dez binary into the registry.
+/// Loads the themes bundled with the Zed binary into the registry.
 pub fn load_bundled_themes(registry: &ThemeRegistry) {
     let theme_paths = registry
         .assets()

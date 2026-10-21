@@ -2,12 +2,11 @@ mod base_keymap_setting;
 mod content_into_gpui;
 mod editable_setting_control;
 mod editorconfig_store;
+mod granted_write_path;
 mod keymap_file;
 mod settings_file;
 mod settings_store;
 mod vscode_import;
-
-extern crate self as settings;
 
 pub use settings_macros::RegisterSetting;
 
@@ -27,7 +26,6 @@ pub mod private {
 
 use gpui::{App, Global};
 
-use rust_embed::RustEmbed;
 use std::env;
 use std::{borrow::Cow, fmt, str};
 use util::asset_str;
@@ -39,6 +37,7 @@ pub use editable_setting_control::*;
 pub use editorconfig_store::{
     Editorconfig, EditorconfigEvent, EditorconfigProperties, EditorconfigStore,
 };
+pub use granted_write_path::GrantedWritePath;
 pub use keymap_file::{
     KeyBindingValidator, KeyBindingValidatorRegistration, KeybindSource, KeybindUpdateOperation,
     KeybindUpdateTarget, KeymapFile, KeymapFileLoadResult,
@@ -59,24 +58,6 @@ pub use keymap_file::ActionSequence;
 pub struct ActiveSettingsProfileName(pub String);
 
 impl Global for ActiveSettingsProfileName {}
-
-#[derive(serde::Deserialize, Default, RegisterSetting)]
-pub struct ProxySettings {
-    pub proxy: Option<String>,
-}
-
-impl Settings for ProxySettings {
-    fn from_settings(content: &SettingsContent) -> Self {
-        Self {
-            proxy: content
-                .proxy
-                .as_deref()
-                .map(str::trim)
-                .filter(|proxy| !proxy.is_empty())
-                .map(ToOwned::to_owned),
-        }
-    }
-}
 
 pub trait UserSettingsContentExt {
     fn for_profile(&self, cx: &App) -> Option<&SettingsProfile>;
@@ -135,12 +116,15 @@ impl fmt::Display for WorktreeId {
     }
 }
 
-#[derive(RustEmbed)]
-#[folder = "../../assets"]
-#[include = "settings/*"]
-#[include = "keymaps/*"]
-#[exclude = "*.DS_Store"]
-pub struct SettingsAssets;
+// Dev builds read the checkout's files at runtime instead of embedding them;
+// see the `assets` crate for the rationale.
+util::fs_embed! {
+    pub struct SettingsAssets,
+    crate_relative = "../../assets",
+    root_relative = "assets",
+    include = ["settings/*", "keymaps/*"],
+    exclude = ["*.DS_Store"],
+}
 
 pub fn init(cx: &mut App) {
     let settings = SettingsStore::new(cx, &default_settings());
@@ -175,6 +159,17 @@ pub fn vim_keymap() -> Cow<'static, str> {
     asset_str::<SettingsAssets>(VIM_KEYMAP_PATH)
 }
 
+/// Specific keybinding overrides. Loaded after the base keymap so they win over
+/// conflicting base-keymap (and default `Editor`) bindings for the same chords,
+/// while still allowing user keymaps (loaded last) to override them. Shared
+/// across features - prefer adding a context block here over creating another
+/// override keymap file.
+#[cfg(target_os = "macos")]
+pub const SPECIFIC_OVERRIDES_KEYMAP_PATH: &str = "keymaps/specific-overrides-macos.json";
+
+#[cfg(not(target_os = "macos"))]
+pub const SPECIFIC_OVERRIDES_KEYMAP_PATH: &str = "keymaps/specific-overrides.json";
+
 pub fn initial_user_settings_content() -> Cow<'static, str> {
     asset_str::<SettingsAssets>("settings/initial_user_settings.json")
 }
@@ -195,23 +190,14 @@ pub fn initial_tasks_content() -> Cow<'static, str> {
     asset_str::<SettingsAssets>("settings/initial_tasks.json")
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{ProxySettings, Settings as _, SettingsContent};
+pub fn initial_worktree_setup_tasks_content() -> Cow<'static, str> {
+    asset_str::<SettingsAssets>("settings/initial_worktree_setup_tasks.json")
+}
 
-    #[test]
-    fn proxy_settings_trim_explicit_proxy_and_ignore_blank_input() {
-        let mut content = SettingsContent {
-            proxy: Some("  http://127.0.0.1:10809  ".to_owned()),
-            ..Default::default()
-        };
+pub fn initial_debug_tasks_content() -> Cow<'static, str> {
+    asset_str::<SettingsAssets>("settings/initial_debug_tasks.json")
+}
 
-        assert_eq!(
-            ProxySettings::from_settings(&content).proxy.as_deref(),
-            Some("http://127.0.0.1:10809")
-        );
-
-        content.proxy = Some("   ".to_owned());
-        assert_eq!(ProxySettings::from_settings(&content).proxy, None);
-    }
+pub fn initial_local_debug_tasks_content() -> Cow<'static, str> {
+    asset_str::<SettingsAssets>("settings/initial_local_debug_tasks.json")
 }

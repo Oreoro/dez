@@ -10,23 +10,25 @@ use strum::{EnumIter, EnumString, IntoStaticStr};
 pub enum IconName {
     AcpRegistry,
     AiAnthropic,
+    AiAnthropicCompat,
     AiBedrock,
     AiClaude,
     AiDeepSeek,
     AiEdit,
     AiGemini,
     AiGoogle,
+    AiLlamaCpp,
     AiLmStudio,
     AiMistral,
     AiOllama,
     AiOpenAi,
     AiOpenAiCompat,
+    AiOpenAiGptSub,
     AiOpenCode,
     AiOpenRouter,
-    AiPi,
     AiVercel,
     AiXAi,
-    Aidez,
+    AiZed,
     Archive,
     ArrowCircle,
     ArrowDown,
@@ -74,6 +76,8 @@ pub enum IconName {
     Code,
     Codeberg,
     Command,
+    Compact,
+    Compass,
     Control,
     Copilot,
     CopilotDisabled,
@@ -88,6 +92,7 @@ pub enum IconName {
     Debug,
     DebugBreakpoint,
     DebugContinue,
+    DebugContinueThread,
     DebugDetach,
     DebugDisabledBreakpoint,
     DebugDisabledLogBreakpoint,
@@ -97,7 +102,10 @@ pub enum IconName {
     DebugStepInto,
     DebugStepOut,
     DebugStepOver,
+    DezAgent,
+    DezSubagent,
     Diff,
+    DiffBoxed,
     DiffSplit,
     DiffSplitAuto,
     DiffUnified,
@@ -123,23 +131,28 @@ pub enum IconName {
     FastForwardOff,
     File,
     FileCode,
+    FileCodeOff,
     FileDiff,
     FileDoc,
     FileGeneric,
     FileGit,
+    FileIgnored,
     FileLock,
     FileMarkdown,
+    FileMultiple,
     FileRust,
     FileTextFilled,
     FileTextOutlined,
     FileToml,
     FileTree,
     Filter,
+    FilterFunnel,
     Flame,
     FoldVertical,
     Folder,
+    FolderAdd,
+    FolderInclude,
     FolderOpen,
-    FolderOpenAdd,
     FolderSearch,
     FolderShare,
     FolderShared,
@@ -171,29 +184,26 @@ pub enum IconName {
     Info,
     Json,
     Keyboard,
-    Library,
     LineHeight,
     Link,
     Linux,
     ListCollapse,
-    ListFilter,
     ListTodo,
     ListTree,
     ListX,
     LoadCircle,
     LocationEdit,
-    LockOutlined,
+    Lock,
+    LockOff,
     MagnifyingGlass,
     Maximize,
     MaximizeAlt,
     Menu,
-    MenuAltTemp,
     Mic,
     MicMute,
     Minimize,
-    NewThread,
     Notepad,
-    OpenFolder,
+    OnCall,
     Option,
     PageDown,
     PageUp,
@@ -220,6 +230,7 @@ pub enum IconName {
     ReplyArrowRight,
     Rerun,
     Return,
+    Robot,
     RotateCcw,
     RotateCw,
     Scissors,
@@ -234,7 +245,6 @@ pub enum IconName {
     SignalLow,
     SignalMedium,
     Slash,
-    Sliders,
     Sourcehut,
     Space,
     Sparkle,
@@ -247,6 +257,7 @@ pub enum IconName {
     StarFilled,
     Stop,
     Tab,
+    Table,
     Terminal,
     TerminalAlt,
     TextSnippet,
@@ -254,21 +265,22 @@ pub enum IconName {
     TextUnwrap,
     ThinkingMode,
     ThinkingModeOff,
+    ThisWindow,
     Thread,
     ThreadFromSummary,
-    ThreadsSidebarLeftClosed,
-    ThreadsSidebarLeftOpen,
-    ThreadsSidebarRightClosed,
-    ThreadsSidebarRightOpen,
+    SidebarLeftClosed,
+    SidebarLeftOpen,
+    SidebarRightClosed,
+    SidebarRightOpen,
     ThumbsDown,
     ThumbsUp,
+    ToC,
     TodoComplete,
     TodoPending,
     TodoProgress,
     ToolCopy,
     ToolDeleteFile,
     ToolDiagnostics,
-    ToolFolder,
     ToolHammer,
     ToolNotification,
     ToolPencil,
@@ -281,6 +293,7 @@ pub enum IconName {
     TriangleRight,
     Undo,
     Unpin,
+    UserArrowUp,
     UserCheck,
     UserGroup,
     UserRoundPen,
@@ -288,16 +301,16 @@ pub enum IconName {
     WholeWord,
     XCircle,
     XCircleFilled,
-    DezAgent,
-    DezAgentTwo,
-    DezAssistant,
-    DezPredict,
-    DezPredictDisabled,
-    DezPredictDown,
-    DezPredictError,
-    DezPredictUp,
-    DezSrcCustom,
-    DezSrcExtension,
+    ZedAgent,
+    ZedAgentTwo,
+    ZedAssistant,
+    ZedPredict,
+    ZedPredictDisabled,
+    ZedPredictDown,
+    ZedPredictError,
+    ZedPredictUp,
+    ZedSrcCustom,
+    ZedSrcExtension,
 }
 
 impl IconName {
@@ -305,5 +318,84 @@ impl IconName {
     pub fn path(&self) -> Arc<str> {
         let file_stem: &'static str = self.into();
         format!("icons/{file_stem}.svg").into()
+    }
+}
+
+pub fn assistant_icon_for_app(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::ZedAssistant
+    } else {
+        IconName::Sparkle
+    }
+}
+
+pub fn agent_icon_for_app(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::ZedAgent
+    } else {
+        IconName::DezAgent
+    }
+}
+
+pub fn subagent_icon_for_app(app_name: &str) -> IconName {
+    if app_name == "Zed" {
+        IconName::ForwardArrowUp
+    } else {
+        IconName::DezSubagent
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use strum::{IntoEnumIterator as _, ParseError};
+
+    use crate::IconName;
+
+    #[test]
+    fn test_all_icons_exist() {
+        let asset_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets");
+
+        for icon in IconName::iter() {
+            let icon_path = asset_path.join(&*icon.path());
+            assert!(
+                icon_path.exists(),
+                "Icon {icon:?} does not exist at {icon_path:?}",
+            );
+        }
+    }
+
+    #[test]
+    fn test_no_dangling_icons() -> Result<(), ParseError> {
+        let icons_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../assets/icons");
+
+        for entry in std::fs::read_dir(&icons_dir).expect("failed to read icons directory") {
+            let path = entry.expect("failed to read icons directory entry").path();
+            if path.extension().is_none_or(|extension| extension != "svg") {
+                continue;
+            }
+            let file_stem = path
+                .file_stem()
+                .and_then(|file_stem| file_stem.to_str())
+                .expect("icon file name is not valid UTF-8");
+
+            file_stem.parse::<IconName>()?;
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn product_icons_keep_zed_branding_out_of_dez() {
+        assert_eq!(crate::assistant_icon_for_app("Zed"), IconName::ZedAssistant);
+        assert_eq!(crate::assistant_icon_for_app("Dez"), IconName::Sparkle);
+        assert_eq!(crate::agent_icon_for_app("Zed"), IconName::ZedAgent);
+        assert_eq!(crate::agent_icon_for_app("Dez"), IconName::DezAgent);
+        assert_eq!(
+            crate::subagent_icon_for_app("Zed"),
+            IconName::ForwardArrowUp
+        );
+        assert_eq!(crate::subagent_icon_for_app("Dez"), IconName::DezSubagent);
     }
 }

@@ -1,6 +1,7 @@
 use crate::components::KernelListItem;
 use crate::setup_editor_session_actions;
 use crate::{
+    KernelStatus,
     kernels::{
         Kernel, KernelSession, KernelSpecification, NativeRunningKernel, RemoteRunningKernel,
         SshRunningKernel, WslRunningKernel,
@@ -182,7 +183,7 @@ impl EditorBlock {
                         .icon_color(Color::Muted)
                         .size(ButtonSize::Compact)
                         .shape(IconButtonShape::Square)
-                        .tooltip(Tooltip::text(localization::text(cx, "repl-close-output")))
+                        .tooltip(Tooltip::text("Close output area"))
                         .on_click(move |_, window, cx| {
                             if let BlockId::Custom(block_id) = block_id {
                                 (on_close)(block_id, window, cx)
@@ -265,6 +266,7 @@ impl Session {
     }
 
     fn start_kernel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let kernel_language = self.kernel_specification.language();
         let entity_id = self.editor.entity_id();
 
         // For WSL Remote kernels, use project root instead of potentially temporary working directory
@@ -294,6 +296,13 @@ impl Session {
                 .and_then(|editor| editor.read(cx).working_directory(cx))
                 .unwrap_or_else(temp_dir)
         };
+
+        telemetry::event!(
+            "Kernel Status Changed",
+            kernel_language,
+            kernel_status = KernelStatus::Starting.to_string(),
+            repl_session_id = cx.entity_id().to_string(),
+        );
 
         let session_view = cx.entity();
 
@@ -814,6 +823,16 @@ impl Session {
             cx.emit(SessionEvent::Shutdown(self.editor.clone()));
         }
 
+        let kernel_status = KernelStatus::from(&kernel).to_string();
+        let kernel_language = self.kernel_specification.language();
+
+        telemetry::event!(
+            "Kernel Status Changed",
+            kernel_language,
+            kernel_status,
+            repl_session_id = cx.entity_id().to_string(),
+        );
+
         self.kernel = kernel;
     }
 
@@ -909,7 +928,7 @@ impl Render for Session {
                     .as_ref()
                     .map(|info| info.language_info.name.clone()),
                 Some(
-                    Button::new("interrupt", localization::text(cx, "repl-interrupt"))
+                    Button::new("interrupt", "Interrupt")
                         .style(ButtonStyle::Subtle)
                         .on_click(cx.listener(move |session, _, _, cx| {
                             session.interrupt(cx);
@@ -945,7 +964,7 @@ impl Render for Session {
             .child(Label::new(self.kernel_specification.name()))
             .children(status_text.map(|status_text| Label::new(format!("({status_text})"))))
             .button(
-                Button::new("shutdown", localization::text(cx, "repl-shutdown"))
+                Button::new("shutdown", "Shutdown")
                     .style(ButtonStyle::Subtle)
                     .disabled(self.kernel.is_shutting_down())
                     .on_click(cx.listener(move |session, _, window, cx| {
@@ -966,6 +985,13 @@ impl KernelSession for Session {
         match &message.content {
             JupyterMessageContent::Status(status) => {
                 self.kernel.set_execution_state(&status.execution_state);
+
+                telemetry::event!(
+                    "Kernel Status Changed",
+                    kernel_language = self.kernel_specification.language(),
+                    kernel_status = KernelStatus::from(&self.kernel).to_string(),
+                    repl_session_id = cx.entity_id().to_string(),
+                );
 
                 cx.notify();
             }

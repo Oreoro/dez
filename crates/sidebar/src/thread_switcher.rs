@@ -1,0 +1,583 @@
+use action_log::DiffStats;
+#[cfg(test)]
+use agent_ui::TerminalId;
+use agent_ui::{
+    terminal_thread_metadata_store::{TerminalAgentKind, TerminalThreadMetadata},
+    thread_metadata_store::ThreadMetadata,
+};
+use gpui::{
+    Action as _, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Modifiers,
+    ModifiersChangedEvent, Render, ScrollHandle, SharedString, prelude::*,
+};
+use settings::Settings as _;
+use ui::{
+    AgentThreadStatus, Divider, KeyBinding, ThreadItem, ThreadItemWorktreeInfo, WithScrollbar,
+    prelude::*,
+};
+use workspace::{DesignSystemSettings, ModalView, Workspace};
+use zed_actions::sidebar::ToggleThreadSwitcher;
+
+use super::{
+    TerminalEntrySource, ThreadEntryWorkspace, canvas_thread_item_style, terminal_agent_icon,
+};
+
+#[derive(Clone)]
+pub(crate) struct ThreadSwitcherThreadEntry {
+    pub title: SharedString,
+    pub icon: IconName,
+    pub icon_from_external_svg: Option<SharedString>,
+    pub status: AgentThreadStatus,
+    pub metadata: ThreadMetadata,
+    pub workspace: Entity<Workspace>,
+    pub project_name: Option<SharedString>,
+    pub worktrees: Vec<ThreadItemWorktreeInfo>,
+    pub diff_stats: DiffStats,
+    pub is_draft: bool,
+    pub is_title_generating: bool,
+    pub notified: bool,
+    pub timestamp: SharedString,
+}
+
+#[derive(Clone)]
+pub(crate) struct ThreadSwitcherTerminalEntry {
+    pub metadata: TerminalThreadMetadata,
+    pub(super) workspace: ThreadEntryWorkspace,
+    pub(super) source: TerminalEntrySource,
+    pub(super) detected_agent_kind: Option<TerminalAgentKind>,
+    pub project_name: Option<SharedString>,
+    pub worktrees: Vec<ThreadItemWorktreeInfo>,
+    pub notified: bool,
+    pub timestamp: SharedString,
+}
+
+#[derive(Clone)]
+pub(crate) enum ThreadSwitcherEntry {
+    Thread(ThreadSwitcherThreadEntry),
+    Terminal(ThreadSwitcherTerminalEntry),
+}
+
+#[derive(Clone)]
+pub(super) enum ThreadSwitcherSelection {
+    Thread {
+        metadata: ThreadMetadata,
+        workspace: Entity<Workspace>,
+    },
+    Terminal {
+        metadata: TerminalThreadMetadata,
+        workspace: ThreadEntryWorkspace,
+        source: TerminalEntrySource,
+    },
+}
+
+impl ThreadSwitcherEntry {
+    pub(super) fn selection(&self) -> ThreadSwitcherSelection {
+        match self {
+            Self::Thread(entry) => ThreadSwitcherSelection::Thread {
+                metadata: entry.metadata.clone(),
+                workspace: entry.workspace.clone(),
+            },
+            Self::Terminal(entry) => ThreadSwitcherSelection::Terminal {
+                metadata: entry.metadata.clone(),
+                workspace: entry.workspace.clone(),
+                source: entry.source.clone(),
+            },
+        }
+    }
+
+    fn element_id(&self) -> SharedString {
+        match self {
+            Self::Thread(entry) => SharedString::from(format!(
+                "thread-switcher-thread-{:?}",
+                entry.metadata.thread_id
+            )),
+            Self::Terminal(entry) => SharedString::from(format!(
+                "thread-switcher-terminal-{}",
+                entry.metadata.terminal_id
+            )),
+        }
+    }
+
+    fn title(&self) -> SharedString {
+        match self {
+            Self::Thread(entry) => entry.title.clone(),
+            Self::Terminal(entry) => entry.metadata.display_title(),
+        }
+    }
+
+    fn icon(&self) -> IconName {
+        match self {
+            Self::Thread(entry) if entry.is_draft => IconName::Circle,
+            Self::Thread(entry) => entry.icon,
+            Self::Terminal(entry) => entry
+                .detected_agent_kind
+                .map(terminal_agent_icon)
+                .unwrap_or(IconName::Terminal),
+        }
+    }
+
+    fn icon_from_external_svg(&self) -> Option<SharedString> {
+        match self {
+            Self::Thread(entry) if entry.is_draft => None,
+            Self::Thread(entry) => entry.icon_from_external_svg.clone(),
+            Self::Terminal(_) => None,
+        }
+    }
+
+    fn status(&self) -> AgentThreadStatus {
+        match self {
+            Self::Thread(entry) => entry.status,
+            Self::Terminal(_) => AgentThreadStatus::default(),
+        }
+    }
+
+    fn project_name(&self) -> Option<SharedString> {
+        match self {
+            Self::Thread(entry) => entry.project_name.clone(),
+            Self::Terminal(entry) => entry.project_name.clone(),
+        }
+    }
+
+    fn worktrees(&self) -> Vec<ThreadItemWorktreeInfo> {
+        match self {
+            Self::Thread(entry) => entry.worktrees.clone(),
+            Self::Terminal(entry) => entry.worktrees.clone(),
+        }
+    }
+
+    fn timestamp(&self) -> SharedString {
+        match self {
+            Self::Thread(entry) => entry.timestamp.clone(),
+            Self::Terminal(entry) => entry.timestamp.clone(),
+        }
+    }
+
+    fn is_draft(&self) -> bool {
+        match self {
+            Self::Thread(entry) => entry.is_draft,
+            Self::Terminal(_) => false,
+        }
+    }
+
+    fn is_title_generating(&self) -> bool {
+        match self {
+            Self::Thread(entry) => entry.is_title_generating,
+            Self::Terminal(_) => false,
+        }
+    }
+
+    fn notified(&self) -> bool {
+        match self {
+            Self::Thread(entry) => entry.notified,
+            Self::Terminal(entry) => entry.notified,
+        }
+    }
+
+    fn diff_stats(&self) -> DiffStats {
+        match self {
+            Self::Thread(entry) => entry.diff_stats,
+            Self::Terminal(_) => DiffStats::default(),
+        }
+    }
+
+    fn session_type_label(&self, app_name: &str) -> &'static str {
+        session_switcher_entry_type_label(app_name, matches!(self, Self::Terminal(_)))
+    }
+
+    #[cfg(test)]
+    pub fn thread_id(&self) -> Option<agent_ui::ThreadId> {
+        match self {
+            Self::Thread(entry) => Some(entry.metadata.thread_id),
+            Self::Terminal(_) => None,
+        }
+    }
+
+    #[cfg(test)]
+    pub fn terminal_id(&self) -> Option<TerminalId> {
+        match self {
+            Self::Thread(_) => None,
+            Self::Terminal(entry) => Some(entry.metadata.terminal_id),
+        }
+    }
+}
+
+fn session_switcher_title(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Thread Switcher"
+    } else {
+        "Switch Sessions"
+    }
+}
+
+fn session_switcher_count(entry_count: usize) -> String {
+    match entry_count {
+        1 => "1 recent session".to_owned(),
+        count => format!("{count} recent sessions"),
+    }
+}
+
+fn session_switcher_entry_type_label(app_name: &str, is_terminal: bool) -> &'static str {
+    match (app_name == "Zed", is_terminal) {
+        (true, false) => "Thread",
+        (true, true) => "Terminal",
+        (false, false) => "Agent Session",
+        (false, true) => "Terminal Session",
+    }
+}
+
+fn session_switcher_entry_type_visible(app_name: &str) -> bool {
+    app_name == "Zed"
+}
+
+fn session_switcher_description(release_to_open: bool) -> &'static str {
+    if release_to_open {
+        "Continue the shortcut to move through recent sessions. Release it to open the selected session, or press Escape to return."
+    } else {
+        "Repeat the switch-session command to move through recent sessions. Press Enter to open the selected session, or Escape to return."
+    }
+}
+
+fn session_switcher_help(release_to_open: bool) -> &'static str {
+    if release_to_open {
+        "Continue to cycle · release to open"
+    } else {
+        "Repeat to cycle · Enter to open"
+    }
+}
+
+pub(super) enum ThreadSwitcherEvent {
+    Preview(ThreadSwitcherSelection),
+    Confirmed(ThreadSwitcherSelection),
+    Dismissed,
+}
+
+pub(crate) struct ThreadSwitcher {
+    focus_handle: FocusHandle,
+    entries: Vec<ThreadSwitcherEntry>,
+    selected_index: usize,
+    init_modifiers: Option<Modifiers>,
+    scroll_handle: ScrollHandle,
+}
+
+impl ThreadSwitcher {
+    pub fn new(
+        entries: Vec<ThreadSwitcherEntry>,
+        select_last: bool,
+        window: &mut gpui::Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let init_modifiers = window.modifiers().modified().then_some(window.modifiers());
+        let selected_index = if entries.is_empty() {
+            0
+        } else if select_last {
+            entries.len() - 1
+        } else {
+            1.min(entries.len().saturating_sub(1))
+        };
+
+        if let Some(entry) = entries.get(selected_index) {
+            cx.emit(ThreadSwitcherEvent::Preview(entry.selection()));
+        }
+
+        let focus_handle = cx.focus_handle();
+        cx.on_focus_out(&focus_handle, window, |_this, _event, _window, cx| {
+            cx.emit(ThreadSwitcherEvent::Dismissed);
+            cx.emit(DismissEvent);
+        })
+        .detach();
+
+        let scroll_handle = ScrollHandle::new();
+        scroll_handle.scroll_to_item(selected_index);
+
+        Self {
+            focus_handle,
+            entries,
+            selected_index,
+            init_modifiers,
+            scroll_handle,
+        }
+    }
+
+    pub fn selected_entry(&self) -> Option<&ThreadSwitcherEntry> {
+        self.entries.get(self.selected_index)
+    }
+
+    #[cfg(test)]
+    pub fn entries(&self) -> &[ThreadSwitcherEntry] {
+        &self.entries
+    }
+
+    #[cfg(test)]
+    pub fn selected_index(&self) -> usize {
+        self.selected_index
+    }
+
+    pub fn cycle_selection(&mut self, cx: &mut Context<Self>) {
+        if self.entries.is_empty() {
+            return;
+        }
+        self.selected_index = (self.selected_index + 1) % self.entries.len();
+        self.emit_preview(cx);
+    }
+
+    pub fn select_last(&mut self, cx: &mut Context<Self>) {
+        if self.entries.is_empty() {
+            return;
+        }
+        if self.selected_index == 0 {
+            self.selected_index = self.entries.len() - 1;
+        } else {
+            self.selected_index -= 1;
+        }
+        self.emit_preview(cx);
+    }
+
+    fn emit_preview(&mut self, cx: &mut Context<Self>) {
+        self.scroll_handle.scroll_to_item(self.selected_index);
+        if let Some(entry) = self.entries.get(self.selected_index) {
+            cx.emit(ThreadSwitcherEvent::Preview(entry.selection()));
+        }
+    }
+
+    fn confirm(&mut self, _: &menu::Confirm, _window: &mut gpui::Window, cx: &mut Context<Self>) {
+        self.confirm_selected(cx);
+    }
+
+    fn confirm_selected(&mut self, cx: &mut Context<Self>) {
+        if let Some(entry) = self.entries.get(self.selected_index) {
+            cx.emit(ThreadSwitcherEvent::Confirmed(entry.selection()));
+        }
+        cx.emit(DismissEvent);
+    }
+
+    fn select_and_confirm(&mut self, index: usize, cx: &mut Context<Self>) {
+        if index < self.entries.len() {
+            self.selected_index = index;
+            self.confirm_selected(cx);
+        }
+    }
+
+    fn cancel(&mut self, _: &menu::Cancel, _window: &mut gpui::Window, cx: &mut Context<Self>) {
+        cx.emit(ThreadSwitcherEvent::Dismissed);
+        cx.emit(DismissEvent);
+    }
+
+    fn toggle(
+        &mut self,
+        action: &ToggleThreadSwitcher,
+        _window: &mut gpui::Window,
+        cx: &mut Context<Self>,
+    ) {
+        if action.select_last {
+            self.select_last(cx);
+        } else {
+            self.cycle_selection(cx);
+        }
+    }
+
+    fn handle_modifiers_changed(
+        &mut self,
+        event: &ModifiersChangedEvent,
+        window: &mut gpui::Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(init_modifiers) = self.init_modifiers else {
+            return;
+        };
+        if !event.modified() || !init_modifiers.is_subset_of(event) {
+            self.init_modifiers = None;
+            if self.entries.is_empty() {
+                cx.emit(DismissEvent);
+            } else {
+                window.dispatch_action(menu::Confirm.boxed_clone(), cx);
+            }
+        }
+    }
+}
+
+impl ModalView for ThreadSwitcher {}
+
+impl EventEmitter<DismissEvent> for ThreadSwitcher {}
+impl EventEmitter<ThreadSwitcherEvent> for ThreadSwitcher {}
+
+impl Focusable for ThreadSwitcher {
+    fn focus_handle(&self, _cx: &gpui::App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl Render for ThreadSwitcher {
+    fn render(&mut self, window: &mut gpui::Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let selected_index = self.selected_index;
+        let design_system = DesignSystemSettings::get_global(cx);
+        let title = session_switcher_title(paths::APP_NAME);
+        let entry_count = session_switcher_count(self.entries.len());
+        let release_to_open = self.init_modifiers.is_some();
+        let accessibility_description = session_switcher_description(release_to_open);
+        let help = session_switcher_help(release_to_open);
+        let set_size = self.entries.len();
+        let switcher_width = (window.viewport_size().width * 0.9).min(px(440.));
+        let focus_handle = self.focus_handle.clone();
+        let (surface_padding, row_gap) = match design_system.density {
+            settings::CanvasDensity::Compact => (px(4.0), px(2.0)),
+            settings::CanvasDensity::Balanced => (px(6.0), px(4.0)),
+            settings::CanvasDensity::Spacious => (px(8.0), px(6.0)),
+        };
+
+        v_flex()
+            .id("session-switcher")
+            .key_context("ThreadSwitcher")
+            .track_focus(&self.focus_handle)
+            .role(gpui::Role::Dialog)
+            .aria_label(title)
+            .aria_description(accessibility_description)
+            .p(surface_padding)
+            .w(switcher_width)
+            .elevation_3(cx)
+            .when(
+                design_system.radius == settings::CanvasRadius::Subtle,
+                |this| this.rounded_sm(),
+            )
+            .when(
+                design_system.radius == settings::CanvasRadius::Rounded,
+                |this| this.rounded_lg(),
+            )
+            .on_modifiers_changed(cx.listener(Self::handle_modifiers_changed))
+            .on_action(cx.listener(Self::confirm))
+            .on_action(cx.listener(Self::cancel))
+            .on_action(cx.listener(Self::toggle))
+            .child(
+                h_flex()
+                    .id("session-switcher-header")
+                    .w_full()
+                    .justify_between()
+                    .px_1p5()
+                    .pb_1p5()
+                    .child(Label::new(title))
+                    .child(
+                        Label::new(entry_count)
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    ),
+            )
+            .child(Divider::horizontal())
+            .child(
+                v_flex()
+                    .id("thread-switcher-list")
+                    .role(gpui::Role::List)
+                    .aria_label("Recent sessions")
+                    .gap(row_gap)
+                    .py_1()
+                    .max_h_128()
+                    .overflow_y_scroll()
+                    .track_scroll(&self.scroll_handle)
+                    .children(self.entries.iter().enumerate().map(|(ix, entry)| {
+                        let diff_stats = entry.diff_stats();
+
+                        canvas_thread_item_style(
+                            ThreadItem::new(entry.element_id(), entry.title()),
+                            &design_system,
+                        )
+                        .icon(entry.icon())
+                        .actor_label(entry.session_type_label(paths::APP_NAME))
+                        .actor_label_visible(session_switcher_entry_type_visible(paths::APP_NAME))
+                        .when(entry.is_draft(), |this| {
+                            this.icon_color(Color::Custom(
+                                cx.theme().colors().icon_muted.opacity(0.2),
+                            ))
+                        })
+                        .status(entry.status())
+                        .when_some(entry.icon_from_external_svg(), |this, svg| {
+                            this.custom_icon_from_external_svg(svg)
+                        })
+                        .when_some(entry.project_name(), |this, name| this.project_name(name))
+                        .worktrees(entry.worktrees())
+                        .timestamp(entry.timestamp())
+                        .title_generating(entry.is_title_generating())
+                        .notified(entry.notified())
+                        .when(diff_stats.lines_added > 0, |this| {
+                            this.added(diff_stats.lines_added as usize)
+                        })
+                        .when(diff_stats.lines_removed > 0, |this| {
+                            this.removed(diff_stats.lines_removed as usize)
+                        })
+                        .selected(ix == selected_index)
+                        .focused(ix == selected_index)
+                        .position_in_set(ix + 1)
+                        .set_size(set_size)
+                        .on_click(cx.listener(
+                            move |this, _event: &gpui::ClickEvent, _window, cx| {
+                                this.select_and_confirm(ix, cx);
+                            },
+                        ))
+                        .into_any_element()
+                    })),
+            )
+            .child(Divider::horizontal())
+            .child(
+                h_flex()
+                    .id("session-switcher-help")
+                    .role(gpui::Role::Status)
+                    .aria_label(help)
+                    .w_full()
+                    .justify_between()
+                    .px_1p5()
+                    .pt_1p5()
+                    .child(Label::new(help).size(LabelSize::Small).color(Color::Muted))
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .when(!release_to_open, |this| {
+                                this.child(KeyBinding::for_action_in(
+                                    &menu::Confirm,
+                                    &focus_handle,
+                                    cx,
+                                ))
+                                .child(Label::new("Open").size(LabelSize::Small))
+                            })
+                            .child(KeyBinding::for_action_in(&menu::Cancel, &focus_handle, cx))
+                            .child(Label::new("Cancel").size(LabelSize::Small)),
+                    ),
+            )
+            .vertical_scrollbar_for(&self.scroll_handle, window, cx)
+    }
+}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::*;
+
+    #[test]
+    fn dez_session_switcher_names_scope_and_count() {
+        assert_eq!(session_switcher_title("Dez"), "Switch Sessions");
+        assert_eq!(session_switcher_title("Zed"), "Thread Switcher");
+        assert_eq!(session_switcher_count(1), "1 recent session");
+        assert_eq!(session_switcher_count(4), "4 recent sessions");
+        assert_eq!(
+            session_switcher_entry_type_label("Dez", false),
+            "Agent Session"
+        );
+        assert_eq!(
+            session_switcher_entry_type_label("Dez", true),
+            "Terminal Session"
+        );
+        assert_eq!(session_switcher_entry_type_label("Zed", false), "Thread");
+        assert!(!session_switcher_entry_type_visible("Dez"));
+        assert!(session_switcher_entry_type_visible("Zed"));
+        assert_eq!(
+            session_switcher_description(true),
+            "Continue the shortcut to move through recent sessions. Release it to open the selected session, or press Escape to return."
+        );
+        assert_eq!(
+            session_switcher_description(false),
+            "Repeat the switch-session command to move through recent sessions. Press Enter to open the selected session, or Escape to return."
+        );
+        assert_eq!(
+            session_switcher_help(true),
+            "Continue to cycle · release to open"
+        );
+        assert_eq!(
+            session_switcher_help(false),
+            "Repeat to cycle · Enter to open"
+        );
+    }
+}

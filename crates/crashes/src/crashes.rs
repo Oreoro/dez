@@ -8,6 +8,7 @@ use std::{panic::Location, pin::Pin};
 use system_specs::GpuSpecs;
 
 use std::{
+    collections::BTreeMap,
     env,
     fs::{self, File},
     io, panic,
@@ -138,6 +139,17 @@ where
     info!("crash signal handlers installed");
     send_crash_server_message(&client, CrashServerMessage::Init(crash_init));
 
+    #[cfg(all(target_os = "linux", target_env = "gnu"))]
+    if let Some(address) = abort_message_address() {
+        send_crash_server_message(
+            &client,
+            CrashServerMessage::AbortMessageLocation(AbortMessageLocation {
+                pid: process::id(),
+                address,
+            }),
+        );
+    }
+
     #[cfg(target_os = "linux")]
     handler.set_ptracer(Some(_crash_handler.id()));
 
@@ -169,6 +181,9 @@ pub struct CrashServer {
     initialization_params: Mutex<Option<InitCrashHandler>>,
     panic_info: Mutex<Option<CrashPanic>>,
     active_gpu: Mutex<Option<system_specs::GpuSpecs>>,
+    tags: Mutex<BTreeMap<String, String>>,
+    abort_message_location: Mutex<Option<AbortMessageLocation>>,
+    shutdown: Arc<AtomicBool>,
     has_connection: Arc<AtomicBool>,
     logs_dir: PathBuf,
 }
@@ -178,14 +193,34 @@ pub struct CrashInfo {
     pub init: InitCrashHandler,
     pub panic: Option<CrashPanic>,
     pub minidump_error: Option<String>,
+    /// The diagnostic the C runtime recorded before aborting the process, e.g.
+    /// glibc's "free(): invalid pointer". Only present when the crash was a
+    /// runtime-initiated abort rather than a signal like SIGSEGV or a panic.
+    #[serde(default)]
+    pub abort_message: Option<String>,
     pub gpus: Vec<system_specs::GpuInfo>,
     pub active_gpu: Option<system_specs::GpuSpecs>,
+    /// Session state the crashed application attached with [`set_tag`], keyed
+    /// by Sentry submission field.
+    #[serde(default)]
+    pub tags: BTreeMap<String, String>,
+}
+
+/// Where to find the C runtime's abort diagnostic in the crashed process's
+/// memory. Sent by the client at startup so that after a crash the server can
+/// recover the message with `process_vm_readv`; the crashed process itself
+/// can't safely do this work, since its heap may be corrupt and its allocator
+/// locks may be held by the crashed thread.
+#[derive(Debug, Deserialize, Serialize, Clone, Copy)]
+pub struct AbortMessageLocation {
+    pub pid: u32,
+    pub address: u64,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct InitCrashHandler {
     pub session_id: String,
-    pub dez_version: String,
+    pub zed_version: String,
     pub binary: String,
     pub release_channel: String,
     pub commit_sha: String,
@@ -195,6 +230,16 @@ pub struct InitCrashHandler {
 pub struct CrashPanic {
     pub message: String,
     pub span: String,
+}
+
+/// The Sentry field identifying the crashing user, which the uploader falls
+/// back to filling in itself when a session never reported one.
+pub const SENTRY_USER_ID: &str = "sentry[user][id]";
+
+#[derive(Debug, Clone)]
+pub struct UserInfo {
+    pub metrics_id: Option<String>,
+    pub is_staff: Option<bool>,
 }
 
 fn send_crash_server_message(crash_client: &Arc<Client>, message: CrashServerMessage) {
@@ -215,43 +260,178 @@ pub fn set_gpu_info(crash_client: &Arc<Client>, specs: GpuSpecs) {
     send_crash_server_message(crash_client, CrashServerMessage::GPUInfo(specs));
 }
 
+pub fn set_user_info(crash_client: &Arc<Client>, info: UserInfo) {
+    set_tags(
+        crash_client,
+        [
+            (SENTRY_USER_ID, info.metrics_id),
+            (
+                "sentry[user][is_staff]",
+                info.is_staff.map(|is_staff| is_staff.to_string()),
+            ),
+        ],
+    );
+}
+
+/// Attaches a value to every crash this session produces from now on, or clears
+/// it when `value` is `None`. A later call with the same key replaces the
+/// earlier value, so independent callers can each track state that changes
+/// during a session without coordinating.
+///
+/// `key` is the Sentry submission field to upload the value under, such as
+/// `sentry[user][username]` or any name under `sentry[tags]`, which is why the
+/// value reaches Sentry without the crash handler modelling what it means.
+pub fn set_tag(crash_client: &Arc<Client>, key: impl Into<String>, value: Option<String>) {
+    set_tags(crash_client, [(key, value)]);
+}
+
+/// Applies several tag updates as one crash-handler message, so a crash cannot
+/// observe part of a logical state change.
+pub fn set_tags<K>(crash_client: &Arc<Client>, tags: impl IntoIterator<Item = (K, Option<String>)>)
+where
+    K: Into<String>,
+{
+    let tags = tags
+        .into_iter()
+        .map(|(key, value)| (key.into(), value))
+        .collect::<Vec<_>>();
+    debug_assert!(
+        tags.iter().all(|(key, _)| key.starts_with("sentry[")),
+        "crash tag keys must be Sentry submission fields"
+    );
+    send_crash_server_message(crash_client, CrashServerMessage::SetTags(tags));
+}
+
+/// Requests an orderly exit from the crash-handler sidecar.
+pub fn shutdown_crash_handler(crash_client: &Arc<Client>) {
+    send_crash_server_message(crash_client, CrashServerMessage::Shutdown);
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 enum CrashServerMessage {
     Init(InitCrashHandler),
     Panic(CrashPanic),
     GPUInfo(GpuSpecs),
+    SetTags(Vec<(String, Option<String>)>),
+    AbortMessageLocation(AbortMessageLocation),
+    Shutdown,
 }
 
-fn persist_minidump(path: &Path) -> io::Result<()> {
-    let source = File::open(path)?;
-    let compressed_path = path.with_extension("zstd");
-    let destination = File::create(&compressed_path)?;
-    zstd::stream::copy_encode(source, destination, 0)?;
-    fs::rename(&compressed_path, path)?;
-    Ok(())
+/// glibc records the diagnostic it prints just before aborting (malloc integrity
+/// failures like "free(): invalid pointer", assertion failures, stack-smashing
+/// reports) in the private global `__abort_msg`, specifically so it can be
+/// recovered post-mortem. Resolve its address here, in a safe context at startup.
+/// The symbol is only exported at the GLIBC_PRIVATE version, which plain `dlsym`
+/// won't resolve, and it has no stability guarantee, so a null result (e.g. musl,
+/// or a future glibc removing it) just disables this diagnostic.
+#[cfg(all(target_os = "linux", target_env = "gnu"))]
+fn abort_message_address() -> Option<u64> {
+    let ptr = unsafe {
+        libc::dlvsym(
+            libc::RTLD_DEFAULT,
+            c"__abort_msg".as_ptr(),
+            c"GLIBC_PRIVATE".as_ptr(),
+        )
+    };
+    std::ptr::NonNull::new(ptr).map(|ptr| ptr.as_ptr() as u64)
 }
 
-fn write_crash_metadata(logs_dir: &Path, crash_info: &CrashInfo) -> io::Result<PathBuf> {
-    let path = logs_dir
-        .join(&crash_info.init.session_id)
-        .with_extension("json");
-    let data = serde_json::to_vec(crash_info).map_err(io::Error::other)?;
-    fs::write(&path, data)?;
-    Ok(path)
+/// Read the crashed process's abort diagnostic. `__abort_msg` points to a
+/// `struct abort_msg_s { unsigned int size; char msg[]; }` that glibc allocates
+/// with mmap so that it stays intact even when the heap is corrupt. `size` is
+/// the total byte size of that mapping (header included, rounded up to whole
+/// pages), not the message length; the message itself is NUL-terminated.
+#[cfg(target_os = "linux")]
+fn read_abort_message(location: AbortMessageLocation) -> Option<String> {
+    let pointer_bytes = read_process_memory(location.pid, location.address, size_of::<usize>())?;
+    let message_address = usize::from_ne_bytes(pointer_bytes.try_into().ok()?) as u64;
+    if message_address == 0 {
+        return None;
+    }
+    let size_bytes = read_process_memory(location.pid, message_address, size_of::<u32>())?;
+    let size = u32::from_ne_bytes(size_bytes.try_into().ok()?);
+    let message_bytes = read_process_memory(
+        location.pid,
+        message_address + size_of::<u32>() as u64,
+        abort_message_read_len(size)?,
+    )?;
+    parse_abort_message(&message_bytes)
+}
+
+/// How many message bytes to read given the `size` field of glibc's
+/// `abort_msg_s`. `size` holds the total size of the mmap'd allocation, so a
+/// value that isn't a whole number of pages means the layout has changed and
+/// we shouldn't trust it. Reading is capped at (one page minus the header),
+/// which both bounds the work and ensures the read never extends past the end
+/// of the mapping.
+#[cfg(any(target_os = "linux", test))]
+fn abort_message_read_len(size: u32) -> Option<usize> {
+    // Every Linux page size (4 KiB, 16 KiB, 64 KiB, ...) is a multiple of 4 KiB.
+    const PAGE_MULTIPLE: usize = 4096;
+    const MAX_READ: usize = 4096;
+
+    let size = size as usize;
+    if size == 0 || !size.is_multiple_of(PAGE_MULTIPLE) {
+        log::warn!("__abort_msg size field {size} is not page-rounded; layout may have changed");
+        return None;
+    }
+    Some(size.min(MAX_READ) - size_of::<u32>())
+}
+
+/// The message is NUL-terminated inside a zero-filled mapping, so truncate at
+/// the first NUL; `trim` alone would keep the padding, since NUL is not
+/// whitespace.
+#[cfg(any(target_os = "linux", test))]
+fn parse_abort_message(bytes: &[u8]) -> Option<String> {
+    let len = bytes
+        .iter()
+        .position(|&byte| byte == 0)
+        .unwrap_or(bytes.len());
+    let message = String::from_utf8_lossy(&bytes[..len]).trim().to_string();
+    (!message.is_empty()).then_some(message)
+}
+
+#[cfg(target_os = "linux")]
+fn read_process_memory(pid: u32, address: u64, len: usize) -> Option<Vec<u8>> {
+    let mut buffer = vec![0u8; len];
+    let local = libc::iovec {
+        iov_base: buffer.as_mut_ptr().cast(),
+        iov_len: len,
+    };
+    let remote = libc::iovec {
+        iov_base: address as *mut libc::c_void,
+        iov_len: len,
+    };
+    let bytes_read =
+        unsafe { libc::process_vm_readv(pid as libc::pid_t, &local, 1, &remote, 1, 0) };
+    if bytes_read < 0 {
+        log::warn!(
+            "process_vm_readv of {len} bytes at {address:#x} in pid {pid} failed: {}",
+            io::Error::last_os_error()
+        );
+        return None;
+    }
+    if bytes_read as usize != len {
+        log::warn!(
+            "process_vm_readv short read at {address:#x} in pid {pid}: {bytes_read} of {len} bytes"
+        );
+        return None;
+    }
+    Some(buffer)
 }
 
 impl minidumper::ServerHandler for CrashServer {
     fn create_minidump_file(&self) -> Result<(File, PathBuf), io::Error> {
-        let initialization_params = self.initialization_params.lock();
-        let initialization_params = initialization_params.as_ref().ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "missing crash initialization data",
-            )
-        })?;
         let dump_path = self
             .logs_dir
-            .join(&initialization_params.session_id)
+            .join(
+                &self
+                    .initialization_params
+                    .lock()
+                    .as_ref()
+                    .expect("Missing initialization data")
+                    .session_id,
+            )
             .with_extension("dmp");
         let file = File::create(&dump_path)?;
         Ok((file, dump_path))
@@ -261,18 +441,15 @@ impl minidumper::ServerHandler for CrashServer {
         let minidump_error = match result {
             Ok(MinidumpBinary { mut file, path, .. }) => {
                 use io::Write;
-                let flush_result = file.flush();
+                file.flush().ok();
+                // TODO: clean this up once https://github.com/EmbarkStudios/crash-handling/issues/101 is addressed
                 drop(file);
-                match flush_result.and_then(|()| persist_minidump(&path)) {
-                    Ok(()) => None,
-                    Err(error) => {
-                        log::error!(
-                            "Failed to persist local minidump at {}: {error}",
-                            path.display()
-                        );
-                        Some(error.to_string())
-                    }
-                }
+                let original_file = File::open(&path).unwrap();
+                let compressed_path = path.with_extension("zstd");
+                let compressed_file = File::create(&compressed_path).unwrap();
+                zstd::stream::copy_encode(original_file, compressed_file, 0).ok();
+                fs::rename(&compressed_path, path).unwrap();
+                None
             }
             Err(e) => Some(format!("{e:?}")),
         };
@@ -289,35 +466,41 @@ impl minidumper::ServerHandler for CrashServer {
             }
         };
 
-        let Some(init) = self.initialization_params.lock().clone() else {
-            log::error!("Cannot write crash metadata without initialization data");
-            return LoopAction::Exit;
-        };
+        // The crashed process is still alive at this point: it stays parked in
+        // its signal handler until the server acknowledges the dump request,
+        // which happens after this callback returns.
+        #[cfg(target_os = "linux")]
+        let abort_message = (*self.abort_message_location.lock()).and_then(read_abort_message);
+        #[cfg(not(target_os = "linux"))]
+        let abort_message = None;
+
         let crash_info = CrashInfo {
-            init,
+            init: self
+                .initialization_params
+                .lock()
+                .clone()
+                .expect("not initialized"),
             panic: self.panic_info.lock().clone(),
             minidump_error,
+            abort_message,
             active_gpu: self.active_gpu.lock().clone(),
             gpus,
+            tags: self.tags.lock().clone(),
         };
-        if let Err(error) = write_crash_metadata(&self.logs_dir, &crash_info) {
-            log::error!(
-                "Failed to write local crash metadata for session {}: {error}",
-                crash_info.init.session_id
-            );
-        }
+
+        let crash_data_path = self
+            .logs_dir
+            .join(&crash_info.init.session_id)
+            .with_extension("json");
+
+        fs::write(crash_data_path, serde_json::to_vec(&crash_info).unwrap()).ok();
 
         LoopAction::Exit
     }
 
     fn on_message(&self, _: u32, buffer: Vec<u8>) {
-        let message: CrashServerMessage = match serde_json::from_slice(&buffer) {
-            Ok(message) => message,
-            Err(error) => {
-                log::error!("Ignoring invalid crash server message: {error}");
-                return;
-            }
-        };
+        let message: CrashServerMessage =
+            serde_json::from_slice(&buffer).expect("invalid init data");
         match message {
             CrashServerMessage::Init(init_data) => {
                 self.initialization_params.lock().replace(init_data);
@@ -327,6 +510,25 @@ impl minidumper::ServerHandler for CrashServer {
             }
             CrashServerMessage::GPUInfo(gpu_specs) => {
                 self.active_gpu.lock().replace(gpu_specs);
+            }
+            CrashServerMessage::SetTags(updates) => {
+                let mut tags = self.tags.lock();
+                for (key, value) in updates {
+                    match value {
+                        Some(value) => {
+                            tags.insert(key, value);
+                        }
+                        None => {
+                            tags.remove(&key);
+                        }
+                    }
+                }
+            }
+            CrashServerMessage::AbortMessageLocation(location) => {
+                self.abort_message_location.lock().replace(location);
+            }
+            CrashServerMessage::Shutdown => {
+                self.shutdown.store(true, Ordering::SeqCst);
             }
         }
     }
@@ -343,7 +545,7 @@ impl minidumper::ServerHandler for CrashServer {
 
 /// Rust's string-slicing panics embed the user's string content in the message,
 /// e.g. "byte index 4 is out of bounds of `a`". Strip that suffix so we
-/// avoid retaining arbitrary user text in local crash metadata.
+/// don't upload arbitrary user text in crash reports.
 fn strip_user_string_from_panic(message: &str) -> String {
     const STRING_PANIC_PREFIXES: &[&str] = &[
         // Older rustc (pre-1.95):
@@ -393,10 +595,7 @@ pub fn panic_hook(crash_client: Arc<Client>, message: &str, location: Option<&Lo
         // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
         CrashHandler.simulate_exception(Some(234)); // (MORE_DATA_AVAILABLE)
     }
-    #[cfg(not(target_os = "windows"))]
-    {
-        std::process::abort();
-    }
+    std::process::abort();
 }
 
 #[cfg(target_os = "macos")]
@@ -530,6 +729,9 @@ pub fn crash_server(socket: &Path, logs_dir: PathBuf) {
             Box::new(CrashServer {
                 initialization_params: Mutex::default(),
                 panic_info: Mutex::default(),
+                tags: Mutex::default(),
+                abort_message_location: Mutex::default(),
+                shutdown: shutdown.clone(),
                 has_connection,
                 active_gpu: Mutex::default(),
                 logs_dir,
@@ -544,70 +746,186 @@ pub fn crash_server(socket: &Path, logs_dir: PathBuf) {
 mod tests {
     use super::*;
 
+    /// Clearing a tag has to remove it rather than record an empty value,
+    /// because that is how an application withdraws identifying state from
+    /// crashes it has not produced yet.
     #[test]
-    fn init_defers_startup_work_until_the_returned_future_is_polled() {
-        let socket_path_resolved = Arc::new(AtomicBool::new(false));
-        let future = init(
-            InitCrashHandler {
-                session_id: "session".to_owned(),
-                dez_version: "1.2.3".to_owned(),
-                binary: "dez".to_owned(),
-                release_channel: "stable".to_owned(),
-                commit_sha: "abc123".to_owned(),
-            },
-            |_| {},
-            {
-                let socket_path_resolved = socket_path_resolved.clone();
-                move |_| {
-                    socket_path_resolved.store(true, Ordering::SeqCst);
-                    PathBuf::from("unused")
-                }
-            },
-            |_| async {},
+    fn setting_tags_updates_and_removes_values() {
+        let server = test_crash_server();
+
+        server.receive(CrashServerMessage::SetTags(vec![
+            (SENTRY_USER_ID.to_string(), Some("metrics-1".to_string())),
+            (
+                "sentry[user][is_staff]".to_string(),
+                Some("true".to_string()),
+            ),
+            (
+                "sentry[tags][custom]".to_string(),
+                Some("first".to_string()),
+            ),
+            (
+                "sentry[tags][custom]".to_string(),
+                Some("second".to_string()),
+            ),
+        ]));
+        assert_eq!(
+            server.tags.lock().clone(),
+            BTreeMap::from([
+                (SENTRY_USER_ID.to_string(), "metrics-1".to_string()),
+                ("sentry[user][is_staff]".to_string(), "true".to_string()),
+                ("sentry[tags][custom]".to_string(), "second".to_string()),
+            ])
         );
 
-        assert!(!socket_path_resolved.load(Ordering::SeqCst));
-        drop(future);
+        server.receive(CrashServerMessage::SetTags(vec![
+            (SENTRY_USER_ID.to_string(), None),
+            ("sentry[user][is_staff]".to_string(), None),
+        ]));
+        assert_eq!(
+            server.tags.lock().clone(),
+            BTreeMap::from([("sentry[tags][custom]".to_string(), "second".to_string())])
+        );
+    }
+
+    /// A crash is reported by the build that starts next, so an upgrade always
+    /// reads crash data written by the previous build. Tags were introduced
+    /// after `user_info`, and dropping a stale identity is acceptable, but
+    /// failing to parse would discard the whole crash.
+    #[test]
+    fn crash_info_written_before_tags_existed_still_parses() {
+        let crash_info: CrashInfo = serde_json::from_str(
+            r#"{
+                "init": {
+                    "session_id": "session-1",
+                    "zed_version": "1.2.3",
+                    "binary": "zed",
+                    "release_channel": "stable",
+                    "commit_sha": "abc123"
+                },
+                "panic": null,
+                "minidump_error": null,
+                "gpus": [],
+                "active_gpu": null,
+                "user_info": { "metrics_id": "metrics-1", "is_staff": true }
+            }"#,
+        )
+        .expect("crash data from an older build must still parse");
+
+        assert_eq!(crash_info.init.session_id, "session-1");
+        assert!(crash_info.tags.is_empty());
     }
 
     #[test]
-    fn persists_local_crash_artifacts_without_user_identity() -> anyhow::Result<()> {
-        let directory = tempfile::tempdir()?;
-        let dump_path = directory.path().join("session.dmp");
-        fs::write(&dump_path, b"local minidump")?;
+    fn abort_message_read_len_requires_page_rounded_total() {
+        assert_eq!(abort_message_read_len(0), None);
+        // A message length rather than a mapping total means the glibc layout
+        // has changed out from under us.
+        assert_eq!(abort_message_read_len(23), None);
+        assert_eq!(abort_message_read_len(4097), None);
+        // The read must stay within the mapping: one page minus the header.
+        assert_eq!(abort_message_read_len(4096), Some(4092));
+        // Larger totals (long messages, larger page sizes) are clamped.
+        assert_eq!(abort_message_read_len(8192), Some(4092));
+        assert_eq!(abort_message_read_len(65536), Some(4092));
+    }
 
-        persist_minidump(&dump_path)?;
-        let decoded = zstd::stream::decode_all(File::open(&dump_path)?)?;
-        assert_eq!(decoded, b"local minidump");
+    #[test]
+    fn parse_abort_message_truncates_at_nul() {
+        let mut buffer = b"free(): invalid pointer\n\0".to_vec();
+        buffer.resize(4092, 0);
+        assert_eq!(
+            parse_abort_message(&buffer),
+            Some("free(): invalid pointer".to_string())
+        );
+    }
 
-        let crash_info = CrashInfo {
-            init: InitCrashHandler {
-                session_id: "session".to_owned(),
-                dez_version: "1.2.3".to_owned(),
-                binary: "dez".to_owned(),
-                release_channel: "stable".to_owned(),
-                commit_sha: "abc123".to_owned(),
-            },
-            panic: Some(CrashPanic {
-                message: "test panic".to_owned(),
-                span: "crates/dez/src/main.rs:1".to_owned(),
-            }),
-            minidump_error: None,
-            gpus: Vec::new(),
-            active_gpu: None,
-        };
+    #[test]
+    fn parse_abort_message_handles_missing_nul() {
+        assert_eq!(
+            parse_abort_message(b"double free or corruption (out)"),
+            Some("double free or corruption (out)".to_string())
+        );
+    }
 
-        let metadata_path = write_crash_metadata(directory.path(), &crash_info)?;
-        let metadata: serde_json::Value = serde_json::from_slice(&fs::read(metadata_path)?)?;
-        assert_eq!(metadata["init"]["dez_version"], "1.2.3");
-        assert_eq!(metadata["init"]["binary"], "dez");
-        assert_eq!(metadata["init"]["release_channel"], "stable");
-        assert_eq!(metadata["init"]["commit_sha"], "abc123");
-        assert_eq!(metadata["panic"]["message"], "test panic");
-        assert!(metadata.get("user_info").is_none());
-        assert!(metadata.get("metrics_id").is_none());
-        assert!(metadata.get("installation_id").is_none());
+    #[test]
+    fn parse_abort_message_rejects_empty() {
+        assert_eq!(parse_abort_message(&[]), None);
+        assert_eq!(parse_abort_message(&[0; 16]), None);
+        assert_eq!(parse_abort_message(b"\n \0garbage after nul"), None);
+    }
 
-        Ok(())
+    /// End-to-end check of `read_abort_message` against a synthetic
+    /// `abort_msg_s` in this very process (`process_vm_readv` may always read
+    /// one's own memory). The message page is followed by a `PROT_NONE` guard
+    /// page so the test fails if the read ever extends past the mapping glibc
+    /// would have allocated.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn read_abort_message_reads_glibc_layout_from_a_live_process() {
+        let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
+        unsafe {
+            let mapping = libc::mmap(
+                std::ptr::null_mut(),
+                2 * page_size,
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_ANON | libc::MAP_PRIVATE,
+                -1,
+                0,
+            );
+            assert_ne!(mapping, libc::MAP_FAILED);
+            assert_eq!(
+                libc::mprotect(
+                    mapping.cast::<u8>().add(page_size).cast(),
+                    page_size,
+                    libc::PROT_NONE
+                ),
+                0
+            );
+
+            mapping.cast::<u32>().write(page_size as u32);
+            let message = b"free(): invalid pointer\n\0";
+            std::ptr::copy_nonoverlapping(
+                message.as_ptr(),
+                mapping.cast::<u8>().add(size_of::<u32>()),
+                message.len(),
+            );
+
+            // Stands in for the `__abort_msg` global: a pointer variable whose
+            // address we hand to the reader.
+            let abort_msg: *mut libc::c_void = mapping;
+            let location = AbortMessageLocation {
+                pid: process::id(),
+                address: (&raw const abort_msg) as u64,
+            };
+            assert_eq!(
+                read_abort_message(location),
+                Some("free(): invalid pointer".to_string())
+            );
+
+            libc::munmap(mapping, 2 * page_size);
+        }
+    }
+
+    impl CrashServer {
+        fn receive(&self, message: CrashServerMessage) {
+            use minidumper::ServerHandler as _;
+
+            let message =
+                serde_json::to_vec(&message).expect("failed to serialize a crash server message");
+            self.on_message(0, message);
+        }
+    }
+
+    fn test_crash_server() -> CrashServer {
+        CrashServer {
+            initialization_params: Mutex::default(),
+            panic_info: Mutex::default(),
+            active_gpu: Mutex::default(),
+            tags: Mutex::default(),
+            abort_message_location: Mutex::default(),
+            shutdown: Arc::default(),
+            has_connection: Arc::default(),
+            logs_dir: PathBuf::new(),
+        }
     }
 }

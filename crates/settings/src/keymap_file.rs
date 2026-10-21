@@ -66,7 +66,7 @@ pub struct KeymapSection {
     /// `Workspace`, the bindings will be active in that context. Boolean expressions like `X && Y`,
     /// `X || Y`, `!X` are also supported. Some more complex logic including checking OS and the
     /// current file extension are also supported - see [the
-    /// documentation](https://github.com/Oreoro/dez/blob/main/docs/src/key-bindings.md#contexts) for more details.
+    /// documentation](https://zed.dev/docs/key-bindings#contexts) for more details.
     #[serde(default)]
     pub context: String,
     /// This option enables specifying keys based on their position on a QWERTY keyboard, by using
@@ -432,7 +432,7 @@ impl KeymapFile {
             Err(InvalidKeystrokeError { keystroke }) => {
                 return Err(format!(
                     "invalid keystroke {}. {}",
-                    MarkdownInlineCode(&format!("\"{}\"", &keystroke)),
+                    MarkdownInlineCode(&format!("\"{keystroke}\"")),
                     KEYSTROKE_PARSE_EXPECTED_MESSAGE
                 ));
             }
@@ -485,7 +485,7 @@ impl KeymapFile {
         .map_err(|InvalidKeystrokeError { keystroke }| {
             format!(
                 "invalid keystroke {}. {}",
-                MarkdownInlineCode(&format!("\"{}\"", &keystroke)),
+                MarkdownInlineCode(&format!("\"{keystroke}\"")),
                 KEYSTROKE_PARSE_EXPECTED_MESSAGE
             )
         })
@@ -566,14 +566,14 @@ impl KeymapFile {
             Err(ActionBuildError::NotFound { name }) => {
                 return Err(format!(
                     "didn't find an action named {}.",
-                    MarkdownInlineCode(&format!("\"{}\"", &name))
+                    MarkdownInlineCode(&format!("\"{name}\""))
                 ));
             }
             Err(ActionBuildError::BuildError { name, error }) => match action_input_string {
                 Some(action_input_string) => {
                     return Err(format!(
                         "can't build {} action from input value {}: {}",
-                        MarkdownInlineCode(&format!("\"{}\"", &name)),
+                        MarkdownInlineCode(&format!("\"{name}\"")),
                         MarkdownInlineCode(&action_input_string),
                         MarkdownEscaped(&error.to_string())
                     ));
@@ -581,7 +581,7 @@ impl KeymapFile {
                 None => {
                     return Err(format!(
                         "can't build {} action - it requires input data via [name, input]: {}",
-                        MarkdownInlineCode(&format!("\"{}\"", &name)),
+                        MarkdownInlineCode(&format!("\"{name}\"")),
                         MarkdownEscaped(&error.to_string())
                     ));
                 }
@@ -893,6 +893,7 @@ impl KeymapFile {
         mut keymap_contents: String,
         tab_size: usize,
         keyboard_mapper: &dyn gpui::PlatformKeyboardMapper,
+        deprecated_aliases: &HashMap<&'static str, &'static str>,
     ) -> Result<String> {
         // When replacing or removing a non-user binding, we may need to write an unbind entry
         // to suppress the original default binding.
@@ -937,9 +938,13 @@ impl KeymapFile {
                 let target_action_value = target
                     .action_value()
                     .context("Failed to generate target action JSON value")?;
-                let Some(binding_location) =
-                    find_binding(&keymap, target, &target_action_value, keyboard_mapper)
-                else {
+                let Some(binding_location) = find_binding(
+                    &keymap,
+                    target,
+                    &target_action_value,
+                    keyboard_mapper,
+                    deprecated_aliases,
+                ) else {
                     anyhow::bail!("Failed to find keybinding to remove");
                 };
                 let is_only_binding = binding_location.is_only_entry_in_section(&keymap);
@@ -973,9 +978,13 @@ impl KeymapFile {
                 .action_value()
                 .context("Failed to generate source action JSON value")?;
 
-            if let Some(binding_location) =
-                find_binding(&keymap, &target, &target_action_value, keyboard_mapper)
-            {
+            if let Some(binding_location) = find_binding(
+                &keymap,
+                &target,
+                &target_action_value,
+                keyboard_mapper,
+                deprecated_aliases,
+            ) {
                 if target.context == source.context {
                     // if we are only changing the keybinding (common case)
                     // not the context, etc. Then just update the binding in place
@@ -1072,7 +1081,7 @@ impl KeymapFile {
             let use_key_equivalents = from.and_then(|from| {
                 let action_value = from.action_value().context("Failed to serialize action value. `use_key_equivalents` on new keybinding may be incorrect.").log_err()?;
                 let binding_location =
-                    find_binding(&keymap, &from, &action_value, keyboard_mapper)?;
+                    find_binding(&keymap, &from, &action_value, keyboard_mapper, deprecated_aliases)?;
                 Some(keymap.0[binding_location.index].use_key_equivalents)
             }).unwrap_or(false);
             if use_key_equivalents {
@@ -1122,6 +1131,7 @@ impl KeymapFile {
             target: &KeybindUpdateTarget<'a>,
             target_action_value: &Value,
             keyboard_mapper: &dyn gpui::PlatformKeyboardMapper,
+            deprecated_aliases: &HashMap<&'static str, &'static str>,
         ) -> Option<BindingLocation<'b>> {
             let target_context_parsed =
                 KeyBindingContextPredicate::parse(target.context.unwrap_or("")).ok();
@@ -1139,6 +1149,7 @@ impl KeymapFile {
                     target,
                     target_action_value,
                     keyboard_mapper,
+                    deprecated_aliases,
                     |action| &action.0,
                 ) {
                     return Some(binding_location);
@@ -1151,6 +1162,7 @@ impl KeymapFile {
                     target,
                     target_action_value,
                     keyboard_mapper,
+                    deprecated_aliases,
                     |action| &action.0,
                 ) {
                     return Some(binding_location);
@@ -1166,6 +1178,7 @@ impl KeymapFile {
             target: &KeybindUpdateTarget<'a>,
             target_action_value: &Value,
             keyboard_mapper: &dyn gpui::PlatformKeyboardMapper,
+            deprecated_aliases: &HashMap<&'static str, &'static str>,
             action_value: impl Fn(&T) -> &Value,
         ) -> Option<BindingLocation<'b>> {
             let entries = entries?;
@@ -1192,7 +1205,11 @@ impl KeymapFile {
                 {
                     continue;
                 }
-                if action_value(action) != target_action_value {
+                if !action_value_matches_target(
+                    action_value(action),
+                    target_action_value,
+                    deprecated_aliases,
+                ) {
                     continue;
                 }
                 return Some(BindingLocation {
@@ -1202,6 +1219,40 @@ impl KeymapFile {
                 });
             }
             None
+        }
+
+        /// Compares a keymap file entry's action value against the target action
+        /// value. The target is built from a loaded binding's canonical action
+        /// name, while the file entry may still use a deprecated alias.
+        fn action_value_matches_target(
+            action_value: &Value,
+            target_action_value: &Value,
+            deprecated_aliases: &HashMap<&'static str, &'static str>,
+        ) -> bool {
+            if action_value == target_action_value {
+                return true;
+            }
+            let (name, arguments) = match action_value {
+                Value::String(name) => (name.as_str(), None),
+                Value::Array(items) => match items.as_slice() {
+                    [Value::String(name), arguments] => (name.as_str(), Some(arguments)),
+                    _ => return false,
+                },
+                _ => return false,
+            };
+            let Some(&preferred_name) = deprecated_aliases.get(name) else {
+                return false;
+            };
+            match target_action_value {
+                Value::String(target_name) => target_name == preferred_name && arguments.is_none(),
+                Value::Array(items) => match items.as_slice() {
+                    [Value::String(target_name), target_arguments] => {
+                        target_name == preferred_name && arguments == Some(target_arguments)
+                    }
+                    _ => false,
+                },
+                _ => false,
+            }
         }
 
         #[derive(Copy, Clone)]
@@ -1255,6 +1306,47 @@ pub enum KeybindUpdateOperation<'a> {
     },
 }
 
+impl KeybindUpdateOperation<'_> {
+    pub fn generate_telemetry(
+        &self,
+    ) -> (
+        // The keybind that is created
+        String,
+        // The keybinding that was removed
+        String,
+        // The source of the keybinding
+        String,
+    ) {
+        let (new_binding, removed_binding, source) = match &self {
+            KeybindUpdateOperation::Replace {
+                source,
+                target,
+                target_keybind_source,
+            } => (Some(source), Some(target), Some(*target_keybind_source)),
+            KeybindUpdateOperation::Add { source, .. } => (Some(source), None, None),
+            KeybindUpdateOperation::Remove {
+                target,
+                target_keybind_source,
+            } => (None, Some(target), Some(*target_keybind_source)),
+        };
+
+        let new_binding = new_binding
+            .map(KeybindUpdateTarget::telemetry_string)
+            .unwrap_or("null".to_owned());
+        let removed_binding = removed_binding
+            .map(KeybindUpdateTarget::telemetry_string)
+            .unwrap_or("null".to_owned());
+
+        let source = source
+            .as_ref()
+            .map(KeybindSource::name)
+            .map(ToOwned::to_owned)
+            .unwrap_or("null".to_owned());
+
+        (new_binding, removed_binding, source)
+    }
+}
+
 impl<'a> KeybindUpdateOperation<'a> {
     pub fn add(source: KeybindUpdateTarget<'a>) -> Self {
         Self::Add { source, from: None }
@@ -1297,6 +1389,16 @@ impl<'a> KeybindUpdateTarget<'a> {
         }
         keystrokes.pop();
         keystrokes
+    }
+
+    fn telemetry_string(&self) -> String {
+        format!(
+            "action_name: {}, context: {}, action_arguments: {}, keystrokes: {}",
+            self.action_name,
+            self.context.unwrap_or("global"),
+            self.action_arguments.unwrap_or("none"),
+            self.keystrokes_unparsed()
+        )
     }
 }
 
@@ -1474,6 +1576,7 @@ impl Action for ActionSequence {
 
 #[cfg(test)]
 mod tests {
+    use collections::HashMap;
     use gpui::{Action, App, DummyKeyboardMapper, KeybindingKeystroke, Keystroke, Unbind};
     use serde_json::Value;
     use unindent::Unindent;
@@ -1623,7 +1726,7 @@ mod tests {
                 [
                     {
                         "unbind": {
-                            "ctrl-a": ["dez::Unbind", "test_keymap_file::StringAction"]
+                            "ctrl-a": ["zed::Unbind", "test_keymap_file::StringAction"]
                         }
                     }
                 ]
@@ -1638,7 +1741,7 @@ mod tests {
                 assert!(
                     error_message
                         .0
-                        .contains("can't use `\"dez::Unbind\"` as an unbind target.")
+                        .contains("can't use `\"zed::Unbind\"` as an unbind target.")
                 );
             }
             other => panic!("expected SomeFailedToLoad, got {other:?}"),
@@ -1691,11 +1794,23 @@ mod tests {
         operation: KeybindUpdateOperation,
         expected: impl ToString,
     ) {
+        check_keymap_update_with_deprecated_aliases(input, operation, expected, &[]);
+    }
+
+    #[track_caller]
+    fn check_keymap_update_with_deprecated_aliases(
+        input: impl ToString,
+        operation: KeybindUpdateOperation,
+        expected: impl ToString,
+        deprecated_aliases: &[(&'static str, &'static str)],
+    ) {
+        let deprecated_aliases = HashMap::from_iter(deprecated_aliases.iter().copied());
         let result = KeymapFile::update_keybinding(
             operation,
             input.to_string(),
             4,
             &gpui::DummyKeyboardMapper,
+            &deprecated_aliases,
         )
         .expect("Update succeeded");
         pretty_assertions::assert_eq!(expected.to_string(), result);
@@ -1723,14 +1838,14 @@ mod tests {
             "[]",
             KeybindUpdateOperation::add(KeybindUpdateTarget {
                 keystrokes: &parse_keystrokes("ctrl-a"),
-                action_name: "dez::SomeAction",
+                action_name: "zed::SomeAction",
                 context: None,
                 action_arguments: None,
             }),
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1741,14 +1856,14 @@ mod tests {
             "[]",
             KeybindUpdateOperation::add(KeybindUpdateTarget {
                 keystrokes: &parse_keystrokes("\\ a"),
-                action_name: "dez::SomeAction",
+                action_name: "zed::SomeAction",
                 context: None,
                 action_arguments: None,
             }),
             r#"[
                 {
                     "bindings": {
-                        "\\ a": "dez::SomeAction"
+                        "\\ a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1759,14 +1874,14 @@ mod tests {
             "[]",
             KeybindUpdateOperation::add(KeybindUpdateTarget {
                 keystrokes: &parse_keystrokes("ctrl-a"),
-                action_name: "dez::SomeAction",
+                action_name: "zed::SomeAction",
                 context: None,
                 action_arguments: Some(""),
             }),
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1777,26 +1892,26 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
             .unindent(),
             KeybindUpdateOperation::add(KeybindUpdateTarget {
                 keystrokes: &parse_keystrokes("ctrl-b"),
-                action_name: "dez::SomeOtherAction",
+                action_name: "zed::SomeOtherAction",
                 context: None,
                 action_arguments: None,
             }),
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
                     "bindings": {
-                        "ctrl-b": "dez::SomeOtherAction"
+                        "ctrl-b": "zed::SomeOtherAction"
                     }
                 }
             ]"#
@@ -1807,27 +1922,27 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
             .unindent(),
             KeybindUpdateOperation::add(KeybindUpdateTarget {
                 keystrokes: &parse_keystrokes("ctrl-b"),
-                action_name: "dez::SomeOtherAction",
+                action_name: "zed::SomeOtherAction",
                 context: None,
                 action_arguments: Some(r#"{"foo": "bar"}"#),
             }),
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
                     "bindings": {
                         "ctrl-b": [
-                            "dez::SomeOtherAction",
+                            "zed::SomeOtherAction",
                             {
                                 "foo": "bar"
                             }
@@ -1842,28 +1957,28 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
             .unindent(),
             KeybindUpdateOperation::add(KeybindUpdateTarget {
                 keystrokes: &parse_keystrokes("ctrl-b"),
-                action_name: "dez::SomeOtherAction",
-                context: Some("dez > Editor && some_condition = true"),
+                action_name: "zed::SomeOtherAction",
+                context: Some("Zed > Editor && some_condition = true"),
                 action_arguments: Some(r#"{"foo": "bar"}"#),
             }),
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
-                    "context": "dez > Editor && some_condition = true",
+                    "context": "Zed > Editor && some_condition = true",
                     "bindings": {
                         "ctrl-b": [
-                            "dez::SomeOtherAction",
+                            "zed::SomeOtherAction",
                             {
                                 "foo": "bar"
                             }
@@ -1878,7 +1993,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1886,13 +2001,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-b"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: None,
                     action_arguments: Some(r#"{"foo": "bar"}"#),
                 },
@@ -1901,13 +2016,13 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
                     "bindings": {
                         "ctrl-b": [
-                            "dez::SomeOtherAction",
+                            "zed::SomeOtherAction",
                             {
                                 "foo": "bar"
                             }
@@ -1916,7 +2031,7 @@ mod tests {
                 },
                 {
                     "unbind": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1929,7 +2044,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1937,13 +2052,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-a"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: None,
                     action_arguments: None,
                 },
@@ -1952,12 +2067,12 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeOtherAction"
+                        "ctrl-a": "zed::SomeOtherAction"
                     }
                 }
             ]"#
@@ -1971,7 +2086,7 @@ mod tests {
                 {
                     "context": "SomeContext",
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -1979,13 +2094,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: Some("SomeContext"),
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-b"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: Some("SomeContext"),
                     action_arguments: None,
                 },
@@ -1995,19 +2110,19 @@ mod tests {
                 {
                     "context": "SomeContext",
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
                     "context": "SomeContext",
                     "bindings": {
-                        "ctrl-b": "dez::SomeOtherAction"
+                        "ctrl-b": "zed::SomeOtherAction"
                     }
                 },
                 {
                     "context": "SomeContext",
                     "unbind": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -2018,7 +2133,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "a": "dez::SomeAction"
+                        "a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -2026,13 +2141,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-b"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: None,
                     action_arguments: Some(r#"{"foo": "bar"}"#),
                 },
@@ -2042,7 +2157,7 @@ mod tests {
                 {
                     "bindings": {
                         "ctrl-b": [
-                            "dez::SomeOtherAction",
+                            "zed::SomeOtherAction",
                             {
                                 "foo": "bar"
                             }
@@ -2057,7 +2172,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "\\ a": "dez::SomeAction"
+                        "\\ a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -2065,13 +2180,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("\\ a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("\\ b"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: None,
                     action_arguments: Some(r#"{"foo": "bar"}"#),
                 },
@@ -2081,7 +2196,7 @@ mod tests {
                 {
                     "bindings": {
                         "\\ b": [
-                            "dez::SomeOtherAction",
+                            "zed::SomeOtherAction",
                             {
                                 "foo": "bar"
                             }
@@ -2096,7 +2211,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "\\ a": "dez::SomeAction"
+                        "\\ a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -2104,13 +2219,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("\\ a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("\\ a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
@@ -2119,7 +2234,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "\\ a": "dez::SomeAction"
+                        "\\ a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -2130,7 +2245,7 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 }
             ]"#
@@ -2138,13 +2253,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-a"),
-                    action_name: "dez::SomeNonexistentAction",
+                    action_name: "zed::SomeNonexistentAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-b"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: None,
                     action_arguments: None,
                 },
@@ -2153,12 +2268,12 @@ mod tests {
             r#"[
                 {
                     "bindings": {
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                     }
                 },
                 {
                     "bindings": {
-                        "ctrl-b": "dez::SomeOtherAction"
+                        "ctrl-b": "zed::SomeOtherAction"
                     }
                 }
             ]"#
@@ -2170,7 +2285,7 @@ mod tests {
                 {
                     "bindings": {
                         // some comment
-                        "ctrl-a": "dez::SomeAction"
+                        "ctrl-a": "zed::SomeAction"
                         // some other comment
                     }
                 }
@@ -2179,13 +2294,13 @@ mod tests {
             KeybindUpdateOperation::Replace {
                 target: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-a"),
-                    action_name: "dez::SomeAction",
+                    action_name: "zed::SomeAction",
                     context: None,
                     action_arguments: None,
                 },
                 source: KeybindUpdateTarget {
                     keystrokes: &parse_keystrokes("ctrl-b"),
-                    action_name: "dez::SomeOtherAction",
+                    action_name: "zed::SomeOtherAction",
                     context: None,
                     action_arguments: Some(r#"{"foo": "bar"}"#),
                 },
@@ -2196,7 +2311,7 @@ mod tests {
                     "bindings": {
                         // some comment
                         "ctrl-b": [
-                            "dez::SomeOtherAction",
+                            "zed::SomeOtherAction",
                             {
                                 "foo": "bar"
                             }
@@ -2513,6 +2628,135 @@ mod tests {
                 }
             ]"#
             .unindent(),
+        );
+    }
+
+    #[test]
+    fn test_keymap_remove_duplicate_binding() {
+        zlog::init_test();
+
+        // Repro: user created two identical bindings via the keymap editor UI,
+        // resulting in two sections with the same keystrokes and action.
+        // Deleting one of them should remove exactly one section.
+        check_keymap_update(
+            r#"
+            [
+              {
+                "bindings": {
+                  "alt-cmd-shift-c": "workspace::CopyRelativePath"
+                }
+              },
+              {
+                "bindings": {
+                  "alt-cmd-shift-c": "workspace::CopyRelativePath"
+                }
+              }
+            ]
+            "#
+            .unindent(),
+            KeybindUpdateOperation::Remove {
+                target: KeybindUpdateTarget {
+                    context: None,
+                    keystrokes: &parse_keystrokes("alt-cmd-shift-c"),
+                    action_name: "workspace::CopyRelativePath",
+                    action_arguments: None,
+                },
+                target_keybind_source: KeybindSource::User,
+            },
+            r#"
+            [
+              {
+                "bindings": {
+                  "alt-cmd-shift-c": "workspace::CopyRelativePath"
+                }
+              }
+            ]
+            "#
+            .unindent(),
+        );
+    }
+
+    #[test]
+    fn test_keymap_update_deprecated_alias_binding() {
+        zlog::init_test();
+
+        // The keymap file entry uses a deprecated alias of the action, while the
+        // update target uses the canonical name (as reported by the loaded binding).
+        let deprecated_aliases = &[("editor::CopyRelativePath", "workspace::CopyRelativePath")];
+
+        check_keymap_update_with_deprecated_aliases(
+            r#"
+            [
+              {
+                "bindings": {
+                  "alt-cmd-shift-c": "editor::CopyRelativePath",
+                  "a": "foo::Bar"
+                }
+              }
+            ]
+            "#
+            .unindent(),
+            KeybindUpdateOperation::Remove {
+                target: KeybindUpdateTarget {
+                    context: None,
+                    keystrokes: &parse_keystrokes("alt-cmd-shift-c"),
+                    action_name: "workspace::CopyRelativePath",
+                    action_arguments: None,
+                },
+                target_keybind_source: KeybindSource::User,
+            },
+            r#"
+            [
+              {
+                "bindings": {
+                  "a": "foo::Bar"
+                }
+              }
+            ]
+            "#
+            .unindent(),
+            deprecated_aliases,
+        );
+
+        // Editing an alias entry should update it in place (rewriting it with the
+        // canonical name) instead of falling back to appending a new binding.
+        check_keymap_update_with_deprecated_aliases(
+            r#"
+            [
+              {
+                "bindings": {
+                  "alt-cmd-shift-c": "editor::CopyRelativePath"
+                }
+              }
+            ]
+            "#
+            .unindent(),
+            KeybindUpdateOperation::Replace {
+                target: KeybindUpdateTarget {
+                    context: None,
+                    keystrokes: &parse_keystrokes("alt-cmd-shift-c"),
+                    action_name: "workspace::CopyRelativePath",
+                    action_arguments: None,
+                },
+                source: KeybindUpdateTarget {
+                    context: None,
+                    keystrokes: &parse_keystrokes("ctrl-alt-c"),
+                    action_name: "workspace::CopyRelativePath",
+                    action_arguments: None,
+                },
+                target_keybind_source: KeybindSource::User,
+            },
+            r#"
+            [
+              {
+                "bindings": {
+                  "ctrl-alt-c": "workspace::CopyRelativePath"
+                }
+              }
+            ]
+            "#
+            .unindent(),
+            deprecated_aliases,
         );
     }
 

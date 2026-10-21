@@ -20,9 +20,9 @@ file_icons.workspace = true
 fuzzy.workspace = true
 gpui.workspace = true
 language.workspace = true
-localization.workspace = true
 log.workspace = true
 picker.workspace = true
+picker_preview.workspace = true
 project.workspace = true
 settings.workspace = true
 text.workspace = true
@@ -37,8 +37,6 @@ gpui = { workspace = true, features = ["test-support"] }
 indoc.workspace = true
 language = { workspace = true, features = ["test-support"] }
 lsp = { workspace = true, features = ["test-support"] }
-menu.workspace = true
 project = { workspace = true, features = ["test-support"] }
 settings = { workspace = true, features = ["test-support"] }
-theme = { workspace = true, features = ["test-support"] }
 workspace = { workspace = true, features = ["test-support"] }

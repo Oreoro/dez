@@ -1,31 +1,34 @@
 use super::register_dez_scheme;
-use anyhow::{Context as _, Result};
-use gpui::{AppContext as _, AsyncApp, Context, PromptButton, PromptLevel, Window, actions};
+use anyhow::Result;
+use gpui::{AppContext as _, AsyncApp, Context, PromptLevel, Window, actions};
 use release_channel::ReleaseChannel;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use util::ResultExt;
+use workspace::notifications::simple_message_notification::MessageNotification;
 use workspace::notifications::{DetachAndPromptErr, NotificationId};
 use workspace::{Toast, Workspace};
 
 actions!(
     cli,
     [
-        /// Installs the dez CLI tool to the system PATH.
+        /// Installs the Dez CLI tool to the system PATH.
         InstallCliBinary,
     ]
 );
 
-async fn install_script(cx: &AsyncApp) -> Result<PathBuf> {
+/// Attempts to install the CLI symlink. Returns the installed path on success,
+/// or `None` if the user dismissed the macOS administrator authentication
+/// prompt. Returns an error if the install could not be completed, most
+/// commonly because the user is not an admin.
+async fn install_script(cx: &AsyncApp) -> Result<Option<PathBuf>> {
     let cli_path = cx.update(|cx| cx.path_for_auxiliary_executable("cli"))?;
     let link_path = Path::new("/usr/local/bin/dez");
-    let bin_dir_path = link_path
-        .parent()
-        .context("CLI link path has no parent directory")?;
+    let bin_dir_path = link_path.parent().unwrap();
 
     // Don't re-create symlink if it points to the same CLI binary.
     if smol::fs::read_link(link_path).await.ok().as_ref() == Some(&cli_path) {
-        return Ok(link_path.into());
+        return Ok(Some(link_path.into()));
     }
 
     // If the symlink is not there or is outdated, first try replacing it
@@ -36,12 +39,12 @@ async fn install_script(cx: &AsyncApp) -> Result<PathBuf> {
         .log_err()
         .is_some()
     {
-        return Ok(link_path.into());
+        return Ok(Some(link_path.into()));
     }
 
-    // The symlink could not be created, so use osascript with admin privileges
-    // to create it.
-    let status = smol::process::Command::new("/usr/bin/osascript")
+    // The symlink could not be created without escalating, so use osascript
+    // with admin privileges to create it.
+    let output = smol::process::Command::new("/usr/bin/osascript")
         .args([
             "-e",
             &format!(
@@ -54,49 +57,78 @@ async fn install_script(cx: &AsyncApp) -> Result<PathBuf> {
                 link_path.to_string_lossy(),
             ),
         ])
-        .stdout(smol::process::Stdio::inherit())
-        .stderr(smol::process::Stdio::inherit())
         .output()
-        .await?
-        .status;
-    anyhow::ensure!(status.success(), "error running osascript");
-    Ok(link_path.into())
+        .await?;
+
+    if output.status.success() {
+        return Ok(Some(link_path.into()));
+    }
+
+    // osascript reports "User canceled." (error -128) when the administrator
+    // prompt is dismissed. Treat that as a cancellation rather than a failure
+    // so we don't show an error the user already chose to avoid.
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if stderr.contains("User canceled") || stderr.contains("-128") {
+        return Ok(None);
+    }
+
+    // The privileged write failed, most commonly because the user is not an
+    // admin.
+    anyhow::bail!("error running osascript: {}", stderr.trim());
 }
 
 pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
-    let install_error = localization::text(cx, "install-cli-error");
+    const LINUX_PROMPT_DETAIL: &str = "The bundled Dez CLI is named `dez`. Add ~/.local/bin to your PATH when your package installs it there.\n\nFor community packages, inspect the package contents or create a `dez` alias or symlink to the packaged CLI. Dez never replaces the official `zed` command.";
+
     cx.spawn_in(window, async move |workspace, cx| {
         if cfg!(any(target_os = "linux", target_os = "freebsd")) {
-            let (title, detail, ok) = cx.update(|_, cx| {
-                (
-                    localization::text(cx, "install-cli-already"),
-                    localization::text(cx, "install-cli-linux-detail"),
-                    localization::text(cx, "common-ok"),
-                )
-            })?;
             let prompt = cx.prompt(
                 PromptLevel::Warning,
-                &title,
-                Some(&detail),
-                &[PromptButton::ok(ok)],
+                "CLI should already be installed",
+                Some(LINUX_PROMPT_DETAIL),
+                &["OK"],
             );
             cx.background_spawn(prompt).detach();
             return Ok(());
         }
-        let path = install_script(cx.deref())
-            .await
-            .context("error creating CLI symlink")?;
+        let path = match install_script(cx.deref()).await {
+            Ok(Some(path)) => path,
+            // The user dismissed the administrator prompt; nothing to do.
+            Ok(None) => return Ok(()),
+            Err(error) => {
+                log::error!("failed to install Dez CLI: {error:#}");
+                workspace.update(cx, |workspace, cx| {
+                    struct CliInstallFailed;
+
+                    workspace.show_notification(
+                        NotificationId::unique::<CliInstallFailed>(),
+                        cx,
+                        |cx| {
+                            cx.new(|cx| {
+                                MessageNotification::new(
+                                    "You can add the bundled `cli` executable to your PATH as `dez` manually.",
+                                    cx,
+                                )
+                                .with_title("Couldn't install the Dez CLI")
+                            })
+                        },
+                    );
+                })?;
+                return Ok(());
+            }
+        };
 
         workspace.update_in(cx, |workspace, _, cx| {
-            struct InstalleddezCli;
+            struct InstalledDezCli;
 
-            let mut args = localization::FluentArgs::new();
-            args.set("path", path.to_string_lossy().into_owned());
-            args.set("app", ReleaseChannel::global(cx).display_name());
             workspace.show_toast(
                 Toast::new(
-                    NotificationId::unique::<InstalleddezCli>(),
-                    localization::text_with_args(cx, "install-cli-complete", &args).to_string(),
+                    NotificationId::unique::<InstalledDezCli>(),
+                    format!(
+                        "Installed `dez` to {}. You can launch {} from your terminal.",
+                        path.to_string_lossy(),
+                        ReleaseChannel::global(cx).display_name()
+                    ),
                 ),
                 cx,
             )
@@ -104,5 +136,5 @@ pub fn install_cli_binary(window: &mut Window, cx: &mut Context<Workspace>) {
         register_dez_scheme(cx).await.log_err();
         Ok(())
     })
-    .detach_and_prompt_err(&install_error, window, cx, |_, _, _| None);
+    .detach_and_prompt_err("Cannot install the Dez CLI", window, cx, |_, _, _| None);
 }

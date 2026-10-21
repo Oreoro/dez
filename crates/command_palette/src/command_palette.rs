@@ -1,18 +1,19 @@
 mod persistence;
 
 use std::{
+    any::TypeId,
     cmp::{self, Reverse},
     collections::{HashMap, VecDeque},
     sync::Arc,
     time::Duration,
 };
 
+use client::parse_zed_link;
 use command_palette_hooks::{
     CommandInterceptItem, CommandInterceptResult, CommandPaletteFilter,
     GlobalCommandPaletteInterceptor,
 };
 
-use dez_actions::command_palette::Toggle;
 use fuzzy_nucleo::{StringMatch, StringMatchCandidate};
 use gpui::{
     Action, App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,
@@ -20,16 +21,67 @@ use gpui::{
 };
 use persistence::CommandPaletteDB;
 use picker::Direction;
-use picker::{Picker, PickerDelegate};
+use picker::{
+    Picker, PickerDelegate, PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius,
+};
 use postage::{sink::Sink, stream::Stream};
 use settings::Settings;
 use ui::{HighlightedLabel, KeyBinding, ListItem, ListItemSpacing, prelude::*};
 use util::ResultExt;
-use workspace::{ModalView, Workspace, WorkspaceSettings};
+use workspace::{
+    DesignSystemSettings, ModalView, NewCenterTerminal, NewTerminal, Workspace, WorkspaceSettings,
+};
+use zed_actions::{
+    GetMerch, OpenAccountSettings, OpenDocs, OpenStatusPage, OpenZedUrl, command_palette::Toggle,
+};
 
 pub fn init(cx: &mut App) {
     command_palette_hooks::init(cx);
+    for &namespace in product_hidden_action_namespaces(paths::APP_NAME) {
+        CommandPaletteFilter::global_mut(cx).hide_namespace(namespace);
+    }
+    let hidden_action_types = product_hidden_action_types(paths::APP_NAME);
+    CommandPaletteFilter::global_mut(cx).hide_action_types(&hidden_action_types);
     cx.observe_new(CommandPalette::register).detach();
+}
+
+fn product_hidden_action_namespaces(app_name: &str) -> &'static [&'static str] {
+    if app_name == "Zed" {
+        &[]
+    } else {
+        &["collab", "feedback", "terminal_panel"]
+    }
+}
+
+fn product_hidden_action_types(app_name: &str) -> Vec<TypeId> {
+    if app_name == "Zed" {
+        vec![
+            TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::dez::GrantWorkspaceAccess>(),
+            TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenGeminiTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenAiderTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenHerdrTerminal>(),
+        ]
+    } else {
+        vec![
+            TypeId::of::<OpenAccountSettings>(),
+            TypeId::of::<OpenDocs>(),
+            TypeId::of::<OpenStatusPage>(),
+            TypeId::of::<GetMerch>(),
+            TypeId::of::<NewCenterTerminal>(),
+            TypeId::of::<NewTerminal>(),
+            TypeId::of::<editor::actions::ToggleTabBar>(),
+        ]
+    }
 }
 
 impl ModalView for CommandPalette {}
@@ -65,124 +117,162 @@ pub fn normalize_action_query(input: &str) -> String {
     result
 }
 
-fn localized_action_name(action: &dyn Action, cx: &App) -> String {
-    action_translation_identifier(action.name())
-        .map(|identifier| localization::text(cx, identifier).to_string())
-        .unwrap_or_else(|| humanize_action_name(action.name()))
-}
-
-fn action_search_name(action: &dyn Action, cx: &App) -> String {
-    let english_name = humanize_action_name(action.name());
-    let localized_name = localized_action_name(action, cx);
-    if localized_name == english_name {
-        localized_name
-    } else {
-        format!("{localized_name} {english_name}")
+fn picker_surface_density(cx: &App) -> PickerSurfaceDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => PickerSurfaceDensity::Compact,
+        settings::CanvasDensity::Balanced => PickerSurfaceDensity::Balanced,
+        settings::CanvasDensity::Spacious => PickerSurfaceDensity::Spacious,
     }
 }
 
-fn action_translation_identifier(action_name: &str) -> Option<&'static str> {
-    Some(match action_name {
-        "workspace::NewFile" => "menu-new",
-        "workspace::NewWindow" => "menu-new-window",
-        "workspace::OpenFiles" => "menu-open-file",
-        "workspace::Open" => {
-            if cfg!(not(target_os = "macos")) {
-                "menu-open-folder"
-            } else {
-                "menu-open"
-            }
+fn picker_surface_radius(cx: &App) -> PickerSurfaceRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => PickerSurfaceRadius::None,
+        settings::CanvasRadius::Subtle => PickerSurfaceRadius::Subtle,
+        settings::CanvasRadius::Rounded => PickerSurfaceRadius::Rounded,
+    }
+}
+
+fn picker_surface_contrast(cx: &App) -> PickerSurfaceContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => PickerSurfaceContrast::Low,
+        settings::CanvasContrast::Standard => PickerSurfaceContrast::Standard,
+        settings::CanvasContrast::High => PickerSurfaceContrast::High,
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CommandCategory {
+    Layout,
+    Agent,
+    Terminal,
+    Pane,
+    Workspace,
+    Project,
+    Git,
+    Editor,
+    Search,
+    Settings,
+    Collaboration,
+    Debug,
+    Preview,
+}
+
+impl CommandCategory {
+    fn for_action_name(action_name: &str) -> Option<Self> {
+        let action_name = action_name.to_ascii_lowercase();
+        let namespace = action_name.split("::").next().unwrap_or_default();
+
+        if action_name.contains("canvas") || action_name.contains("layout") {
+            return Some(Self::Layout);
         }
-        "workspace::Save" => "menu-save",
-        "workspace::SaveAs" => "menu-save-as",
-        "workspace::SaveAll" => "menu-save-all",
-        "workspace::CloseActiveItem" => "menu-close-editor",
-        "workspace::CloseProject" => "menu-close-project",
-        "workspace::CloseWindow" => "menu-close-window",
-        "workspace::GoBack" => "menu-back",
-        "workspace::GoForward" => "menu-forward",
-        "workspace::DeploySearch" => "menu-find-in-project",
-        "workspace::ToggleFileFinder" => "menu-go-to-file",
-        "workspace::SplitUp" => "menu-split-up",
-        "workspace::SplitDown" => "menu-split-down",
-        "workspace::SplitLeft" => "menu-split-left",
-        "workspace::SplitRight" => "menu-split-right",
-        "dez::IncreaseBufferFontSize" => "menu-zoom-in",
-        "dez::DecreaseBufferFontSize" => "menu-zoom-out",
-        "dez::ResetBufferFontSize" => "menu-reset-zoom",
-        "dez::ResetAllZoom" => "menu-reset-all-zoom",
-        "workspace::ToggleLeftDock" => "menu-toggle-left-dock",
-        "workspace::ToggleRightDock" => "menu-toggle-right-dock",
-        "workspace::ToggleBottomDock" => "menu-toggle-bottom-dock",
-        "workspace::ToggleAllDocks" => "menu-toggle-all-docks",
-        "dez::Extensions" => "menu-extensions",
-        "agent_threads::ToggleFocus" => "menu-agent-threads",
-        "agent_threads::NewCodexThread" => "menu-new-codex-thread",
-        "agent_threads::NewClaudeThread" => "menu-new-claude-thread",
-        "agent_threads::NewPiThread" => "menu-new-pi-thread",
-        "agent_threads::NewOpenCodeThread" => "menu-new-opencode-thread",
-        "auto_update::Check" => "menu-check-for-updates",
-        "theme_selector::Toggle" => "menu-select-theme",
-        "icon_theme_selector::Toggle" => "menu-select-icon-theme",
-        "cli::InstallCliBinary" => "menu-install-cli",
-        "dez::OpenSettings" => "menu-open-settings",
-        "dez::OpenSettingsFile" => "menu-open-settings-file",
-        "dez::OpenProjectSettingsFile" => "menu-open-project-settings-file",
-        "dez::OpenDefaultSettings" => "menu-open-default-settings",
-        "dez::OpenKeymap" => "menu-open-keymap",
-        "dez::OpenKeymapFile" => "menu-open-keymap-file",
-        "dez::OpenDefaultKeymap" => "menu-open-default-key-bindings",
-        "dez::About" => "menu-about-dez",
-        "dez::Quit" => "menu-quit-dez",
-        "dez::OpenRecent" => "menu-open-recent",
-        "dez::OpenRemote" => "menu-open-remote",
-        "dez::OpenProjectTasks" => "menu-edit-tasks-json",
-        "dez::OpendezRepo" => "menu-dez-repository",
-        "dez::Hide" => "menu-hide-dez",
-        "dez::HideOthers" => "menu-hide-others",
-        "dez::ShowAll" => "menu-show-all",
-        "dez::Minimize" => "menu-minimize",
-        "dez::Zoom" => "menu-window-zoom",
-        "command_palette::Toggle" => "menu-command-palette",
-        "project_panel::ToggleFocus" => "menu-project-panel",
-        "outline_panel::ToggleFocus" => "menu-outline-panel",
-        "terminal_panel::ToggleFocus" => "menu-terminal",
-        "extensions_ui::Toggle" => "menu-extensions",
-        "editor::Undo" => "menu-undo",
-        "editor::Redo" => "menu-redo",
-        "editor::Cut" => "menu-cut",
-        "editor::Copy" => "menu-copy",
-        "editor::CopyAndTrim" => "menu-copy-and-trim",
-        "editor::Paste" => "menu-paste",
-        "editor::ToggleComments" => "menu-toggle-line-comment",
-        "search::buffer_search::Deploy" => "menu-find",
-        "text_finder::Toggle" => "menu-text-finder",
-        "diagnostics::Deploy" => "menu-diagnostics",
-        "editor::SelectAll" => "menu-select-all",
-        "editor::SelectLargerSyntaxNode" => "menu-expand-selection",
-        "editor::SelectSmallerSyntaxNode" => "menu-shrink-selection",
-        "editor::SelectNextSyntaxNode" => "menu-select-next-sibling",
-        "editor::SelectPreviousSyntaxNode" => "menu-select-previous-sibling",
-        "editor::AddSelectionAbove" => "menu-add-cursor-above",
-        "editor::AddSelectionBelow" => "menu-add-cursor-below",
-        "editor::SelectNext" => "menu-select-next-occurrence",
-        "editor::SelectPrevious" => "menu-select-previous-occurrence",
-        "editor::SelectAllMatches" => "menu-select-all-occurrences",
-        "editor::MoveLineUp" => "menu-move-line-up",
-        "editor::MoveLineDown" => "menu-move-line-down",
-        "editor::DuplicateLineDown" => "menu-duplicate-selection",
-        "editor::GoToDefinition" => "menu-go-to-definition",
-        "editor::GoToDeclaration" => "menu-go-to-declaration",
-        "editor::GoToTypeDefinition" => "menu-go-to-type-definition",
-        "editor::FindAllReferences" => "menu-find-all-references",
-        "editor::GoToDiagnostic" => "menu-next-problem",
-        "editor::GoToPreviousDiagnostic" => "menu-previous-problem",
-        "workspace::AddFolderToProject" => "menu-add-folder-to-project",
-        "outline::Toggle" => "menu-go-to-symbol-in-editor",
-        "editor::ToggleGoToLine" => "menu-go-to-line-column",
-        "task::Spawn" => "menu-spawn-task",
-        _ => return None,
-    })
+
+        match namespace {
+            "agent" | "agent_panel" | "agent_ui" | "assistant" | "copilot" | "copilot_chat" => {
+                return Some(Self::Agent);
+            }
+            "terminal" | "terminal_panel" | "terminal_view" => return Some(Self::Terminal),
+            "pane" => return Some(Self::Pane),
+            "workspace" | "multi_workspace" | "worktree" => return Some(Self::Workspace),
+            "project" | "project_panel" => return Some(Self::Project),
+            "git" | "git_ui" | "buffer_diff" => return Some(Self::Git),
+            "editor" | "vim" => return Some(Self::Editor),
+            "search" | "project_search" | "buffer_search" | "file_finder" | "go_to_line"
+            | "project_symbols" => return Some(Self::Search),
+            "settings"
+            | "settings_ui"
+            | "settings_profile_selector"
+            | "keymap_editor"
+            | "theme_selector"
+            | "icon_theme_selector" => return Some(Self::Settings),
+            "collab" | "collab_ui" | "call" | "channel" => return Some(Self::Collaboration),
+            "debugger" | "debugger_ui" | "dap" => return Some(Self::Debug),
+            "component_preview" | "csv_preview" | "image_viewer" | "svg_preview"
+            | "markdown_preview" | "browser" => return Some(Self::Preview),
+            _ => {}
+        }
+
+        if action_name.contains("agent") {
+            Some(Self::Agent)
+        } else if action_name.contains("terminal") {
+            Some(Self::Terminal)
+        } else if action_name.contains("pane") && !action_name.contains("panel") {
+            Some(Self::Pane)
+        } else if action_name.contains("workspace") || action_name.contains("worktree") {
+            Some(Self::Workspace)
+        } else if action_name.contains("project") {
+            Some(Self::Project)
+        } else if action_name.contains("git") || action_name.contains("diff") {
+            Some(Self::Git)
+        } else if action_name.contains("search") || action_name.contains("finder") {
+            Some(Self::Search)
+        } else if action_name.contains("settings") || action_name.contains("keybinding") {
+            Some(Self::Settings)
+        } else if action_name.contains("debug") || action_name.contains("breakpoint") {
+            Some(Self::Debug)
+        } else if action_name.contains("preview") {
+            Some(Self::Preview)
+        } else {
+            None
+        }
+    }
+
+    fn label(self, app_name: &str) -> &'static str {
+        match self {
+            Self::Layout => "layout",
+            Self::Agent => "agent",
+            Self::Terminal => "terminal",
+            Self::Pane => "pane",
+            Self::Workspace => "workspace",
+            Self::Project if app_name != "Zed" => "workspace",
+            Self::Project => "project",
+            Self::Git => "git",
+            Self::Editor => "editor",
+            Self::Search => "search",
+            Self::Settings => "settings",
+            Self::Collaboration => "collab",
+            Self::Debug => "debug",
+            Self::Preview => "preview",
+        }
+    }
+}
+
+fn command_category_badge(category: CommandCategory, selected: bool, cx: &App) -> impl IntoElement {
+    let design_system = DesignSystemSettings::get_global(cx);
+    let colors = cx.theme().colors();
+    let background = if selected {
+        colors.element_selected.opacity(0.5)
+    } else if design_system.is_high_contrast() {
+        colors.element_background.opacity(0.9)
+    } else if design_system.is_low_contrast() {
+        colors.element_background.opacity(0.4)
+    } else {
+        colors.element_background.opacity(0.65)
+    };
+    let border = if design_system.is_high_contrast() {
+        colors.border
+    } else {
+        colors.border_variant.opacity(0.65)
+    };
+
+    div()
+        .flex_none()
+        .px_1()
+        .py_0p5()
+        .rounded_sm()
+        .border_1()
+        .border_color(border)
+        .bg(background)
+        .child(
+            Label::new(category.label(paths::APP_NAME))
+                .size(LabelSize::XSmall)
+                .line_height_style(LineHeightStyle::UiLabel)
+                .color(if selected {
+                    Color::Default
+                } else {
+                    Color::Muted
+                }),
+        )
 }
 
 impl CommandPalette {
@@ -202,6 +292,15 @@ impl CommandPalette {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
+        if workspace.active_modal::<CommandPalette>(cx).is_some() {
+            workspace.hide_modal(window, cx);
+            return;
+        }
+
+        if workspace.has_active_modal(window, cx) && !workspace.hide_modal(window, cx) {
+            return;
+        }
+
         let Some(previous_focus_handle) = window.focused(cx) else {
             return;
         };
@@ -229,10 +328,10 @@ impl CommandPalette {
                     return None;
                 }
 
+                let action_name = action.name();
                 Some(Command {
-                    name: localized_action_name(&*action, cx),
-                    search_name: action_search_name(&*action, cx),
-                    history_key: action.name().to_string(),
+                    name: humanize_action_name(action_name),
+                    category: CommandCategory::for_action_name(action_name),
                     action,
                 })
             })
@@ -246,7 +345,13 @@ impl CommandPalette {
         );
 
         let picker = cx.new(|cx| {
-            let picker = Picker::uniform_list(delegate, window, cx);
+            // One-shot action; there's nothing to reopen.
+            let picker = Picker::uniform_list(delegate, window, cx)
+                .surface_density(picker_surface_density(cx))
+                .surface_radius(picker_surface_radius(cx))
+                .surface_contrast(picker_surface_contrast(cx))
+                .reopenable(false, cx)
+                .show_scrollbar(true);
             picker.set_query(query, window, cx);
             picker
         });
@@ -271,7 +376,6 @@ impl Render for CommandPalette {
     fn render(&mut self, _window: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         v_flex()
             .key_context("CommandPalette")
-            .w(rems(34.))
             .child(self.picker.clone())
     }
 }
@@ -294,9 +398,14 @@ pub struct CommandPaletteDelegate {
 
 struct Command {
     name: String,
-    search_name: String,
-    history_key: String,
+    category: Option<CommandCategory>,
     action: Box<dyn Action>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct CommandUsage {
+    last_invoked: i64,
+    invocations: u16,
 }
 
 #[derive(Default)]
@@ -388,8 +497,7 @@ impl Clone for Command {
     fn clone(&self) -> Self {
         Self {
             name: self.name.clone(),
-            search_name: self.search_name.clone(),
-            history_key: self.history_key.clone(),
+            category: self.category,
             action: self.action.boxed_clone(),
         }
     }
@@ -443,8 +551,7 @@ impl CommandPaletteDelegate {
             }
             commands.push(Command {
                 name: string.clone(),
-                search_name: string.clone(),
-                history_key: action.name().to_string(),
+                category: CommandCategory::for_action_name(action.name()),
                 action,
             });
             new_matches.push(StringMatch {
@@ -469,11 +576,19 @@ impl CommandPaletteDelegate {
     /// Hit count for each command in the palette.
     /// We only account for commands triggered directly via command palette and not by e.g. keystrokes because
     /// if a user already knows a keystroke for a command, they are unlikely to use a command palette to look for it.
-    fn hit_counts(&self, cx: &App) -> HashMap<String, u16> {
+    fn command_usage(&self, cx: &App) -> HashMap<String, CommandUsage> {
         if let Ok(commands) = CommandPaletteDB::global(cx).list_commands_used() {
             commands
                 .into_iter()
-                .map(|command| (command.command_name, command.invocations))
+                .map(|command| {
+                    (
+                        command.command_name,
+                        CommandUsage {
+                            last_invoked: command.last_invoked.unix_timestamp(),
+                            invocations: command.invocations,
+                        },
+                    )
+                })
                 .collect()
         } else {
             HashMap::new()
@@ -503,8 +618,12 @@ impl CommandPaletteDelegate {
 impl PickerDelegate for CommandPaletteDelegate {
     type ListItem = ListItem;
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "command-palette-placeholder").into()
+    fn name() -> &'static str {
+        "command palette"
+    }
+
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Execute a command...".into()
     }
 
     fn select_history(
@@ -578,16 +697,18 @@ impl PickerDelegate for CommandPaletteDelegate {
         let (mut tx, mut rx) = postage::dispatch::channel(1);
 
         let query_str = query.as_str();
+        let is_zed_link = parse_zed_link(query_str, cx).is_some();
 
         let task = cx.background_spawn({
             let mut commands = self.all_commands.clone();
-            let hit_counts = self.hit_counts(cx);
+            let command_usage = self.command_usage(cx);
             let executor = cx.background_executor().clone();
             let query = normalize_action_query(query_str);
+            let query_for_link = query_str.to_string();
             async move {
                 commands.sort_by_key(|action| {
                     (
-                        Reverse(hit_counts.get(&action.history_key).cloned()),
+                        Reverse(command_usage.get(&action.name).copied()),
                         action.name.clone(),
                     )
                 });
@@ -595,10 +716,10 @@ impl PickerDelegate for CommandPaletteDelegate {
                 let candidates = commands
                     .iter()
                     .enumerate()
-                    .map(|(ix, command)| StringMatchCandidate::new(ix, &command.search_name))
+                    .map(|(ix, command)| StringMatchCandidate::new(ix, &command.name))
                     .collect::<Vec<_>>();
 
-                let matches = fuzzy_nucleo::match_strings_async(
+                let mut matches = fuzzy_nucleo::match_strings_async(
                     &candidates,
                     &query,
                     fuzzy_nucleo::Case::Smart,
@@ -609,7 +730,31 @@ impl PickerDelegate for CommandPaletteDelegate {
                 )
                 .await;
 
-                let intercept_result = if let Some(task) = intercept_task {
+                let used_commands = commands
+                    .iter()
+                    .take_while(|command| command_usage.contains_key(&command.name))
+                    .count();
+                matches.sort_by_key(|string_match| {
+                    if string_match.candidate_id < used_commands {
+                        string_match.candidate_id
+                    } else {
+                        usize::MAX
+                    }
+                });
+
+                let intercept_result = if is_zed_link {
+                    CommandInterceptResult {
+                        results: vec![CommandInterceptItem {
+                            action: OpenZedUrl {
+                                url: query_for_link.clone().into(),
+                            }
+                            .boxed_clone(),
+                            string: query_for_link,
+                            positions: vec![],
+                        }],
+                        exclusive: false,
+                    }
+                } else if let Some(task) = intercept_task {
                     task.await
                 } else {
                     CommandInterceptResult::default()
@@ -679,7 +824,7 @@ impl PickerDelegate for CommandPaletteDelegate {
                 return;
             };
             let action_name = selected_command.action.name();
-            let open_keymap = Box::new(dez_actions::ChangeKeybinding {
+            let open_keymap = Box::new(zed_actions::ChangeKeybinding {
                 action: action_name.to_string(),
             });
             window.dispatch_action(open_keymap, cx);
@@ -699,9 +844,14 @@ impl PickerDelegate for CommandPaletteDelegate {
 
         let action_ix = self.matches[self.selected_ix].candidate_id;
         let command = self.commands.swap_remove(action_ix);
+        telemetry::event!(
+            "Action Invoked",
+            source = "command palette",
+            action = command.name
+        );
         self.matches.clear();
         self.commands.clear();
-        let command_name = command.history_key.clone();
+        let command_name = command.name.clone();
         let latest_query = self.latest_query.clone();
         let db = CommandPaletteDB::global(cx);
         cx.background_spawn(async move {
@@ -734,21 +884,30 @@ impl PickerDelegate for CommandPaletteDelegate {
                     h_flex()
                         .w_full()
                         .py_px()
+                        .gap_2()
                         .justify_between()
-                        .child(HighlightedLabel::new(command.name.clone(), {
-                            let displayed_character_count = command.name.chars().count();
-                            matching_command
-                                .positions
-                                .iter()
-                                .copied()
-                                .filter(|position| *position < displayed_character_count)
-                                .collect::<Vec<_>>()
-                        }))
-                        .child(KeyBinding::for_action_in(
+                        .child(
+                            h_flex()
+                                .min_w_0()
+                                .flex_1()
+                                .gap_2()
+                                .child(
+                                    HighlightedLabel::new(
+                                        command.name.clone(),
+                                        matching_command.positions.clone(),
+                                    )
+                                    .flex_1()
+                                    .truncate(),
+                                )
+                                .when_some(command.category, |this, category| {
+                                    this.child(command_category_badge(category, selected, cx))
+                                }),
+                        )
+                        .child(h_flex().flex_none().child(KeyBinding::for_action_in(
                             &*command.action,
                             &self.previous_focus_handle,
                             cx,
-                        )),
+                        ))),
                 ),
         )
     }
@@ -764,29 +923,23 @@ impl PickerDelegate for CommandPaletteDelegate {
 
         let focus_handle = &self.previous_focus_handle;
         let keybinding_buttons = if keybind.has_binding(window) {
-            Button::new(
-                "change",
-                localization::text(cx, "command-palette-change-keybinding"),
-            )
-            .key_binding(
-                KeyBinding::for_action_in(&menu::SecondaryConfirm, focus_handle, cx)
-                    .map(|kb| kb.size(rems_from_px(12.))),
-            )
-            .on_click(move |_, window, cx| {
-                window.dispatch_action(menu::SecondaryConfirm.boxed_clone(), cx);
-            })
+            Button::new("change", "Change Keybinding…")
+                .key_binding(
+                    KeyBinding::for_action_in(&menu::SecondaryConfirm, focus_handle, cx)
+                        .map(|kb| kb.size(rems_from_px(12_f32))),
+                )
+                .on_click(move |_, window, cx| {
+                    window.dispatch_action(menu::SecondaryConfirm.boxed_clone(), cx);
+                })
         } else {
-            Button::new(
-                "add",
-                localization::text(cx, "command-palette-add-keybinding"),
-            )
-            .key_binding(
-                KeyBinding::for_action_in(&menu::SecondaryConfirm, focus_handle, cx)
-                    .map(|kb| kb.size(rems_from_px(12.))),
-            )
-            .on_click(move |_, window, cx| {
-                window.dispatch_action(menu::SecondaryConfirm.boxed_clone(), cx);
-            })
+            Button::new("add", "Add Keybinding…")
+                .key_binding(
+                    KeyBinding::for_action_in(&menu::SecondaryConfirm, focus_handle, cx)
+                        .map(|kb| kb.size(rems_from_px(12_f32))),
+                )
+                .on_click(move |_, window, cx| {
+                    window.dispatch_action(menu::SecondaryConfirm.boxed_clone(), cx);
+                })
         };
 
         Some(
@@ -799,10 +952,10 @@ impl PickerDelegate for CommandPaletteDelegate {
                 .border_color(cx.theme().colors().border_variant)
                 .child(keybinding_buttons)
                 .child(
-                    Button::new("run-action", localization::text(cx, "command-palette-run"))
+                    Button::new("run-action", "Run")
                         .key_binding(
                             KeyBinding::for_action_in(&menu::Confirm, &focus_handle, cx)
-                                .map(|kb| kb.size(rems_from_px(12.))),
+                                .map(|kb| kb.size(rems_from_px(12_f32))),
                         )
                         .on_click(|_, window, cx| {
                             window.dispatch_action(menu::Confirm.boxed_clone(), cx)
@@ -814,6 +967,126 @@ impl PickerDelegate for CommandPaletteDelegate {
 }
 
 pub fn humanize_action_name(name: &str) -> String {
+    humanize_action_name_for_product(name, paths::APP_NAME)
+}
+
+fn action_name_for_product(name: &str, app_name: &str) -> String {
+    if app_name == "Zed" {
+        return name.to_owned();
+    }
+
+    match name {
+        "workspace::NewTerminal" | "terminal::OpenAgentTerminal" => {
+            return "terminal::OpenTerminal".to_owned();
+        }
+        "terminal::OpenShellTerminal" => return "terminal::OpenNativeShell".to_owned(),
+        "terminal::OpenTmuxTerminal" => return "terminal::OpenWorkspaceTmux".to_owned(),
+        "terminal::OpenCodexTerminal" => return "terminal::LaunchCodex".to_owned(),
+        "terminal::ResumeCodexTerminal" => return "terminal::ResumeCodex".to_owned(),
+        "terminal::OpenClaudeCodeTerminal" => {
+            return "terminal::LaunchClaudeCode".to_owned();
+        }
+        "terminal::ResumeClaudeCodeTerminal" => {
+            return "terminal::ResumeClaudeCode".to_owned();
+        }
+        "terminal::OpenOpenCodeTerminal" => {
+            return "terminal::LaunchOpenCode".to_owned();
+        }
+        "terminal::ResumeOpenCodeTerminal" => {
+            return "terminal::ResumeOpenCode".to_owned();
+        }
+        "terminal::OpenGeminiTerminal" => return "terminal::LaunchGeminiCli".to_owned(),
+        "terminal::OpenAiderTerminal" => return "terminal::LaunchAider".to_owned(),
+        "terminal::OpenHerdrTerminal" => return "terminal::LaunchHerdr".to_owned(),
+        "dez::GrantWorkspaceAccess" => return "workspace::GrantAccess".to_owned(),
+        "dez::OpenWorkspaceInCmux" => return "workspace::OpenInCmux".to_owned(),
+        "zed::ApplyCanvasFullLayout" => return "layout::WorkAreaAndFiles".to_owned(),
+        "zed::ApplyCanvasAgentControlLayout" => {
+            return "layout::WorkAreaAndBuiltInAgent".to_owned();
+        }
+        "zed::ApplyCanvasEditorFocusLayout" => return "layout::FocusWorkArea".to_owned(),
+        "zed::ApplyCanvasCodeRunObserveLayout" => return "layout::SplitWorkArea".to_owned(),
+        "zed::ApplyCanvasReviewLayout" => return "layout::WorkAreaAndGit".to_owned(),
+        "zed::ApplyCanvasDebugLayout" => return "layout::WorkAreaAndDebug".to_owned(),
+        "zed::CycleCanvasLayout" => return "layout::NextWorkspaceLayout".to_owned(),
+        "workspace::SaveCurrentCanvasLayoutAs" => {
+            return "layout::SaveWorkspaceLayoutAs".to_owned();
+        }
+        "workspace::ManageSavedCanvasLayouts" => {
+            return "layout::ManageSavedWorkspaceLayouts".to_owned();
+        }
+        "zed::RestorePreviousCanvasLayout" => {
+            return "layout::RestorePreviousWorkspaceLayout".to_owned();
+        }
+        "workspace::ToggleProjectPane" => return "workspace_tools::Toggle".to_owned(),
+        "workspace::AddFolderToProject" => return "workspace::AddFolder".to_owned(),
+        "workspace::CloseProject" => return "workspace::Close".to_owned(),
+        "workspace::DeploySearch" => return "workspace::Search".to_owned(),
+        "agent::OpenProjectAGENTS.mdRules" => {
+            return "agent::OpenWorkspaceAGENTS.mdRules".to_owned();
+        }
+        "agent::ToggleNewThreadMenu" => return "agent::ToggleNewAgentSessionMenu".to_owned(),
+        "agent::NewThread" => return "agent::NewAgentSession".to_owned(),
+        "agent::NewExternalAgentThread" => return "agent::NewExternalAgentSession".to_owned(),
+        "agent::ArchiveSelectedThread" => {
+            return "agent_sessions::RemoveSelectedSession".to_owned();
+        }
+        "agent::RemoveSelectedThread" => {
+            return "agent_sessions::RemoveSelectedSession".to_owned();
+        }
+        "agent::RenameSelectedThread" => {
+            return "agent_sessions::RenameSelectedSession".to_owned();
+        }
+        "agent::NewTerminalThread" => {
+            return "terminal::OpenTerminalInWorkspace".to_owned();
+        }
+        "sidebar::NewSessionInGroup" => {
+            return "terminal::OpenTerminalInSelectedWorkspace".to_owned();
+        }
+        "sidebar::NewThreadInGroup" => {
+            return "built_in_agent::NewSessionInWorkspace".to_owned();
+        }
+        "sidebar::ToggleSidebar" => return "workspaces::ShowOrHide".to_owned(),
+        "sidebar::CloseSidebar" => return "workspaces::Hide".to_owned(),
+        "sidebar::FocusSidebar" => return "workspaces::Focus".to_owned(),
+        "sidebar::FocusSidebarFilter" => return "workspaces::Search".to_owned(),
+        "sidebar::PreviousProject" => return "workspaces::PreviousWorkspace".to_owned(),
+        "sidebar::NextProject" => return "workspaces::NextWorkspace".to_owned(),
+        "sidebar::ToggleThreadSwitcher" => return "workspaces::SwitchSessions".to_owned(),
+        "sidebar::ToggleThreadHistory" => return "workspaces::ToggleAgentHistory".to_owned(),
+        "sidebar::OpenSelectedReviewBrief" => {
+            return "workspaces::OpenSelectedSessionDetails".to_owned();
+        }
+        "workspace::RevealFiles" => return "files::Open".to_owned(),
+        "zed_actions::OpenProjectSettings" => return "workspace::OpenSettings".to_owned(),
+        "zed::OpenProjectSettingsFile" => return "workspace::OpenSettingsFile".to_owned(),
+        _ => {}
+    }
+
+    for (source, product) in [
+        ("zed_actions::", "dez::"),
+        ("sidebar::", "workspaces::"),
+        ("agent_panel::", "built_in_agent::"),
+        ("debug_panel::", "debug::"),
+        ("git_panel::", "git::"),
+        ("outline_panel::", "outline::"),
+        ("project_panel::", "files::"),
+        ("project_search::", "workspace_search::"),
+        ("project_symbols::", "workspace_symbols::"),
+        ("multi_workspace::", "workspace::"),
+        ("project::", "workspace::"),
+    ] {
+        if let Some(action) = name.strip_prefix(source) {
+            return format!("{product}{action}");
+        }
+    }
+
+    name.to_owned()
+}
+
+fn humanize_action_name_for_product(name: &str, app_name: &str) -> String {
+    let product_name = action_name_for_product(name, app_name);
+    let name = product_name.as_str();
     let chars = name.chars().collect::<Vec<_>>();
     let capacity = name.len() + chars.iter().filter(|c| c.is_uppercase()).count();
     let mut result = String::with_capacity(capacity);
@@ -877,6 +1150,10 @@ pub fn humanize_action_name(name: &str) -> String {
         }
     }
 
+    if app_name != "Zed" && result.starts_with("zed: ") {
+        result.replace_range(..3, &app_name.to_ascii_lowercase());
+    }
+
     result
 }
 
@@ -884,6 +1161,7 @@ impl std::fmt::Debug for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Command")
             .field("name", &self.name)
+            .field("category", &self.category)
             .finish_non_exhaustive()
     }
 }
@@ -900,65 +1178,6 @@ mod tests {
     use project::Project;
     use settings::KeymapFile;
     use workspace::{AppState, MultiWorkspace, Workspace};
-
-    #[test]
-    fn core_menu_actions_have_translation_identifiers() {
-        for action_name in [
-            "dez::IncreaseBufferFontSize",
-            "dez::DecreaseBufferFontSize",
-            "dez::ResetBufferFontSize",
-            "dez::ResetAllZoom",
-            "workspace::ToggleLeftDock",
-            "workspace::ToggleRightDock",
-            "workspace::ToggleBottomDock",
-            "workspace::ToggleAllDocks",
-            "dez::Extensions",
-            "agent_threads::ToggleFocus",
-            "agent_threads::NewCodexThread",
-            "agent_threads::NewClaudeThread",
-            "agent_threads::NewPiThread",
-            "agent_threads::NewOpenCodeThread",
-            "auto_update::Check",
-            "theme_selector::Toggle",
-            "icon_theme_selector::Toggle",
-            "cli::InstallCliBinary",
-            "outline_panel::ToggleFocus",
-            "terminal_panel::ToggleFocus",
-            "diagnostics::Deploy",
-            "search::buffer_search::Deploy",
-            "text_finder::Toggle",
-            "dez::OpenSettingsFile",
-            "dez::OpenProjectSettingsFile",
-            "dez::OpenDefaultSettings",
-            "dez::OpenKeymapFile",
-            "dez::OpenDefaultKeymap",
-            "dez::OpenRecent",
-            "dez::OpenRemote",
-            "workspace::Open",
-            "workspace::AddFolderToProject",
-            "workspace::Save",
-            "workspace::SplitRight",
-            "editor::ToggleComments",
-            "editor::Copy",
-            "outline::Toggle",
-            "editor::ToggleGoToLine",
-            "editor::GoToDefinition",
-            "editor::GoToDiagnostic",
-            "task::Spawn",
-            "dez::OpenProjectTasks",
-            "dez::OpendezRepo",
-            "dez::Hide",
-            "dez::HideOthers",
-            "dez::ShowAll",
-            "dez::Minimize",
-            "dez::Zoom",
-        ] {
-            assert!(
-                action_translation_identifier(action_name).is_some(),
-                "missing translation identifier for {action_name}"
-            );
-        }
-    }
 
     #[test]
     fn test_humanize_action_name() {
@@ -987,6 +1206,292 @@ mod tests {
             humanize_action_name("editor::OpenURLParser"),
             "editor: open URL parser"
         );
+        assert_eq!(
+            humanize_action_name_for_product("zed::OpenPerformanceProfiler", "Dez"),
+            "dez: open performance profiler"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::OpenPerformanceProfiler", "Zed"),
+            "zed: open performance profiler"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed_actions::OpenSettings", "Dez"),
+            "dez: open settings"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("project_panel::ToggleFocus", "Dez"),
+            "files: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::RevealFiles", "Dez"),
+            "files: open"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenAgentTerminal", "Dez"),
+            "terminal: open terminal"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenShellTerminal", "Dez"),
+            "terminal: open native shell"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenTmuxTerminal", "Dez"),
+            "terminal: open workspace tmux"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenCodexTerminal", "Dez"),
+            "terminal: launch codex"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeCodexTerminal", "Dez"),
+            "terminal: continue codex"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenClaudeCodeTerminal", "Dez"),
+            "terminal: launch claude code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeClaudeCodeTerminal", "Dez"),
+            "terminal: continue claude code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenOpenCodeTerminal", "Dez"),
+            "terminal: launch open code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::ResumeOpenCodeTerminal", "Dez"),
+            "terminal: continue open code"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenGeminiTerminal", "Dez"),
+            "terminal: launch gemini cli"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenAiderTerminal", "Dez"),
+            "terminal: launch aider"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("terminal::OpenHerdrTerminal", "Dez"),
+            "terminal: launch herdr"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("dez::GrantWorkspaceAccess", "Dez"),
+            "workspace: grant access"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("dez::OpenWorkspaceInCmux", "Dez"),
+            "workspace: open in cmux"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasFullLayout", "Dez"),
+            "layout: work area and files"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasAgentControlLayout", "Dez"),
+            "layout: work area and built in agent"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasCodeRunObserveLayout", "Dez"),
+            "layout: split work area"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasReviewLayout", "Dez"),
+            "layout: work area and git"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasDebugLayout", "Dez"),
+            "layout: work area and debug"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::ApplyCanvasFullLayout", "Zed"),
+            "zed: apply canvas full layout"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::CycleCanvasLayout", "Dez"),
+            "layout: next workspace layout"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::SaveCurrentCanvasLayoutAs", "Dez"),
+            "layout: save workspace layout as"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::ManageSavedCanvasLayouts", "Dez"),
+            "layout: manage saved workspace layouts"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("zed::RestorePreviousCanvasLayout", "Dez"),
+            "layout: restore previous workspace layout"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("outline_panel::ToggleFocus", "Dez"),
+            "outline: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("git_panel::ToggleFocus", "Dez"),
+            "git: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("git_panel::ReviewChanges", "Dez"),
+            "git: review changes"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("debug_panel::ToggleFocus", "Dez"),
+            "debug: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent_panel::ToggleFocus", "Dez"),
+            "built in agent: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::ToggleProjectPane", "Dez"),
+            "workspace tools: toggle"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleAttentionFilter", "Dez"),
+            "workspaces: toggle attention filter"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleSidebar", "Dez"),
+            "workspaces: show or hide"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::FocusSidebar", "Dez"),
+            "workspaces: focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::FocusSidebarFilter", "Dez"),
+            "workspaces: search"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::PreviousProject", "Dez"),
+            "workspaces: previous workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NextProject", "Dez"),
+            "workspaces: next workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NextProject", "Zed"),
+            "sidebar: next project"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("workspace::AddFolderToProject", "Dez"),
+            "workspace: add folder"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::OpenProjectAGENTS.mdRules", "Dez"),
+            "agent: open workspace AGENTS.md rules"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::RenameSelectedThread", "Dez"),
+            "agent sessions: rename selected session"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NewThreadInGroup", "Dez"),
+            "built in agent: new session in workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::NewTerminalThread", "Dez"),
+            "terminal: open terminal in workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::NewSessionInGroup", "Dez"),
+            "terminal: open terminal in selected workspace"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleThreadHistory", "Dez"),
+            "workspaces: toggle agent history"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ToggleThreadSwitcher", "Dez"),
+            "workspaces: switch sessions"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ReturnToSelectedSession", "Dez"),
+            "workspaces: return to selected session"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::OpenSelectedSessionFiles", "Dez"),
+            "workspaces: open selected session files"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::ReviewSelectedSessionChanges", "Dez"),
+            "workspaces: review selected session changes"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Dez"),
+            "workspaces: open selected session details"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("sidebar::OpenSelectedReviewBrief", "Zed"),
+            "sidebar: open selected review brief"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::ArchiveSelectedThread", "Dez"),
+            "agent sessions: remove selected session"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::RenameSelectedThread", "Zed"),
+            "agent: rename selected thread"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("agent::ArchiveSelectedThread", "Zed"),
+            "agent: archive selected thread"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("project_panel::ToggleFocus", "Zed"),
+            "project panel: toggle focus"
+        );
+        assert_eq!(
+            humanize_action_name_for_product("outline_panel::ToggleFocus", "Zed"),
+            "outline panel: toggle focus"
+        );
+    }
+
+    #[test]
+    fn each_product_hides_commands_that_do_not_belong_to_it() {
+        assert_eq!(
+            product_hidden_action_namespaces("Dez"),
+            &["feedback", "terminal_panel"]
+        );
+        assert!(product_hidden_action_namespaces("Zed").is_empty());
+
+        let hidden_types = product_hidden_action_types("Dez");
+        for action_type in [
+            TypeId::of::<OpenAccountSettings>(),
+            TypeId::of::<OpenDocs>(),
+            TypeId::of::<OpenStatusPage>(),
+            TypeId::of::<GetMerch>(),
+            TypeId::of::<NewCenterTerminal>(),
+            TypeId::of::<NewTerminal>(),
+            TypeId::of::<editor::actions::ToggleTabBar>(),
+        ] {
+            assert!(hidden_types.contains(&action_type));
+        }
+        assert!(
+            !product_hidden_action_types("Zed")
+                .contains(&TypeId::of::<editor::actions::ToggleTabBar>())
+        );
+
+        let hidden_types = product_hidden_action_types("Zed");
+        for action_type in [
+            TypeId::of::<zed_actions::dez::OpenWorkspaceInCmux>(),
+            TypeId::of::<zed_actions::dez::GrantWorkspaceAccess>(),
+            TypeId::of::<zed_actions::terminal::OpenAgentTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenShellTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenTmuxTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeCodexTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeClaudeCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::ResumeOpenCodeTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenGeminiTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenAiderTerminal>(),
+            TypeId::of::<zed_actions::terminal::OpenHerdrTerminal>(),
+        ] {
+            assert!(hidden_types.contains(&action_type));
+        }
     }
 
     #[test]
@@ -1023,6 +1528,40 @@ mod tests {
             normalize_action_query("project_panel::ToggleFocus"),
             "project panel:ToggleFocus"
         );
+    }
+
+    #[test]
+    fn test_command_category_for_action_name() {
+        assert_eq!(
+            CommandCategory::for_action_name("zed::ApplyCanvasFourAgentMatrixLayout"),
+            Some(CommandCategory::Layout)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("agent::NewThread"),
+            Some(CommandCategory::Agent)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("terminal_panel::ToggleFocus"),
+            Some(CommandCategory::Terminal)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("pane::SplitRight"),
+            Some(CommandCategory::Pane)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("workspace::ToggleZoom"),
+            Some(CommandCategory::Workspace)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("workspaces::SwitchSessions"),
+            Some(CommandCategory::Workspace)
+        );
+        assert_eq!(
+            CommandCategory::for_action_name("markdown_preview::OpenPreview"),
+            Some(CommandCategory::Preview)
+        );
+        assert_eq!(CommandCategory::Project.label("Dez"), "workspace");
+        assert_eq!(CommandCategory::Project.label("Zed"), "project");
     }
 
     #[gpui::test]
@@ -1085,7 +1624,7 @@ mod tests {
         });
 
         cx.simulate_keystrokes("cmd-shift-p");
-        cx.simulate_input("editor: bcksp");
+        cx.simulate_input("bcksp");
 
         let palette = workspace.update(cx, |workspace, cx| {
             workspace
@@ -1097,6 +1636,126 @@ mod tests {
         });
         palette.read_with(cx, |palette, _| {
             assert!(palette.delegate.matches.is_empty())
+        });
+    }
+
+    #[gpui::test]
+    async fn test_commands_sorted_by_recency(cx: &mut TestAppContext) {
+        let app_state = init_test(cx);
+        cx.update(|cx| cx.set_global(db::AppDatabase::test_new()));
+        let db = cx.update(|cx| persistence::CommandPaletteDB::global(cx));
+
+        db.write_command_invocation("editor: backspace", "")
+            .await
+            .unwrap();
+        db.write_command_invocation("editor: backspace", "")
+            .await
+            .unwrap();
+        db.write_command_invocation("go to line: toggle", "")
+            .await
+            .unwrap();
+        db.set_last_invoked(100, "editor: backspace".to_string())
+            .await
+            .unwrap();
+        db.set_last_invoked(200, "go to line: toggle".to_string())
+            .await
+            .unwrap();
+
+        let project = Project::test(app_state.fs.clone(), [], cx).await;
+        let (multi_workspace, cx) =
+            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+        let workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
+
+        cx.simulate_keystrokes("cmd-n");
+        cx.simulate_keystrokes("cmd-shift-p");
+
+        let palette = workspace.update(cx, |workspace, cx| {
+            workspace
+                .active_modal::<CommandPalette>(cx)
+                .unwrap()
+                .read(cx)
+                .picker
+                .clone()
+        });
+
+        palette.read_with(cx, |palette, _| {
+            let names = palette
+                .delegate
+                .commands
+                .iter()
+                .map(|command| command.name.as_str())
+                .collect::<Vec<_>>();
+            assert_eq!(names[0], "go to line: toggle");
+            assert_eq!(names[1], "editor: backspace");
+            assert!(
+                names[2..].windows(2).all(|pair| pair[0] <= pair[1]),
+                "unused commands should stay alphabetical"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_used_commands_rank_above_unused_when_filtering(cx: &mut TestAppContext) {
+        let app_state = init_test(cx);
+        cx.update(|cx| cx.set_global(db::AppDatabase::test_new()));
+        let db = cx.update(|cx| persistence::CommandPaletteDB::global(cx));
+
+        let project = Project::test(app_state.fs.clone(), [], cx).await;
+        let (multi_workspace, cx) =
+            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+        let workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
+
+        cx.simulate_keystrokes("cmd-n");
+        cx.simulate_keystrokes("cmd-shift-p");
+
+        let palette = workspace.update(cx, |workspace, cx| {
+            workspace.active_modal::<CommandPalette>(cx).unwrap()
+        });
+        let picker = palette.read_with(cx, |palette, _| palette.picker.clone());
+
+        palette.update_in(cx, |palette, window, cx| {
+            palette.set_query("toggle", window, cx)
+        });
+        cx.run_until_parked();
+
+        let (worst_match, second_worst_match, match_count) = picker.read_with(cx, |picker, _| {
+            let matches = &picker.delegate.matches;
+            (
+                matches[matches.len() - 1].string.to_string(),
+                matches[matches.len() - 2].string.to_string(),
+                matches.len(),
+            )
+        });
+        assert!(match_count > 2);
+
+        db.write_command_invocation(second_worst_match.clone(), "")
+            .await
+            .unwrap();
+        db.write_command_invocation(worst_match.clone(), "")
+            .await
+            .unwrap();
+        db.set_last_invoked(100, second_worst_match.clone())
+            .await
+            .unwrap();
+        db.set_last_invoked(200, worst_match.clone()).await.unwrap();
+
+        palette.update_in(cx, |palette, window, cx| palette.set_query("", window, cx));
+        cx.run_until_parked();
+        palette.update_in(cx, |palette, window, cx| {
+            palette.set_query("toggle", window, cx)
+        });
+        cx.run_until_parked();
+
+        picker.read_with(cx, |picker, _| {
+            let names = picker
+                .delegate
+                .matches
+                .iter()
+                .map(|string_match| string_match.string.to_string())
+                .collect::<Vec<_>>();
+            assert_eq!(names[0], worst_match);
+            assert_eq!(names[1], second_worst_match);
+            assert_eq!(names.len(), match_count);
         });
     }
 
@@ -1203,11 +1862,31 @@ mod tests {
         });
     }
 
+    #[gpui::test]
+    async fn test_reopen_command_palette_over_another_modal(cx: &mut TestAppContext) {
+        let app_state = init_test(cx);
+        let project = Project::test(app_state.fs.clone(), [], cx).await;
+        let (multi_workspace, cx) =
+            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
+        let workspace =
+            multi_workspace.read_with(cx, |multi_workspace, _| multi_workspace.workspace().clone());
+
+        cx.simulate_keystrokes("cmd-n");
+
+        for _ in 0..2 {
+            cx.simulate_keystrokes("cmd-shift-p");
+            cx.simulate_input("go to line: Toggle");
+            cx.simulate_keystrokes("enter");
+
+            workspace.update(cx, |workspace, cx| {
+                assert!(workspace.active_modal::<GoToLine>(cx).is_some());
+            });
+        }
+    }
+
     fn init_test(cx: &mut TestAppContext) -> Arc<AppState> {
         cx.update(|cx| {
             let app_state = AppState::test(cx);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
             editor::init(cx);
             menu::init();
@@ -1230,17 +1909,6 @@ mod tests {
             ));
             app_state
         })
-    }
-
-    #[gpui::test]
-    fn chinese_action_search_keeps_the_english_alias(cx: &mut TestAppContext) {
-        cx.update(|cx| {
-            localization::init(localization::UiLanguage::SimplifiedChinese, cx)
-                .expect("test localization must load");
-            let action = workspace::NewFile;
-            assert_eq!(localized_action_name(&action, cx), "新建");
-            assert_eq!(action_search_name(&action, cx), "新建 workspace: new file");
-        });
     }
 
     fn open_palette_with_history(

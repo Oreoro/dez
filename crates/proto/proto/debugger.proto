@@ -1,5 +1,5 @@
 syntax = "proto3";
-package dez.messages;
+package zed.messages;
 
 import "buffer.proto";
 import "task.proto";

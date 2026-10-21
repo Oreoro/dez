@@ -1,5 +1,5 @@
 syntax = "proto3";
-package dez.messages;
+package zed.messages;
 
 import "core.proto";
 import "worktree.proto";

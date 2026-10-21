@@ -1,3 +1,6 @@
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_row_padding, debugger_row_surface,
+};
 use gpui::{AnyElement, Empty, Entity, FocusHandle, Focusable, ListState, Subscription, list};
 use project::debugger::session::{Session, SessionEvent};
 use ui::prelude::*;
@@ -43,12 +46,9 @@ impl LoadedSourceList {
             return Empty.into_any();
         };
 
-        v_flex()
-            .rounded_md()
-            .w_full()
+        debugger_row_surface(v_flex().w_full(), false, cx)
             .group("")
-            .p_1()
-            .hover(|s| s.bg(cx.theme().colors().element_hover))
+            .p(debugger_row_padding(cx))
             .child(
                 h_flex()
                     .gap_0p5()
@@ -85,7 +85,8 @@ impl Render for LoadedSourceList {
         div()
             .track_focus(&self.focus_handle)
             .size_full()
-            .p_1()
+            .p(debugger_panel_padding(cx))
+            .bg(debugger_panel_background(cx))
             .child(
                 list(
                     self.list.clone(),

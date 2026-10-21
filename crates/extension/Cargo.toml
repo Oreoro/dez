@@ -16,7 +16,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 cloud_api_types.workspace = true
 collections.workspace = true
-dap-types.workspace = true
+dap.workspace = true
 fs.workspace = true
 futures.workspace = true
 gpui.workspace = true
@@ -26,6 +26,7 @@ language.workspace = true
 log.workspace = true
 lsp.workspace = true
 parking_lot.workspace = true
+path.workspace = true
 proto.workspace = true
 semver.workspace = true
 serde.workspace = true
@@ -37,6 +38,7 @@ url.workspace = true
 util.workspace = true
 wasm-encoder.workspace = true
 wasmparser.workspace = true
+which.workspace = true
 ztracing.workspace = true
 
 [dev-dependencies]
@@ -46,5 +48,5 @@ indoc.workspace = true
 pretty_assertions.workspace = true
 tempfile.workspace = true
 
-[package.metadata.cargo-machete]
+[package.metadata.cargo-shear]
 ignored = ["tracing"]

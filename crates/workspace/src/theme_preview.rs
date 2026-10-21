@@ -5,8 +5,10 @@ use gpui::{
 use strum::IntoEnumIterator;
 use theme::all_theme_colors;
 use ui::{
-    Avatar, ButtonLike, Checkbox, DecoratedIcon, ElevationIndex, IconDecoration, Indicator,
-    KeybindingHint, Switch, TintColor, Tooltip, prelude::*, utils::calculate_contrast_ratio,
+    AudioStatus, Avatar, AvatarAudioStatusIndicator, AvatarAvailabilityIndicator, ButtonLike,
+    Checkbox, CollaboratorAvailability, DecoratedIcon, ElevationIndex, Facepile, IconDecoration,
+    Indicator, KeybindingHint, Switch, TintColor, Tooltip, prelude::*,
+    utils::calculate_contrast_ratio,
 };
 
 use crate::{Item, Workspace};
@@ -36,17 +38,10 @@ enum ThemePreviewPage {
 }
 
 impl ThemePreviewPage {
-    pub fn identifier(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         match self {
             Self::Overview => "Overview",
             Self::Typography => "Typography",
-        }
-    }
-
-    pub fn title(&self, cx: &App) -> SharedString {
-        match self {
-            Self::Overview => localization::text(cx, "workspace-theme-overview"),
-            Self::Typography => localization::text(cx, "workspace-theme-typography"),
         }
     }
 }
@@ -95,7 +90,11 @@ impl Item for ThemePreview {
 
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
         let name = cx.theme().name.clone();
-        localization::tr!(cx, "workspace-theme-tab", theme = name.as_ref())
+        format!("{} Preview", name).into()
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
     }
 
     fn can_split(&self) -> bool {
@@ -130,18 +129,14 @@ impl ThemePreview {
     ) -> impl IntoElement {
         let bg = layer.bg(cx);
 
-        let label_with_contrast = |label: SharedString, fg: Hsla| {
+        let label_with_contrast = |label: &str, fg: Hsla| {
             let contrast = calculate_contrast_ratio(fg, bg);
             format!("{} ({:.2})", label, contrast)
         };
 
         v_flex()
             .gap_1()
-            .child(
-                Headline::new(localization::text(cx, "workspace-theme-text"))
-                    .size(HeadlineSize::Small)
-                    .color(Color::Muted),
-            )
+            .child(Headline::new("Text").size(HeadlineSize::Small).color(Color::Muted))
             .child(
                 h_flex()
                     .items_start()
@@ -149,198 +144,146 @@ impl ThemePreview {
                     .child(
                         v_flex()
                             .gap_1()
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-headline-sizes",
-                                ))
-                                .size(HeadlineSize::Small)
-                                .color(Color::Muted),
-                            )
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-headline-xlarge",
-                                ))
-                                .size(HeadlineSize::XLarge),
-                            )
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-headline-large",
-                                ))
-                                .size(HeadlineSize::Large),
-                            )
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-headline-medium",
-                                ))
-                                .size(HeadlineSize::Medium),
-                            )
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-headline-small",
-                                ))
-                                .size(HeadlineSize::Small),
-                            )
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-headline-xsmall",
-                                ))
-                                .size(HeadlineSize::XSmall),
-                            ),
+                            .child(Headline::new("Headline Sizes").size(HeadlineSize::Small).color(Color::Muted))
+                            .child(Headline::new("XLarge Headline").size(HeadlineSize::XLarge))
+                            .child(Headline::new("Large Headline").size(HeadlineSize::Large))
+                            .child(Headline::new("Medium Headline").size(HeadlineSize::Medium))
+                            .child(Headline::new("Small Headline").size(HeadlineSize::Small))
+                            .child(Headline::new("XSmall Headline").size(HeadlineSize::XSmall)),
                     )
                     .child(
                         v_flex()
                             .gap_1()
-                            .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-text-colors",
-                                ))
-                                .size(HeadlineSize::Small)
-                                .color(Color::Muted),
-                            )
+                            .child(Headline::new("Text Colors").size(HeadlineSize::Small).color(Color::Muted))
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-default"),
+                                    "Default Text",
                                     Color::Default.color(cx),
                                 ))
                                 .color(Color::Default),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-accent"),
+                                    "Accent Text",
                                     Color::Accent.color(cx),
                                 ))
                                 .color(Color::Accent),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-conflict"),
+                                    "Conflict Text",
                                     Color::Conflict.color(cx),
                                 ))
                                 .color(Color::Conflict),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-created"),
+                                    "Created Text",
                                     Color::Created.color(cx),
                                 ))
                                 .color(Color::Created),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-deleted"),
+                                    "Deleted Text",
                                     Color::Deleted.color(cx),
                                 ))
                                 .color(Color::Deleted),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-disabled"),
+                                    "Disabled Text",
                                     Color::Disabled.color(cx),
                                 ))
                                 .color(Color::Disabled),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-error"),
+                                    "Error Text",
                                     Color::Error.color(cx),
                                 ))
                                 .color(Color::Error),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-hidden"),
+                                    "Hidden Text",
                                     Color::Hidden.color(cx),
                                 ))
                                 .color(Color::Hidden),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-hint"),
+                                    "Hint Text",
                                     Color::Hint.color(cx),
                                 ))
                                 .color(Color::Hint),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-ignored"),
+                                    "Ignored Text",
                                     Color::Ignored.color(cx),
                                 ))
                                 .color(Color::Ignored),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-info"),
+                                    "Info Text",
                                     Color::Info.color(cx),
                                 ))
                                 .color(Color::Info),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-modified"),
+                                    "Modified Text",
                                     Color::Modified.color(cx),
                                 ))
                                 .color(Color::Modified),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-muted"),
+                                    "Muted Text",
                                     Color::Muted.color(cx),
                                 ))
                                 .color(Color::Muted),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-placeholder"),
+                                    "Placeholder Text",
                                     Color::Placeholder.color(cx),
                                 ))
                                 .color(Color::Placeholder),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-selected"),
+                                    "Selected Text",
                                     Color::Selected.color(cx),
                                 ))
                                 .color(Color::Selected),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-success"),
+                                    "Success Text",
                                     Color::Success.color(cx),
                                 ))
                                 .color(Color::Success),
                             )
                             .child(
                                 Label::new(label_with_contrast(
-                                    localization::text(cx, "workspace-theme-color-warning"),
+                                    "Warning Text",
                                     Color::Warning.color(cx),
                                 ))
                                 .color(Color::Warning),
-                            ),
+                            )
                     )
                     .child(
                         v_flex()
                             .gap_1()
+                            .child(Headline::new("Wrapping Text").size(HeadlineSize::Small).color(Color::Muted))
                             .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "workspace-theme-wrapping-heading",
-                                ))
-                                .size(HeadlineSize::Small)
-                                .color(Color::Muted),
-                            )
-                            .child(
-                                div()
-                                    .max_w(px(200.))
-                                    .child(localization::text(cx, "workspace-theme-wrapping-text")),
-                            ),
-                    ),
+                                div().max_w(px(200.)).child(
+                                "This is a longer piece of text that should wrap to multiple lines. It demonstrates how text behaves when it exceeds the width of its container."
+                            ))
+                    )
             )
     }
 
@@ -356,7 +299,7 @@ impl ThemePreview {
         v_flex()
             .gap_1()
             .child(
-                Headline::new(localization::text(cx, "workspace-theme-colors"))
+                Headline::new("Colors")
                     .size(HeadlineSize::Small)
                     .color(Color::Muted),
             )
@@ -414,20 +357,9 @@ impl ThemePreview {
             .size_full()
             .child(
                 v_flex()
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-preview-title"))
-                            .size(HeadlineSize::Large),
+                    .child(Headline::new("Theme Preview").size(HeadlineSize::Large))
+                    .child(div().w_full().text_color(cx.theme().colors().text_muted).child("This view lets you preview a range of UI elements across a theme. Use it for testing out changes to the theme."))
                     )
-                    .child(
-                        div()
-                            .w_full()
-                            .text_color(cx.theme().colors().text_muted)
-                            .child(localization::text(
-                                cx,
-                                "workspace-theme-preview-description",
-                            )),
-                    ),
-            )
             .child(self.render_theme_layer(ElevationIndex::Background, window, cx))
             .child(self.render_theme_layer(ElevationIndex::Surface, window, cx))
             .child(self.render_theme_layer(ElevationIndex::EditorSurface, window, cx))
@@ -443,57 +375,20 @@ impl ThemePreview {
             .id("theme-preview-typography")
             .overflow_scroll()
             .size_full()
-            .child(
-                v_flex()
-                    .gap_4()
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-heading-one"))
-                            .size(HeadlineSize::XLarge),
-                    )
-                    .child(Label::new(localization::text(
-                        cx,
-                        "workspace-theme-sample-one",
-                    )))
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-heading-two"))
-                            .size(HeadlineSize::Large),
-                    )
-                    .child(Label::new(localization::text(
-                        cx,
-                        "workspace-theme-sample-two",
-                    )))
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-heading-three"))
-                            .size(HeadlineSize::Medium),
-                    )
-                    .child(Label::new(localization::text(
-                        cx,
-                        "workspace-theme-sample-three",
-                    )))
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-heading-four"))
-                            .size(HeadlineSize::Small),
-                    )
-                    .child(Label::new(localization::text(
-                        cx,
-                        "workspace-theme-sample-four",
-                    )))
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-heading-five"))
-                            .size(HeadlineSize::XSmall),
-                    )
-                    .child(Label::new(localization::text(
-                        cx,
-                        "workspace-theme-sample-five",
-                    )))
-                    .child(
-                        Headline::new(localization::text(cx, "workspace-theme-body-text"))
-                            .size(HeadlineSize::Small),
-                    )
-                    .child(Label::new(localization::text(
-                        cx,
-                        "workspace-theme-sample-body",
-                    ))),
+            .child(v_flex()
+                .gap_4()
+                .child(Headline::new("Headline 1").size(HeadlineSize::XLarge))
+                .child(Label::new("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."))
+                .child(Headline::new("Headline 2").size(HeadlineSize::Large))
+                .child(Label::new("Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."))
+                .child(Headline::new("Headline 3").size(HeadlineSize::Medium))
+                .child(Label::new("Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur."))
+                .child(Headline::new("Headline 4").size(HeadlineSize::Small))
+                .child(Label::new("Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."))
+                .child(Headline::new("Headline 5").size(HeadlineSize::XSmall))
+                .child(Label::new("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."))
+                .child(Headline::new("Body Text").size(HeadlineSize::Small))
+                .child(Label::new("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."))
             )
     }
 
@@ -505,7 +400,7 @@ impl ThemePreview {
             .py_2()
             .bg(Self::preview_bg(window, cx))
             .children(ThemePreviewPage::iter().map(|p| {
-                Button::new(ElementId::Name(p.identifier().into()), p.title(cx))
+                Button::new(ElementId::Name(p.name().into()), p.name())
                     .on_click(cx.listener(move |this, _, window, cx| {
                         this.current_page = p;
                         cx.notify();

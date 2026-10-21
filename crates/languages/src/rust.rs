@@ -269,7 +269,7 @@ impl RustLspAdapter {
             "{}-{}-{}.{}",
             SERVER_NAME,
             std::env::consts::ARCH,
-            &arch_server_name,
+            arch_server_name,
             extension
         )
     }
@@ -292,7 +292,7 @@ impl ManifestProvider for CargoManifestProvider {
     ) -> Option<Arc<RelPath>> {
         let mut outermost_cargo_toml = None;
         for path in path.ancestors().take(depth) {
-            let p = path.join(RelPath::unix("Cargo.toml").unwrap());
+            let p = path.join(RelPath::from_unix_str("Cargo.toml").unwrap());
             if delegate.exists(&p, Some(false)) {
                 outermost_cargo_toml = Some(Arc::from(path));
             }
@@ -326,7 +326,10 @@ impl LspAdapter for RustLspAdapter {
                 .iter_mut()
                 .flatten()
                 .map(|info| &mut info.message)
-                .chain([&mut diagnostic.message])
+                .chain(match &mut diagnostic.message {
+                    lsp::DiagnosticMessage::String(message) => Some(message),
+                    lsp::DiagnosticMessage::MarkupContent(_) => None,
+                })
             {
                 if let Cow::Owned(sanitized) = REGEX.replace_all(message, "`$1`") {
                     *message = sanitized;
@@ -422,7 +425,7 @@ impl LspAdapter for RustLspAdapter {
                 };
 
                 static FULL_SIGNATURE_REGEX: LazyLock<Regex> =
-                    LazyLock::new(|| Regex::new(r"fn (.?+)\(").expect("Failed to create REGEX"));
+                    LazyLock::new(|| Regex::new(r"fn (.+?)\(").expect("Failed to create REGEX"));
                 if let Some((function_signature, match_)) = function_signature
                     .filter(|it| it.contains(&label))
                     .and_then(|it| Some((it, FULL_SIGNATURE_REGEX.find(it)?)))
@@ -431,7 +434,7 @@ impl LspAdapter for RustLspAdapter {
                     let runs = language.highlight_text(&source, 0..function_signature.len());
                     mk_label(
                         function_signature.to_owned(),
-                        &|| match_.range().start - 3..match_.range().end - 1,
+                        &|| match_.range().start + 3..match_.range().end - 1,
                         runs,
                     )
                 } else if let Some((prefix, suffix)) = fn_prefixed {
@@ -489,6 +492,7 @@ impl LspAdapter for RustLspAdapter {
                         .collect::<SmallVec<[_; 8]>>();
                     all_stop_ranges.sort_unstable_by_key(|a| (a.start, Reverse(a.end)));
 
+                    // Placeholders may nest, e.g. `$2` inside `${1:"$2"}`
                     struct OpenPlaceholder {
                         snippet_text_end: usize,
                         label_run_start: usize,
@@ -535,6 +539,7 @@ impl LspAdapter for RustLspAdapter {
                             HighlightId::TABSTOP_REPLACE_ID,
                         ));
                     }
+
                     label.push_str(&snippet.text[text_pos..]);
                     runs.sort_unstable_by_key(|(range, _)| (range.start, Reverse(range.end)));
 
@@ -649,15 +654,15 @@ impl LspAdapter for RustLspAdapter {
     ) -> Option<CodeLabel> {
         let name = &symbol.name;
         let (prefix, suffix) = match symbol.kind {
-            lsp::SymbolKind::METHOD | lsp::SymbolKind::FUNCTION => ("fn ", "();"),
-            lsp::SymbolKind::STRUCT => ("struct ", ";"),
-            lsp::SymbolKind::ENUM => ("enum ", "{}"),
-            lsp::SymbolKind::INTERFACE => ("trait ", "{}"),
-            lsp::SymbolKind::CONSTANT => ("const ", ":()=();"),
-            lsp::SymbolKind::MODULE => ("mod ", ";"),
-            lsp::SymbolKind::PACKAGE => ("extern crate ", ";"),
-            lsp::SymbolKind::TYPE_PARAMETER => ("type ", "=();"),
-            lsp::SymbolKind::ENUM_MEMBER => {
+            language::SymbolKind::Method | language::SymbolKind::Function => ("fn ", "();"),
+            language::SymbolKind::Struct => ("struct ", ";"),
+            language::SymbolKind::Enum => ("enum ", "{}"),
+            language::SymbolKind::Interface => ("trait ", "{}"),
+            language::SymbolKind::Constant => ("const ", ":()=();"),
+            language::SymbolKind::Module => ("mod ", ";"),
+            language::SymbolKind::Package => ("extern crate ", ";"),
+            language::SymbolKind::TypeParameter => ("type ", "=();"),
+            language::SymbolKind::EnumMember => {
                 let prefix = "enum E {";
                 return Some(CodeLabel::new(
                     name.to_string(),
@@ -690,31 +695,23 @@ impl LspAdapter for RustLspAdapter {
             .get(&SERVER_NAME)
             .is_some_and(|s| s.enable_lsp_tasks);
 
+        let mut commands = vec![
+            "rust-analyzer.showReferences",
+            "rust-analyzer.gotoLocation",
+            "rust-analyzer.triggerParameterHints",
+            "rust-analyzer.rename",
+        ];
+        if enable_lsp_tasks {
+            commands.push("rust-analyzer.runSingle");
+        }
+
         let mut experimental = json!({
             "commands": {
-                "commands": [
-                    "rust-analyzer.showReferences",
-                    "rust-analyzer.gotoLocation",
-                    "rust-analyzer.triggerParameterHints",
-                    "rust-analyzer.rename",
-                ]
+                "commands": commands,
             }
         });
-
         if enable_lsp_tasks {
-            merge_json_value_into(
-                json!({
-                    "runnables": {
-                        "kinds": [ "cargo", "shell" ],
-                    },
-                    "commands": {
-                        "commands": [
-                            "rust-analyzer.runSingle",
-                        ]
-                    }
-                }),
-                &mut experimental,
-            );
+            experimental["runnables"] = json!({ "kinds": ["cargo", "shell"] });
         }
 
         if let Some(original_experimental) = &mut original.capabilities.experimental {
@@ -1373,10 +1370,10 @@ async fn human_readable_package_name(
 }
 
 // For providing local `cargo check -p $pkgid` task, we do not need most of the information we have returned.
-// Output example in the root of dez project:
+// Output example in the root of Zed project:
 // ```sh
-// ❯ cargo pkgid dez
-// path+file:///absolute/path/to/project/dez/crates/dez#0.131.0
+// ❯ cargo pkgid zed
+// path+file:///absolute/path/to/project/zed/crates/zed#0.131.0
 // ```
 // Another variant, if a project has a custom package name or hyphen in the name:
 // ```
@@ -1480,48 +1477,82 @@ mod tests {
     use crate::language;
     use gpui::{BorrowAppContext, Hsla, TestAppContext};
     use lsp::CompletionItemLabelDetails;
+    use pretty_assertions::assert_eq;
     use settings::SettingsStore;
     use theme::SyntaxTheme;
     use util::path;
 
     #[gpui::test]
     async fn test_process_rust_diagnostics() {
+        let markdown_message = lsp::MarkupContent {
+            kind: lsp::MarkupKind::Markdown,
+            value: "consider importing this struct: `use b::c;\n`".to_string(),
+        };
+        let plain_text_message = lsp::MarkupContent {
+            kind: lsp::MarkupKind::PlainText,
+            value: "consider importing this struct: `use b::c;\n`".to_string(),
+        };
         let mut params = lsp::PublishDiagnosticsParams {
             uri: lsp::Uri::from_file_path(path!("/a")).unwrap(),
             version: None,
             diagnostics: vec![
                 // no newlines
                 lsp::Diagnostic {
-                    message: "use of moved value `a`".to_string(),
+                    message: lsp::DiagnosticMessage::from("use of moved value `a`"),
                     ..Default::default()
                 },
                 // newline at the end of a code span
                 lsp::Diagnostic {
-                    message: "consider importing this struct: `use b::c;\n`".to_string(),
+                    message: lsp::DiagnosticMessage::from(
+                        "consider importing this struct: `use b::c;\n`",
+                    ),
                     ..Default::default()
                 },
                 // code span starting right after a newline
                 lsp::Diagnostic {
-                    message: "cannot borrow `self.d` as mutable\n`self` is a `&` reference"
-                        .to_string(),
+                    message: lsp::DiagnosticMessage::from(
+                        "cannot borrow `self.d` as mutable\n`self` is a `&` reference".to_string(),
+                    ),
+                    ..Default::default()
+                },
+                lsp::Diagnostic {
+                    message: lsp::DiagnosticMessage::from(markdown_message.clone()),
+                    ..Default::default()
+                },
+                lsp::Diagnostic {
+                    message: lsp::DiagnosticMessage::from(plain_text_message.clone()),
                     ..Default::default()
                 },
             ],
         };
         RustLspAdapter.process_diagnostics(&mut params, LanguageServerId(0));
 
-        assert_eq!(params.diagnostics[0].message, "use of moved value `a`");
+        assert_eq!(
+            params.diagnostics[0].message,
+            lsp::DiagnosticMessage::from("use of moved value `a`")
+        );
 
         // remove trailing newline from code span
         assert_eq!(
             params.diagnostics[1].message,
-            "consider importing this struct: `use b::c;`"
+            lsp::DiagnosticMessage::from("consider importing this struct: `use b::c;`")
         );
 
         // do not remove newline before the start of code span
         assert_eq!(
             params.diagnostics[2].message,
-            "cannot borrow `self.d` as mutable\n`self` is a `&` reference"
+            lsp::DiagnosticMessage::from(
+                "cannot borrow `self.d` as mutable\n`self` is a `&` reference"
+            )
+        );
+
+        assert_eq!(
+            params.diagnostics[3].message,
+            lsp::DiagnosticMessage::from(markdown_message)
+        );
+        assert_eq!(
+            params.diagnostics[4].message,
+            lsp::DiagnosticMessage::from(plain_text_message)
         );
     }
 
@@ -1734,6 +1765,36 @@ mod tests {
                     (21..24, HighlightId::new(1)),
                     (34..41, HighlightId::new(0)),
                     (46..47, HighlightId::new(0))
+                ],
+            ))
+        );
+
+        assert_eq!(
+            adapter
+                .label_for_completion(
+                    &lsp::CompletionItem {
+                        kind: Some(lsp::CompletionItemKind::METHOD),
+                        label: "sync_all(…)".to_string(),
+                        filter_text: Some("sync_allfsync".to_string()),
+                        label_details: Some(CompletionItemLabelDetails {
+                            detail: None,
+                            description: Some(
+                                "pub fn sync_all(&self) -> io::Result<()>".to_string()
+                            ),
+                        }),
+                        ..Default::default()
+                    },
+                    &language
+                )
+                .await,
+            Some(CodeLabel::new(
+                "pub fn sync_all(&self) -> io::Result<()>".to_string(),
+                7..15,
+                vec![
+                    (0..3, HighlightId::new(1)),
+                    (4..6, HighlightId::new(1)),
+                    (7..15, HighlightId::new(2)),
+                    (30..36, HighlightId::new(0))
                 ],
             ))
         );
@@ -1997,7 +2058,7 @@ mod tests {
                 .label_for_symbol(
                     &language::Symbol {
                         name: "hello".to_string(),
-                        kind: lsp::SymbolKind::FUNCTION,
+                        kind: language::SymbolKind::Function,
                         container_name: None,
                     },
                     &language
@@ -2015,7 +2076,7 @@ mod tests {
                 .label_for_symbol(
                     &language::Symbol {
                         name: "World".to_string(),
-                        kind: lsp::SymbolKind::TYPE_PARAMETER,
+                        kind: language::SymbolKind::TypeParameter,
                         container_name: None,
                     },
                     &language
@@ -2032,15 +2093,15 @@ mod tests {
             adapter
                 .label_for_symbol(
                     &language::Symbol {
-                        name: "dez".to_string(),
-                        kind: lsp::SymbolKind::PACKAGE,
+                        name: "zed".to_string(),
+                        kind: language::SymbolKind::Package,
                         container_name: None,
                     },
                     &language
                 )
                 .await,
             Some(CodeLabel::new(
-                "extern crate dez".to_string(),
+                "extern crate zed".to_string(),
                 13..16,
                 vec![(0..6, highlight_keyword), (7..12, highlight_keyword),],
             ))
@@ -2051,7 +2112,7 @@ mod tests {
                 .label_for_symbol(
                     &language::Symbol {
                         name: "Variant".to_string(),
-                        kind: lsp::SymbolKind::ENUM_MEMBER,
+                        kind: language::SymbolKind::EnumMember,
                         container_name: None,
                     },
                     &language
@@ -2141,8 +2202,8 @@ mod tests {
     fn test_package_name_from_pkgid() {
         for (input, expected) in [
             (
-                "path+file:///absolute/path/to/project/dez/crates/dez#0.131.0",
-                "dez",
+                "path+file:///absolute/path/to/project/zed/crates/zed#0.131.0",
+                "zed",
             ),
             (
                 "path+file:///absolute/path/to/project/custom-package#my-custom-package@0.1.0",
@@ -2157,16 +2218,16 @@ mod tests {
     fn test_target_info_from_metadata() {
         for (input, absolute_path, expected) in [
             (
-                r#"{"packages":[{"id":"path+file:///absolute/path/to/project/dez/crates/dez#0.131.0","manifest_path":"/path/to/dez/Cargo.toml","targets":[{"name":"dez","kind":["bin"],"src_path":"/path/to/dez/src/main.rs"}]}]}"#,
-                "/path/to/dez/src/main.rs",
+                r#"{"packages":[{"id":"path+file:///absolute/path/to/project/zed/crates/zed#0.131.0","manifest_path":"/path/to/zed/Cargo.toml","targets":[{"name":"zed","kind":["bin"],"src_path":"/path/to/zed/src/main.rs"}]}]}"#,
+                "/path/to/zed/src/main.rs",
                 Some((
                     Some(TargetInfo {
-                        package_name: "dez".into(),
-                        target_name: "dez".into(),
+                        package_name: "zed".into(),
+                        target_name: "zed".into(),
                         required_features: Vec::new(),
                         target_kind: TargetKind::Bin,
                     }),
-                    Arc::from("/path/to/dez".as_ref()),
+                    Arc::from("/path/to/zed".as_ref()),
                 )),
             ),
             (

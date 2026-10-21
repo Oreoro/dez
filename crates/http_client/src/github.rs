@@ -1,12 +1,13 @@
-use crate::{HttpClient, HttpRequestExt};
+use crate::{AsyncBody, HttpClient, HttpRequestExt};
 use anyhow::{Context as _, Result, anyhow, bail};
 use futures::AsyncReadExt;
 use http::Request;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use url::Url;
 
 const GITHUB_API_URL: &str = "https://api.github.com";
+const GITHUB_RELEASE_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub struct GitHubLspBinaryVersion {
     pub name: String,
@@ -17,8 +18,6 @@ pub struct GitHubLspBinaryVersion {
 #[derive(Deserialize, Debug)]
 pub struct GithubRelease {
     pub tag_name: String,
-    pub name: Option<String>,
-    pub body: Option<String>,
     #[serde(rename = "prerelease")]
     pub pre_release: bool,
     pub assets: Vec<GithubReleaseAsset>,
@@ -33,24 +32,15 @@ pub struct GithubReleaseAsset {
     pub digest: Option<String>,
 }
 
-pub fn releases_url(repo: &str) -> String {
-    format!("{GITHUB_API_URL}/repos/{repo}/releases")
-}
-
 pub async fn latest_github_release(
     repo_name_with_owner: &str,
     require_assets: bool,
     pre_release: bool,
     http: Arc<dyn HttpClient>,
 ) -> anyhow::Result<GithubRelease> {
-    let url = releases_url(repo_name_with_owner);
+    let url = format!("{GITHUB_API_URL}/repos/{repo_name_with_owner}/releases");
 
-    let request = Request::get(&url)
-        .follow_redirects(crate::RedirectPolicy::FollowAll)
-        .when_some(std::env::var("GITHUB_TOKEN").ok(), |builder, token| {
-            builder.header("Authorization", format!("Bearer {}", token))
-        })
-        .body(Default::default())?;
+    let request = github_api_request(&url)?;
 
     let mut response = http
         .send(request)
@@ -100,23 +90,14 @@ pub async fn latest_github_release(
     Ok(release)
 }
 
-pub fn tags_url(repo: &str, tag: &str) -> String {
-    format!("{GITHUB_API_URL}/repos/{repo}/releases/tags/{tag}")
-}
-
 pub async fn get_release_by_tag_name(
     repo_name_with_owner: &str,
     tag: &str,
     http: Arc<dyn HttpClient>,
 ) -> anyhow::Result<GithubRelease> {
-    let url = tags_url(repo_name_with_owner, tag);
+    let url = format!("{GITHUB_API_URL}/repos/{repo_name_with_owner}/releases/tags/{tag}");
 
-    let request = Request::get(&url)
-        .follow_redirects(crate::RedirectPolicy::FollowAll)
-        .when_some(std::env::var("GITHUB_TOKEN").ok(), |builder, token| {
-            builder.header("Authorization", format!("Bearer {}", token))
-        })
-        .body(Default::default())?;
+    let request = github_api_request(&url)?;
 
     let mut response = http
         .send(request)
@@ -151,6 +132,17 @@ pub async fn get_release_by_tag_name(
     Ok(release)
 }
 
+fn github_api_request(url: &str) -> Result<Request<AsyncBody>> {
+    Request::get(url)
+        .follow_redirects(crate::RedirectPolicy::FollowAll)
+        .timeout(GITHUB_RELEASE_REQUEST_TIMEOUT)
+        .when_some(std::env::var("GITHUB_TOKEN").ok(), |builder, token| {
+            builder.header("Authorization", format!("Bearer {}", token))
+        })
+        .body(Default::default())
+        .map_err(Into::into)
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum AssetKind {
     TarGz,
@@ -182,23 +174,20 @@ pub fn build_asset_url(repo_name_with_owner: &str, tag: &str, kind: AssetKind) -
 
 #[cfg(test)]
 mod tests {
-    use crate::github::{AssetKind, GithubRelease, build_asset_url};
+    use crate::{
+        RequestTimeout,
+        github::{AssetKind, GITHUB_RELEASE_REQUEST_TIMEOUT, build_asset_url, github_api_request},
+    };
 
     #[test]
-    fn github_release_includes_local_release_note_fields() {
-        let release: GithubRelease = serde_json::from_value(serde_json::json!({
-            "tag_name": "v1.2.3",
-            "name": "dez 1.2.3",
-            "body": "## Improvements",
-            "prerelease": false,
-            "assets": [],
-            "tarball_url": "https://example.com/source.tar.gz",
-            "zipball_url": "https://example.com/source.zip"
-        }))
-        .expect("valid GitHub release response");
+    fn github_api_requests_have_a_total_deadline() {
+        let request =
+            github_api_request("https://api.github.com/repos/zed-industries/zed/releases").unwrap();
 
-        assert_eq!(release.name.as_deref(), Some("dez 1.2.3"));
-        assert_eq!(release.body.as_deref(), Some("## Improvements"));
+        assert_eq!(
+            request.extensions().get::<RequestTimeout>(),
+            Some(&RequestTimeout(GITHUB_RELEASE_REQUEST_TIMEOUT))
+        );
     }
 
     #[test]

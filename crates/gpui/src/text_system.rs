@@ -72,9 +72,6 @@ impl TextSystem {
                 // TODO: Remove this when Linux have implemented setting fallbacks.
                 font(".ZedMono"),
                 font(".ZedSans"),
-                font("PingFang SC"),        // macOS Simplified Chinese
-                font("Microsoft YaHei UI"), // Windows Simplified Chinese
-                font("Noto Sans CJK SC"),   // Linux Simplified Chinese
                 font("Helvetica"),
                 font("Segoe UI"),     // Windows
                 font("Ubuntu"),       // Gnome (Ubuntu)
@@ -96,7 +93,7 @@ impl TextSystem {
                 .map(|font| font.family.to_string()),
         );
         names.push(".SystemUIFont".to_string());
-        names.sort();
+        names.sort_unstable();
         names.dedup();
         names
     }
@@ -166,6 +163,22 @@ impl TextSystem {
                 .map(|fallback| &fallback.family)
                 .join(", ")
         );
+    }
+
+    /// Prewarm any system font caches needed to shape text.
+    ///
+    /// This may be expensive, so callers should generally invoke it on a
+    /// background executor. Missing entries are still populated on demand by
+    /// the normal shaping path.
+    pub fn prewarm_fonts(&self, fonts: &[Font]) {
+        let mut font_ids = SmallVec::<[FontId; 8]>::new();
+        for font in fonts {
+            let font_id = self.resolve_font(font);
+            if !font_ids.contains(&font_id) {
+                font_ids.push(font_id);
+            }
+        }
+        self.platform_text_system.prewarm_fonts(&font_ids);
     }
 
     /// Get the bounding box for the given font and font size.
@@ -1180,13 +1193,13 @@ impl FontMetrics {
 /// Maps well-known virtual font names to their concrete equivalents.
 #[allow(unused)]
 pub fn font_name_with_fallbacks<'a>(name: &'a str, system: &'a str) -> &'a str {
-    // Note: the "dez Plex" fonts were deprecated as we are not allowed to use "Plex"
+    // Note: the "Zed Plex" fonts were deprecated as we are not allowed to use "Plex"
     // in a derived font name. They are essentially indistinguishable from IBM Plex/Lilex,
     // and so retained here for backward compatibility.
     match name {
         ".SystemUIFont" => system,
-        ".ZedSans" | "dez Plex Sans" => "IBM Plex Sans",
-        ".ZedMono" | "dez Plex Mono" => "Lilex",
+        ".ZedSans" | "Zed Plex Sans" => "IBM Plex Sans",
+        ".ZedMono" | "Zed Plex Mono" => "Lilex",
         _ => name,
     }
 }
@@ -1197,13 +1210,13 @@ pub fn font_name_with_fallbacks_shared<'a>(
     name: &'a SharedString,
     system: &'a SharedString,
 ) -> &'a SharedString {
-    // Note: the "dez Plex" fonts were deprecated as we are not allowed to use "Plex"
+    // Note: the "Zed Plex" fonts were deprecated as we are not allowed to use "Plex"
     // in a derived font name. They are essentially indistinguishable from IBM Plex/Lilex,
     // and so retained here for backward compatibility.
     match name.as_str() {
         ".SystemUIFont" => system,
-        ".ZedSans" | "dez Plex Sans" => const { &SharedString::new_static("IBM Plex Sans") },
-        ".ZedMono" | "dez Plex Mono" => const { &SharedString::new_static("Lilex") },
+        ".ZedSans" | "Zed Plex Sans" => const { &SharedString::new_static("IBM Plex Sans") },
+        ".ZedMono" | "Zed Plex Mono" => const { &SharedString::new_static("Lilex") },
         _ => name,
     }
 }

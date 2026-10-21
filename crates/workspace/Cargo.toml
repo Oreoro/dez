@@ -14,6 +14,7 @@ doctest = false
 
 [features]
 test-support = [
+    "client/test-support",
     "http_client/test-support",
     "db/test-support",
     "project/test-support",
@@ -26,8 +27,10 @@ test-support = [
 
 [dependencies]
 any_vec.workspace = true
+agent_settings.workspace = true
 anyhow.workspace = true
 async-recursion.workspace = true
+client.workspace = true
 chrono.workspace = true
 clock.workspace = true
 collections.workspace = true
@@ -42,16 +45,16 @@ gpui.workspace = true
 http_client.workspace = true
 itertools.workspace = true
 language.workspace = true
-localization.workspace = true
 log.workspace = true
 menu.workspace = true
 markdown.workspace = true
 node_runtime.workspace = true
 parking_lot.workspace = true
+paths.workspace = true
 postage.workspace = true
 project.workspace = true
+release_channel.workspace = true
 remote.workspace = true
-rpc.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -61,18 +64,18 @@ smallvec.workspace = true
 sqlez.workspace = true
 strum.workspace = true
 task.workspace = true
+telemetry.workspace = true
 theme.workspace = true
 theme_settings.workspace = true
 ui.workspace = true
+ui_input.workspace = true
 url.workspace = true
 util.workspace = true
 uuid.workspace = true
-dez_actions.workspace = true
-
-[target.'cfg(target_os = "windows")'.dependencies]
-windows.workspace = true
+zed_actions.workspace = true
 
 [dev-dependencies]
+client = { workspace = true, features = ["test-support"] }
 db = { workspace = true, features = ["test-support"] }
 fs = { workspace = true, features = ["test-support"] }
 gpui = { workspace = true, features = ["test-support"] }

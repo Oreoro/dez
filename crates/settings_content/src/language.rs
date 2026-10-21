@@ -1,4 +1,4 @@
-use std::num::NonZeroU32;
+use std::{borrow::Cow, num::NonZeroU32};
 
 use collections::{HashMap, HashSet};
 use schemars::JsonSchema;
@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 use settings_macros::{MergeFrom, with_fallible_options};
 use std::sync::Arc;
 
-use crate::{DocumentFoldingRanges, DocumentSymbols, ExtendingVec, SemanticTokens, merge_from};
+use crate::{
+    DelayMs, DocumentFoldingRanges, DocumentSymbols, ExtendingSet, SemanticTokens, merge_from,
+};
 
 /// The state of the modifier keys at some point in time
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema, MergeFrom)]
@@ -32,8 +34,10 @@ pub struct ModifiersContent {
 }
 
 #[with_fallible_options]
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, JsonSchema)]
 pub struct AllLanguageSettingsContent {
+    /// The edit prediction settings.
+    pub edit_predictions: Option<EditPredictionSettingsContent>,
     /// The default language settings.
     #[serde(flatten)]
     pub defaults: LanguageSettingsContent,
@@ -42,19 +46,27 @@ pub struct AllLanguageSettingsContent {
     pub languages: LanguageToSettingsMap,
     /// Settings for associating file extensions and filenames
     /// with languages.
-    pub file_types: Option<HashMap<Arc<str>, ExtendingVec<String>>>,
+    pub file_types: Option<FileTypeMap>,
 }
+
+crate::fallible_options::flattened_deserialize!(AllLanguageSettingsContent {
+    sections: { defaults },
+    options: { edit_predictions, file_types },
+    defaults: { languages },
+});
 
 impl merge_from::MergeFrom for AllLanguageSettingsContent {
     fn merge_from(&mut self, other: &Self) {
         self.file_types.merge_from(&other.file_types);
+        self.edit_predictions.merge_from(&other.edit_predictions);
 
         // A user's global settings override the default global settings and
         // all default language-specific settings.
-        //
         self.defaults.merge_from(&other.defaults);
         for language_settings in self.languages.0.values_mut() {
+            let language_servers = language_settings.language_servers.take();
             language_settings.merge_from(&other.defaults);
+            language_settings.language_servers = language_servers;
         }
 
         // A user's language-specific settings override default language-specific settings.
@@ -63,12 +75,322 @@ impl merge_from::MergeFrom for AllLanguageSettingsContent {
                 existing.merge_from(&user_language_settings);
             } else {
                 let mut new_settings = self.defaults.clone();
+                new_settings.language_servers = None;
                 new_settings.merge_from(&user_language_settings);
 
                 self.languages.0.insert(language_name.clone(), new_settings);
             }
         }
     }
+}
+
+/// The provider that supplies edit predictions.
+#[derive(
+    Copy, Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum EditPredictionProvider {
+    None,
+    #[default]
+    Copilot,
+    Zed,
+    Codestral,
+    Ollama,
+    OpenAiCompatibleApi,
+    Mercury,
+}
+
+impl EditPredictionProvider {
+    pub fn is_zed(&self) -> bool {
+        match self {
+            EditPredictionProvider::Zed => true,
+            EditPredictionProvider::None
+            | EditPredictionProvider::Copilot
+            | EditPredictionProvider::Codestral
+            | EditPredictionProvider::Ollama
+            | EditPredictionProvider::OpenAiCompatibleApi
+            | EditPredictionProvider::Mercury => false,
+        }
+    }
+
+    pub fn display_name(&self) -> Option<&'static str> {
+        match self {
+            EditPredictionProvider::Zed => Some("Zed AI"),
+            EditPredictionProvider::Copilot => Some("GitHub Copilot"),
+            EditPredictionProvider::Codestral => Some("Codestral"),
+            EditPredictionProvider::Mercury => Some("Mercury"),
+            EditPredictionProvider::None => None,
+            EditPredictionProvider::Ollama => Some("Ollama"),
+            EditPredictionProvider::OpenAiCompatibleApi => Some("OpenAI-Compatible API"),
+        }
+    }
+}
+
+/// The contents of the edit prediction settings.
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct EditPredictionSettingsContent {
+    /// Determines which edit prediction provider to use.
+    pub provider: Option<EditPredictionProvider>,
+    /// A list of globs representing files that edit predictions should be disabled for.
+    /// This list adds to a pre-existing, sensible default set of globs.
+    /// Any additional ones you add are combined with them.
+    pub disabled_globs: Option<Vec<String>>,
+    /// The mode used to display edit predictions in the buffer.
+    /// Provider support required.
+    pub mode: Option<EditPredictionsMode>,
+    /// Settings specific to GitHub Copilot.
+    pub copilot: Option<CopilotSettingsContent>,
+    /// Settings specific to Codestral.
+    pub codestral: Option<CodestralSettingsContent>,
+    /// Settings specific to Ollama.
+    pub ollama: Option<OllamaEditPredictionSettingsContent>,
+    /// Settings specific to using custom OpenAI-compatible servers for edit prediction.
+    pub open_ai_compatible_api: Option<CustomEditPredictionProviderSettingsContent>,
+    /// Settings specific to Zed's Edit Predictions provider.
+    pub zed: Option<ZedEditPredictionSettingsContent>,
+    /// Settings specific to the Mercury Edit Predictions provider.
+    pub mercury: Option<MercuryEditPredictionSettingsContent>,
+    /// Controls whether Zed may collect training data when using Zed's Edit Predictions.
+    /// Data is only ever captured for files in projects that are detected as open source.
+    ///
+    /// - `"default"`: use the preference previously set via the status-bar toggle,
+    ///   or false if no preference has been stored.
+    /// - `"yes"`: allow data collection for files in open-source projects.
+    /// - `"no"`: never allow data collection.
+    pub allow_data_collection: Option<EditPredictionDataCollectionChoice>,
+}
+
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct CustomEditPredictionProviderSettingsContent {
+    /// Api URL to use for completions.
+    ///
+    /// Default: ""
+    pub api_url: Option<String>,
+    /// The prompt format to use for completions. Set to `""` to have the format be derived from the model name.
+    ///
+    /// Default: ""
+    pub prompt_format: Option<EditPredictionPromptFormatContent>,
+    /// The name of the model.
+    ///
+    /// Default: ""
+    pub model: Option<String>,
+    /// Maximum tokens to generate for FIM models and self-hosted Sweep rewrite responses.
+    ///
+    /// Default: 256
+    pub max_output_tokens: Option<u32>,
+    /// The debounce delay in milliseconds before automatically requesting a prediction
+    /// after typing stops. Set to 0 to request predictions immediately.
+    ///
+    /// Default: 0
+    pub prediction_debounce: Option<DelayMs>,
+}
+
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum EditPredictionPromptFormatContent {
+    #[default]
+    Infer,
+    Zeta,
+    Zeta2,
+    Zeta2_1,
+    CodeLlama,
+    StarCoder,
+    DeepseekCoder,
+    Qwen,
+    CodeGemma,
+    Codestral,
+    Glm,
+    Sweep,
+}
+
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct CopilotSettingsContent {
+    /// HTTP/HTTPS proxy to use for Copilot.
+    ///
+    /// Default: none
+    pub proxy: Option<String>,
+    /// Disable certificate verification for the proxy (not recommended).
+    ///
+    /// Default: false
+    pub proxy_no_verify: Option<bool>,
+    /// Enterprise URI for Copilot.
+    ///
+    /// Default: none
+    pub enterprise_uri: Option<String>,
+    /// Whether the Copilot Next Edit Suggestions feature is enabled.
+    ///
+    /// Default: true
+    pub enable_next_edit_suggestions: Option<bool>,
+    /// The debounce delay in milliseconds before automatically requesting a prediction
+    /// after typing stops. Set to 0 to request predictions immediately.
+    ///
+    /// Default: 75
+    pub prediction_debounce: Option<DelayMs>,
+}
+
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct CodestralSettingsContent {
+    /// Model to use for completions.
+    ///
+    /// Default: "codestral-latest"
+    pub model: Option<String>,
+    /// Maximum tokens to generate.
+    ///
+    /// Default: 150
+    pub max_tokens: Option<u32>,
+    /// Api URL to use for completions.
+    ///
+    /// Default: "https://codestral.mistral.ai"
+    pub api_url: Option<String>,
+    /// The debounce delay in milliseconds before automatically requesting a prediction
+    /// after typing stops. Set to 0 to request predictions immediately.
+    ///
+    /// Default: 150
+    pub prediction_debounce: Option<DelayMs>,
+}
+
+/// Settings specific to Zed's Edit Predictions provider.
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct ZedEditPredictionSettingsContent {
+    /// The debounce delay in milliseconds before automatically requesting a prediction
+    /// after typing stops. Set to 0 to request predictions immediately.
+    ///
+    /// Default: 0
+    pub prediction_debounce: Option<DelayMs>,
+}
+
+/// Settings specific to the Mercury Edit Predictions provider.
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct MercuryEditPredictionSettingsContent {
+    /// The debounce delay in milliseconds before automatically requesting a prediction
+    /// after typing stops. Set to 0 to request predictions immediately.
+    ///
+    /// Default: 0
+    pub prediction_debounce: Option<DelayMs>,
+}
+
+/// Ollama model name for edit predictions.
+#[with_fallible_options]
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct OllamaModelName(pub String);
+
+impl AsRef<str> for OllamaModelName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for OllamaModelName {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<OllamaModelName> for String {
+    fn from(value: OllamaModelName) -> Self {
+        value.0
+    }
+}
+
+#[with_fallible_options]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct OllamaEditPredictionSettingsContent {
+    /// Model to use for completions.
+    ///
+    /// Default: none
+    pub model: Option<OllamaModelName>,
+    /// Maximum tokens to generate for FIM models and self-hosted Sweep rewrite responses.
+    ///
+    /// Default: 256
+    pub max_output_tokens: Option<u32>,
+    /// Api URL to use for completions.
+    ///
+    /// Default: "http://localhost:11434"
+    pub api_url: Option<String>,
+
+    /// The prompt format to use for completions. Set to `""` to have the format be derived from the model name.
+    ///
+    /// Default: ""
+    pub prompt_format: Option<EditPredictionPromptFormatContent>,
+    /// The debounce delay in milliseconds before automatically requesting a prediction
+    /// after typing stops. Set to 0 to request predictions immediately.
+    ///
+    /// Default: 0
+    pub prediction_debounce: Option<DelayMs>,
+}
+
+/// Controls whether Zed collects training data when using Zed's Edit Predictions.
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum EditPredictionDataCollectionChoice {
+    /// Use the preference previously set via the status-bar toggle, or false
+    /// if no preference has been stored.
+    #[default]
+    Default,
+    /// Allow Zed to collect training data from open-source projects.
+    Yes,
+    /// Never allow training data collection.
+    No,
+}
+
+/// The mode in which edit predictions should be displayed.
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    Default,
+    Eq,
+    PartialEq,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum EditPredictionsMode {
+    /// If provider supports it, display inline when holding modifier key (e.g., alt).
+    /// Otherwise, eager preview is used.
+    #[serde(alias = "auto")]
+    Subtle,
+    /// Display inline when there are no language server completions available.
+    #[default]
+    #[serde(alias = "eager_preview")]
+    Eager,
 }
 
 /// Controls the soft-wrapping behavior in the editor.
@@ -123,6 +445,65 @@ pub enum SoftWrap {
     /// Soft wrap line at the preferred line length or the editor width (whichever is smaller).
     #[serde(alias = "preferred_line_length")]
     Bounded,
+}
+
+pub const REST_OF_LANGUAGE_SERVERS: &str = "...";
+
+#[derive(Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[schemars(with = "String")]
+pub struct ConfiguredLanguageServer {
+    pub name: Arc<str>,
+    pub disabled: bool,
+}
+
+impl ConfiguredLanguageServer {
+    const DISABLED_CHAR: char = '!';
+
+    pub fn new(name: impl Into<Arc<str>>) -> Self {
+        Self {
+            name: name.into(),
+            disabled: false,
+        }
+    }
+
+    pub fn new_disabled(name: impl Into<Arc<str>>) -> Self {
+        Self {
+            name: name.into(),
+            disabled: true,
+        }
+    }
+}
+
+impl From<&str> for ConfiguredLanguageServer {
+    fn from(value: &str) -> Self {
+        match value.strip_prefix(Self::DISABLED_CHAR) {
+            Some(name) => Self::new_disabled(name),
+            None => Self::new(value),
+        }
+    }
+}
+
+impl Serialize for ConfiguredLanguageServer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        if self.disabled {
+            serializer.collect_str(&format_args!("{}{}", Self::DISABLED_CHAR, self.name))
+        } else {
+            serializer.serialize_str(&self.name)
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ConfiguredLanguageServer {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = Cow::<'de, str>::deserialize(deserializer)?;
+        Ok(Self::from(value.as_ref()))
+    }
 }
 
 /// The settings for a particular language.
@@ -196,7 +577,7 @@ pub struct LanguageSettingsContent {
     ///
     /// Default: auto
     pub formatter: Option<FormatterList>,
-    /// dez's Prettier integration settings.
+    /// Zed's Prettier integration settings.
     /// Allows to enable/disable formatting with Prettier
     /// and configure default Prettier, used when no project-level Prettier installation is found.
     ///
@@ -216,7 +597,7 @@ pub struct LanguageSettingsContent {
     /// - `"..."` - A placeholder to refer to the **rest** of the registered language servers for this language.
     ///
     /// Default: ["..."]
-    pub language_servers: Option<Vec<String>>,
+    pub language_servers: Option<Vec<ConfiguredLanguageServer>>,
     /// Controls how semantic tokens from language servers are used for syntax highlighting.
     ///
     /// Options:
@@ -250,6 +631,18 @@ pub struct LanguageSettingsContent {
     ///
     /// Default: "in_comments"
     pub allow_rewrap: Option<RewrapBehavior>,
+    /// Controls whether edit predictions are shown immediately (true)
+    /// or manually by triggering `editor::ShowEditPrediction` (false).
+    ///
+    /// Default: true
+    pub show_edit_predictions: Option<bool>,
+    /// Controls whether edit predictions are shown in the given language
+    /// scopes.
+    ///
+    /// Example: ["string", "comment"]
+    ///
+    /// Default: []
+    pub edit_predictions_disabled_in: Option<Vec<String>>,
     /// Whether to show tabs and spaces in the editor.
     pub show_whitespaces: Option<ShowWhitespaceSetting>,
     /// Visible characters used to render whitespace when show_whitespaces is enabled.
@@ -271,12 +664,12 @@ pub struct LanguageSettingsContent {
     /// Inlay hint related settings.
     pub inlay_hints: Option<InlayHintSettingsContent>,
     /// Whether to automatically type closing characters for you. For example,
-    /// when you type '(', dez will automatically add a closing ')' at the correct position.
+    /// when you type '(', Zed will automatically add a closing ')' at the correct position.
     ///
     /// Default: true
     pub use_autoclose: Option<bool>,
     /// Whether to automatically surround text with characters for you. For example,
-    /// when you select text and type '(', dez will automatically surround text with ().
+    /// when you select text and type '(', Zed will automatically surround text with ().
     ///
     /// Default: true
     pub use_auto_surround: Option<bool>,
@@ -622,12 +1015,22 @@ pub struct PrettierSettingsContent {
     strum::VariantArray,
     strum::VariantNames,
 )]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum FormatOnSave {
     /// Files should be formatted on save.
     On,
     /// Files should not be formatted on save.
     Off,
+    /// Only lines with unstaged changes are formatted on save.
+    /// Requires source control and LSP range formatting support.
+    /// If no git diff is available or if the LSP doesn't support
+    /// range formatting, formatting is skipped.
+    Modifications,
+    /// Only lines with unstaged changes are formatted on save.
+    /// If no git diff is available (e.g., when source control is
+    /// unavailable) or if the LSP doesn't support range formatting,
+    /// falls back to formatting the whole file.
+    ModificationsIfAvailable,
 }
 
 /// Controls how line endings are normalized when a buffer is saved.
@@ -693,13 +1096,13 @@ impl AsRef<[Formatter]> for FormatterList {
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq, Eq, JsonSchema, MergeFrom)]
 #[serde(rename_all = "snake_case")]
 pub enum Formatter {
-    /// Format files using dez's Prettier integration (if applicable),
+    /// Format files using Zed's Prettier integration (if applicable),
     /// or falling back to formatting via language server.
     #[default]
     Auto,
     /// Do not format code.
     None,
-    /// Format code using dez's Prettier integration.
+    /// Format code using Zed's Prettier integration.
     Prettier,
     /// Format code using an external command.
     External {
@@ -785,7 +1188,7 @@ struct LanguageServerSpecifierContent {
 pub struct IndentGuideSettingsContent {
     /// Whether to display indent guides in the editor.
     ///
-    /// Default: true
+    /// Default: false
     pub enabled: Option<bool>,
     /// The width of the indent guides in pixels, between 1 and 10.
     ///
@@ -812,13 +1215,13 @@ pub struct LanguageTaskSettingsContent {
     /// Extra task variables to set for a particular language.
     pub variables: Option<HashMap<String, String>>,
     pub enabled: Option<bool>,
-    /// Use LSP tasks over dez language extension ones.
+    /// Use LSP tasks over Zed language extension ones.
     /// If no LSP tasks are returned due to error/timeout or regular execution,
-    /// dez language extension tasks will be used instead.
+    /// Zed language extension tasks will be used instead.
     ///
-    /// Other dez tasks will still be shown:
-    /// * dez task from either of the task config file
-    /// * dez task from history (e.g. one-off task was spawned before)
+    /// Other Zed tasks will still be shown:
+    /// * Zed task from either of the task config file
+    /// * Zed task from history (e.g. one-off task was spawned before)
     pub prefer_lsp: Option<bool>,
 }
 
@@ -826,6 +1229,20 @@ pub struct LanguageTaskSettingsContent {
 #[with_fallible_options]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct LanguageToSettingsMap(pub HashMap<String, LanguageSettingsContent>);
+
+/// Map from language name to file patterns.
+#[with_fallible_options]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
+pub struct FileTypeMap(pub HashMap<Arc<str>, ExtendingSet<String>>);
+
+impl<'a> IntoIterator for &'a FileTypeMap {
+    type Item = (&'a Arc<str>, &'a ExtendingSet<String>);
+    type IntoIter = std::collections::hash_map::Iter<'a, Arc<str>, ExtendingSet<String>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
 
 /// Determines how indent guides are colored.
 #[derive(
@@ -880,7 +1297,7 @@ pub enum IndentGuideBackgroundColoring {
 #[cfg(test)]
 mod test {
 
-    use crate::{ParseStatus, fallible_options};
+    use crate::{ParseStatus, fallible_options, merge_from::MergeFrom};
 
     use super::*;
 
@@ -949,6 +1366,272 @@ mod test {
         let raw_auto = "{\"formatter\": {}}";
         let (_, result) = fallible_options::parse_json::<LanguageSettingsContent>(raw_auto);
         assert!(matches!(result, ParseStatus::Failed { .. }));
+    }
+
+    #[test]
+    fn test_configured_language_server_serialization() {
+        let enabled = ConfiguredLanguageServer::new("rust-analyzer");
+        let disabled = ConfiguredLanguageServer::new_disabled("rust-analyzer");
+
+        assert_eq!(
+            serde_json::to_string(&enabled).expect("enabled server should serialize"),
+            "\"rust-analyzer\""
+        );
+        assert_eq!(
+            serde_json::to_string(&disabled).expect("disabled server should serialize"),
+            "\"!rust-analyzer\""
+        );
+        assert_eq!(
+            serde_json::from_str::<ConfiguredLanguageServer>("\"rust-analyzer\"")
+                .expect("enabled server should deserialize"),
+            enabled
+        );
+        assert_eq!(
+            serde_json::from_str::<ConfiguredLanguageServer>("\"!rust-analyzer\"")
+                .expect("disabled server should deserialize"),
+            disabled
+        );
+    }
+
+    #[test]
+    fn test_language_servers_merge_keeps_per_language_lists_pure() {
+        let default_typescript_servers = vec![
+            ConfiguredLanguageServer::new_disabled("typescript-language-server"),
+            ConfiguredLanguageServer::new("vtsls"),
+            ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
+        ];
+        let mut base = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            languages: LanguageToSettingsMap(
+                [(
+                    "TypeScript".into(),
+                    LanguageSettingsContent {
+                        language_servers: Some(default_typescript_servers.clone()),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+
+        let user = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec!["!vtsls".into(), REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            ..AllLanguageSettingsContent::default()
+        };
+        base.merge_from(&user);
+        assert_eq!(
+            base.languages.0["TypeScript"].language_servers.as_ref(),
+            Some(&default_typescript_servers),
+            "a global list must not rewrite per-language lists"
+        );
+        assert_eq!(
+            base.defaults.language_servers.as_ref(),
+            Some(&vec![
+                ConfiguredLanguageServer::new_disabled("vtsls"),
+                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
+            ])
+        );
+
+        let project = AllLanguageSettingsContent {
+            languages: LanguageToSettingsMap(
+                [(
+                    "TypeScript".into(),
+                    LanguageSettingsContent {
+                        language_servers: Some(vec![
+                            "vtsls".into(),
+                            REST_OF_LANGUAGE_SERVERS.into(),
+                        ]),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+        base.merge_from(&project);
+        assert_eq!(
+            base.languages.0["TypeScript"].language_servers.as_ref(),
+            Some(&vec![
+                ConfiguredLanguageServer::new("vtsls"),
+                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
+            ]),
+            "a per-language list must replace the older one wholesale"
+        );
+    }
+
+    #[test]
+    fn test_language_servers_merge_no_per_language_config_stays_unset() {
+        let mut base = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            languages: LanguageToSettingsMap(
+                [(
+                    "Rust".into(),
+                    LanguageSettingsContent {
+                        tab_size: Some(std::num::NonZeroU32::new(4).unwrap()),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+
+        let user = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec!["!eslint".into(), REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            ..AllLanguageSettingsContent::default()
+        };
+
+        base.merge_from(&user);
+
+        assert_eq!(
+            base.languages.0["Rust"].language_servers, None,
+            "languages without their own list must not get a stale copy of the global one"
+        );
+        assert_eq!(
+            base.defaults.language_servers.as_ref(),
+            Some(&vec![
+                ConfiguredLanguageServer::new_disabled("eslint"),
+                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_language_servers_merge_user_per_language_overrides() {
+        let mut base = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            languages: LanguageToSettingsMap(
+                [(
+                    "TypeScript".into(),
+                    LanguageSettingsContent {
+                        language_servers: Some(vec![
+                            "!typescript-language-server".into(),
+                            "vtsls".into(),
+                            REST_OF_LANGUAGE_SERVERS.into(),
+                        ]),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+
+        let user = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec!["!eslint".into(), REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            languages: LanguageToSettingsMap(
+                [(
+                    "TypeScript".into(),
+                    LanguageSettingsContent {
+                        language_servers: Some(vec![
+                            "deno".into(),
+                            "!vtsls".into(),
+                            REST_OF_LANGUAGE_SERVERS.into(),
+                        ]),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+
+        base.merge_from(&user);
+
+        let ts_servers = base.languages.0["TypeScript"]
+            .language_servers
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            ts_servers,
+            &vec![
+                ConfiguredLanguageServer::new("deno"),
+                ConfiguredLanguageServer::new_disabled("vtsls"),
+                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_user_per_language_config_overrides_default_disables() {
+        let mut base = AllLanguageSettingsContent {
+            defaults: LanguageSettingsContent {
+                language_servers: Some(vec![REST_OF_LANGUAGE_SERVERS.into()]),
+                ..LanguageSettingsContent::default()
+            },
+            languages: LanguageToSettingsMap(
+                [(
+                    "TypeScript".into(),
+                    LanguageSettingsContent {
+                        language_servers: Some(vec![
+                            "!typescript-language-server".into(),
+                            "vtsls".into(),
+                            REST_OF_LANGUAGE_SERVERS.into(),
+                        ]),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+
+        let user = AllLanguageSettingsContent {
+            languages: LanguageToSettingsMap(
+                [(
+                    "TypeScript".into(),
+                    LanguageSettingsContent {
+                        language_servers: Some(vec![
+                            "typescript-language-server".into(),
+                            REST_OF_LANGUAGE_SERVERS.into(),
+                        ]),
+                        ..LanguageSettingsContent::default()
+                    },
+                )]
+                .into_iter()
+                .collect(),
+            ),
+            ..AllLanguageSettingsContent::default()
+        };
+
+        base.merge_from(&user);
+
+        let ts_servers = base.languages.0["TypeScript"]
+            .language_servers
+            .as_ref()
+            .unwrap();
+        assert_eq!(
+            ts_servers,
+            &vec![
+                ConfiguredLanguageServer::new("typescript-language-server"),
+                ConfiguredLanguageServer::new(REST_OF_LANGUAGE_SERVERS),
+            ]
+        );
     }
 
     #[test]

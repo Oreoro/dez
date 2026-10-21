@@ -1,13 +1,26 @@
 ---
-description: dez is a text editor that supports lots of Git features
-title: dez Editor Git integration documentation
+description: Zed is a text editor that supports lots of Git features
+title: Zed Editor Git integration documentation
 ---
 
 # Git
 
-dez has built-in Git support that lets you manage version control without leaving the editor. The Git Panel shows your working tree state, staging area, and branch information. Changes you make on the command line are reflected immediately in dez.
+Zed has built-in Git support that lets you manage version control without leaving the editor. The Git Panel shows your working tree state, staging area, and branch information. Changes you make on the command line are reflected immediately in Zed.
 
-For operations that dez doesn't support natively, you can use the integrated terminal.
+For operations that Zed doesn't support natively, you can use the integrated terminal.
+
+## Repository Activation
+
+When a project is rooted at a git repository, or at a subdirectory of one, all repositories in it are active immediately.
+
+When a project is not rooted at a repository (a home directory, a folder of projects), repositories directly inside the project root are also active immediately, and deeper ones activate when a file inside them is opened, in local and remote projects alike.
+
+Inactive repositories are fully indexed and searchable; only git features (status, diffs, branches) wait for activation.
+
+This behavior is tied to the [`file_scan_depth`](./reference/all-settings.md#file-scan-depth) setting, but not to its value: any non-zero `file_scan_depth` defers activation for repositories that are not directly inside a project root folder, and repositories rooted at or deeper than the limit are not even discovered until their directories are indexed on demand.
+In multi-folder projects, depth and activation are measured from each root folder separately.
+
+Setting `file_scan_depth` to `0` turns deferred activation off: every discovered repository activates immediately.
 
 ## Git Panel
 
@@ -17,7 +30,7 @@ You can open the Git Panel using {#action git_panel::ToggleFocus}, or by clickin
 
 In the panel you can see the state of your project at a glance: which repository and branch are active, what files have changed and the current staging state of each file.
 
-dez monitors your repository so that changes you make on the command line are instantly reflected.
+Zed monitors your repository so that changes you make on the command line are instantly reflected.
 
 ### Configuration
 
@@ -36,7 +49,7 @@ The Git Panel shows a flat list of changed files by default. To see files organi
 
 #### Inline Blame
 
-dez shows Git blame information on the current line. To turn this off or add a delay before it appears, go to **Version Control > Inline Git Blame**.
+Zed shows Git blame information on the current line. To turn this off or add a delay before it appears, go to **Version Control > Inline Git Blame**.
 
 #### Hiding the Gutter Indicators
 
@@ -44,11 +57,11 @@ The colored bars in the gutter that show added, modified, and deleted lines can 
 
 #### Commit Message Line Length
 
-dez wraps commit messages at 72 characters (a Git convention). To change this, search for "Git Commit" in Settings and adjust **Preferred Line Length**.
+Zed wraps commit messages at 72 characters (a Git convention). To change this, search for "Git Commit" in Settings and adjust **Preferred Line Length**.
 
 ## Project Diff
 
-You can see all of the changes captured by Git in dez by opening the Project Diff ({#kb git::Diff}), accessible via the {#action git::Diff} action in the Command Palette or the Git Panel.
+You can see all of the changes captured by Git in Zed by opening the Project Diff ({#kb git::Diff}), accessible via the {#action git::Diff} action in the Command Palette or the Git Panel.
 
 All of the changes displayed in the Project Diff behave exactly the same as any other multibuffer: they are all editable excerpts of files.
 
@@ -56,7 +69,7 @@ You can stage or unstage each hunk as well as a whole file by hitting the button
 
 ### Word Diff Highlighting
 
-By default, dez highlights changed words within modified lines to make it easier to spot exactly what changed. To disable this globally, open the Settings Editor and go to **Languages & Tools > Miscellaneous**, then turn off **Word Diff Enabled**.
+By default, Zed highlights changed words within modified lines to make it easier to spot exactly what changed. To disable this globally, open the Settings Editor and go to **Languages & Tools > Miscellaneous**, then turn off **Word Diff Enabled**.
 
 To disable word diff for specific languages only, add this to your settings.json:
 
@@ -72,11 +85,11 @@ To disable word diff for specific languages only, add this to your settings.json
 
 ### Diff View Styles
 
-dez displays diffs in two modes: **split** (side-by-side comparison) or **unified** (inline changes). Split view is the default.
+Zed displays diffs in two modes: **split** (side-by-side comparison) or **unified** (inline changes). Split view is the default.
 
 #### Changing the diff view
 
-Open the Settings Editor ({#kb dez::OpenSettings}) and search for "diff view style". Select either **Split** or **Unified**.
+Open the Settings Editor ({#kb zed::OpenSettings}) and search for "diff view style". Select either **Split** or **Unified**.
 
 To change the default, add this to your `settings.json`:
 
@@ -86,7 +99,7 @@ To change the default, add this to your `settings.json`:
 }
 ```
 
-See [Configuring dez](./configuring-dez.md) for more about the Settings Editor.
+See [Configuring Zed](./configuring-zed.md) for more about the Settings Editor.
 
 #### Split vs unified
 
@@ -108,25 +121,25 @@ To view File History:
 
 ## Fetch, Push, and Pull
 
-Fetch, push, or pull from your Git repository in dez via the buttons available on the Git Panel or via the Command Palette by looking at the respective actions: {#action git::Fetch}, {#action git::Push}, and {#action git::Pull}.
+Fetch, push, or pull from your Git repository in Zed via the buttons available on the Git Panel or via the Command Palette by looking at the respective actions: {#action git::Fetch}, {#action git::Push}, and {#action git::Pull}.
 
 ### Push Configuration
 
-dez respects Git's push configuration. When pushing, dez checks the following in order:
+Zed respects Git's push configuration. When pushing, Zed checks the following in order:
 
 1. `pushRemote` configured for the current branch
 2. `remote.pushDefault` in your Git config
 3. The branch's tracking remote
 
-This matches Git's standard behavior, so if you've configured `pushRemote` or `pushDefault` in your `.gitconfig` or via `git config`, dez will use those settings.
+This matches Git's standard behavior, so if you've configured `pushRemote` or `pushDefault` in your `.gitconfig` or via `git config`, Zed will use those settings.
 
 ## Remotes
 
-When your repository has multiple remotes, dez shows a remote selector in the Git Panel. Click the remote button next to push/pull to choose which remote to use for that operation.
+When your repository has multiple remotes, Zed shows a remote selector in the Git Panel. Click the remote button next to push/pull to choose which remote to use for that operation.
 
 ## Staging Workflow
 
-dez has two primary staging workflows, using either the Project Diff or the panel directly.
+Zed has two primary staging workflows, using either the Project Diff or the panel directly.
 
 ### Using the Project Diff
 
@@ -142,23 +155,27 @@ From the panel, you can simply type a commit message and hit the commit button, 
 
 Entries can be staged using each individual entry's checkbox. All changes can be staged using the button at the top of the panel, or {#action git::StageAll}.
 
+Entries are grouped into sections (**Tracked** and **Untracked** by default), and each section can be staged on its own without touching the others. Click the checkbox on a section header, or use {#action git::StageSection} / {#action git::UnstageSection}, which act on the section containing the selected entry. These are also available by right-clicking an entry. Neither is bound by default; bind them in your keymap under the `GitPanel` context if you use them often.
+
+To open a changed file in the editor without a diff view, right-click on the file in the Git Panel and select **View File**. Use **Open Diff** ({#kb menu::Confirm}) or **Open Diff (File)** to review changes in a diff view instead.
+
 <!-- Add media -->
 
 ## Committing
 
-dez offers two commit textareas:
+Zed offers two commit textareas:
 
 1. The first one is available right at the bottom of the Git Panel. Hitting {#kb git::Commit} immediately commits all of your staged changes.
 2. The second is available via the action {#action git::ExpandCommitEditor} or via hitting the {#kb git::ExpandCommitEditor} while focused in the Git Panel commit textarea.
 
 ### Undoing a Commit
 
-As soon as you commit in dez, in the Git Panel, you'll see a bar right under the commit textarea, which will show the recently submitted commit.
+As soon as you commit in Zed, in the Git Panel, you'll see a bar right under the commit textarea, which will show the recently submitted commit.
 In there, you can use the "Uncommit" button, which performs the `git reset HEADˆ--soft` command.
 
 ### Configuring Commit Line Length
 
-By default, dez sets the commit line length to `72` but it can be configured in your local `settings.json` file.
+By default, Zed sets the commit line length to `72` but it can be configured in your local `settings.json` file.
 
 Find more information about setting the `preferred-line-length` in the [Configuration](#configuration) section.
 
@@ -172,7 +189,7 @@ When you are working in a [Git worktree](#git-worktrees), use the branch picker 
 
 ### Deleting Branches
 
-To delete a branch, open the branch switcher with {#action git::Switch}, find the branch you want to delete, and use the delete option. dez will confirm before deleting to prevent accidental data loss.
+To delete a branch, open the branch switcher with {#action git::Switch}, find the branch you want to delete, and use the delete option. Zed will confirm before deleting to prevent accidental data loss.
 
 > **Note:** You cannot delete the branch you currently have checked out. Switch to a different branch first.
 
@@ -185,7 +202,7 @@ Open the worktree picker from the title bar, next to the project picker, or by r
 From the picker, you can:
 
 - Create a new linked worktree either from the current branch or default branch
-- Type a name to create a named worktree or let dez automatically pick one for you
+- Type a name to create a named worktree or let Zed automatically pick one for you
 - Switch the current workspace to an existing worktree
 - Open an existing worktree in a new window
 - Delete linked worktrees that are not currently open in the project
@@ -194,26 +211,26 @@ From the picker, you can:
 
 New worktrees are created in detached HEAD state.
 After switching to the new worktree, use the branch picker next to the worktree picker to create a new branch or check out an existing, unused branch.
-This keeps dez from accidentally checking out the same branch in multiple worktrees.
+This keeps Zed from accidentally checking out the same branch in multiple worktrees.
 
 The directory used for new worktrees is controlled by the `git.worktree_directory` setting.
-By default, dez creates worktrees under `../worktrees` relative to the repository's working directory.
+By default, Zed creates worktrees under `../worktrees` relative to the repository's working directory.
 
 See [All Settings](./reference/all-settings.md#git-worktree-directory) for examples.
 
 ### Init Setup
 
-To run setup steps after dez creates a linked worktree, use the [`create_worktree` task hook](./tasks.md#hooks).
+To run setup steps after Zed creates a linked worktree, use the [`create_worktree` task hook](./tasks.md#hooks).
 For agent-specific workflows, see [Worktree Isolation](./ai/parallel-agents.md#worktree-isolation).
 
 ### Multi-root Workspaces
 
-If your project contains multiple Git repositories (i.e., multi-root folders), dez creates a linked worktree for each repository when creating a new worktree from the picker.
+If your project contains multiple Git repositories (i.e., multi-root folders), Zed creates a linked worktree for each repository when creating a new worktree from the picker.
 Non-Git folders in the same project are included in the new workspace as-is.
 
 ## Merge Conflicts
 
-When you encounter merge conflicts after a merge, rebase, or pull, dez highlights the conflicting regions in your files and displays resolution buttons above each conflict.
+When you encounter merge conflicts after a merge, rebase, or pull, Zed highlights the conflicting regions in your files and displays resolution buttons above each conflict.
 
 ### Viewing Conflicts
 
@@ -240,11 +257,17 @@ Git stash allows you to temporarily save your uncommitted changes and revert you
 
 ### Creating Stashes
 
-To stash all your current changes, use the {#action git::StashAll} action. This will save both staged and unstaged changes to a new stash entry and clean your working directory.
+To stash all your current changes, use the {#action git::StashAll} action. This will save both staged and unstaged changes, including untracked files, to a new stash entry and clean your working directory.
+
+To stash only tracked changes and leave untracked files in place, use the {#action git::StashTracked} action. To stash only staged changes and leave unstaged changes in place, use the {#action git::StashStaged} action; this requires git 2.35 or newer.
+
+The Git Panel's overflow menu offers whichever of these matches the current **Group By** mode: **Stash Tracked** when grouping by Tracked & Untracked, and **Stash Staged** when grouping by Staged & Unstaged. **Stash All** is always available.
+
+Each of these actions first prompts for an optional stash name. Confirming with an empty prompt lets git generate its usual `WIP on ...` description.
 
 ### Managing Stashes
 
-dez provides a stash picker accessible via {#action git::ViewStash} or from the Git Panel's overflow menu. From the stash picker, you can:
+Zed provides a stash picker accessible via {#action git::ViewStash} or from the Git Panel's overflow menu. From the stash picker, you can:
 
 - **View stash list**: Browse all your saved stashes with their descriptions and timestamps
 - **Open diffs**: See exactly what changes are stored in each stash
@@ -254,7 +277,7 @@ dez provides a stash picker accessible via {#action git::ViewStash} or from the 
 
 ### Quick Stash Operations
 
-For faster workflows, dez provides direct actions to work with the most recent stash:
+For faster workflows, Zed provides direct actions to work with the most recent stash:
 
 - **Apply latest stash**: Use {#action git::StashApply} to apply the most recent stash without removing it
 - **Pop latest stash**: Use {#action git::StashPop} to apply and remove the most recent stash
@@ -271,10 +294,10 @@ To view a stash's contents, select it in the stash picker and press {#kb stash_p
 
 ## AI Support in Git
 
-dez currently supports LLM-powered commit message generation.
+Zed currently supports LLM-powered commit message generation.
 You can ask AI to generate a commit message by focusing on the message editor within the Git Panel and either clicking on the pencil icon in the bottom left, or reaching for the {#action git::GenerateCommitMessage}, or through the {#kb git::GenerateCommitMessage} keybinding.
 
-> Note that you need to have an LLM provider configured either via your own API keys or through dez's hosted AI models.
+> Note that you need to have an LLM provider configured either via your own API keys or through Zed's hosted AI models.
 > Visit [AI Quick Start](./ai/quick-start.md) to learn how to configure AI.
 
 You can specify your preferred model for this task by adding a `commit_message_model` field to your agent settings.
@@ -291,7 +314,7 @@ See [Feature-specific models](./ai/agent-settings.md#feature-specific-models) fo
 }
 ```
 
-To add custom commit instructions for the model, use the global `AGENTS.md` file located `~/.config/dez/AGENTS.md` on macOS and Linux, `%APPDATA%\dez\AGENTS.md` on Windows.
+To add custom commit instructions for the model, use the global `AGENTS.md` file located at `~/.config/zed/AGENTS.md` on macOS and Linux, `%APPDATA%\Zed\AGENTS.md` on Windows.
 
 To add custom instructions that apply only to commit message generation, use the `commit_message_instructions` field in your agent settings:
 
@@ -303,27 +326,28 @@ To add custom instructions that apply only to commit message generation, use the
 }
 ```
 
-These instructions are sent to the model in addition to any instruction files, such as `.rules` or `AGENTS.md`. To add instructions that apply to both commit messages and the agent more broadly, use the global `AGENTS.md` file located `~/.config/dez/AGENTS.md` on macOS and Linux, `%APPDATA%\dez\AGENTS.md` on Windows.
+These instructions are sent to the model in addition to any instruction files, such as `.rules` or `AGENTS.md`. To add instructions that apply to both commit messages and the agent more broadly, use the global `AGENTS.md` file located at `~/.config/zed/AGENTS.md` on macOS and Linux, `%APPDATA%\Zed\AGENTS.md` on Windows.
 
-> Before dez v1.4.0, this was done through the Rules Library, which has been removed.
+> Before Zed v1.4.0, this was done through the Rules Library, which has been removed.
 > See [Migrating from Rules](./ai/instructions.md#migrating-from-rules) for more information.
 
 ## Git Integrations
 
-dez integrates with popular Git hosting services to ensure that Git commit hashes and references to Issues, Pull Requests, and Merge Requests become clickable links.
+Zed integrates with popular Git hosting services to ensure that Git commit hashes and references to Issues, Pull Requests, and Merge Requests become clickable links.
 
-dez currently supports links to the hosted versions of
+Zed currently supports links to the hosted versions of
 [GitHub](https://github.com),
 [GitLab](https://gitlab.com),
 [Bitbucket](https://bitbucket.org),
-[SourceHut](https://sr.ht) and
+[SourceHut](https://sr.ht),
+[Tangled](https://tangled.org) and
 [Codeberg](https://codeberg.org).
 
 ### Self-Hosted Instances
 
-dez automatically identifies Git hosting providers by checking for keywords in your Git remote URL. For example, if your self-hosted URL contains `gitlab`, `gitea`, or other recognized provider names, dez will automatically register that hosting provider without any configuration needed.
+Zed automatically identifies Git hosting providers by checking for keywords in your Git remote URL. For example, if your self-hosted URL contains `gitlab`, `gitea`, or other recognized provider names, Zed will automatically register that hosting provider without any configuration needed.
 
-However, if your self-hosted Git instance URL doesn't contain identifying keywords, you can manually configure dez to create clickable links to your instance by adding a `git_hosting_providers` setting so commit hashes and permalinks resolve to your domain:
+However, if your self-hosted Git instance URL doesn't contain identifying keywords, you can manually configure Zed to create clickable links to your instance by adding a `git_hosting_providers` setting so commit hashes and permalinks resolve to your domain:
 
 ```json [settings]
 {
@@ -337,22 +361,26 @@ However, if your self-hosted Git instance URL doesn't contain identifying keywor
 }
 ```
 
-The `provider` field specifies which type of hosting service you're using. Supported `provider` values are `github`, `gitlab`, `bitbucket`, `gitea`, `forgejo`, and `sourcehut`. The `name` is optional and used as a display name for your instance, and `base_url` is the root URL of your self-hosted server.
+The `provider` field specifies which type of hosting service you're using. Supported `provider` values are `github`, `gitlab`, `bitbucket`, `gitea`, `forgejo`, `sourcehut`, and `tangled`. The `name` is optional and used as a display name for your instance, and `base_url` is the root URL of your self-hosted server.
 
 You can configure multiple custom providers if you work with several self-hosted instances.
 
 ### Permalinks
 
-dez also has a Copy Permalink feature to create a permanent link to a code snippet on your Git hosting service.
+Zed can open or copy a permanent link to a file or code selection on your Git hosting service.
 These links are useful for sharing a specific line or range of lines in a file at a specific commit.
-Trigger this action via the [Command Palette](./getting-started.md#command-palette) (search for `permalink`),
-by creating [custom key bindings](./key-bindings.md#custom-key-bindings) for the
-`editor::CopyPermalinkToLine` or `editor::OpenPermalinkToLine` actions
-or by simply right clicking and selecting `Copy Permalink` with line(s) selected in your editor.
+
+For the current selection in the editor, use {#action editor::CopyPermalinkToLine} or
+{#action editor::OpenPermalinkToLine} from the [Command Palette](./getting-started.md#command-palette)
+(search for `permalink`), via [custom key bindings](./key-bindings.md#custom-key-bindings),
+or by right-clicking and selecting **Copy Permalink to Line**.
+
+From a file tab or the Project Panel, you can also **Open File Permalink** or **Copy File Permalink**
+for the whole file (without a line selection).
 
 ## Diff Hunk Keyboard Shortcuts
 
-When viewing files with changes, dez displays diff hunks that can be expanded or collapsed for detailed review:
+When viewing files with changes, Zed displays diff hunks that can be expanded or collapsed for detailed review:
 
 - **Expand all diff hunks**: {#action editor::ExpandAllDiffHunks} ({#kb editor::ExpandAllDiffHunks})
 - **Collapse all diff hunks**: Press `Escape` (bound to {#action editor::Cancel})
@@ -368,6 +396,8 @@ When viewing files with changes, dez displays diff hunks that can be expanded or
 | {#action git::Add}                        | {#kb git::Add}                        |
 | {#action git::StageAll}                   | {#kb git::StageAll}                   |
 | {#action git::UnstageAll}                 | {#kb git::UnstageAll}                 |
+| {#action git::StageSection}               | {#kb git::StageSection}               |
+| {#action git::UnstageSection}             | {#kb git::UnstageSection}             |
 | {#action git::ToggleStaged}               | {#kb git::ToggleStaged}               |
 | {#action git::StageAndNext}               | {#kb git::StageAndNext}               |
 | {#action git::UnstageAndNext}             | {#kb git::UnstageAndNext}             |
@@ -387,6 +417,8 @@ When viewing files with changes, dez displays diff hunks that can be expanded or
 | {#action git::Worktree}                   | {#kb git::Worktree}                   |
 | {#action git::Blame}                      | {#kb git::Blame}                      |
 | {#action git::StashAll}                   | {#kb git::StashAll}                   |
+| {#action git::StashTracked}               | {#kb git::StashTracked}               |
+| {#action git::StashStaged}                | {#kb git::StashStaged}                |
 | {#action git::StashPop}                   | {#kb git::StashPop}                   |
 | {#action git::StashApply}                 | {#kb git::StashApply}                 |
 | {#action git::ViewStash}                  | {#kb git::ViewStash}                  |
@@ -398,14 +430,14 @@ When viewing files with changes, dez displays diff hunks that can be expanded or
 
 ## Git CLI Configuration
 
-If you would like to also use dez for your [git commit message editor](https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration#_core_editor) when committing from the command line you can use `dez --wait`:
+If you would like to also use Zed for your [git commit message editor](https://git-scm.com/book/en/v2/Customizing-Git-Git-Configuration#_core_editor) when committing from the command line you can use `zed --wait`:
 
 ```sh
-git config --global core.editor "dez --wait"
+git config --global core.editor "zed --wait"
 ```
 
 Or add the following to your shell environment (in `~/.zshrc`, `~/.bashrc`, etc):
 
 ```sh
-export GIT_EDITOR="dez --wait"
+export GIT_EDITOR="zed --wait"
 ```

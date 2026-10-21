@@ -1,0 +1,4611 @@
+# Dez Roadmap
+
+This is the living execution plan. [Fork Notes](./fork-notes.md) win whenever
+the two conflict.
+
+Update Progress, Discoveries, Decisions, and Verification while work is active.
+Do not erase completed evidence.
+
+## Objective {#objective}
+
+Prepare Dez v0.5 as a public-quality native IDE for developers who move between
+code, durable terminals, and terminal-native agents. Preserve Zed-quality
+editing and tools, make Workspaces optional supervision rather than mandatory
+navigation, and prove lifecycle, integration, visual, accessibility, and
+packaging behavior through exact artifacts. The v0.4 artifact lane remains the
+latest compiled evidence until an exact v0.5 candidate is built and audited.
+
+## Dependency order {#dependency-order}
+
+```text
+source checks
+-> remote exact-candidate compilation and optimized packaging
+-> installed-artifact Workspace access, navigation, and durable terminal recovery
+-> external agent and multiplexer integrations
+-> visual, input, responsive, and accessibility validation
+-> Developer ID signing, notarization, and stable release
+```
+
+Visual polish continues in small slices, but it must support truthful state and
+the product loop rather than outrun ownership foundations.
+
+## v0.5 active surface-readiness track {#v0-5-active-surface-readiness-track}
+
+The active source-polish and release-planning contract lives in
+[v0.5 Surface Readiness](./v0.5-surface-readiness.md). It advances the complete
+native shell, navigation, Home, Settings, terminal integrations, editor tools,
+visual system, accessibility, continuity, and release gates over the 0.4.0
+baseline. It does not claim that a v0.5 artifact exists.
+
+The v0.5 product route is:
+
+```text
+Open Workspace
+-> start or resume work in a native tab
+-> supervise bounded Activity without losing pane or tab ownership
+-> inspect Files, Search, Diagnostics, Debug, Git, and diffs
+-> review and return after restart with Workspace and process context intact
+```
+
+While builds are paused, v0.5 work advances only through reviewable source
+slices and permitted source checks. Compilation, focused regressions,
+optimized packaging, installation, runtime, visual, accessibility, signing,
+and notarization evidence remain open for the exact future candidate.
+
+## v0.4 active readiness track {#v0-4-active-readiness-track}
+
+The latest exact-artifact contract lives in [v0.4
+Readiness](./v0.4-readiness.md). The [Native Surface
+Contract](./surface-contract.md) defines the current interface, while
+[v0.2 Workspace Polish](./v0.2-workspace-polish.md) and [v0.1 Product
+Hardening](./v0.1-product-hardening.md) preserve the ownership and reliability
+baseline rather than competing version targets.
+
+The 0.4.0 source-candidate route under validation is:
+
+```text
+Open Workspace
+-> run or attach work in native terminal tabs
+-> supervise bounded Activity and open native tabs in Workspaces
+-> Open Files or Review Changes in the Main Work Area
+-> recover access or Host state without losing running work
+```
+
+The v0.4 dependency order is:
+
+```text
+pass source checks for the exact 0.4.0 candidate
+-> remotely compile and package that exact candidate
+-> validate installed Home, Workspace, Files-return, Settings, and terminal flows
+-> validate access, durable ownership, legacy recovery, and quit behavior
+-> validate Codex, Claude Code, OpenCode, tmux, Herdr, and cmux integrations
+-> pass visual, input, responsive, and accessibility matrices
+-> pass Developer ID signing, notarization, and stable-release gates
+```
+
+Do not advance or promote the candidate because source looks plausible. Each
+checkpoint must preserve the primary workflow and carry exact evidence for the
+claims it adds.
+
+## v0.2 historical source track {#v0-2-historical-source-track}
+
+The previous source contract lives in
+[v0.2 Workspace Polish](./v0.2-workspace-polish.md). Its unresolved runtime and
+release gates remain useful inputs from [v0.1 Product
+Hardening](./v0.1-product-hardening.md), not the active version target.
+
+The source-candidate route under validation is:
+
+```text
+Open Workspace
+-> run or attach work in native terminal tabs
+-> supervise bounded Activity and attention in Workspaces
+-> Open Files or Review Changes in the Main Work Area
+```
+
+The v0.2 dependency order is:
+
+```text
+pass source checks for the exact v0.2.2 candidate
+-> remotely compile and package that exact candidate
+-> validate installed Workspace access, navigation, and durable terminal recovery
+-> validate Codex, Claude Code, OpenCode, tmux, Herdr, and cmux integrations
+-> pass visual, input, responsive, and accessibility matrices
+-> pass Developer ID signing, notarization, and stable-release gates
+```
+
+Do not advance a marketing version because source looks plausible. Each
+checkpoint must preserve the primary workflow and carry exact evidence for the
+claims it adds.
+
+The v0.2.2 source candidate sharpens the Workspace-first route without adding
+a second navigation model:
+
+- the adjacent native `+` launches the configured terminal, native shell,
+  tmux, Codex, Claude Code, or OpenCode and exposes **Browse Running
+  Sessions…**;
+- discovered tmux, Herdr, and cmux items appear beneath the most specific
+  matching Workspace, while pathless or unmatched items remain in **Other
+  Running Sessions**;
+- every discovery source distinguishes **Missing**, **Empty**, **Failed**, and
+  **Ready**, preserving only failed-source rows as **last known**;
+- browsing running Sessions clears transient navigator filters, refreshes
+  sources, expands each matching Workspace and its nested running-session
+  disclosure, and focuses Workspaces;
+- expanded Workspaces now separate **Layout** from **Activity**: Layout returns
+  to native open tabs, while Activity retains only active, running, actionable,
+  recoverable, or review-ready work; completed history remains in Agent
+  History;
+- a guided **Default Terminal** chooser lives in **Workspaces & Terminals →
+  Terminal Launch**, with Custom Command as the compatible escape hatch; and
+- Host command cycles and PTY input are bounded, ambiguous commands are not
+  replayed, and resize or termination cannot be starved by input backlog.
+
+These are source-candidate claims. Exact-artifact runtime, restart, visual,
+accessibility, and packaging evidence remains open.
+
+## v0.0.4 baseline slice {#v0-0-4-active-slice}
+
+The release promise is one predictable route:
+
+```text
+open a Workspace
+-> run or reattach work in the native Main Work Area
+-> supervise its state in Workspaces
+-> inspect Files, Git, diagnostics, and review in native workspace tabs
+```
+
+The implementation order is:
+
+```text
+v0.0.3 shell and durability baseline
+-> protocol-based external discovery
+-> explicit attach without ownership transfer
+-> Project association and attention projection
+-> responsive/Lumin verification
+-> exact macOS artifact
+```
+
+Decisions for this slice:
+
+- tmux discovery uses one fixed `list-panes` format and stable session IDs;
+- Herdr discovery uses its documented local snapshot response;
+- cmux discovery uses its public JSON CLI and opens Workspaces back in cmux;
+- selecting an attachable row opens a normal draggable terminal Surface;
+- closing the tab or application detaches the client and never ends externally
+  owned work;
+- Herdr attachment never passes `--takeover` automatically;
+- arbitrary machine terminals remain outside Workspaces; and
+- external work does not introduce a second rail, transcript, pane grid, tab
+  implementation, or session database.
+
+**Acceptance:** With a tmux session, Herdr pane, and cmux Workspace already
+running, the matching Workspace offers each under **Open Running Workspace or
+Session…**. tmux and Herdr attach in a native Main Work Area terminal; cmux
+opens its existing Workspace. Every external owner remains alive after the Dez
+tab or application closes. Unrelated machine terminals do not appear. Dark,
+light, and reduced-transparency layouts retain one clear Workspaces/Main Work
+Area hierarchy, while Files, Git, Debug, editor, terminal, and agent views
+behave as ordinary closeable tabs without overlays or clipped controls.
+
+## Revised consolidated-plan intake {#revised-plan-intake}
+
+The 1,756-line revised Product and Execution Plan supplied on 2026-07-22 is
+reconciled in
+[Consolidated Plan Reconciliation](./consolidated-plan-reconciliation.md). It
+does not reset this Roadmap's evidence or replace the Fork Notes.
+
+Its twelve delivery milestones map onto the active dependency plan as follows:
+
+| Supplied plan                                                      | Active Roadmap treatment                                                                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Baseline, upstream, and identity (0–1)                             | Permanent Milestone 0 gate; partially implemented, build and next-merge evidence open       |
+| App Session, scoped Project, Evidence, opening, and Surfaces (2–4) | Milestones 1–2; source work is partial and precedes broad store refactors                   |
+| Local Host, persistent terminals, and PMF Run (5–7)                | Current vertical slice; broad source exists, consolidated restart proof open                |
+| ACP and power operations (8–9)                                     | Preserve upstream substrate now; project into the common model only after the vertical gate |
+| Remote Hosts and environments (10)                                 | Milestone 3 after local lifecycle truth is proven                                           |
+| Platform and commercial coordination (11–12)                       | Post-PMF hypotheses, not v0.0.2 scope                                                       |
+
+Change Set storage, Environment orchestration, browser automation, provider
+platforms, relay, mobile, and team policy do not enter the critical path merely
+because the consolidated plan describes them.
+
+## Synara reference intake {#synara-reference-intake}
+
+[Synara](https://github.com/Emanuele-web04/synara) is useful as a reference for
+agent-work coordination, not as a product template. Its current public docs
+emphasize a local-first desktop workspace, explicit provider handoff, parallel
+work across isolated worktrees, integrated diffs/branches, and a scoped
+[External MCP bridge](https://github.com/Emanuele-web04/synara/blob/main/docs/external-mcp.md).
+
+Adopt these lessons after the v0.0.2 native loop is stable:
+
+- add a generated setup flow for external MCP clients that uses the exact
+  running Dez executable, data directory, and integration identity;
+- expose narrow tools first: overview, capabilities, allowed Workspaces, create
+  Run, wait for owned Run, and read owned Run;
+- require stable request IDs, managed-worktree defaults, approval-required
+  execution, rate limits, revocation, and audit rows;
+- make provider handoff an explicit action that carries evidence and review
+  context without changing terminal or Workspace ownership.
+
+Do not adopt a permanent chat-first center composer, Kanban, broad automations,
+or another task system until the terminal-to-IDE review loop has runtime
+evidence.
+
+## Milestone 0: Upstream and identity gate {#milestone-0}
+
+This milestone repeats before major work and every release.
+
+- Refresh and record upstream refs and the latest stable tag.
+- Rehearse the merge in an isolated branch or worktree.
+- Audit and adapt new Zed features instead of reimplementing them.
+- Verify executable, app, bundle, URL, storage, update, and signing identities.
+- Keep legacy Superzed data available through an explicit compatibility
+  boundary until transactional migration exists.
+- Add automated upstream drift, merge rehearsal, identity, and updater guards.
+
+**Acceptance:** The selected upstream base and feature audit are recorded; Dez
+and Zed coexist; no official Zed update can overwrite Dez; the `dez` build gate
+passes when compilation is scheduled.
+
+## Milestone 1: Durable vertical slice {#milestone-1}
+
+### Workspace recovery {#workspace-recovery}
+
+- Establish one app-session owner for durable workspaces.
+- Restore every workspace before applying CLI or URL requests.
+- Preserve ordering, active workspace, empty workspaces, and unresolved IDs.
+- Treat future windows as viewports over the same session.
+
+### Persistent local terminal {#persistent-local-terminal}
+
+- Define host and session identities independent of pane IDs.
+- Implement create, list, attach, detach, input, resize, bounded replay,
+  metadata, working-directory updates, exit, and explicit termination.
+- Move PTY and process lifetime outside the GUI lifecycle.
+- Expose reconnecting, detached, exited, missing, incompatible, and stale
+  states with a safe path to a new terminal.
+
+### First agent loop {#first-agent-loop}
+
+- Detect Codex in an ordinary terminal through a structured adapter where
+  available.
+- Attach running, waiting, attention, completed, failed, resumable, and exited
+  state to the owning session.
+- Associate objective, actor, session, evidence, attention, and review as one
+  Run without duplicating their authoritative stores.
+- Project attention to one low-noise inbox that focuses the existing surface.
+- Generate a deterministic review brief from observed intent, diff, commands,
+  checks, failures, permissions, and unresolved risks.
+- Restore the workspace, live terminal, agent state, attention, and review after
+  a GUI restart.
+
+**Acceptance:** Start Codex in a terminal, receive an attention event, review an
+observed result, close Dez without killing the process, reopen it, and recover
+the same truthful state.
+
+## Milestone 2: Workspace intelligence {#milestone-2}
+
+- Give each workspace a scoped `Entity<Project>` over shared backend stores.
+- Derive roots and repositories from file and terminal evidence.
+- Scope file tree, Git, search, diagnostics, tasks, debugger, and settings.
+- Convert appropriate dock-only tools into ordinary pane surfaces.
+- Add session cards, bounded activity events, and the command center.
+- Keep file discovery, Git, diagnostics, and language work lazy and measurable.
+
+**Acceptance:** Two workspaces can share cached repository data while retaining
+independent evidence and tool scope. Moving a terminal moves its context without
+global leakage or eager home-folder scanning.
+
+Source progress: Files, Git, Outline, and Debug route to Workspace tools when
+legacy docks are hidden; Agent uses its dedicated pane. Terminals use one public
+placement model: New Terminal opens a center Surface in the ordinary tab and
+split grid. Commit `ad2fdcf766` removes the inherited compatibility Terminal
+Panel from Dez menus, the Command Palette, keybindings, and Settings while
+preserving official Zed. The registered-panel compatibility map remains covered
+for upstream synchronization, but it is no longer part of Dez's product model.
+
+Follow-up `e4f1e341c9` normalizes the loaded-worktree launch and empty tool-pane
+recovery surfaces on Workspace vocabulary while leaving compatible internal
+Project types unchanged. The identity gate rejects the old mixed copy;
+rendered proof remains deferred.
+
+Commit `6f1562847e` names the region **Workspace tools** and its file-tree tab
+**Files** across toggle, accessibility, empty, reveal, tooltip, preview, and
+Settings surfaces. Official Zed retains Project Panel wording through explicit
+product branches, and persistence/action identifiers remain compatible. Cargo
+metadata and static gates pass; compilation and rendered proof remain deferred.
+
+Commit `f6aea3e013` carries the same outward contract through the title bar,
+recent-work pickers, remote Workspace indicators and deletion, and the Agent
+History picker. Official Zed retains its Project vocabulary through explicit
+product branches. Formatting and static identity gates pass; compilation and
+rendered proof remain deferred.
+
+Commit `b749a25619` completes the adjacent recent-work and Restricted Mode pass:
+search, empty, open/move/remove, multi-root, Dev Container, failure, trust, and
+trust-validation copy all use Workspace language in Dez. Official Zed and
+internal action/type identifiers remain compatible. Formatting and static
+identity gates pass; compilation and rendered proof remain deferred.
+
+Commit `0e2c0dcae3` carries the same contract through remote search/errors,
+Agent History, pane search, review evidence, agent rules/checkpoints, skills,
+MCP/external-agent empty states, scoped Settings, status controls, and the full
+Files settings section. Official Zed branches and internal schema/action names
+remain compatible. Static gates pass; compilation and render proof are deferred.
+
+Commit `e969abda4a` removes reachable upstream recovery and promotion traps:
+the GPU dialog uses Dez identity and `DEZ_ALLOW_EMULATED_GPU`, the palette hides
+inherited collaboration/feedback/account/docs/status/merchandise commands, and
+database failure explains local safety and opens logs instead of an upstream
+issue form. Explicit upstream Help links remain. Static gates pass; compilation
+and interaction proof are deferred.
+
+Commit `0607771783` completes the source-level shell grammar in retained
+disconnected, follow/join, shared-agent, and multi-root collaboration recovery
+states. Dez says Workspace, official Zed retains Project, and compatibility
+types remain unchanged. Static gates pass; rendered proof remains deferred.
+
+Commit `2092acd453` removes the supplied screenshot's repeated zero-session
+hierarchy from current source. The region is explicitly **Session Rail**, its
+summary reports the number of ready Workspaces, and each empty Workspace owns
+one scoped New Terminal action with a Workspace-specific accessible name.
+Focused assertions and static gates pass; rendered proof remains deferred.
+
+Commit `57290c27c3` makes creation terminal-first after activation as well. The
+Workspace plus control, worktree picker, and default desktop/Vim rail bindings
+create terminal sessions; **New Agent Thread** remains an explicit secondary
+Workspace option. A focused target assertion and static identity gates pass;
+compiled interaction proof remains deferred.
+
+Commit `633dcc4bec` closes the Workspace-options hover parity gap. Non-active
+worktrees can be closed through a keyboard-addressable **Close Worktree from
+Window** submenu with multi-root scope preserved, while whole-group removal is
+explicitly **Remove Workspace from Window**. Focused label and identity checks
+pass; compiled interaction proof remains deferred.
+
+Commit `7893762cd5` makes restored attention a textual secondary signal. Active
+persisted attention composes with Saved, Detached, Reconnecting, Missing,
+Incompatible, and Exited transport labels even without a live adapter snapshot.
+Focused state assertions and identity checks pass; durable activity/review
+recovery and rendered accessibility proof remain open.
+
+Commit `bd36afd3f4` makes bounded Host evidence truncation durable and visible.
+The Host preserves an eviction flag through detach/list/reattach, the Session
+Rail labels retained evidence **partial**, and Review Briefs explain that older
+structured activity was evicted. A focused 40-event lifecycle assertion and
+identity checks pass; helper-process/GUI restart proof remains deferred.
+
+Commit `b39eedf724` redacts obvious secret-bearing environment assignments
+before structured command evidence enters bounded Host retention. Evidence
+settings now accurately separate the identity/attention metadata database from
+Host-owned activity, state that transcripts are not stored there, and explain
+that structured activity returns only from the same live Host Session. Focused
+redaction and identity checks pass; compiled hook-flow proof remains deferred.
+
+Commit `9323af8008` extends shared retained-command redaction to secret-suffixed
+CLI flags in spaced and equals forms while preserving ordinary arguments.
+Focused utility and Host-ingestion assertions plus identity checks pass;
+compiled hook-flow proof remains deferred.
+
+Commit `80ff1df75f` extends retained-command redaction to URL userinfo passwords
+and secret-suffixed query parameters while preserving host/path structure. The
+Evidence page also discloses that bounded file targets remain verbatim for
+review navigation. Focused utility/Host assertions and identity checks pass;
+compiled hook-flow proof remains deferred.
+
+Commit `c47637c2ac` exposes the Session Rail hierarchy as a named accessible
+list. Non-sticky Workspace headers report selected/expanded state plus
+ready/running work and attention counts without relying on color; sticky visual
+duplicates are excluded from accessibility output. Focused copy and identity
+checks pass; platform-tree inspection remains deferred.
+
+Commit `7e91f00b69` exposes All/Attention as a named Session scope group with
+stable control names, shared toggle state, and explicit action descriptions.
+Session search is a named region, while changing totals and empty/caught-up
+results use status semantics. Focused copy and identity checks pass;
+platform-announcement timing remains deferred.
+
+Commit `e28b78ed57` gives the shared Callout primitive urgency semantics:
+informational/success messages are status updates, while warning/error messages
+are alerts. Durable Host and Workspace-recovery callouts no longer rely on
+visual severity alone. Authored role and identity checks pass; platform
+announcement timing remains deferred.
+
+Commit `a90fae5873` aligns compact Workspace headers with their 28 px hover
+controls and moves high-frequency rail creation, scope, Host-detail, and
+Workspace-recovery actions from 18 px compact buttons to the shared medium
+target. Identity checks pass; rendered density and zoom proof remains deferred.
+
+Commit `f6318ea907` makes the keyboard-selected Workspace header or Session row
+the active accessibility descendant while the rail retains keyboard focus. The
+same audit confirmed that GPUI collapses repeating activity animations to a
+single static frame when Dez resolves reduced motion. Identity checks pass;
+platform focus and motion inspection remains deferred.
+
+Commit `9930e86677` retires the unfinished 56 px icon presentation for Dez
+v0.0.1. Legacy `icon` values remain readable but resolve to compact, the
+smallest layout that presents the full supervision, search, evidence, action,
+and recovery hierarchy without clipping. Width and identity checks pass;
+rendered compact proof remains deferred.
+
+Commit `4a102fc50e` makes the terminal-first onboarding workflow a named region
+and Start/Watch/Review a named accessible list. Its safety copy now sits above a
+wrapping action row, and Copy Codex Hook/New Terminal use 28 px targets. Identity
+checks pass; rendered zoom and narrow-window proof remains deferred.
+
+Commit `933e3f515f` forces diagnostics and metrics off for every non-Zed build
+before the inherited telemetry client can queue or upload them. Dez onboarding
+and Settings no longer offer those misleading opt-ins; Anthropic retention
+remains visible as a separate model-request policy. Source and identity checks
+pass; compiled network proof remains deferred.
+
+Commit `2680937952` hides the Auto Update section in Dez because the fork
+updater is deliberately disabled and defaults off. The compatibility key stays
+readable and official Zed keeps the control. Source and identity checks pass;
+rendered Settings proof remains deferred.
+
+Commit `9239006d4b` removes Collaboration Panel button/dock/width controls from
+the Dez Panels page now that the page, panel entry points, and commands are
+removed. Compatibility parsing and official Zed UI remain intact. Identity
+checks pass; rendered Settings proof remains deferred.
+
+Commit `33f7ff5893` adds non-visual shortcut metadata to shared text and icon
+buttons. Session scope controls now announce Shift+A and Review Brief controls
+announce Shift+V, matching their visible action-aware tooltips. Identity checks
+pass; platform announcement proof remains deferred.
+
+Commit `2fc5226a51` requires official Zed identity as well as explicit
+auto-connect before the language-model registry eagerly authenticates all
+providers. A legacy `auto_connect: true` can no longer make Dez contact cloud
+providers during ordinary startup. Source and identity checks pass; compiled
+network proof remains deferred.
+
+## Milestone 3: Serious multi-actor work {#milestone-3}
+
+- Evaluate and extend upstream remote/headless infrastructure for SSH session
+  continuity.
+- Add another terminal-agent adapter after the generic contract is proven.
+- Warn about overlapping modified files, shared worktrees, risky branch
+  operations, and conflicts with unsaved human edits.
+- Add explicit worktree brokering and reusable task recipes.
+- Add workspace return briefs and adapter-approved agent resumption.
+
+**Acceptance:** Local and remote sessions coexist in one workspace; a host can
+disconnect safely; two agents remain visible; conflict warnings are advisory,
+traceable, and low-noise.
+
+## Milestone 4: v0.0.2 release {#milestone-4}
+
+- Complete first-run guidance, recovery copy, accessibility, keyboard and
+  pointer parity, crash behavior, packaging, migration, and release provenance.
+- Validate the hero workflow with design partners on real repositories.
+- Measure session recovery, agent-state truthfulness, attention routing, review
+  use, startup, memory, and crashes.
+- Document close, detach, reconnect, resume, and terminate semantics.
+
+**Acceptance:** A new user completes the activation loop without reading source
+code, all launch gates pass, and known limitations are documented.
+
+## Progress {#progress}
+
+- [x] 2026-09-06: Restore the Collaboration panel as a Dez Workspace Tool.
+      `CollabPanel` loads again in every window, routes into the native
+      Workspace Tools pane surface, and gains `workspace::RevealCollab` plus
+      **Open Collab** entries in the pane Add menu and the active Workspace
+      header menu; `workspace::RevealOutline` similarly exposes Outline. The
+      demoted account, call, and channel-modal chrome stays hidden: `collab::`
+      and `channel_modal::` keybindings remain filtered while panel-level
+      `collab_panel::` shortcuts work again. The identity check now requires
+      the Dez panel load, rejects a Zed-gated load, and requires the
+      Collaboration routing. The surface contract Add-menu wireframe names the
+      Collab destination. Source checks pass; compiled and rendered proof
+      remains deferred to CI.
+- [x] 2026-07-23: Prepare the canonical public source repository. Replace the
+      inherited Zed front page with an honest Dez v0.0.1 source-candidate
+      README, add a public **What is Dez?** guide to documentation navigation,
+      explain the one-Project IDE integration and four-region screen model,
+      preserve Zed/Lumin/JetBrains attribution, and add static guards against
+      branding or readiness regressions. Reclassify deleted local build outputs
+      as historical evidence so no document points to a removed artifact as the
+      current runnable candidate.
+- [x] 2026-07-22: Merge the locally recorded upstream base through
+      `f14fea9bf3c93797d5161f7440ed418655bc6c57`.
+- [x] 2026-07-22: Rename public executable and application identity to Dez
+      v0.0.1 while preserving the legacy storage boundary.
+- [x] 2026-07-22: Repair dead canvas states, panel-to-pane visibility, focus
+      treatment, pane accessibility, offline startup, and truthful terminal-agent
+      process status in the current source slice.
+- [x] 2026-07-22: Reconcile the supplied product notes into canonical Fork
+      Notes, product strategy, upstream policy, and this roadmap.
+- [x] 2026-07-22: Reconcile the revised consolidated Product and Execution Plan
+      without resetting source progress. Adopt complete-product positioning,
+      Evidence provenance, adapter capabilities, and long-range requirements;
+      reject its competing authority, per-slice build mandate, and flattened
+      Run/Session lifecycle.
+- [x] 2026-07-22: Refresh `upstream/main` to `cf61b7ccc5d5`, confirming 72
+      upstream commits after the current merge base and stable tag `v1.11.3`.
+- [x] 2026-07-22: Add the first derived attention view to the Session Rail.
+      Waiting, failed, completed-unread, and notified terminal sessions surface
+      without creating duplicate ownership; an empty inbox offers an explicit
+      return to all sessions.
+- [x] 2026-07-22: Replace the empty Session Rail's project-first actions with
+      New Terminal, New File, and Open actions, and remove remaining hard-coded
+      Zed branding from shell collaboration and agent-history messages.
+- [x] 2026-07-22: Restore Session Rail search using its existing upstream
+      editor and fuzzy matching path. Search now renders visibly, focuses from
+      the existing action, clears explicitly, composes with attention mode, and
+      reports deliberate empty results.
+- [x] 2026-07-22: Rehearse the next merge in an isolated worktree and record
+      nine presentation/settings conflicts in the Upstream Feature Ledger.
+- [x] 2026-07-22: Refresh the permanent upstream gate again. `upstream/main`
+      advanced to `9d0ef37a2571` (81 commits after the merge base), stable
+      remains `v1.11.3`, and a disposable detached-worktree rehearsal was
+      aborted and removed after recording ten conflicts. The new conflict is
+      `workspace.rs`; the active dirty product worktree was not modified.
+- [x] 2026-07-22: Checkpoint the completed supervision source slice as
+      `c2335969f994`, then integrate `upstream/main` `9d0ef37a2571` with the
+      reversible two-parent merge `2be63cfea347`. Resolve all eleven actual
+      conflicts according to Fork Notes, preserve the Dez sidebar-native shell,
+      retain compatible Markdown/workspace/task behavior, and pass formatting,
+      metadata, diff, and identity static gates.
+- [x] 2026-07-22: Add a locally runnable fork identity checker and GitHub
+      workflow for pull-request identity guards, scheduled upstream drift,
+      no-commit merge rehearsal, conflict artifacts, and one maintained status
+      issue.
+- [x] 2026-07-22: Audit current app, workspace, project, terminal, agent, and
+      remote ownership and record the source-backed Architecture Baseline.
+- [x] 2026-07-22: Define the first versioned terminal Host/Session protocol
+      seam with independent host and computation IDs, bounded replay positions,
+      truthful lifecycle states, and distinct detach and terminate commands.
+- [x] 2026-07-22: Implement an entity-independent in-process Host/Session
+      registry with explicit Missing and Incompatible results, bounded
+      sequence-addressed replay, and tested create, detach, reattach, and
+      terminate transitions. It does not yet own a PTY or survive GUI exit.
+- [x] 2026-07-22: Adapt real local terminal entities to the in-process host.
+      Host identity derives from persisted installation identity; closing a
+      view detaches, the Session Rail shows and reattaches the same entity, an
+      explicit action terminates it, and observed process exit is distinct from
+      view closure. Remote terminals remain outside this local adapter.
+- [x] 2026-07-22: Extend terminal-item and agent-terminal persistence with
+      nullable Host/Session references. New rows retain computation identity,
+      legacy rows keep their prior shell-restoration behavior, live in-process
+      sessions reattach to the same entity, and stale or malformed references
+      render a display-only unavailable surface without starting a replacement
+      process or rerunning an agent init command.
+- [x] 2026-07-22: Scaffold the `dez-terminal-host` helper boundary. It binds a
+      user-private local socket, reads a private token file, fails closed on
+      authentication, host, protocol, malformed-frame, and frame-size errors,
+      and exposes a sequential client transport. The helper now owns raw local
+      PTYs on poll-driven I/O threads, routes output into bounded replay, and
+      accepts create, list, attach, detach, input, resize, and terminate. Dez
+      launch wiring remains open; the terminal crate now has a controller-backed
+      hosted-emulator seam for replay output and delegated input, resize,
+      detach, and terminate.
+- [x] 2026-07-22: Add an opt-in GUI runtime supervisor and release packaging
+      seam. With `DEZ_EXPERIMENTAL_TERMINAL_HOST=1`, Dez reuses a private
+      persistent token, connects before spawning, removes only a validated
+      stale socket, launches the sibling helper without shell interpolation,
+      and retains one ordered background connection. The macOS bundle builds,
+      copies, and signs the helper, and identity guards require it.
+- [x] 2026-07-22: Route ordinary local shells through the helper when the
+      experimental host is enabled. Hosted terminals keep the client-side
+      emulator and delegate create, replay, input, resize, metadata, detach,
+      reattach, and terminate to the helper. Saved terminal and agent surfaces
+      briefly await startup reconciliation instead of failing a healthy
+      session immediately. The Session Rail observes host snapshot revisions,
+      preserves host/session row identity, title, working directory, and PID,
+      and distinguishes Detached, Reconnecting, and Exited. Task terminals and
+      the default-off path retain their existing backend until the consolidated
+      verification gate.
+- [x] 2026-07-22: Harden the experimental client boundary. Enabling the host
+      now waits for readiness and fails visibly instead of silently creating a
+      GUI-owned shell. The Session Rail shows connecting, failed, and
+      reconnecting callouts; the ordered transport reconnects before later
+      commands without replaying an uncertain command. Input is chunked and
+      raw replay is capped below the JSON frame ceiling. Runtime, token, and
+      socket paths reject symlink substitution, and cleanup verifies the bound
+      socket's device and inode before removal.
+- [x] 2026-07-22: Turn stale terminal references into a deliberate recovery
+      surface. Missing, foreign, malformed, or unavailable sessions preserve
+      their evidence, explain that Dez started no replacement process, and
+      expose a single New Terminal action instead of leaving a dead emulator.
+- [x] 2026-07-22: Add the first deterministic Run review projection. Native
+      agent rows and terminal-agent rows expose Open Review Brief from the
+      Session Rail and open it as an ordinary Markdown pane. The brief derives
+      actor, lifecycle, host/session identity, workspace evidence, and observed
+      diff counts from existing owners; it explicitly reports absent command,
+      check, and file-change evidence and never infers a clean worktree or a
+      passing check. This is a value projection, not a duplicate Run database.
+      Hover actions, the thread context menu, and the command-palette action
+      `sidebar::OpenSelectedReviewBrief` reach the same pane-based surface.
+- [x] 2026-07-22: Make terminal attention restart-safe. Agent-terminal metadata
+      now stores an additive attention bit, writes it immediately when a bell
+      is raised or acknowledged, restores it into the owning surface, and
+      projects it into the Session Rail without requiring a live entity.
+- [x] 2026-07-22: Replace the compatibility attention bit as product truth with
+      a typed condition/presentation model. Active versus resolved,
+      unread versus acknowledged, normal versus urgent, one-hour snooze,
+      resume, explicit resolution, and seven-day expiry for observed bell
+      events are independent. Opening an owner acknowledges but does not
+      resolve it; the Session Rail keeps acknowledged active work in Attention,
+      hides muted work until its deadline, labels snoozed rows, and orders
+      structured permission/failure conditions first. The old column remains
+      only for additive migration and older-reader compatibility.
+- [x] 2026-07-22: Remove the compiled Zed Pro trial-end overlay and its reset
+      action instead of hiding it behind a false predicate. Provider-limit
+      errors now offer truthful provider/model recovery without an upstream
+      subscription CTA; native-agent, authentication, collaboration, update,
+      REPL, and recovery copy identify Dez or clearly label an upstream link.
+      Terminal hover actions now have context-menu parity, with destructive
+      detach/terminate/remove kept in a separated final menu group.
+- [x] 2026-07-22: Add open pane files to Workspace Evidence. Add/remove/path
+      changes recompute stable authoritative open-surface records, sort and
+      deduplicate paths, cap retention at 256, preserve truncation across root
+      refreshes, and project the result into deterministic Review Briefs
+      without claiming those files changed. Add first-class Attention and
+      Evidence settings pages with actual notification, accessibility,
+      confidence, adapter, and bounded-restore controls; rename the surrounding
+      settings groups around Dez's Workspace/Session/Agent mental model.
+- [x] 2026-07-23: Add explicit user-selected Workspace review evidence.
+      Commit `a8ce563373` adds Command Palette actions to add, remove, or clear
+      selected paths and matching file-tab context actions. User selections
+      have stable, authoritative provenance, survive passive open-file
+      recomputation and tab closure, and stop at 128 paths with visible
+      feedback. Review Briefs label them Selected path and suppress the
+      duplicate Open file projection. Focused model tests are authored;
+      formatting, diff, and identity checks pass. Commit `e101b63e43` adds an
+      additive Workspace database column, saves only explicit selections, and
+      rehydrates them with current Host classification. A focused database
+      round-trip test is authored. Commit `f535c5e6ae` then makes the tab menu
+      expose only the state-appropriate Add or Remove action. Compiled
+      interaction and restart proof remain in the consolidated gate.
+- [x] 2026-07-22: Make Session Rail review actions preserve owner context.
+      Pointer and context-menu actions first activate the existing terminal or
+      agent owner, then open the generated Markdown brief in an ordinary
+      right-hand pane. Review remains pane-native and no duplicate terminal,
+      conversation, or Run owner is created. The command-palette action now
+      follows the same owner-first behavior; briefs expose section jumps and
+      clickable local paths for Workspace, open-file, and terminal-CWD evidence.
+- [x] 2026-07-22: Add the first structured Codex terminal-adapter path. Codex
+      lifecycle hooks can send authenticated events to the helper using the
+      terminal's stable Host/Session environment. The helper retains bounded
+      provider session, lifecycle, resumability, attention, command, and exit
+      evidence. The Session Rail prefers this truth over process detection,
+      shows exact permission/review states, and acknowledges attention by
+      focusing the existing terminal. Hook installation remains explicit and
+      the build/live-restart gate remains pending.
+- [x] 2026-07-22: Project the helper's bounded event journal into review and
+      recency UI. Review briefs now include ordered recent activity, observed
+      commands, and conservative checks; structured terminal rows use the last
+      meaningful adapter event for recency instead of their creation time.
+- [x] 2026-07-22: Add honest adapter onboarding. Lower-confidence process
+      detection is labeled **Detected**, and detected Codex rows expose a
+      context action that copies the reviewed hook JSON. The action disappears
+      after structured Host/Session evidence arrives; Dez never edits Codex
+      configuration automatically.
+- [x] 2026-07-22: Close the startup request-ordering hole in workspace
+      recovery. A launch-time CLI path, URL, or extension request no longer
+      bypasses last-session restore. Dez restores the durable workspace set,
+      applies the initial request, then releases additional queued open
+      requests; workspace garbage collection observes the same boundary.
+- [x] 2026-07-22: Move the restore lifecycle boundary into `AppSession`.
+      Ordered Pending, Restoring, and Ready state is now observable and rejects
+      duplicate or out-of-order transitions without panicking. Live workspace
+      entities remain window-owned so this change does not pin GPUI resources;
+      durable membership consolidation remains open.
+- [x] 2026-07-22: Give `AppSession` the identity-keyed durable workspace
+      registry. Persisted IDs and prior viewport associations are adopted before
+      entity restoration, live workspaces update their viewport association,
+      and explicit removal unregisters membership. SQLite remains the durable
+      serializer and the registry deliberately owns no GPUI entities.
+- [x] 2026-07-22: Harden hosted-session recovery UX and transport liveness.
+      Session Rail reconciliation failures now open a visible display-only
+      recovery surface instead of doing nothing, bounded reconnect attempts
+      keep one dead helper from blocking the ordered command queue forever,
+      permanent identity failures stop immediately, and exited PTY handles are
+      reaped without discarding their review snapshot.
+- [x] 2026-07-22: Make the Host boundary self-describing and reduce idle work.
+      The authenticated handshake now negotiates additive lifecycle, replay,
+      metadata, structured-agent, and attention capabilities with false-by-
+      default compatibility. Adapter snapshots separately declare structured
+      state, attention, activity, command, check, and resumability evidence.
+      Stable snapshot polling backs off to one second, remains responsive at
+      250 ms after changes, and retries errors at 500 ms; pushed events and
+      heartbeats remain explicit follow-up work.
+- [x] 2026-07-22: Add source-backed changed-file navigation to Review Briefs.
+      Native agent action logs now provide sorted, deduplicated absolute paths
+      for unreviewed buffers, rendered as local file links beside conservative
+      diff totals. Terminal review projections honor adapter command, check,
+      and activity capability flags instead of inferring support from provider
+      identity; Git ownership and terminal file provenance remain open.
+- [x] 2026-07-22: Give changed native runs a one-step diff path. Session Rail
+      rows with observed action-log changes now expose Review Changes through
+      both hover controls and the context menu, activate the existing owning
+      thread, and open the ordinary agent diff surface without duplicating the
+      Run. The action remains absent when no source-backed changes exist.
+- [x] 2026-07-22: Strengthen Session Rail row semantics for assistive
+      technology. Shared rows now announce remote/archive state and observed
+      added/removed line counts in addition to title, actor, state, Host,
+      selection, and unread activity. Permission wording is consistent between
+      visible tooltips and accessible labels, and duplicate state announcements
+      are suppressed when a richer state label is already present.
+- [x] 2026-07-22: Complete another outward identity sweep. Native empty drafts
+      now say New Dez Agent Thread; component previews, task/edit-prediction
+      settings, GPU diagnostics, Windows IPC failures, and CLI help no longer
+      present the fork as Zed. Remaining visible Zed labels are restricted to
+      truthful upstream services/providers/links or compatibility identifiers.
+- [x] 2026-07-22: Add an explicit Host liveness primitive. The negotiated
+      heartbeat capability echoes a caller-supplied nonce and Host observation
+      time without mutating or creating Sessions, allowing future supervisors
+      to reject delayed responses.
+- [x] 2026-07-22: Add reconnectable bounded Host event cursors. The helper
+      retains at most 512 monotonic snapshot envelopes and returns at most eight
+      per response; the GUI begins from one authoritative list, resumes after
+      its last delivered cursor, applies typed metadata/state events, and
+      requests a full resync when retention truncates history.
+- [x] 2026-07-22: Replace GUI snapshot polling with negotiated Host push. A
+      second authenticated socket becomes a cursor-resumable subscription,
+      preserving the simple ordered command channel while the helper broadcasts
+      coalesced state changes to every subscriber. Batches remain bounded,
+      reconnects resume without command replay, retention loss forces a list
+      resync, and peers without the capability retain the bounded polling
+      fallback. Framing and notifier tests are source-authored; live recovery
+      verification remains in the consolidated gate.
+- [x] 2026-07-22: Make Review Brief repository ownership explicit without
+      inventing another Run database. The projection now names its objective
+      and reads Git-store worktree, main-worktree, branch, changed-path count,
+      conflicts, untracked state, bounded path links, and truncation. A terminal
+      resolves the most specific repository containing its working directory;
+      whole-repository changes are labeled as observations and never attributed
+      to that agent. Structured activity, command, and check events also retain
+      their observed cwd as a local navigation target.
+- [x] 2026-07-22: Fail closed on consequential agent responses. Permission and
+      input response capabilities are separate, false by default, and not
+      implied by attention detection. Codex hooks v1 only observe lifecycle, so
+      Dez omits synthetic approval/input actions and tells the reviewer to use
+      the owning terminal. A future adapter must supply scoped, time-bounded,
+      actor-attributed audit evidence before these controls can appear.
+- [x] 2026-07-22: Add bounded terminal-adapter file provenance without parsing
+      terminal output. Recognized completed Codex write, edit, and patch hooks
+      resolve direct and patch-declared paths against the hook cwd, deduplicate
+      them, retain at most 64 per event, and surface truncation. Review labels
+      these paths as adapter targets rather than successful changes; repository
+      status and native action logs remain the sources for observed changes.
+- [x] 2026-07-22: Complete another reachable-product identity sweep. OAuth
+      browser pages, extension cards, Copilot and local-provider setup, remote
+      and debugger errors, system diagnostics, DAP/OAuth client names, and
+      outbound OpenRouter titles now identify Dez. Actual upstream Zed accounts,
+      hosted models, and Edit Predictions are labeled as upstream. An
+      incompatible upstream prediction service can be dismissed but no longer
+      offers an “Update Zed” action that would install the wrong product. The
+      identity script now guards these boundaries.
+- [x] 2026-07-22: Make the trusted Codex hook path discoverable without
+      auto-modifying configuration. Eligible durable Codex rows now label Hook
+      setup and expose Copy Codex Hook Setup through both hover and context
+      actions; the affordance disappears after structured Host/Session evidence
+      arrives. Installation remains an explicit user-reviewed Codex action.
+- [x] 2026-07-22: Make terminal failure copy operational. Center and panel
+      launch failures now say no process started and point from settings to an
+      explicit New Terminal retry. Durable-Host connecting, reconnecting, and
+      failed callouts distinguish untouched existing work from absent fallback
+      computation and provide wait, restart, or next-launch recovery guidance.
+- [x] 2026-07-22: Resolve task-terminal eligibility for v0.0.1. Task terminals
+      remain GUI-owned because rerun, completion, cancellation, and task-status
+      semantics do not yet define safe cross-GUI survival; retaining one could
+      contradict a visible cancellation. Ordinary durable shells remain the
+      explicit path for long-lived supervision.
+- [x] 2026-07-22: Demote upstream account and collaboration chrome from the Dez
+      shell. Sign-in, plan/user, and collaboration-connection controls no longer
+      render in the Dez workspace bar; the View menu omits Collab; Help removes
+      upstream bug, feature, email, social, and hiring routes while retaining
+      clearly attributed upstream documentation and repository links.
+- [x] 2026-07-22: Add the first typed workspace-evidence projection. Review
+      briefs distinguish workspace roots from observed terminal working
+      directories rather than flattening both into unlabeled paths, while the
+      Session Rail exposes copy actions for the working directory and stable
+      Host/Session reference. Evidence remains a projection, not a new owner.
+- [x] 2026-07-22: Establish the first outward Session Rail orientation slice.
+      The rail now names its purpose, communicates whether action is needed,
+      exposes All and Attention as visible scopes, provides a clear New Terminal
+      Session action, removes the duplicate footer filter, and preserves the
+      selected session across scope changes when it remains visible; otherwise
+      it chooses the nearest or first actionable row. Search and
+      no-session dead ends now explain the state and provide a direct Clear
+      Search or New Terminal action. No Dez process was running, so rendered
+      verification remains in the consolidated gate.
+- [x] 2026-07-22: Make Session Rail orientation measurable and keyboard-stable.
+      All and Attention scopes expose live totals, status copy handles singular
+      and plural counts, and assistive labels report the same facts. Rebuilds
+      retain selection by Thread/Terminal identity across reorder and filtering
+      rather than letting an old numeric index focus unrelated work; removal
+      falls back to the nearest actionable row.
+- [x] 2026-07-22: Make terminal-native empty and evidence states truthful. The
+      no-project onboarding gate no longer hides standalone/restored sessions,
+      search results, or the caught-up attention view. Structured terminal rows
+      now summarize recognized checks as passed, running, or failed and fall
+      back to observed command counts when no classified check exists; the
+      visible icon/text/color and accessibility label derive from one fact.
+- [x] 2026-07-22: Preserve exceptional Host lifecycle states through the
+      product projection. Missing and protocol-incompatible sessions now remain
+      distinct in Session Rail and Review Brief state rather than degrading to
+      Saved. Host reconnect/failure callouts can copy their complete diagnostic
+      detail without exposing it permanently in the compact rail.
+- [x] 2026-07-22: Add explicit keyboard paths for the supervision loop. With
+      Session Rail focused, Shift-A toggles Attention and Shift-V opens the
+      selected Review Brief on macOS, Linux, and Windows; scope and review
+      tooltips expose the bindings through the existing keymap authority.
+- [x] 2026-07-22: Separate destructive terminal termination from ordinary
+      lifecycle controls. Detached and reconnecting Host rows render a red Stop
+      action and require a critical confirmation that names the durable session
+      and the effect on computation. Hover, context-menu, and keyboard routes
+      share the gate; live detach and exited/saved cleanup remain one step. If
+      the Host rejects termination, the row remains authoritative and Dez shows
+      a visible failure toast rather than relying on logs.
+- [x] 2026-07-22: Complete the per-Workspace no-session recovery path. Empty
+      project groups provide an inline New Terminal action scoped to that
+      Workspace and restore a closed group when necessary. While filtering,
+      Session Rail reports matching-session counts with search semantics rather
+      than presenting filtered absence as a caught-up state.
+- [x] 2026-07-22: Align top-level navigation with Dez's terminal-native shell.
+      File leads with New Terminal and disambiguates New File; View exposes the
+      Session Rail directly; title-bar and collapsed status controls use Session
+      Rail terminology instead of the generic upstream sidebar label.
+- [x] 2026-07-22: Remove inert account-chrome settings from the Dez path. Show
+      Sign In, Show User Menu, and Show User Picture no longer appear because
+      their controls are intentionally absent from Dez. Compatibility schema
+      fields remain, while the surviving placement and chrome settings use
+      Session Rail terminology and describe behavior that actually renders.
+- [x] 2026-07-22: Prevent cached structured work state from hiding transport
+      failure. Session Rail composes work and non-live transport labels, while
+      Review Brief state gives Missing, Incompatible, Reconnecting, and
+      Detached ownership priority and records the matching evidence risk.
+      Bounded state chips shrink at narrow rail widths but preserve the full
+      accessible label.
+- [x] 2026-07-22: Add explicit honest review outcomes without a duplicate Run
+      store. Each editable Review Brief includes reviewer-owned Continue,
+      Request changes, and Accept as reviewed checkboxes plus a warning that
+      notes do not mutate lifecycle truth. Archive, remove, detach, and
+      confirmed terminate remain separate owner-backed actions; unsupported
+      discard is absent.
+- [x] 2026-07-22: Route structured Host attention through the accessible window
+      announcement setting even while its terminal surface is detached. The
+      rail keeps only transient transition IDs, requests attention once for a
+      newly active authoritative condition, and allows a later condition to
+      announce after acknowledgement clears the prior ID.
+- [x] 2026-07-22: Stop advertising the fork as Zed in outbound HTTP identity.
+      The process user agent now derives from the configured Dez application
+      name while preserving version, operating-system, and architecture
+      diagnostics.
+- [x] 2026-07-22: Extend App Session from identity membership to ordered durable
+      state. A compact KVP record preserves Workspace order, active selection by
+      viewport, and explicitly unresolved prior IDs; database-resolved records
+      reconcile without reordering, and live creation, activation, and removal
+      update the same state without storing GPUI entities. True viewport
+      composition and consolidated restart proof remain open.
+- [x] 2026-07-22: Separate global Workspace membership from viewport
+      composition. Ordered viewport records now contain ordered Workspace IDs
+      and active selection, migrate the earlier compact state, accept the same
+      Workspace in multiple viewports, restore complete MultiWorkspace groups,
+      and make removal viewport-aware so closing one copy cannot erase another.
+      Focused migration, deduplication, reconciliation, and removal tests are
+      authored; live entity composition and runtime proof remain open.
+- [x] 2026-07-22: Convert the historical visual audit into first-party source
+      fixes. The welcome path is terminal-first, carries the Dez product
+      promise, and resists narrow header wrapping; settings, installation,
+      update, and permission copy use product identity; active AI onboarding
+      no longer markets Zed subscriptions and instead explains provider-owned
+      configuration. Historical screenshots predate this source, so the
+      intended Dez artifact still needs rendered verification.
+- [x] 2026-07-22: Reframe onboarding around Dez's activation loop instead of
+      upstream account conversion. The first-run page now teaches Start, Watch,
+      and Review; provides New Terminal; explains close versus detach versus
+      terminate and Host-dependent persistence; and keeps optional ACP agents
+      without a bundled Zed plan, sign-in funnel, or trial action. Codex hook
+      installation and rendered verification remain open.
+- [x] 2026-07-22: Give terminal Session Rail rows an explicit information
+      hierarchy. Actor, state, Host, scope, changes, and recency are separate
+      accessible fields; identity and scope truncate as one left cluster while
+      observed activity remains stable on the right. Native-thread checks and
+      rendered narrow-width verification remain open.
+- [x] 2026-07-22: Apply the same metadata grammar to native agent rows. Actor
+      identity and Draft, Running, Waiting for permission, Error, or Completed
+      state are explicit and accessible instead of being inferred only from an
+      icon. Check evidence and rendered narrow-width verification remain open.
+- [x] 2026-07-22: Establish the first Workspace-owned `EvidenceSet`. Visible
+      worktree roots now have deterministic identity plus provenance,
+      confidence, Host, lifecycle, and truncation truth; worktree and remote
+      context events recompute it. Open Run Briefs consume that authority and
+      closed rows fall back explicitly to saved metadata. File and explicit
+      choice evidence are now implemented. Commit `0e6507756e` retains a saved
+      hosted terminal's last-known cwd as Unresolved when attach fails and
+      replaces it with Current truth on successful reattach. Commit
+      `ea2bb18453` observes live Host snapshot revisions so transport
+      reconnection, missing/incompatible truth, exit, and snapshot cwd changes
+      reconcile the same Session-owned record. Compiled runtime proof remains.
+- [x] 2026-07-23: Make authoritative evidence mutation an internal Workspace
+      boundary. Commit `0f8740b1a1` makes all EvidenceSet mutation methods and
+      selection outcomes crate-private; downstream search, Git, settings,
+      conversation, and review code can read records but cannot attach roots or
+      invent explicit choices merely by existing. Formatting, diff, and
+      identity checks pass.
+- [x] 2026-07-23: Isolate provisional Workspace evidence identity. Commit
+      `af232402f5` replaces the shared `workspace:pending` prefix with one
+      stable UUID-backed namespace per EvidenceSet. Same-path provisional
+      Workspaces therefore cannot collide in downstream identity maps. A
+      focused isolation test is authored; formatting, diff, and identity checks
+      pass.
+- [x] 2026-07-23: Bind retained terminal Sessions to durable Workspace
+      ownership. Commit `a4047d95c0` adds an optional backward-compatible
+      Workspace ID to Host snapshots, associates both in-process and helper
+      Sessions from TerminalView, and makes Session Rail prefer exact ownership
+      over cwd prefix inference. Compatibility, Host-model, and integrated
+      same-cwd/two-Workspace tests are authored; compiled detach/reattach proof
+      remains in the consolidated gate.
+- [x] 2026-07-23: Add direct Workspace evidence isolation proof. Commit
+      `6f2061d2c7` covers live terminal cwd evidence in two same-path Workspace
+      entities and selected-evidence persistence in two durable Workspaces.
+      Records remain distinct, and clearing one Workspace leaves the other
+      unchanged. Formatting, diff, and identity checks pass; focused tests are
+      authored and await the consolidated compile gate.
+- [x] 2026-07-23: Scope Session Rail branch metadata to the owning Workspace.
+      Commit `27279ca542` replaces the global last-writer-wins path map with
+      per-Workspace repository snapshots for open terminal and agent rows.
+      Closed historical rows show a branch only when every open Workspace that
+      knows the path agrees; conflicting values are omitted rather than
+      guessed. A focused fallback regression is authored; formatting, diff,
+      and identity checks pass, while compilation remains deferred.
+- [x] 2026-07-23: Scope graphical project settings to the originating
+      MultiWorkspace. Commit `a2d733eea3` stops a Settings window from merging
+      project files from unrelated OS windows, including after its source
+      window becomes unavailable. Project-file discovery, restricted-mode
+      lookup, opening, and mutation now share the scoped resolver; user settings
+      retain application-global semantics. Two cross-window regressions are
+      updated and await the consolidated compile gate. Follow-up `498f94a525`
+      refreshes that scoped inventory before a reused Settings window applies
+      its new target, preventing stale project files from the prior viewport
+      from receiving the action.
+- [x] 2026-07-22: Feed live terminal cwd changes into Workspace evidence. Each
+      record carries stable terminal-Session provenance, root refreshes preserve
+      it, and Run Briefs include only cwd evidence owned by their terminal so
+      unrelated sessions cannot leak scope. File, explicit-choice, lifecycle,
+      and reconnect evidence remain open.
+- [x] 2026-07-22: Add terminal evidence lifecycle truth. Activity marks an
+      owning Session's cwd evidence Current; observed process exit marks it
+      Stale without deleting review history; and Run Briefs disclose the stale
+      observation as a risk. Explicit removal and reconnect reconciliation
+      remain open. Commit `0e6507756e` adds restore/reattach reconciliation;
+      `ea2bb18453` adds live Host snapshot lifecycle reconciliation. Compiled
+      runtime proof remains open.
+- [x] 2026-07-22: Complete the upstream-integration compatibility repair and
+      focused runtime-facing test slice. Fifteen terminal tests, eight helper
+      tests, and three Session Rail terminal lifecycle tests pass. Stale
+      onboarding actions no longer panic built-in keymap loading, draft agent
+      rows remain visible, and local startup no longer authenticates cloud
+      providers when `auto_connect` is false.
+- [x] 2026-07-22: Complete the warning-free consolidated arm64 app and helper
+      build at `da562e14bb403af815cbab9802225dda0b2418c8`, then build the CLI
+      with the same locked low-disk profile. Launch only the exact
+      `target/debug/dez`; exclude and do not open the historical untracked
+      `dist/Superzed.app`.
+- [x] 2026-07-22: Prove the external helper's process-level lifetime. Helper
+      PID `48768` survives GUI PID `48519`, reparents to PID 1, and is reused by
+      relaunched GUI PID `50092` with one instance, the same socket, and Host ID
+      `d9670db8-e498-5537-a9d8-f99ad098f4aa`. Same hosted-Session replay and
+      child-PID reattachment remain unproven because the desktop is locked.
+- [x] 2026-07-22: Repair the blocking macOS client-decoration layout exposed by
+      the first unlocked screenshot. The Session Rail no longer pins both
+      horizontal edges or covers the editor/welcome surface; it uses its
+      configured width, anchors only its active edge, and presents an empty
+      project as a vertical explanation plus full-width New Terminal action.
+      The exact corrected raw executable builds and runs while reusing the
+      existing helper. A fresh rendered capture remains open because the bare
+      Mach-O process is not targetable by the approved accessibility surface.
+- [x] 2026-07-22: Harden and audit local debug packaging at `ce11c4ed3d`. The
+      bundle script reuses the consolidated host artifacts, restores its
+      manifest after failures, avoids the pinned bundler's broken colour path,
+      and skips release-only remote-server work. The ad-hoc arm64 bundle passes
+      deep strict signature verification with identifier `dev.dez.Dez-Dev`,
+      version `0.0.1`, scheme `dez-dev`, and app, CLI, helper, and bundled Git.
+      Permission prompts now describe developer-tool requests truthfully.
+- [x] 2026-07-22: Run warning-denied Clippy across all terminal Host targets.
+      Current Clippy exposed one equal-operands normalization in the fallback
+      theme dependency; `3ad224dfd6` replaces `100 / 100` with the identical
+      `1.0`, after which the complete Host lint graph passes.
+- [x] 2026-07-22: Preserve replay geometry as protocol truth. Protocol 4 records
+      terminal dimensions in snapshots and replay fragments; resize updates
+      them at the Host boundary, and the renderer applies the matching size
+      while replaying. Focused model, hosted-renderer, and helper lifecycle
+      tests pass.
+- [x] 2026-07-22: Make ordinary live shells first-class Session Rail rows and
+      repair the workspace footer. Detection now classifies an agent instead of
+      deciding whether a terminal exists, active shells select correctly, the
+      footer stays on one line, dynamic labels truncate, and a redundant
+      default `main` worktree label is suppressed. A focused visual-model test
+      now creates a plain workspace shell and proves its live, unclassified,
+      selected Session Rail projection.
+- [x] 2026-07-22: Exercise the packaged protocol 4 boundary with a live PTY.
+      Host `d9670db8-e498-5537-a9d8-f99ad098f4aa` created Session
+      `040b4465-5f0a-416b-9cb3-549da1a2a28b` with shell PID `53394`; 88 replay
+      chunks retained 80x24 and 132x41 geometry plus output markers on both
+      sides of resize, then reported explicit Detached state. GUI-driven
+      restart and same-process reattachment remain open while macOS is locked.
+- [x] 2026-07-22: Make local macOS packaging deterministic. Commit
+      `fcd1d06564` signs the CLI, terminal Host, Git, and main executable
+      inside-out before sealing the app. The resulting arm64 `Dez Dev.app`
+      passes deep strict verification with ad-hoc CDHash
+      `4aff38edc9de37515e5488a216c2d648a53c0b01` and launches through the exact
+      audited bundle path; `dist/Superzed.app` remains unopened.
+- [x] 2026-07-22: Give Session Rail an explicit macOS accessibility landmark
+      and harden narrow-width copy. Commit `2dd523b6e9` exposes the rail as a
+      named `Complementary` region and truncates overview and empty-Workspace
+      status instead of permitting word-level wrapping. The focused `sidebar`
+      graph compiles; bundle rebuild and accessibility-tree inspection remain
+      separate gates.
+- [x] 2026-07-22: Repair the compact Session Rail width contract exposed by the
+      later running-bundle screenshot. Commit `79f69b273c` makes both server-
+      and client-decoration roots paint at the same mode-resolved width the
+      workspace reserves: 240 px compact, 56 px icon, and at least 380 px
+      detailed. Regression assertions cover all three modes. Formatting and
+      diff checks pass. The complete post-fix app and signed bundle now build;
+      the focused test and rendered proof remain open, so neither is inferred
+      from compilation.
+- [x] 2026-07-23: Give compact and zero-session chrome enough room to breathe.
+      Commit `1ebb7c79d4` raises the compact rail cap from 240 px to 280 px and
+      the resize floor from 200 px to 240 px, hides All 0 / Attention 0 until a
+      session exists, and suppresses the inert search row at zero while keeping
+      an existing query visible for recovery. The visibility rules have a
+      focused model assertion. A clean
+      `cargo check --locked -p sidebar --lib -j1` passes in 14m34s after only
+      regenerable Cargo caches were cleared; rendered proof remains open.
+- [x] 2026-07-22: Keep an empty loaded project actionable after restoration.
+      Commit `4829f6b052` makes the visible-worktree launch surface outrank a
+      missing legacy welcome flag, preventing the blank center shown beside the
+      crushed rail. Find File, New File, and New Terminal remain the deliberate
+      recovery actions. The focused assertion is authored; the shared
+      storage-bound test target and rendered proof remain open; the complete
+      corrected app and signed bundle build pass.
+- [x] 2026-07-23: Enforce a quiet local-first launch in source. The stale
+      bundle log showed inherited settings starting Zed websocket, LiveKit, and
+      Zed-hosted prediction activity behind removed chrome. Commit
+      `1d5c03d88b` gates automatic upstream authentication and eager Collab
+      panel construction to official Zed, and ignores inherited Zed/Mercury
+      prediction providers while preserving explicit non-Zed providers. Commit
+      `9318b270d9` guards the policy statically. The corrected bundle rebuild
+      passes and the running app held no established or listening TCP socket
+      during the recorded soak.
+- [x] 2026-07-23: Bound the lower workspace footer under narrow widths and real
+      repository names. Commit `0d8496969f` gives project identity and
+      worktree/branch controls independent shrinkable, overflow-hidden regions,
+      allowing their existing one-line truncation and tooltips to work without
+      colliding in the fixed-height row. Formatting and diff checks pass;
+      compile and bundle rebuild pass; rendered narrow-width proof remains open.
+- [x] 2026-07-23: Consolidate the lower utility chrome. Commit `abc4f8bedb`
+      removes the standalone Dez Command Search row, preserves the action and
+      accessible tooltip in the existing icon bar, suppresses the unowned
+      upstream update surface, and keeps the Canvas prefix row on demand.
+      Official Zed behavior is unchanged. Formatting and diff checks pass;
+      compile and bundle rebuild pass; rendered proof remains open.
+- [x] 2026-07-23: Rebuild and audit the corrected source head
+      `679cdc28445c`. The arm64 app and protocol-4 terminal Host complete, the
+      inside-out ad-hoc bundle passes deep-strict verification with CDHash
+      `0dc2e1e872b88cbd6288f1bea5455fbc48271cc5`, and live PID `85053` resolves
+      to the exact intended bundle executable. The Mac remains locked, so the
+      corrected visual and accessibility matrix is still an explicit gate.
+- [x] 2026-07-23: Prove durable viewport normalization in the focused Session
+      slice. Commit `a91b04809c` fixes an uncovered round-trip type annotation
+      and adds duplicate-viewport replacement coverage. All nine
+      `cargo test -p session --lib` cases pass: ordering, deduplication,
+      unresolved composition, multi-viewport membership, one-copy removal,
+      legacy migration, reconciliation, and serialization are covered. Live
+      viewport/entity composition and restart proof remain open.
+- [x] 2026-07-23: Preserve a terminal-first empty Workspace instead of opening
+      an unsolicited draft. Commit `e4fbc22a3a` makes New Terminal the primary
+      Workspace ready action and gates New Window and startup blank-file seeding
+      to official Zed. The same slice removes stale Zed wording from public CLI
+      help, hides the legacy compatibility alias, and names `--dez` input
+      `<PATH>`. The rebuilt CLI hash is
+      `cc8d62764f0892da5306aeefb9206732e8f25584f9213e84631184d2ae8d9787`.
+      Formatting, diff, identity, CLI build/help, and full `zed --bin dez`
+      source checks pass. Consolidated app rebuild and rendered proof remain
+      open.
+- [x] 2026-07-23: Make the Session Rail zero state honest and explicit. Commit
+      `d9688490ad` replaces `0 sessions · caught up` with `No sessions yet`,
+      labels the ambiguous `+ New` action `New Terminal`, and changes the
+      project-centric `Start a workspace` frame to `Start working`. A model
+      assertion covers empty, search, singular/plural attention, and genuine
+      caught-up copy. Formatting, diff, identity, CLI build/help, and the full
+      `zed --bin dez` source check pass. The focused sidebar test target is not
+      claimed because its separate WebRTC graph exceeded safe local storage
+      headroom. Consolidated rebuild and rendered proof remain open.
+- [x] 2026-07-23: Make the isolated CLI installer reachable from Dez. Commit
+      `704314cc92` moves Install CLI out of the official-Zed-only menu branch,
+      keeps the target at `/usr/local/bin/dez`, replaces upstream Linux package
+      guidance, and makes handshake failures identify Dez. The compatibility
+      branch refuses to manage the official `zed` command. Formatting, diff,
+      identity, CLI build/help, and the full `zed --bin dez` source check pass.
+      Install interaction and consolidated bundle proof remain open.
+- [x] 2026-07-23: Seed terminal scope before the first PTY event. Commit
+      `7a20dc1d19` records a new terminal's initial cwd in its Workspace-owned
+      EvidenceSet during event subscription, so an idle shell no longer has to
+      emit output before review can name its scope. Existing cwd, wakeup, and
+      exit events still update Current/Stale lifecycle truth. Formatting, diff,
+      identity, and full `zed --bin dez` source checks pass; runtime restoration
+      proof remains open.
+- [x] 2026-07-23: Connect live background Workspace registration to App
+      Session viewport composition. Commit `962b611605` records a durable
+      Workspace in the current viewport from `MultiWorkspace::register_workspace`
+      without changing active selection. Repeated registration is idempotent,
+      a second viewport preserves singular global membership, and activation
+      updates selection in place. All ten focused Session tests and the
+      workspace library compile gate pass with the low-disk profiles. Shared
+      live entity composition and restart proof remain open.
+- [x] 2026-07-23: Keep the empty replacement after final-project removal in the
+      durable App Session. Commit `e9a595fcff` centralizes both close-Workspace
+      and remove-project-group fallbacks behind an allocator-backed constructor.
+      The empty Workspace now has a database ID before construction, enters
+      global membership, and becomes active in the current viewport. The
+      existing persistence regression asserts all three conditions. The
+      production workspace library check passes in 5m08s; its expanded test
+      target is authored but not claimed because the all-tests metadata graph
+      reached the local storage floor before producing a code result.
+- [x] 2026-07-23: Prove New Window is another viewport over the shared App
+      Session in source. Commit `2334fbdcfc` upgrades the existing headless
+      regression from checking only the old sidebar to constructing both
+      windows with one AppState and asserting distinct viewport and Workspace
+      IDs, shared durable membership, and correct per-viewport active
+      selection. It also updates a stale bottom-dock test to Dez's supported
+      side-dock model. The full workspace test configuration compiles with one
+      unrelated dead-code warning; direct test execution was cancelled during
+      sustained codegen/I/O pressure, so packaged runtime proof remains open.
+- [x] 2026-07-23: Extract queued-open startup ordering into one explicit
+      completion barrier. Commit `47e769da5d` routes the continuing listener
+      through an ordered dispatcher and authors a focused regression for
+      pre-barrier retention, ordered release, and continued delivery after
+      restoration completes. Failure fallback releases the same completion
+      signal, so queued user intent is not discarded when restoration reports
+      an error. Formatting, diff, and identity gates pass; a cold Dez source
+      check was stopped at the 3.4 GiB storage floor before returning a code
+      result, so compiled-test and packaged runtime proof remain open.
+- [x] 2026-07-23: Preserve truthful ownership when a Workspace window fails to
+      restore. Commit `d10d90648d` changes the affected durable identity from
+      resolved to unresolved without deleting or reordering its App Session
+      membership or viewport placement. The transition is idempotent and all
+      11 focused Session tests pass in 2m08s. The full startup integration check
+      and polished retry/remove recovery UI remain open; no bundle was built or
+      launched. Commit `fbf8443359` later refines this into the distinct
+      `RestoreFailed` state and persistent recovery callout described below.
+- [x] 2026-07-23: Replace the failed-restore dead end with an actionable notice.
+      Commit `31cc1b1205` keeps one stable, non-autohiding toast with concise
+      copy and an **Open Dez log** action, and only treats an active-window
+      update as successful when the toast was actually installed. A failed
+      update therefore still opens the durable empty recovery Workspace.
+      Formatting, diff, and identity gates pass; compiled and rendered proof
+      remains deferred to the consolidated build gate.
+- [x] 2026-07-23: Give failed Workspace restoration a durable Session Rail
+      recovery surface without false alarms. Commit `fbf8443359` introduces a
+      distinct `RestoreFailed` resolution so identities merely skipped by the
+      active restore policy remain ordinary unresolved records. Actual failures
+      persist in order and render a compact warning callout with **Open Recent**
+      and **Dismiss**; Dismiss removes the App Session reference but does not
+      directly delete recent-workspace storage. All 12 focused Session tests
+      pass in 4.89s, and the offline lock change adds only Sidebar -> Session.
+      The Sidebar library check was stopped at the 3.4 GiB storage floor while
+      compiling inherited audio/WebRTC dependencies, before a final code
+      result. Formatting, diff, and identity gates pass; compiled UI and
+      rendered proof remain open.
+- [x] 2026-07-23: Isolate Dez launch endpoints from official Zed in source.
+      Commit `c101fe6a43` moves macOS single-instance channels off upstream
+      Zed's 43737 range to Dez-owned 45737/45837/45937/46037 bases, renames the
+      Linux app/CLI listener to `dez-{channel}.sock`, and removes Linux/Windows
+      CLI autodetection fallbacks that could silently launch an official Zed
+      executable. Identity guards freeze each boundary. The standalone CLI
+      check passes in 1m22s; formatting, diff, and identity gates pass. Actual
+      installed coexistence remains open because this machine has no official
+      Zed app or CLI to inspect side by side.
+- [x] 2026-07-23: Remove the final upstream onboarding route from Dez chrome.
+      Commit `699cbd1bc8` makes title-bar promotion banners and Return to
+      Onboarding official-Zed-only, renames the Help entry to **Getting
+      Started**, and rewrites the optional welcome surface around Workspaces,
+      supervision, worktree isolation, and review evidence. Identity guards
+      freeze the onboarding gates. Formatting, diff, and identity checks pass;
+      compiled and rendered proof remains deferred to the consolidated build.
+- [x] 2026-07-23: Remove the last Zed-branded glyph from Dez getting started.
+      Commit `869cddcce0` replaces the Zed Assistant icon with the neutral Robot
+      glyph and extends the identity guard so it cannot silently return.
+      Formatting, diff, and identity checks pass; rendered proof remains in the
+      consolidated build gate.
+- [x] 2026-07-23: Collapse the empty Session Rail to one activation hierarchy.
+      Commit `4e6292ff0a` suppresses the ordinary overview while the full start
+      state is visible, so New Terminal appears once instead of competing with
+      itself. The state is now titled **Start a session**, explains that live
+      state returns to the rail, and icons its New File and Open alternatives.
+      Later overview work restored the persistent rail title and status without
+      restoring its zero-session creation button. Commit `d53cd5d656` completes
+      that hierarchy by removing the now-duplicated start-state title and icon
+      card, retaining one filled **New Terminal** action and one outlined
+      **Open Workspace…** alternative. Authored model assertions and identity
+      guards cover the handoff. Formatting, diff, and identity checks pass;
+      compile and rendered proof remain in the consolidated gate.
+- [x] 2026-07-23: Remove duplicate project identity from the Dez rail footer.
+      Commit `a9b1a961c0` leaves Workspace/project identity in the Session Rail
+      group hierarchy instead of repeating and wrapping it above the utility
+      icons. Restricted Mode and embedded cross-platform application menus can
+      still open the row, and official Zed retains the upstream behavior. Two
+      model tests and an identity guard cover those boundaries. Formatting,
+      diff, and identity checks pass; compile and rendered proof remain in the
+      consolidated gate.
+- [x] 2026-07-23: Normalize the Session Rail on Workspace vocabulary. Commit
+      `ff91b34a81` changes its remaining visible Remote Project, Project
+      Options, focus/open-new-window, Add Project, and Project Rules labels to
+      Workspace equivalents. The bottom entry uses a Folder Open glyph.
+      Internal upstream types remain intact, and an identity rejection freezes
+      the visible language. Formatting, diff, and identity checks pass;
+      rendered proof remains in the consolidated gate.
+- [x] 2026-07-23: Normalize recent and remote work on Workspace vocabulary.
+      Commit `f6aea3e013` updates the title bar, recent-work picker, remote
+      controls, and Agent History picker without renaming internal upstream
+      types or official Zed copy. Focused label assertions and identity guards
+      cover the product branch. Formatting and static checks pass; compiled and
+      rendered proof remain in the consolidated gate.
+- [x] 2026-07-23: Normalize recent-work actions and Restricted Mode trust copy.
+      Commit `b749a25619` carries Workspace language through search, empty,
+      open/move/remove, multi-root, failure, and trust states while preserving
+      official Zed branches and internal identifiers. Focused trust-label
+      assertions and identity guards are authored; static gates pass, and
+      compilation/rendered proof remain in the consolidated gate.
+- [x] 2026-07-23: Normalize developer-tool and Settings surfaces. Commit
+      `0e2c0dcae3` applies Workspace/Files language to remote, agent, pane,
+      evidence, skills, scoped Settings, status, and Files configuration UI.
+      Official Zed and internal compatibility names remain intact. Identity and
+      formatting gates pass; compile/render proof remains consolidated.
+- [x] 2026-07-23: Remove stale upstream recovery and promotion actions. Commit
+      `e969abda4a` fixes the GPU warning identity/override, hides inherited
+      palette actions, and replaces upstream issue filing in database recovery
+      with truthful local diagnostics. Authored assertions and identity guards
+      cover the product boundary; compiled interaction proof remains deferred.
+- [x] 2026-07-23: Finish Workspace grammar in retained recovery states. Commit
+      `0607771783` normalizes disconnected, follow/join, shared-agent, and
+      multi-root error copy while preserving official Zed branches. Identity
+      and formatting gates pass; rendered proof remains consolidated.
+- [x] 2026-07-23: Clarify the zero-session hierarchy. Commit `2092acd453`
+      replaces the ambiguous Sessions heading and repeated absence copy with a
+      named Session Rail, ready-Workspace count, and one accessible scoped
+      creation action per empty Workspace. Focused assertions and static gates
+      pass; rendered proof remains consolidated.
+- [x] 2026-07-23: Make Session Rail creation terminal-first. Commit
+      `57290c27c3` routes the Workspace plus control, worktree chooser, and
+      desktop/Vim defaults through New Session while preserving an explicit New
+      Agent Thread option. Focused and identity assertions pass; compiled and
+      rendered proof remains consolidated.
+- [x] 2026-07-23: Make Workspace closure scope and input parity explicit.
+      Commit `633dcc4bec` adds a keyboard-addressable worktree-close submenu,
+      preserves multi-root names, and distinguishes per-worktree closure from
+      whole-Workspace removal. Focused and identity assertions pass; compiled
+      and rendered proof remains consolidated.
+- [x] 2026-07-23: Expose restored attention without relying on color. Commit
+      `7893762cd5` composes persisted active attention into every non-live
+      transport label while preserving Saved/Detached/Missing truth. Focused
+      and identity assertions pass; rendered proof remains consolidated.
+- [x] 2026-07-23: Disclose bounded Host evidence gaps. Commit `bd36afd3f4`
+      persists structured-event eviction through detach/list/reattach, marks
+      rail evidence partial, and adds the precise Review Brief risk. Focused
+      lifecycle and identity assertions pass; process-restart/rendered proof
+      remains consolidated.
+- [x] 2026-07-23: Redact retained terminal evidence and correct its settings
+      contract. Commit `b39eedf724` filters secret environment assignments
+      before Host retention and distinguishes local metadata from Host-owned
+      structured activity and transcripts. Focused and identity assertions
+      pass; compiled hook-flow proof remains consolidated.
+- [x] 2026-07-23: Redact explicit secret CLI flags from retained commands.
+      Commit `9323af8008` covers spaced and equals forms without masking
+      ordinary flags. Focused utility, Host-ingestion, and identity assertions
+      pass; compiled proof remains consolidated.
+- [x] 2026-07-23: Redact URL credentials from retained commands. Commit
+      `80ff1df75f` covers userinfo and secret query parameters, preserves useful
+      URL structure, and discloses verbatim file-target retention. Focused and
+      identity assertions pass; compiled proof remains consolidated.
+- [x] 2026-07-23: Expose the Session Rail Workspace hierarchy. Commit
+      `c47637c2ac` adds named list semantics and complete selected, expanded,
+      ready/running, and attention labels while suppressing sticky duplicates.
+      Focused and identity assertions pass; platform inspection remains
+      consolidated.
+- [x] 2026-07-23: Announce Session Rail scope and result changes. Commit
+      `7e91f00b69` names the scope group and search region, gives totals and
+      empty results status semantics, and separates stable scope names from
+      toggle state and action descriptions. Focused and identity assertions
+      pass; platform announcement timing remains consolidated.
+- [x] 2026-07-23: Expose callout urgency to assistive technology. Commit
+      `e28b78ed57` maps informational/success callouts to status and
+      warning/error callouts to alert, covering durable Host and Workspace
+      recovery. Authored role and identity assertions pass; platform
+      announcement timing remains consolidated.
+- [x] 2026-07-23: Normalize high-frequency Session Rail hit targets. Commit
+      `a90fae5873` aligns compact headers with their 28 px hover controls and
+      raises primary creation, scope, Host-detail, and Workspace-recovery
+      actions from compact to medium size. Identity checks pass; rendered
+      density and zoom proof remains consolidated.
+- [x] 2026-07-23: Connect keyboard selection to accessibility focus. Commit
+      `f6318ea907` marks the focused Workspace header or Session row as the
+      active descendant while the Session Rail keeps real keyboard focus. The
+      audit also confirms the existing static-frame reduced-motion fallback.
+      Identity checks pass; platform focus/motion proof remains consolidated.
+- [x] 2026-07-23: Retire the clipped 56 px Session Rail icon presentation.
+      Commit `9930e86677` keeps legacy configuration readable but resolves it to
+      the smallest complete compact layout. Width and identity checks pass;
+      rendered compact proof remains consolidated.
+- [x] 2026-07-23: Make terminal-first onboarding responsive and semantic.
+      Commit `4a102fc50e` names the workflow and its ordered steps, separates
+      safety copy from a wrapping action row, and normalizes its primary hit
+      targets. Identity checks pass; rendered zoom/narrow proof remains
+      consolidated.
+- [x] 2026-07-23: Disable inherited upstream telemetry for Dez. Commit
+      `933e3f515f` forces diagnostics/metrics false in non-Zed builds and removes
+      their fork UI while preserving separate Anthropic retention consent.
+      Source and identity checks pass; compiled network proof remains
+      consolidated.
+- [x] 2026-07-23: Hide the disabled fork updater setting. Commit `2680937952`
+      removes the inert Dez Auto Update section while retaining compatibility
+      parsing and official Zed UI. Source and identity checks pass; rendered
+      Settings proof remains consolidated.
+- [x] 2026-07-23: Remove dead Collaboration Panel settings. Commit
+      `9239006d4b` hides its button/dock/width section in Dez while preserving
+      compatibility and official Zed UI. Identity checks pass; rendered
+      Settings proof remains consolidated.
+- [x] 2026-07-23: Expose high-value Session Rail shortcuts accessibly. Commit
+      `33f7ff5893` reports Shift+A on scope controls and Shift+V on Review Brief
+      buttons without adding cramped visual labels. Identity checks pass;
+      platform announcement proof remains consolidated.
+- [x] 2026-07-23: Keep provider authentication opt-in in Dez. Commit
+      `2fc5226a51` gates eager provider authentication on official Zed identity
+      plus auto-connect, covering stale fork settings. Source and identity
+      checks pass; compiled network proof remains consolidated.
+- [x] 2026-07-23: Hide unavailable upstream edit-prediction UI in Dez. Commit
+      `cc2509e8b8` normalizes legacy Zed/Mercury selections before rendering,
+      removes them from the provider picker, and hides Mercury setup while
+      preserving official Zed and explicit local/user-configured providers.
+      Focused source and identity checks pass; rendered Settings/status proof
+      remains consolidated.
+- [x] 2026-07-23: Keep upstream prediction commands hidden after Agent UI
+      refreshes. Commit `b909b31d45` prevents the later Agent filter from
+      restoring Zed Predict onboarding in Dez and treats legacy Zed/Mercury
+      selections as unavailable when filtering prediction actions. Supported
+      explicit providers and official Zed remain unchanged. Source and identity
+      checks pass; rendered command-palette proof remains consolidated.
+- [x] 2026-07-23: Isolate crash recovery identity and opt-in. Commit
+      `aab0e5f2f2` prevents an inherited upstream endpoint from enabling the
+      crash handler in Dez; fork minidumps require explicit
+      `DEZ_GENERATE_MINIDUMPS=1|true`. Startup/duplicate-instance messages,
+      crash metadata, and temporary artifacts use Dez identity while official
+      Zed remains unchanged. Source and identity checks pass; compiled recovery
+      proof remains consolidated.
+- [x] 2026-07-23: Remove inherited collaboration keybindings and call chrome.
+      Commit `0ddf84161e` filters channel/collaboration namespaces and the
+      follow-collaborator action from every keymap source in Dez, preventing
+      removed handlers from consuming useful chords. Title-bar call controls
+      are official-Zed-only; AI opt-out filtering and official Zed behavior are
+      preserved. Source and identity checks pass; compiled key-routing proof
+      remains consolidated.
+- [x] 2026-07-23: Correct remaining CLI and skill-import guidance. Commit
+      `2efbf166b7` teaches `dez <path>` in Dez Settings and removes the false
+      attribution that Zed performs private skill URL retries. Official Zed
+      keeps its CLI copy. Source and identity checks pass; rendered
+      Settings/skill proof remains consolidated.
+- [x] 2026-07-23: Reconcile the frozen workspace lock graph. Commit
+      `c3dfb7aa79` adds the already-declared `util` and `paths` direct edges for
+      `dez_terminal_host` and `project_panel`; no version or source changes.
+      Full locked metadata resolves and the candidate hash is updated in
+      Release Evidence.
+- [x] 2026-07-23: Repair the Callout accessibility compile boundary. The
+      consolidated build exposed a missing GPUI `Role` import and the need for
+      a stateful element. Commits `5a25a72f92` and `42ff77e99c` import the role
+      and derive a stable call-site ID before applying it. The focused `ui`
+      build passes in 2m33s; both failed attempts stopped before replacing an
+      executable.
+- [x] 2026-07-23: Repair the Host snapshot transport import boundary. The
+      resumed consolidated build exposed terminal-view imports from the parent
+      `session_host` module rather than the public `transport` module that
+      defines the snapshot globals. Commit `1ed2ff814a` aligns terminal view
+      with the already-working Session Rail import without changing behavior.
+      Formatting, diff, and identity checks pass; the failed build stopped
+      before replacing an executable.
+- [x] 2026-07-23: Preserve the Workspace handle across terminal event and Host
+      snapshot subscriptions. Commit `4369bb1f3b` gives the event closure its
+      own weak Workspace clone, retaining navigation, lifecycle evidence, and
+      hosted reconciliation. The focused `terminal_view` build passes in
+      7m36s.
+- [x] 2026-07-23: Close the remaining consolidated compile boundaries. Commit
+      `af8ecad961` exports the tested Dez provider normalization for Settings
+      UI. Commits `9ed0e1aaaf` and `2452d3b4ec` give Session Rail and
+      terminal-first onboarding landmarks stable GPUI IDs before applying
+      accessibility roles. The clean locked arm64 app/helper build, separate
+      CLI build, and `Dez Dev.app` bundle pass through `2452d3b4ec`; bundle
+      identity, four-executable inventory, hashes, and deep strict ad-hoc
+      signature verification are recorded in Release Evidence. Current
+      candidate runtime and rendered proof remain open.
+- [x] 2026-07-23: Scope zero-session creation to the exact Workspace. Commit
+      `4fc53b860f` hides the overview's global New Terminal shortcut while no
+      sessions exist, leaving each open Workspace group's scoped action as the
+      single path. The shortcut returns after the first session, and the
+      no-Workspace activation surface is unchanged. An authored model
+      assertion and identity guard cover the transition. Formatting, diff, and
+      identity checks pass; compile and rendered proof remain in the
+      consolidated gate. The 2026-07-26 populated-state ownership slice
+      supersedes the shortcut-return behavior for Dez while preserving
+      official Zed.
+- [x] 2026-07-23: Clarify the remaining Session Rail utilities. Commit
+      `8bcd11f4b6` calls the clock Agent History, uses Command Palette
+      consistently, and adds explicit accessible labels plus action-aware
+      tooltips to the New File and Open alternatives. An identity rejection
+      freezes the visible names. Formatting, diff, and identity checks pass;
+      compiled interaction proof remains in the consolidated gate.
+- [x] 2026-07-23: Remove dead Session Rail settings from Dez. Commit
+      `ad59a60926` hides branch status/name, worktree name, duplicate project
+      identity, and upstream onboarding controls whose surfaces no longer
+      render in Dez. Compatibility schema remains readable; Files Pane, menus,
+      and platform button-layout controls remain because they are live. A
+      focused model test and identity guard cover the product filter.
+      Formatting, diff, and identity checks pass; compiled Settings UI proof
+      remains in the consolidated gate.
+- [x] 2026-07-23: Remove inherited cloud and call settings from Dez. Commit
+      `a20074de26` omits the Calls/Collaboration page, leaves Network with its
+      live proxy control, and removes the graphical paths for inherited Zed
+      auto-connect and collaboration-server configuration. Compatibility keys
+      remain readable and official Zed keeps the full UI. Attention copy no
+      longer names the removed workspace bar. A product-boundary model test and
+      identity guards pass; compiled Settings UI proof remains in the
+      consolidated gate.
+- [x] 2026-07-23: Remove upstream prediction-data controls from Dez. Commit
+      `2435348289` hides Zed Edit Predictions data collection because Dez
+      disables its Zed/Mercury providers, and rewrites provider setup around
+      explicit providers. Compatibility parsing and official Zed behavior are
+      retained. A product-boundary model test and identity guard pass; compiled
+      Settings UI proof remains in the consolidated gate.
+- [x] 2026-07-23: Productize command names and copied Settings links. Commit
+      `f89f55868c` displays the internal `zed::…` action namespace as `dez: …`
+      across the Command Palette, keymap editor, and which-key UI while leaving
+      action identities compatible. Release channels now own their canonical
+      Dez URL scheme, which both registration and Settings copy links consume;
+      legacy `zed://` remains input-only compatibility. Focused assertions plus
+      formatting, diff, lockfile, and identity gates pass; compiled interaction
+      proof remains in the consolidated gate.
+- [x] 2026-07-23: Remove inherited collaboration commands from Dez's palette.
+      Commit `f40877d4ab` filters the registered `collab` namespace from Dez
+      presentation while preserving action/keymap compatibility and official
+      Zed behavior. A product-boundary assertion and identity guard pass;
+      compiled palette proof remains in the consolidated gate.
+- [x] 2026-07-23: Remove Zed Assistant glyphs from Codex session surfaces.
+      Commit `526218a972` uses the neutral Robot glyph in the Session Rail and
+      keyboard switcher while retaining explicit Codex labels and metadata. A
+      directory-wide identity rejection covers both paths. Formatting, diff,
+      and identity checks pass; rendered proof remains consolidated-gate work.
+- [x] 2026-07-23: Add deliberate Codex setup to first-run onboarding. Commit
+      `bb0cf408b4` exposes **Copy Codex Hook** before New Terminal, copies the
+      bundled setup, states that Dez installs or modifies nothing, and retains
+      lifecycle/Host persistence limitations. An identity guard covers the
+      action. Formatting, diff, and identity checks pass; rendered onboarding
+      proof remains in the consolidated gate.
+- [x] 2026-07-23: Add explicit user-selected review evidence. Commit
+      `a8ce563373` keeps the selected path in the Workspace-owned EvidenceSet
+      after its tab closes, distinguishes user selection from passive open
+      surfaces, exposes add/remove/clear commands plus file-tab actions, and
+      projects one Selected path row into Review Briefs. Commit `e101b63e43`
+      persists only those selections through the normal Workspace database and
+      restores them without persisting passive evidence. Formatting, diff, and
+      identity checks pass; compiled restart proof remains deferred.
+- [x] 2026-07-23: Reconcile saved terminal evidence across failed restore and
+      successful reattach. Commit `0e6507756e` retains last-known cwd evidence
+      under the original Session as Unresolved, surfaces the uncertainty in
+      Review Brief risk copy, and lets a successful attach replace the record
+      with Current Host truth. A focused model test is authored; formatting,
+      diff, and identity checks pass. Commit `ea2bb18453` then maps live
+      Attached/Starting/Detached to Current, Reconnecting/Missing/Incompatible
+      to Unresolved, and Exited to Stale while consuming snapshot cwd changes.
+      Compiled restart proof remains open.
+- [x] 2026-07-23: Restrict EvidenceSet mutation to Workspace ownership. Commit
+      `0f8740b1a1` keeps immutable evidence projection public while root,
+      open-file, terminal, and selection mutation stays inside the Workspace
+      crate. Formatting, diff, and identity checks pass.
+- [x] 2026-07-23: Prevent provisional evidence and detached Session identity
+      leakage across Workspaces. Commits `af232402f5` and `a4047d95c0` give
+      pending evidence sets distinct stable namespaces and retained Host
+      Sessions an optional durable Workspace owner, with legacy cwd fallback
+      only when ownership is absent. Focused tests are authored; compiled
+      runtime proof remains deferred.
+- [x] 2026-07-23: Prove live and persisted evidence isolation between two
+      Workspaces. Commit `6f2061d2c7` asserts same-path Session records remain
+      distinct and database-backed selections cannot be cleared across
+      Workspace IDs. Formatting, diff, and identity checks pass.
+- [x] 2026-07-23: Stop terminal creation from reentering Workspace mutation.
+      Commit `c0de209e28` moves center-terminal creation through the deferred
+      workspace action boundary instead of mutating the active Workspace from
+      its own update callback.
+- [x] 2026-07-23: Keep terminal-only empty Workspaces visible. Commit
+      `930292ad47` projects a live terminal even when its Workspace has no
+      worktree, so the Session Rail does not regress to a false zero-session
+      state after New Terminal succeeds.
+- [x] 2026-07-23: Keep terminal sessions visually anchored. Commit `fb2b90e193`
+      lets a terminal request its tab header even when inherited single-tab
+      auto-hide is enabled. The same slice keeps the zero-session rail compact
+      instead of using the full rail as a centered onboarding canvas.
+- [x] 2026-07-23: Detach the durable terminal Host from the GUI process
+      session. Commit `7eca42a56c` launches the helper in a separate Unix
+      session so a normal GUI lifecycle does not imply helper termination.
+- [x] 2026-07-23: Polish the terminal-first welcome and Session Rail absence
+      states. Commit `798df9ec04` establishes a compact top-anchored state
+      grammar, one primary recovery action, a Start/Watch/Verify welcome
+      orientation, and a rail-only utility footer without the duplicate global
+      Command Palette action.
+- [x] 2026-07-23: Remove empty-state panels from full-size list flow. Commit
+      `7f0da8c04a` makes populated and empty Session Rail bodies mutually
+      exclusive and top-aligns the scrollable welcome surface. This is
+      source-only evidence; compilation, launch, and rendered verification
+      remain deliberately deferred.
+- [x] 2026-07-23: Align terminal launch and native-agent identity across the
+      retained shell. Commit `dcd38968d3` makes the empty Workspace and Dez
+      New Item menu use a center terminal as the unqualified primary action,
+      names the legacy panel explicitly, suppresses inherited Zed
+      release-channel migration work in Dez, and routes native-agent marks
+      through one official-Zed-compatible icon policy. A focused icon-policy
+      test is authored, and the static identity guard covers each boundary.
+- [x] 2026-07-23: Make the persistent terminal header identify real lifecycle
+      and ownership. Commit `56f7c46db6` replaces the local-PID-only tooltip
+      with a bounded identity card that also works for durable hosted Sessions,
+      adds textual task/process state to the terminal accessibility name,
+      labels hosted closure as Detach, preserves termination as a separate
+      destructive action, and aligns the terminal context menu with Dez's
+      center-first creation contract. Focused state and label assertions are
+      authored; compilation and rendered proof remain deferred. Commit
+      `dd2459eef9` then bases hosted ownership on the terminal backing type so
+      reconnecting Sessions cannot regress to local close terminology.
+- [x] 2026-07-23: Give compact Session Rail rows a deliberate information and
+      action hierarchy. Commit `059656999e` keeps identity, priority evidence,
+      Review Brief, and the contextual lifecycle action in the narrow layout;
+      rename and raw-diff controls remain in the context menu and return inline
+      only when the rail is detailed. Compact rows omit recency when stronger
+      evidence is present, while a wrapping tooltip preserves the complete
+      title and state metadata. Focused pure assertions and the static identity
+      guard cover the responsive contract; rendered proof remains deferred.
+- [x] 2026-07-23: Collapse terminal placement to one public model. Commit
+      `ad2fdcf766` removes the false **New Terminal Panel** choice, inherited
+      Terminal Panel View command and keybindings, duplicate palette action,
+      status-bar toggle, and dock-size Settings from Dez. Every visible
+      **New Terminal** entry point now means a center tab that can join the
+      ordinary split grid. Official Zed keeps its panel behavior. Focused pure
+      visibility assertions and static identity guards pass; compilation and
+      rendered proof remain deferred.
+- [x] 2026-07-23: Name developer surfaces by user intent instead of placement.
+      Commit `622acd1a61` changes Dez's View menu to **Workspace Tools**,
+      **Files**, **Outline**, **Debug**, **Agent**, and **Git** regardless of
+      whether compatibility internals use a pane tab or dock. Official Zed
+      retains its existing labels. Focused pure assertions and the static
+      identity guard pass; rendered proof remains deferred.
+- [x] 2026-07-23: Make welcome and recovery states work-first rather than
+      promotional. Commit `d2e2a3992a` removes the stacked supervision and agent
+      cards, preserves the primary start and recent-Workspace actions, and
+      condenses orientation to **Start in a terminal. Track attention. Review
+      evidence.** Commit `594296efa8` then constrains welcome content to a
+      640 px reading measure and empty/recovery states to 384 px with tighter
+      spacing. Focused pure assertions and static identity guards pass;
+      compilation and rendered narrow-window proof remain deferred.
+- [x] 2026-07-23: Make the Session Rail footer utilities match their outcomes.
+      Commit `9e14ca2db7` replaces the misleading Robot options glyph with a
+      Settings glyph and **Agent Tools and Settings** identity, gives every
+      configuration command a specific noun and verb, and renames the folder
+      utility **Open Recent Workspaces**. Static identity, formatting, and diff
+      checks pass; rendered tooltip and popover proof remain deferred.
+- [x] 2026-07-23: Make terminal context and recovery actions explicit. Commit
+      `72cec1f285` hides Copy without a selection, distinguishes clipboard and
+      text-only paste, names Clear Screen, and presents detach/close separately
+      from hosted-Session/local-process termination. Failed restore uses
+      product language instead of Host-oriented copy, and the permanently
+      disabled terminal Agent branch is removed. Commit `8dc53f4077` later
+      consolidates that state into **Terminal Session unavailable** and **Start
+      Fresh Terminal**, preserving the exact reason without synthetic PTY
+      output. Focused pure assertions and static identity guards pass;
+      compilation and rendered context-menu proof remain deferred.
+- [x] 2026-07-23: Finish the top-level Workspace vocabulary pass. Commit
+      `218e346ede` product-gates Workspace Settings, Add Folder to Workspace,
+      Close Workspace, and Find in Workspace while retaining official Zed
+      labels. The Dez Help menu now distinguishes local diagnostics and
+      open-source licenses and groups attribution links under **Upstream Zed**
+      instead of presenting loose upstream commands. Focused pure assertions
+      and static identity guards pass; compilation and rendered native-menu
+      proof remain deferred.
+- [x] 2026-07-23: Productize retained Command Palette names. Commit
+      `35c516a5bb` presents **Session Rail**, **Files**, **Workspace Search**,
+      **Workspace Symbols**, **Workspace Tools**, and **Dez** instead of
+      inherited implementation namespaces, and labels the Project category
+      **workspace** in Dez. Official Zed labels and the underlying action IDs,
+      keymaps, telemetry, and dispatch remain unchanged. Focused pure
+      assertions, formatting, and static identity guards pass; compilation and
+      rendered palette proof remain deferred.
+- [x] 2026-07-23: Make terminal-tab and Session-Rail lifecycle actions
+      truthful. Commit `be1a20dae1` keeps the attached center tab as the
+      interactive surface and labels its closure as detach, while a Host-only
+      running row says **Terminate Running Session**, uses destructive
+      presentation, and requires confirmation. Stale and completed rows use
+      close/remove language, and row ownership reads **Durable Host**,
+      **Remote Workspace**, or **Workspace process**. Commit `ddd7f25f4e`
+      gives empty PTY titles a **Terminal** fallback so a valid Session cannot
+      render as a blank row. Focused pure assertions and static identity guards
+      pass; compilation and rendered proof remain deferred.
+- [x] 2026-07-23: Preserve useful terminal names until visual layout.
+      Commit `e28314a893` removes the 25-character display truncation from
+      Session Rail, Session Switcher, local Host, durable transport, and
+      retained-Agent metadata. Tabs and rows still truncate to their available
+      width while tooltips and restored projections retain the useful title.
+      Custom names trim surrounding whitespace, edit the full live title, and
+      use the explicit **Rename Terminal…** action without breaking tab
+      double-click. Pure assertions, formatting, identity, locked offline
+      metadata, and diff checks pass; rendered long-title and rename-focus proof
+      remain deferred.
+- [x] 2026-07-23: Clarify the persistent bottom utility chrome. Commit
+      `91f738f83b` labels the normal-width Session Rail footer **Agent Tools**,
+      **History**, and **Workspaces**, while retaining accessible icon-only
+      controls below the compact breakpoint. Dez's center status bar now says
+      **Search Workspace Files** and **Workspace Diagnostics** and renders
+      **No diagnostics** beside the otherwise ambiguous zero-state checkmark
+      when no editor is active. Official Zed keeps its Project vocabulary and
+      compact zero-state presentation. Focused pure assertions, locked
+      no-dependency metadata, formatting, and static identity guards pass;
+      compilation and rendered responsive proof remain deferred.
+- [x] 2026-07-23: Distinguish Agent Sessions from Terminal Sessions. Commit
+      `92e0591811` replaces visible Thread terminology in Dez's Session Rail,
+      empty drafts, Agent History, title-generation feedback, review-risk copy,
+      and Command Palette with **Agent Session** while reserving
+      **Terminal Session** for terminal-backed computation. Creation, rename,
+      archive, regeneration, Markdown export, search, count, filter, import,
+      and empty-state labels now follow the same model. Official Zed
+      terminology and underlying action identities remain unchanged. Focused
+      pure assertions, formatting, locked offline metadata, and static identity
+      guards pass. Commit `1f3432a211` additionally guards the explicit
+      accessible names on Agent History's icon-only row and toolbar actions;
+      compilation and rendered rail/history proof remain deferred.
+- [x] 2026-07-23: Keep Workspace tool naming stable after activation. Commit
+      `ce770c5eee` aligns Workspace Search fallback tab/tooltip, loading, and
+      no-results copy with Workspace scope. Workspace Diagnostics retains its
+      Workspace tooltip and always includes a **Diagnostics** identity before
+      check/error/warning status in custom tab content instead of presenting a
+      status-only tab. Official Zed retains Project labels. Focused pure
+      assertions, formatting, locked offline metadata, and static identity
+      guards pass; compilation and rendered destination proof remain deferred.
+- [x] 2026-07-23: Prevent clipped shortcut badges in the empty Workspace
+      launcher. Commit `281b6e22c9` keeps **New Terminal**, **Find File**, and
+      **New File** as full-width actions but moves shortcut discovery from
+      inline end slots into action tooltips, preserving the same keymaps and
+      dispatch. Explicit accessible names cover all three actions. Formatting,
+      locked offline metadata, and static identity guards pass; compilation and
+      rendered narrow-width proof remain deferred.
+- [x] 2026-07-23: Give Session rows a width-aware information hierarchy. Commit
+      `be2a8d6ec6` keeps title, lifecycle state, attention, evidence, and recency
+      legible in compact and minimum-detailed rails. Actor, Host ownership, and
+      worktree context return at 440 px instead of competing in the same narrow
+      line; hidden actor and Host labels remain available to accessibility and
+      tooltip output. Plain terminal rows omit their redundant
+      **Terminal Session** actor label below that threshold. Focused source
+      assertions, formatting, locked offline metadata, and static identity
+      guards pass; compilation and rendered width/theme proof remain deferred.
+- [x] 2026-07-23: Make pane-tab tool toggles close the surface they opened.
+      Commit `39c8379f05` extends generic panel closure beyond legacy docks:
+      Files, Outline, Git, Debug, and Agent now hide their Workspace Tools or
+      Agent pane when closed or re-toggled under the default policy. The
+      transition retains a visible editor or terminal pane, restores focus when
+      the tool pane owned it, and persists the layout. A focused source
+      regression and static identity guard cover the contract. Formatting and
+      locked offline metadata pass; compilation and rendered toggle/focus proof
+      remain deferred.
+- [x] 2026-07-23: Complete the Workspace Tool registration lifecycle. Commit
+      `6cbdda5405` removes a panel's retained pane-tab item when the panel is
+      unregistered, preventing stale Files, Outline, Git, Debug, or Agent tabs
+      from surviving after their backing panel disappears. It also adds focused
+      toggle-close and unregister regressions. Formatting, locked offline
+      metadata, and static identity checks pass; compilation and rendered
+      remove/re-register proof remain deferred.
+- [x] 2026-07-23: Keep Dez terminals in one interaction model. Commit
+      `a95e0a4bb4` stops routing the inherited `TerminalPanel` into Workspace
+      Tools for Dez. New terminals and attached terminal Sessions therefore
+      remain ordinary main-work-area tabs or splits instead of producing a
+      second **Terminals** tool surface. Official Zed retains its inherited
+      Terminal Panel routing. Focused source assertions, formatting, locked
+      offline metadata, and static identity checks pass; compilation and
+      rendered migration proof remain deferred.
+- [x] 2026-07-23: Make Workspace-scoped terminal creation discoverable. Commit
+      `f863b3e45c` keeps the active Workspace's terminal-shaped creation action
+      visible and gives it a Workspace-specific accessible name. Inactive
+      Workspace actions remain hover-revealed to preserve row hierarchy.
+      Focused source assertions, formatting, locked offline metadata, and
+      static identity checks pass; compilation and rendered multi-Workspace
+      proof remain deferred.
+- [x] 2026-07-23: Keep active Workspace management discoverable. Commit
+      `86775eb7bc` keeps **Workspace Options** visible for the active Workspace,
+      adds a tooltip and source regression, and records the permanent
+      Session-Rail/Workspace-Tools/main-area/Agent ownership model in Fork
+      Notes. Inactive Workspace options remain hover-revealed to protect the
+      hierarchy. Static identity, formatting, locked offline metadata, and diff
+      checks pass; rendered narrow-width proof remains deferred.
+- [x] 2026-07-23: Give Agent title editing accurate product language. Commit
+      `c625c1f3b4` gives the pencil affordance an accessible name and tooltip,
+      says **Edit Agent Session Title** in Dez, preserves **Edit Thread Title**
+      in official Zed, and names a legacy terminal surface **Edit Terminal
+      Title**. A pure label regression and the static identity guard cover the
+      distinction; rendered hover and accessibility-tree proof remain deferred.
+- [x] 2026-07-23: Make unsupported Agent Session mentions understandable.
+      Commit `a0f51cbc3a` replaces upstream **Thread/native agent** wording in
+      Dez with **Agent Session/built-in Dez Agent**, while official Zed retains
+      its existing error. Product-copy assertions and the static identity guard
+      pass; rendered error-notice proof remains deferred.
+- [x] 2026-07-23: Protect unsent Agent Session drafts. Commit `94b27cb2db`
+      requires confirmation before a draft is discarded from either its
+      Session Rail row or main-area tab, states that unsent prompt text will be
+      permanently removed, and keeps saved-session archive immediate and
+      reversible. Tab labels distinguish discard from archive and preserve
+      official Zed behavior. Pure behavior assertions, formatting, locked
+      offline metadata, static identity, and diff checks pass; rendered modal
+      and focus-return proof remain deferred.
+- [x] 2026-07-23: Make Agent Session sandbox scope explicit. Commit
+      `e064c91b53` replaces visible per-thread sandbox status, granted-scope,
+      fallback, and unsandboxed-warning copy with **Agent Session** in Dez while
+      retaining official Zed terminology and protocol identifiers. Pure copy
+      assertions and static identity guards pass; rendered tooltip/warning
+      proof remains deferred.
+- [x] 2026-07-23: Name Agent menu destinations. Commit `70dd7e12c6` replaces
+      ambiguous **Settings** and **Toggle Sidebar** entries with **Agent
+      Settings** and **Toggle Session Rail** in Dez while preserving official
+      Zed labels and action identity. Pure copy assertions and static identity
+      guards pass; rendered menu proof remains deferred.
+- [x] 2026-07-23: Polish Agent Session switching and in-session search. Commit
+      `4229be7201` turns the floating switcher into a named, responsive dialog
+      with recent-session count and open/cancel guidance, and gives Agent
+      Session search product-specific placeholder copy plus an accessible
+      Search landmark. Commit `ff1d03b8d3` aligns the deferred message-editor
+      completion expectation with the visible **Agent Sessions** label. Static
+      identity, formatting, locked offline metadata, and diff checks pass;
+      rendered keyboard/modifier-release/search proof remains deferred.
+- [x] 2026-07-23: Remove the visible default-Thread fallback and finish Agent
+      toolbar accessibility. Commit `a3cf18ce8e` keeps `New thread` only as the
+      compatible storage sentinel while tabs, Session Rail, Agent History,
+      mentions, Markdown, completion, and title editing show **New Agent
+      Session** in Dez. The retry, Agent Options, full-screen, and new-session
+      icon buttons now have accurate accessible names; title retry uses a
+      retry-shaped icon. Pure vocabulary assertions and static identity guards
+      pass; rendered title/toolbar/accessibility-tree proof remains deferred.
+- [x] 2026-07-23: Explain unavailable pane splitting. Commit `b42be6e0b2`
+      preserves the ordinary **Split Pane** control when supported, but gives a
+      disabled Dez control the accessible name **Split Pane Unavailable** and
+      explains that the current Surface cannot be split or moved into a new
+      pane. Pure copy assertions and static identity guards pass; rendered
+      disabled-state proof remains deferred.
+- [x] 2026-07-23: Clarify main-work-area control intent. Commit `a6ff92643e`
+      names worktree removal **Close Worktree from Window**. Commit
+      `eb603481d5` renames the tab-overflow control **Switch Surface** and its
+      menu **Surfaces**, matching the product model. Pure copy assertions and
+      static identity guards pass; rendered menu proof remains deferred.
+- [x] 2026-07-23: Make the visible Agent title pencil actionable. Commit
+      `e09bb2d73b` routes the control to Agent Session or terminal title
+      editing, with focused coverage for both paths; commit `b92e001bb3` adds a
+      static regression guard. Compilation and rendered pointer/focus proof
+      remain deferred.
+- [x] 2026-07-23: Finish native Agent icon routing across Agent surfaces.
+      Commit `ab3f8e0408` routes the Agent toggle, Agent Session notifications,
+      Agent diff Surface, and profile controls through the app-aware native
+      Agent icon instead of a hard-coded upstream Assistant glyph. Static
+      identity guards cover all four paths; rendered icon proof remains
+      deferred.
+- [x] 2026-07-23: Productize exceptional Agent Session recovery. Commit
+      `8da9d0d694` gives context-too-large and token-limit callouts consistent
+      Agent Session copy and actions, and gives cross-channel import feedback
+      product-correct singular, plural, and empty messages. Official Zed keeps
+      Thread terminology. Pure copy assertions and static identity guards pass;
+      rendered callout/toast proof remains deferred.
+- [x] 2026-07-23: Polish empty Workspace recovery across primary regions.
+      Commit `f622dad03d` gives empty Dez Files, Git, and Agent regions compact,
+      top-anchored, region-specific guidance with a heading, explicit
+      **Open Workspace** primary action, secondary clone action, icons, and an
+      accessible region name. Agent zoom now says **Expand Agent** and
+      **Restore Agent**. Commit `b1a20d9b17` preserves official Zed's original
+      centered layout while retaining the Dez hierarchy; `22893a6491` declares
+      the Git UI's product-identity dependency explicitly. Static identity,
+      formatting, locked offline metadata, and diff checks pass; rendered
+      narrow-pane/zoom/focus proof remains deferred.
+- [x] 2026-07-23: Curate the public Canvas Layout menu. Commit `cdedb6a23a`
+      removes disabled implementation diagnostics, prefix-key documentation,
+      and repeated `Canvas:` labels. Commit `75fb4bc5c9` keeps only Full, Agent
+      Control, Focus Editor, Code/Run/Observe, Review, and Debug in the routine
+      workflow set. Commit `ed5750c0ce` moves slot/JSON/named-layout storage
+      detail behind **Manage Saved Layouts…**, leaving Cycle, **Save Layout
+      As…**, and Restore Previous as concise immediate actions. Commit
+      `df8864833d` exposes those controls through the active Workspace's
+      persistent **Workspace Options** control in the Session Rail without
+      adding global chrome or changing official Zed's account behavior.
+      Advanced actions remain registered for deliberate workflows. Static
+      identity, formatting, locked offline metadata, and diff checks pass;
+      rendered menu height/selection/manager proof remains deferred.
+- [x] 2026-07-23: Polish the interactive Agent Review Surface. Commit
+      `c7f73fb0fe` replaces Agent Diff/Hunk terminology in Dez with Agent
+      Review/Change, gives the empty state a compact top-aligned hierarchy and
+      **Return to Agent** action, names previous/next/review-all icons, exposes
+      generation as visible status, and explains why a newly created file
+      cannot be rejected one change at a time. Commit `c782f2fc63` adds
+      narrow-pane padding and guards the full toolbar accessibility contract.
+      Official Zed retains upstream terminology. Pure copy assertions,
+      formatting, locked offline metadata, identity, and diff checks pass;
+      rendered navigation/disabled-state/focus-return proof remains deferred.
+- [x] 2026-07-23: Simplify Workspace tool labels. Commit `6223c05368` makes
+      Dez tool controls and tooltips say **Files**, **Outline**, **Git**, and
+      **Debug** without inherited Panel terminology, while official Zed retains
+      its original labels. The Outline crate now declares its product-identity
+      dependency explicitly. Static identity, formatting, locked offline
+      metadata, and diff checks pass; rendered tooltip proof remains deferred.
+- [x] 2026-07-23: Restore cancelled Session Switcher previews through their
+      original source. Commit `67a8152db7` preserves center Workspace items,
+      durable Host Sessions, retained compatibility terminals, and Agent
+      Sessions as distinct restoration targets instead of forcing terminals
+      through Agent. Commit `23ae297ef0` adds focused center-terminal source
+      coverage. Formatting, identity, and diff checks pass; compilation and
+      live Escape/focus proof remain deferred.
+- [x] 2026-07-23: Productize Agent clipboard and metadata diagnostics. Commit
+      `07024bf5c0` gives copy/load outcomes, missing-session notices, Workspace
+      prerequisites, and diagnostic-buffer titles consistent Agent Session and
+      Session Rail wording in Dez while preserving official Zed copy. Static
+      identity, formatting, and diff checks pass; rendered toast proof remains
+      deferred.
+- [x] 2026-07-23: Disambiguate mixed Session Switcher rows and Agent controls.
+      Commit `745792e28e` adds visible **Agent Session** and **Terminal Session**
+      type labels, replaces the inherited Agent Panel tooltip with **Agent**,
+      and names Session Rail's settings destination **Agent Settings**. Commit
+      `79e87f2351` refines the switcher after the complete row hierarchy became
+      available: type stays explicit in accessibility and tooltips but no
+      longer repeats visibly under every title; hover cannot preview unrelated
+      work; and the selected row is the active descendant of the named list.
+      Pure copy assertions, formatting, identity, and diff checks pass;
+      rendered density and accessibility-tree proof remain deferred.
+- [x] 2026-07-23: Remove remaining terminal-thread language from Dez UI.
+      Commit `d1ea4a914f` gives the external-session import flow consistent
+      Agent Session, Agent History, count, empty, and completion copy. Commit
+      `037eebaf02` renames the terminal startup setting to **Terminal Session
+      Startup Command** while retaining official Zed's Terminal Thread copy.
+      Focused source assertions, formatting, locked offline metadata, and
+      static identity checks pass; compilation and rendered modal/settings
+      proof remain deferred.
+- [x] 2026-07-23: Enforce the Dez Workspace Tools boundary. Commit
+      `d490735631` restricts Dez's left tool region to Files, Outline, Git, and
+      Debug; the inherited Terminal and Collaboration panels are official-Zed
+      compatibility surfaces only. Focused source assertions, formatting,
+      locked offline metadata, and static identity checks pass; compilation and
+      rendered tool-registration proof remain deferred.
+- [x] 2026-07-23: Make Agent History search functional and truthful. Commit
+      `5cf88897ba` replaces the production hard-coded empty query with the
+      existing editor value, renders the Search region and clear control, and
+      filters by Agent Session title or Workspace path name. Search misses now
+      say **No matching Agent Sessions** and offer **Clear Search**; genuinely
+      empty history offers **Start New Agent Session** instead. Focused
+      product-copy assertions, formatting, locked offline metadata, and static
+      guards pass; compilation and rendered search/focus proof remain deferred.
+- [x] 2026-07-23: Route scoped Session Rail terminals to the main work area.
+      Commit `d1b2b640de` activates the selected Workspace and dispatches
+      `NewCenterTerminal` instead of calling the inherited Agent-panel
+      terminal-thread constructor. The visible Workspace action now creates the
+      same ordinary terminal Surface as every other unqualified New Terminal
+      path. Static routing guards, formatting, locked offline metadata, and
+      diff checks pass; compilation and rendered multi-Workspace placement
+      proof remain deferred.
+- [x] 2026-07-23: Remove terminal creation from the Dez Agent surface. Commit
+      `263553d036` hides Terminal from the Agent selector, prevents a remembered
+      terminal-thread kind from replacing **New Agent Session**, and routes
+      both Workspace- and Agent-focused `NewTerminalThread` compatibility
+      actions to `NewCenterTerminal`. Compatibility action IDs remain, and
+      official Zed behavior is unchanged. Focused source assertions, static
+      guards, formatting, locked offline metadata, and diff checks pass;
+      compilation and rendered selector/shortcut proof remain deferred.
+- [x] 2026-07-23: Make legacy terminal reconciliation truthful in Dez. Commit
+      `16d1bd16b8` projects stored terminal metadata only when a live
+      Agent-terminal entity or real Host Session backs it; Host-backed records
+      route to a normal main-area terminal, and stale metadata no longer
+      shadows a real center/Host terminal or appears resumable. Commit
+      `d1f5b2a15a` also prevents Dez from automatically restoring the retired
+      Agent-terminal surface and removes its compatibility command from the
+      Dez palette while preserving both behaviors in official Zed. Focused
+      source assertions, static guards, formatting, locked offline metadata,
+      and diff checks pass; compilation and rendered upgrade proof remain
+      deferred.
+- [x] 2026-07-23: Confirm permanent Agent Session deletion. Commit
+      `9615b513d4` routes both the archived-row trash control and keyboard
+      remove action through one critical prompt. The prompt names the selected
+      Agent Session, identifies Agent History as the deletion scope, and states
+      that the action cannot be undone. Archive and restore remain immediate
+      reversible operations. Focused prompt-copy assertions and static identity
+      guards pass; compilation and rendered modal/focus proof remain deferred.
+- [x] 2026-07-23: Keep Workspace hierarchy visible and document region
+      ownership. Commit `799147c525` makes each Workspace disclosure arrow
+      persistent instead of hover-only. Commit `5a64bc9af1` adds the permanent
+      interface composition contract to Fork Notes: Session Rail projects and
+      navigates existing work, Workspace Tools and Agent occupy hideable
+      pane-grid regions, and terminals remain ordinary main-area Surfaces.
+      Static identity, formatting, locked offline metadata, and documentation
+      format checks pass; compilation and rendered hierarchy proof remain
+      deferred.
+- [x] 2026-07-23: Make the center and Agent add controls name their true
+      destinations. Commit `9ef23f920a` labels the center plus control **Add to
+      Main Work Area**, describes its file/search/terminal choices, and removes
+      remaining Thread vocabulary from Dez's Agent pane headers, tooltips, and
+      session actions. Official Zed behavior and copy remain compatible.
+      Commit `1c87220109` completes the region boundary: main-area add remains
+      available across focus changes, picker commands signal their follow-up,
+      Workspace Tools and Agent replace inherited add/split/zoom chrome with
+      explicit hide controls, and all three accessibility landmarks use their
+      product region names.
+      Source assertions, formatting, identity, and diff checks pass; rendered
+      tooltip/menu proof remains deferred.
+- [x] 2026-07-23: Rename visible Agent context completion without breaking
+      compatibility. Commit `bf76ab9b63` presents **Agent Sessions** in Dez's
+      context picker while retaining the internal `@thread` keyword and
+      official Zed's **Threads** label. Source assertions, formatting,
+      identity, and diff checks pass; rendered completion-menu proof remains
+      deferred.
+- [x] 2026-07-23: Clarify first-use Workspace readiness and terminal ownership.
+      Commit `38524c9c01` makes the empty Session Rail state explicitly say
+      that terminals open in the main work area while live status and attention
+      appear in the rail. Workspace scan progress is now an accessible status,
+      and automatic trust names its folder scope plus the services it enables.
+      Commit `d53cd5d656` removes the duplicate empty-state headline and
+      decorative card, capitalizes the **Main Work Area** destination, and
+      presents **Open Workspace…** as the clearly secondary action.
+      Official Zed retains its Project terminology. Formatting, locked offline
+      metadata, identity, and diff checks pass; compilation and rendered
+      first-use proof remain deferred.
+- [x] 2026-07-23: Remove remaining visible Panel implementation terminology.
+      Commit `ff63d573ba` changes editor file actions to **Reveal in Files** and
+      keeps the Workspace layout menu named **Canvas Layout** in Dez even when
+      a compatibility setting uses dock-backed panels. Official Zed retains its
+      Project Panel and Panel Layout labels. Pure copy assertions, formatting,
+      locked offline metadata, identity, and diff checks pass; compilation and
+      rendered menu proof remain deferred.
+- [x] 2026-07-24: Replace the Workspace Search splash with truthful compact
+      states. Dez now distinguishes ready, indexing, searching, and no-match
+      states in one top-aligned accessibility status, keeps the query field as
+      the obvious next action, and removes the centered five-button feature
+      pile. Progress rotation respects reduced Canvas motion. Official Zed
+      retains its inherited search landing page; compiled and rendered
+      density/theme proof remains deferred.
+- [x] 2026-07-24: Turn unavailable terminals into an intentional recovery
+      surface. The saved failure reason, no-silent-replacement rule, and one
+      primary **Start Fresh Terminal** action now replace the blank terminal
+      grid plus floating warning. Selected normal terminal tabs use a compact
+      labeled status dot, while failed, unavailable, and unknown states keep
+      visible text. The default-width Session Rail keeps Codex hook setup in
+      the context menu until the row has enough room for a third inline action.
+      Formatting, identity, Bash syntax, and diff checks pass; this post-build
+      source pass still needs compiled and rendered proof.
+- [x] 2026-07-24: Productize terminal service startup and failure in the
+      Session Rail. Preparing, reconnecting, and unavailable states now use one
+      Terminal Session vocabulary and concise operational guidance. Raw
+      transport errors and the experimental environment switch no longer
+      appear in the primary UI. Reconnection and failure retain wrapped
+      **Open Local Log** plus **Copy Details** or **Copy Error** actions.
+      Severity continues to map to status, warning, and alert semantics.
+      Focused copy assertions, formatting, identity, Bash syntax, and diff
+      checks pass; compiled and rendered narrow-rail proof remains deferred.
+- [x] 2026-07-24: Make failed Workspace restoration explicit and responsive.
+      Singular and plural states now explain that Dez retained recovery
+      entries, route retry through **Open Recent Workspaces**, and name
+      non-destructive removal as **Remove Entry** or **Remove Entries**. The
+      copy no longer exposes failed Session references or implies that removal
+      deletes recent Workspace data. Both actions wrap at narrow Session Rail
+      widths. Focused copy assertions, formatting, identity, Bash syntax, and
+      diff checks pass; compiled interaction and rendered overflow proof remain
+      deferred.
+- [x] 2026-07-24: Repair Lumin Light contrast as a system instead of patching
+      individual controls. The active-control pairing moves from effectively
+      dark-on-dark to a readable pressed state. Focus, accent, semantic status,
+      terminal ANSI, line-number, placeholder, and every syntax foreground now
+      meet a checked 4.5:1 floor on white and off-white light surfaces while
+      retaining Lumin's orange, teal, blue, magenta, and violet character.
+      `script/dez-theme-check` parses the theme, validates the contrast matrix,
+      verifies blurred/opaque variants, confirms the bundled JetBrains Mono
+      faces, and guards interface, editor, terminal, and Markdown-code defaults.
+      JSON, Node syntax, identity, Bash syntax, and diff checks
+      pass; rendered Lumin Light and system-translucency proof remains deferred.
+- [x] 2026-07-24: Apply the same measurable contract to Lumin Blur and its
+      opaque fallback. Placeholder text, line numbers, dim terminal text,
+      standard and bright ANSI black, booleans, constants, and special-function
+      definitions now clear a 4.5:1 foreground floor across representative dark
+      translucent and opaque surfaces. Pane focus clears a 3:1 non-text floor.
+      The repository guard now composites blurred backdrops and interactive
+      overlays before testing UI text, every terminal ANSI foreground, every
+      syntax foreground, icons, and focus indicators. Semantic JSON comparison
+      confirms that formatting normalization changed no additional theme
+      values. Rendered wallpaper, width, and opacity proof remains deferred.
+- [x] 2026-07-24: Keep recovery UI usable in short windows. Workspace-restore
+      and terminal-service callouts now share one named Session Rail notice
+      region that scrolls and cannot consume half the viewport, so the session
+      list remains the primary surface even when both failures are present.
+      Empty Main Work Area and unavailable-terminal recovery surfaces gain
+      bounded vertical scrolling plus bottom breathing room. A pure invariant
+      test and static guards protect the height cap and all three overflow
+      paths. Compiled and rendered short-window proof remains deferred.
+- [x] 2026-09-02: Product-wide accessibility and visual-system polish slice.
+      Lumin themes gain distinct terminal ANSI blue and magenta plus brighter
+      bright variants, an information/hint color split, an icon hierarchy step
+      (Lumin opaque and Lumin Light), a de-emphasized Lumin Blur line number
+      and dim terminal foreground, a corrected Lumin Light success background,
+      and full `terminal.ansi.dim_*` coverage derived from each variant's own
+      palette. Icon-only controls across the title bar call controls,
+      onboarding banner, Settings pages (MCP servers, external agents, skills,
+      sandbox, tool permissions), terminal panel tab strip, thread search, and
+      agent conversation surfaces now carry accessible names, with the
+      sharing copy and expanded states aligned to the surface contract.
+      Session Rail header controls now stay visible whenever keyboard focus is
+      anywhere in the rail, so Tab and assistive navigation can reach them
+      without a pointer. Home's first tool entry now derives its secondary
+      meta from the configured launcher, so a Codex or tmux destination never
+      carries a stale "Default terminal" caption; the identity guard was
+      extended to lock that meta override in place. Token-usage context rings
+      announce "Context almost full" with the percentage label tinted at the
+      warning threshold instead of relying on ring color alone. Terminal
+      launch-failure and unavailable-session recovery regions now derive their
+      horizontal gutter from a density-aware helper shared with the context
+      strip. `cargo fmt`, `script/dez-theme-check`,
+      `script/dez-identity-check --source-only`, and `git diff --check` pass;
+      compiled, rendered, and screen-reader proof remains deferred to the
+      consolidated gate.
+- [ ] Complete durable app-session ownership.
+- [x] Persist Host/Session references in terminal items and metadata.
+- [x] Persist local terminal Host/Session references and implement authenticated
+      replay/reattachment in source; full process-restart proof remains in the
+      release gate.
+- [x] Implement the structured Codex adapter and attention inbox in source;
+      hook onboarding and live verification remain release-gate work.
+- [x] Implement the deterministic review-brief projection with structured
+      terminal command/check evidence, conservative classification, Git and
+      worktree state, bounded file targets, cwd provenance, and explicit
+      non-ownership language. Broader checker adapters remain open.
+- [ ] Demonstrate the complete restart-and-review vertical slice.
+- [ ] Complete workspace-scoped `Project` and evidence behavior.
+- [ ] Add remote continuity, conflict radar, recipes, and worktree brokering.
+- [ ] Complete the v0.0.2 release gate.
+
+## Discoveries {#discoveries}
+
+- **Observation:** The checkout had no committed Fork Notes or `PLAN.md`.
+  **Evidence:** A working-tree and supplied-attachment filename/content search
+  on 2026-07-22 found neither. **Consequence:** The canonical set was created
+  under `docs/src/development/dez/` without deleting historical Canvas
+  documents.
+- **Observation:** The root `AGENTS.md` is a symlink to `.rules`, whose policy
+  explicitly rejects architectural maps and drive-by rule additions.
+  **Consequence:** Dez architecture lives in documentation rather than
+  replacing the shared Rust rules file.
+- **Observation:** The local upstream ref is already the merge base and the
+  branch is 240 commits ahead and 0 behind that local ref. **Consequence:** The
+  next Milestone 0 action is a fresh fetch and isolated rehearsal, not an
+  assumption that the remote has not moved.
+- **Observation:** The current worktree contains a large uncommitted product
+  slice and no current `dez` artifact. **Consequence:** Do not mix a new
+  upstream merge into it; finish static checks, then build and smoke-test at the
+  explicit consolidated gate.
+- **Observation:** Fetching upstream tags reported local collisions for
+  `nightly` and `collab-staging`. **Consequence:** Upstream automation must
+  separate branch refresh from collision-prone unqualified tag updates and
+  report partial fetch outcomes precisely.
+- **Observation:** The later consolidated plan introduces Run as a useful
+  user-facing relationship that was implicit in the earlier documents.
+  **Consequence:** Add Run to the permanent model, but keep Session as the owner
+  of computation and existing stores as the owners of facts.
+- **Observation:** Existing Session Rail notifications represented completed or
+  bell-notified work but did not treat waiting-for-confirmation and failed agent
+  states as global attention. **Consequence:** Derive one attention predicate
+  from current row state and use it for filtering, sorting, group indicators,
+  and workspace chrome.
+- **Observation:** Codex exposes trusted lifecycle hooks with stable session,
+  working-directory, event, and turn fields. **Consequence:** Use that
+  structured feed for critical agent state and retain process-name detection
+  only as a visibly lower-confidence fallback.
+- **Observation:** Session Rail search had an allocated editor and action, but
+  the production query was hard-coded empty and the editor was not rendered.
+  **Consequence:** Restore the current upstream search path before inventing a
+  separate command-center index.
+- **Observation:** The refreshed 81-commit rehearsal produced ten conflicts in
+  settings, preview styling, title-bar presentation, task dependency wiring,
+  pane rendering, and workspace routing. **Consequence:** Resolve them as one
+  focused integration slice; terminal, remote, ACP, Git, and persistence still
+  need semantic tests even though they merged textually.
+- **Observation:** Upstream `run_tests.yml` is gated to repositories owned by
+  `zed-industries` or `zed-extensions`. **Consequence:** Dez needs fork-owned
+  identity and upstream checks instead of assuming upstream CI runs here.
+- **Observation:** `AppSession` persists a GUI-launch ID and window order,
+  `WorkspaceStore` holds window-bound weak entities, and `MultiWorkspace` owns
+  each window's retained workspace set. **Consequence:** Existing restoration
+  is substantial. `AppSession` now owns the ordered restore lifecycle and the
+  identity-keyed durable membership registry, while SQLite serializes state and
+  `MultiWorkspace` still owns live composition. Do not collapse that remaining
+  viewport gap by retaining window-bound `Workspace` entities in the app
+  session.
+- **Observation:** Storing one optional viewport on global Workspace membership
+  cannot represent the same Workspace in two windows and lets removal from one
+  window erase the shared identity. **Consequence:** App Session now persists
+  ordered viewport records separately, migrates the compatibility fields, and
+  treats viewport removal independently from global membership until the final
+  presentation disappears.
+- **Observation:** The available Superzed screenshots are historical rather
+  than evidence for current source, but consistently expose generic welcome
+  copy, a project-first start path, repeated untitled chrome, unexplained blank
+  windows, and stale Zed identity. **Consequence:** Use them as a defect
+  baseline only; repair source now and defer visual completion claims until the
+  one intended Dez artifact is built and inspected.
+- **Observation:** Startup treated a non-focus initial open request as an
+  alternative to session restoration, and the continuing listener was not
+  gated on restore completion. **Consequence:** Establish one startup barrier:
+  restore first, apply the initial request second, then process queued requests.
+- **Observation:** `TerminalThreadMetadataStore` restores title, path, and
+  identity by spawning a new shell, while `terminal::Terminal` still owns the
+  PTY or subprocess. **Consequence:** Saved terminal history must not be called
+  a detached or reattached session; process continuity begins with a separate
+  Host/Session identity and protocol.
+- **Observation:** Full Cargo dependency resolution for the terminal contract
+  completed and updated `Cargo.lock`, but fetching the clean cache and resolving
+  the real host adapter reduced free space on the workspace volume from 17 GiB
+  to 11 GiB. **Consequence:** Keep
+  the agreed consolidated build gate deferred; a GPUI terminal build can
+  exhaust the remaining volume and would not yet prove the unconnected host
+  contract end to end.
+- **Observation:** Retaining a terminal entity after pane closure would make
+  the process invisible if the Session Rail only scanned live views and saved
+  agent metadata. **Consequence:** The adapter slice includes a detached-session
+  projection, stable session-derived row identity, reattachment into a normal
+  pane, and explicit termination; invisible retained processes are not an
+  acceptable intermediate UX.
+- **Observation:** Existing terminal-item and agent-terminal tables can be
+  extended with nullable Host/Session columns without assigning new meaning to
+  legacy item UUIDs. **Consequence:** Null pairs are the explicit legacy path;
+  valid pairs are reconciled against the host; partial or malformed pairs must
+  fail closed instead of starting computation.
+- **Observation:** The upstream Alacritty event loop combines PTY I/O with its
+  in-process terminal grid, so moving that loop wholesale would also move the
+  renderer state out of the GUI. **Consequence:** The helper owns the raw PTY
+  through the same platform constructor but uses a small poll-driven I/O loop;
+  raw bytes feed bounded host replay and will feed a client-side emulator.
+- **Observation:** A helper snapshot store created after the Session Rail has
+  no entity subscription path in an already-constructed sidebar.
+  **Consequence:** Host snapshot changes publish a lightweight app-global
+  revision; projections observe that revision and rebuild only when snapshots
+  or connection truth actually changes.
+- **Observation:** Workspace item restoration races the asynchronous helper
+  handshake during application startup.
+  **Consequence:** Valid Host/Session references wait for the opt-in host for a
+  bounded interval before rendering the explicit unavailable surface; they
+  never create replacement computation.
+
+## Decisions {#decisions}
+
+- **2026-07-22:** Keep permanent architecture, product hypotheses, upstream
+  procedure, release state, and execution progress in separate linked files.
+- **2026-07-22:** Treat agent supervision as the initial market wedge while
+  retaining durable workspace and host-owned session architecture as the
+  foundation.
+- **2026-07-22:** Build the first complete vertical loop before sequentially
+  implementing every long-range architecture milestone.
+- **2026-07-22:** Do not replace the `AGENTS.md` symlink or add architecture to
+  `.rules`; the new documentation index supplies the contributor reading order.
+- **2026-07-22:** Incorporate the new consolidated plan selectively instead of
+  replacing the canonical document hierarchy. Its Run, protocol, and security
+  refinements are adopted; its late attention milestone and single-file
+  authority model are not.
+- **2026-07-22:** Apply the same hierarchy to the revised 1,756-line plan. The
+  revision correctly brings Attention into the PMF Run slice and strengthens
+  complete-product positioning, Evidence provenance, capabilities, metrics,
+  and long-range integrations. Its blank progress checklist is not repository
+  evidence, Session transport facts remain separate from Run state, and build
+  execution stays at the agreed consolidated gate.
+- **2026-07-22:** Introduce the terminal Host/Session contract inside the
+  existing terminal substrate before moving PTY ownership. Keep the current
+  renderer and terminal metadata paths as compatibility adapters until attach,
+  detach, replay, and explicit termination are tested.
+- **2026-07-22:** Keep the first real host adapter local and in-process. Do not
+  register remote terminal entities with it or imply GUI-exit survival. Use the
+  adapter to prove view-independent identity and lifecycle before adding local
+  IPC or modifying upstream remote transport.
+- **2026-07-22:** Persist Host/Session identity as an optional pair alongside
+  compatibility metadata. Reattach only after the current host confirms
+  ownership. When confirmation fails, preserve the reference and render a
+  terminal-shaped recovery surface that states no replacement was started.
+- **2026-07-22:** Give the helper a token-file handshake instead of placing a
+  secret on the process command line. Require private token-file, socket-file,
+  and socket-directory permissions; redact the token's debug output; cap a
+  frame before allocating its payload; and keep the first transport sequential
+  until live event multiplexing is required by the GUI adapter.
+- **2026-07-23:** Lock the v0.0.1 visual baseline to the system-aware Lumin
+  Blur/Lumin Light pair and role-based typography. Commit `67001bf0ef` removes
+  stale first-run One theme and oversized font overrides, uses bundled
+  JetBrains Mono at 14 px for editor and terminal work, and adds subtle
+  structural, focus, active-line, and
+  scrollbar contrast to Lumin without layering additional blur effects inside
+  high-motion work surfaces. Theme attribution, font licensing, assets,
+  defaults, and first-run settings have static guards. Rendered dark/light,
+  density, transparency, contrast, and fallback-font proof remains part of the
+  consolidated visual matrix.
+- **2026-07-23:** Make the selected terminal's backing controller the only
+  authority for destructive termination. Commit `7664c6e59b` removes global
+  Host-based routing, suppresses termination for exited or unavailable
+  terminals, separates it from close/detach, and requires a critical,
+  effect-specific confirmation. This prevents an ordinary terminal from losing
+  its Surface while a coexisting Host receives an unrelated session ID.
+  Compiled interaction and prompt-focus proof remains in the consolidated gate.
+- **2026-07-23:** Repeated controls in list rows name the domain object the
+  person can see, never the private element used to coordinate hover or focus.
+  Commit `e0e8f119e0` applies that rule to **New Terminal** and **Workspace
+  Options** in every Workspace header, with the same specific name in
+  accessibility output and the visual tooltip. Active Workspace controls stay
+  persistent; inactive controls may reveal on hover without changing identity.
+- **2026-07-23:** Pane chrome belongs to a region, not to the reusable pane
+  implementation. Commit `1c87220109` reserves add, split, and zoom for the
+  Main Work Area; keeps its add control available while another region has
+  focus; and gives Workspace Tools and Agent one persistent, accurately named
+  hide control each. The accessibility landmarks are **Main work area**,
+  **Workspace Tools**, and **Agent**. Follow-up creation commands use ellipses.
+- **2026-07-23:** A switcher may preview on an explicit keyboard cycle, never
+  on pointer hover. Commit `79e87f2351` makes hover visual-only, retains direct
+  click confirmation, and exposes selection through a named accessibility
+  list. Session type remains semantic and available in tooltips without
+  becoming a repeated second line on every Dez row.
+- **2026-07-23:** An empty rail has one status and one primary action. Commit
+  `d53cd5d656` lets the overview own **No sessions yet**, removes the second
+  empty-state title and decorative icon card, and keeps the start block compact
+  and top-anchored. **New Terminal** names the Main Work Area destination;
+  **Open Workspace…** is the outlined alternative.
+- **2026-07-23:** Persist semantic identity; truncate only at the visual edge.
+  Commit `e28314a893` carries full terminal titles through every supervision and
+  Host metadata path, while tabs and rows remain responsible for fitting their
+  width. Custom names are trimmed and compared against the full live title.
+  **Rename Terminal…** and tab double-click open the same inline editor.
+- **2026-07-23:** Bottom chrome must preserve ownership when the active Surface
+  changes. Commit `05df05d282` keeps Agent Tools, Agent History, and recent
+  Workspaces in the Session Rail, while the global toolbar owns Workspace
+  search and health. A terminal or other non-editor Surface now shows **Search
+  files** beside **No diagnostics** rather than an unexplained search/check
+  pair. Editor Surfaces retain compact status, and the toolbar's accessibility
+  name is **Workspace status and navigation**.
+- **2026-07-23:** Lifecycle safety cannot depend on the input method. Commit
+  `c83b56b5aa` makes terminal row buttons, context menus, and selected-row
+  keyboard removal use one source/runtime presentation policy. A live
+  Host-owned Terminal Session always requires the same critical termination
+  confirmation. Destructive labels use ellipses, the prompt names the shell and
+  foreground process without internal durability jargon, and the mixed
+  compatibility command is presented as **Session Rail: Remove Selected
+  Session**. The public terminal guide now teaches the same first-class Surface
+  and supervisory-projection model implemented by Dez.
+- **2026-07-23:** Do not disguise dead compatibility UI with better nouns.
+  Commit `222c658123` hides the inherited Agent-Panel terminal startup setting
+  in Dez because the public Main Work Area terminal path does not consume it.
+  The stored key and official-Zed control remain for migration and upstream
+  compatibility. The release rule is capability first, copy second.
+- **2026-07-23:** Contextual does not mean pointer-only. Commit `f0e817669a`
+  makes the keyboard-selected Session Rail row reveal the same actions as
+  pointer hover. Visible rename, review, stop, discard, archive, setup, and
+  terminal lifecycle controls enter the tab order; rename mode suppresses
+  conflicting controls, and destructive actions remain last.
+- **2026-07-23:** Terminal lifecycle nouns do not change with projection.
+  Commit `7f8fd167c2` makes the Main Work Area Surface, Session Rail, context
+  menu, and critical prompt use **Terminal Session** consistently. The prompt
+  names the shell and foreground-process effect without internal durability
+  jargon. The same slice improves the Surface accessibility landmark, labels
+  the tab's working directory accurately, names task rerun, and makes failed
+  reconnect recovery identify the Main Work Area destination.
+- **2026-07-23:** Inspectable metadata names both type and value. Commit
+  `88948b869a` makes terminal tab tooltips distinguish Persistent, Saved, and
+  Workspace Terminal Sessions, then labels Working directory, Process ID, and
+  Session ID explicitly. The rerun control uses one matching accessible and
+  tooltip name.
+- **2026-07-23:** A responsive breakpoint belongs to the content it protects.
+  Commit `b43503e3fe` gives Session Rail utilities their own 280 px label
+  threshold instead of reusing the 380 px detailed-row threshold. The default
+  compact rail therefore names Agent Tools, History, and Workspaces; narrower
+  rails retain named, tooltip-backed icon mode.
+- **2026-07-23:** Revealed labels need an explicit space budget. Commit
+  `ef35bf40a7` switches the three labeled Session Rail utilities from medium
+  standalone padding to compact utility padding, preserving their full
+  semantics inside the 280 px default footer.
+- **2026-07-24:** Empty-state polish must preserve the primary interaction.
+  Workspace Search keeps its query and filters in the existing Context Bar,
+  while the content area reports only ready, indexing, searching, or no-match
+  state. It does not duplicate every search feature as a centered button.
+  Busy-state animation follows the Canvas motion preference, and the state
+  remains understandable when motion is reduced.
+
+## Verification {#verification}
+
+Completed for the responsive recovery-surface slice:
+
+- simultaneous Workspace and terminal-service failures render inside one
+  labeled **Workspace notices** region;
+- the notice region scrolls and is capped below half the viewport, leaving most
+  of the window for the session list and Main Work Area;
+- empty Main Work Area and unavailable-terminal recovery surfaces scroll
+  vertically and retain bottom spacing at short heights;
+- a pure layout invariant keeps the notice cap above 25% and below 50%;
+- static guards cover the notice-region cap and both Main Work Area overflow
+  paths;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the Lumin dark-theme contrast slice:
+
+- Lumin Blur is checked after its translucent shell is composited over dark
+  backdrop samples, and Lumin is checked on its opaque dark surfaces;
+- placeholder text, line numbers, dim terminal text, all standard and bright
+  ANSI foregrounds, and every syntax foreground pass a 4.5:1 floor;
+- booleans and constants remain restrained neutral gray, while
+  special-function definitions inherit the established function color instead
+  of disappearing as black text;
+- identified pane focus borders pass a 3:1 non-text floor;
+- text on hover, active, selected, search-match, editor-line, and selection
+  overlays is checked after alpha compositing;
+- semantic JSON comparison against the prior checkpoint reports only the 18
+  intended dark color-value changes across Lumin Blur and Lumin;
+- `node --check script/dez-theme-check`;
+- `./script/dez-theme-check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the Lumin Light contrast and typography-default slice:
+
+- active controls no longer pair `#111111` text with a `#1C1C1C` background;
+- focus, accent, semantic state, terminal ANSI, placeholder, line-number, and
+  every syntax foreground pass a 4.5:1 contrast floor on white and off-white
+  light surfaces;
+- Lumin Blur remains the blurred dark default, Lumin remains the opaque dark
+  fallback, and Lumin Light remains the blurred light default;
+- interface, editor, terminal, Markdown, prompt, Git, and review roles use the
+  bundled JetBrains Mono identity;
+- `node --check script/dez-theme-check`;
+- `./script/dez-theme-check`;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the failed Workspace restoration slice:
+
+- singular and plural recovery states name the failed Workspace outcome;
+- **Open Recent Workspaces** accurately opens the existing retry path;
+- **Remove Entry** and **Remove Entries** describe non-destructive recovery
+  record removal without internal Session-reference language;
+- both controls wrap within narrow Session Rail widths;
+- pure singular/plural copy assertions were authored;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the Terminal Session service-status slice:
+
+- preparing, reconnecting, and failure copy uses user-facing Terminal Session
+  language instead of internal Host and environment-switch terminology;
+- exact transport errors remain available through explicit copy actions rather
+  than appearing in the primary callout;
+- reconnecting and failed states provide a wrapped **Open Local Log** action;
+- info, warning, and error states preserve status and alert semantics through
+  the shared Callout component;
+- pure copy-matrix assertions were authored;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the terminal status and recovery-surface slice:
+
+- unavailable saved Sessions render one top-aligned alert surface instead of a
+  blank terminal grid with a floating overlay;
+- normal selected terminal tabs retain a labeled status dot without repeating
+  status text, while exceptional states keep visible labels;
+- the default-width Session Rail preserves title room by keeping optional
+  setup copy in the existing context menu;
+- pure breakpoint and status-visibility assertions were authored;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- `git diff --check`;
+- no build, Rust test binary, bundle, alternate binary, or visual launch was
+  performed after this source slice.
+
+Completed for the Workspace Search state-hierarchy slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including state hierarchy, top alignment,
+  accessibility status, official-Zed compatibility, and reduced-motion guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for ready, indexing, searching, and no-match copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the labeled compact-utility sizing slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including compact-size guards for Agent
+  Tools, History, and Workspaces;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the compact Session Rail footer-label slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including aligned compact-width and
+  utility-label guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- a pure breakpoint assertion covering 279 px and 280 px;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal tab identity-metadata slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including ownership and identifier-label
+  guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal Surface lifecycle-language slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including internal-jargon rejection,
+  recovery destination, tooltip scope, and control-name guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for lifecycle wording and Surface accessibility
+  identity;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the Session row keyboard-parity slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including focused-row rendering and tab
+  order guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- a pure pointer/focus/rename visibility assertion;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the dead terminal-setting removal slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks, including the Zed-only visibility gate;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- a pure visibility assertion authored for Dez and official Zed;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the lifecycle-path and terminal-guide slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including lifecycle-path parity and
+  internal-jargon rejection;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for lifecycle labels, confirmation copy, Dez Command
+  Palette scope, and official-Zed compatibility;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal-focused Workspace status slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- focused pure assertions authored for terminal/non-editor visible search,
+  compact editor search, official-Zed compatibility, and toolbar scope;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the preceding source slice:
+
+- `cargo fmt --all -- --check`
+- `git diff --check`
+- `bash -n script/bundle-mac`
+- `cargo metadata --no-deps --format-version 1`
+- focused Prettier checks for the earlier documentation changes
+
+Completed for the Lumin and JetBrains typography source slice:
+
+- Prettier parse checks for both settings files and the bundled theme;
+- Prettier formatting check for the user-facing appearance guide;
+- Bash syntax and Dez identity checks, including asset and attribution guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- no application build, test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal termination safety slice:
+
+- `cargo fmt --all -- --check`;
+- Bash syntax and Dez identity checks;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- focused pure assertions authored for termination availability and local versus
+  durable confirmation copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the Workspace header control-identity slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including the internal-ID rejection
+  guard;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for visible Workspace names and implementation-ID
+  exclusion;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the region-owned pane-chrome slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the user and canonical Dez documentation;
+- Bash syntax and Dez identity checks, including region-ownership guards;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for region landmarks, hide controls, follow-up menu
+  copy, and official-Zed compatibility;
+- read-only process inspection confirmed no Dez/Zed/Superzed process was
+  available for visual inspection, so no binary was targeted or launched;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the quiet Session Switcher slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including the hover-activation rejection
+  guard;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for visible type-label policy and official-Zed
+  compatibility;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the compact Session Rail start-state slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the canonical Dez documentation;
+- Bash syntax and Dez identity checks, including duplicate-copy rejection;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for the single zero-session creation action and
+  destination-specific copy;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the terminal title-fidelity slice:
+
+- `cargo fmt --all -- --check`;
+- focused Prettier checks for the public terminal guide and canonical Dez
+  documentation;
+- Bash syntax and Dez identity checks, including pre-truncation rejection
+  guards across every metadata path;
+- locked offline Cargo metadata;
+- `git diff --check`;
+- pure assertions authored for custom-title normalization and explicit rename
+  double-click compatibility;
+- no application build, Rust test binary, bundle, alternate binary, or visual
+  launch.
+
+Completed for the 2026-07-22 documentation reconciliation:
+
+- Prettier write and check for every touched documentation file;
+- `git diff --check`;
+- relative documentation target inspection.
+
+Completed for the first attention and start-state source slice:
+
+- `cargo fmt --all -- --check`;
+- `git diff --check`;
+- focused source tests added for attention-state classification;
+- no application binary launched.
+
+Completed for the first upstream-resilience slice:
+
+- isolated no-commit merge rehearsal and cleanup;
+- `./script/dez-identity-check`;
+- Bash syntax check for the identity script;
+- Prettier check for the Dez guard workflow;
+- `git diff --check`.
+
+Completed for the architecture and terminal Host/Session contract slice:
+
+- full Cargo metadata resolution and lockfile update;
+- `cargo fmt --all -- --check`;
+- Prettier check for the canonical Dez documentation changes;
+- `git diff --check`;
+- focused unit tests authored for stable identities, truthful lifecycle
+  predicates, create/detach/reattach/terminate transitions, bounded replay,
+  Missing, and Incompatible outcomes;
+- no Rust tests or application binary executed at this source-only gate.
+
+Completed for the in-process real-terminal adapter slice:
+
+- Cargo metadata resolution and lockfile update for the new direct dependency
+  edges;
+- `cargo fmt --all -- --check`;
+- `git diff --check`;
+- Prettier check for the updated architecture, roadmap, and launch record;
+- `./script/dez-identity-check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
+Completed for the Host/Session persistence migration slice:
+
+- reversible nullable-column migrations for terminal items and saved agent
+  terminals;
+- `cargo fmt --all -- --check`;
+- `git diff --check`;
+- `cargo metadata --no-deps --format-version 1`;
+- `./script/dez-identity-check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
+Completed for the ordered viewport and first-party source-polish slices:
+
+- `cargo fmt --all -- --check` before the viewport edits and `cargo fmt --all`
+  after them;
+- `git diff --check`;
+- `cargo metadata --no-deps --format-version 1`;
+- `./script/dez-identity-check` before the viewport edits;
+- focused source tests authored for legacy migration, multi-viewport identity,
+  viewport reconciliation, viewport-aware removal, and compact-state roundtrip;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
+Completed for the global Session Rail terminal-destination slice:
+
+- the zero-session explanation names the active Workspace, Main Work Area, and
+  live Session Rail projection;
+- both global **New Terminal** entry points retain concise visible copy but
+  expose a destination-specific accessible name and tooltip;
+- a focused source assertion and Dez identity guard prevent regression to
+  ambiguous Workspace or Agent ownership;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
+Completed for the Workspace Tools and Agent Settings slice:
+
+- renamed Dez's inherited **Panels** page to **Workspace Tools & Agent**;
+- presented Files, Outline, and Git as Workspace Tool surfaces and Agent as its
+  dedicated region without changing compatible internal setting keys;
+- retained live content, status-control, and Agent readability settings;
+- filtered dock position, dock-only dimensions, and flexible-dock sizing from
+  Dez while preserving the complete upstream page in official Zed;
+- added a pure product-branch visibility test and static identity guards;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
+Completed for the remaining live Agent Session terminology slice:
+
+- renamed the Add Context entry from **Threads** to **Agent Sessions** in Dez
+  without changing compatible `@thread` insertion syntax;
+- made message editing disclose that it restarts the Agent Session from that
+  point;
+- made feedback disclose that rating sends the current Agent Session to the
+  upstream agent service;
+- renamed response export to **Open Agent Session as Markdown**;
+- preserved official Zed's upstream Thread copy and added a static identity
+  guard over all four surfaces;
+- `cargo fmt --all -- --check`;
+- Bash syntax and `./script/dez-identity-check`;
+- locked offline Cargo metadata and `git diff --check`;
+- no Rust compile, test, alternate binary launch, or live interaction claim.
+
+Completed for the terminal Surface composition audit:
+
+- confirmed the terminal renderer adds no decorative mascot or floating
+  success/time badge; those screenshot elements are shell-emitted PTY content;
+- preserved the existing terminal-specific override that keeps the Surface tab
+  header visible under single-tab auto-hide;
+- added identity guards for the Item opt-in contract, pane auto-hide policy,
+  and Terminal override;
+- Bash syntax and `./script/dez-identity-check`;
+- `cargo fmt --all -- --check`, locked offline Cargo metadata, and
+  `git diff --check`;
+- no terminal output was altered and no build, test binary, alternate binary,
+  or visual launch was performed.
+
+Completed for the Agents settings language and disclosure slice:
+
+- changed parent Thread wording to parent **Agent Session** in Dez;
+- described focused Agent review as single-file **Surfaces**;
+- removed Panel wording from edit-card and terminal-card presentation settings;
+- scoped the merge-conflict indicator to **Workspace status**;
+- disclosed that response rating sends the current Agent Session to the
+  upstream agent service;
+- preserved official Zed wording through a product branch;
+- added a pure copy test and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the Session Switcher discoverability slice:
+
+- preserved Main Work Area `Ctrl-Tab` for conventional Surface/tab switching;
+- preserved direct Session cycling when Agent or Session Rail has focus;
+- renamed the global Command Palette action to **Session Rail: Switch
+  Sessions**, removing the internal Thread Switcher name;
+- corrected the action documentation to describe its open-or-cycle behavior;
+- added a product-copy assertion and static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the Session Switcher guidance and collection-semantics slice:
+
+- replaced ambiguous footer copy with instructions specific to held-shortcut
+  and direct-command invocation;
+- attached the complete cycle, open, and cancel behavior to the dialog as its
+  accessible description;
+- exposed the visible footer as an accessibility status;
+- made the outside interaction boundary dispatch Cancel while dialog clicks
+  remain contained, so the switcher cannot become an invisible dead overlay;
+- retained the selected row as the active descendant and added one-based row
+  position plus total collection size to every mixed Session entry;
+- added reusable `ThreadItem` collection semantics, focused copy assertions,
+  and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the Workspace Tool action-language slice:
+
+- mapped Outline, Git, Debug, and Agent compatibility action namespaces to
+  their direct Dez region names in the Command Palette;
+- preserved every inherited `*_panel` namespace and humanized label in
+  official Zed;
+- replaced Outline's **Toggle Panel With** empty-state hint with **Toggle
+  Outline With** in Dez;
+- changed Git review's handoff tooltip from the invisible Agent panel to
+  **Agent**;
+- added focused product-copy assertions and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the Outline empty/search-state slice:
+
+- replaced the generic centered placeholder with a compact top-aligned Dez
+  state consistent with Files, Git, and Agent;
+- distinguished no Outline filter match, no Workspace search result, no symbols
+  in the active file, and no active file;
+- labeled the active filter instead of rendering an unexplained query chip;
+- added a full-width **Clear Filter** recovery action that returns focus to the
+  filter;
+- exposed the full state as an accessibility status while preserving official
+  Zed's upstream UI;
+- added pure state-matrix assertions and a static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the clean Git-state slice:
+
+- replaced the centered generic sentence with a top-aligned, success-marked
+  **Working tree clean** status;
+- included the active branch in the clean-state explanation;
+- limited branch comparison to non-main branches;
+- renamed **View Branch Diff** to the intent-oriented **Review Branch Changes**
+  in Dez and explained its base-branch comparison;
+- preserved official Zed's upstream clean-state presentation;
+- added pure branch-copy assertions and a static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the Git setup-state slice:
+
+- replaced the centered plural **No Git Repositories** placeholder with **No
+  repository in this Workspace**;
+- explained that initialization starts tracking changes in the open folder;
+- made **Initialize Repository** the one full-width primary recovery action
+  with Git iconography and an explicit tooltip;
+- exposed the setup content as a named top-aligned region;
+- preserved official Zed's upstream presentation;
+- added a pure copy assertion and static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the unsafe Git-repository slice:
+
+- replaced the dense centered paragraph with a top-aligned warning hierarchy;
+- named the ownership problem and explained that Git blocked the repository;
+- exposed the exact repository path in a labeled, tooltip-backed chip;
+- disclosed that trust changes global Git configuration before approval;
+- renamed the action to **Trust This Directory**, applied warning treatment,
+  and attached the exact `git config --global --add safe.directory …` command;
+- made **Learn About Safe Directories** a full-width secondary action;
+- preserved official Zed's upstream state and added copy assertions plus a
+  static identity guard;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the idle Debug-experience slice:
+
+- aligned Dez's Debug header and pane-tab name while preserving official Zed's
+  **Debugger** label;
+- replaced the centered button pile with a top-aligned **Start debugging**
+  hierarchy and an explanation of the unified debugging Workspace;
+- made **Start Debug Session** the full-width primary action;
+- separated **Configure debug.json**, **Documentation**, and **Debug Adapters**
+  into clear supporting actions;
+- replaced **No Breakpoints Set** with a named **No breakpoints yet** status
+  that teaches the editor-gutter entry point;
+- added pure product-copy assertions and static identity guards;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the unavailable Terminal Session slice:
+
+- removed duplicate synthetic recovery text from the terminal grid;
+- hid the inert cursor on unavailable display-only terminals;
+- preserved the saved custom terminal title through unavailable restoration;
+- carried the concrete Host, process, or saved-reference failure into one
+  **Terminal Session unavailable** warning;
+- retained the no-silent-fallback rule and renamed recovery to **Start Fresh
+  Terminal**;
+- made the recovery action name its Main Work Area destination and separate
+  computation effect;
+- added pure copy assertions and guards for title, reason, cursor, blank grid,
+  and action semantics;
+- `cargo fmt --all -- --check`, Bash syntax, `./script/dez-identity-check`,
+  locked offline Cargo metadata, and `git diff --check`;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the running Agent Session action-parity slice:
+
+- replaced Dez's implementation-shaped **Stop Generation** row action with
+  **Stop Agent Run**, while preserving official Zed's upstream label;
+- applied the same wording to the in-session stop control, gave its icon an
+  explicit accessible name, and retained the Escape shortcut in its tooltip;
+- removed **Archive Agent Session** from the context menu while the selected
+  run is active;
+- exposed **Stop Agent Run** in that context menu so pointer, focus, context
+  menu, and selected-row keyboard paths share one lifecycle policy;
+- made Agent History consume the Session Rail's live status, show active and
+  permission-blocked state, and withhold both its archive icon and keyboard
+  archive path until the run reaches a terminal state;
+- closed the corresponding permanent-delete bypass: keyboard deletion,
+  pointer deletion, and the post-confirmation race check now all require an
+  archived, non-running Session;
+- routed Agent History archive requests through the Session Rail's
+  authoritative Workspace/worktree lifecycle instead of mutating metadata
+  directly;
+- placed row lifecycle actions, restore cancellation, toolbar utilities,
+  search clearing, and empty-state recovery in the keyboard tab order, with an
+  explicit **Cancel Agent Session Restore** name;
+- exposed the virtualized History collection as **Agent Session history** and
+  gave each Session a one-based position plus total collection size while
+  excluding visual time-bucket separators from the count;
+- replaced the count-only toolbar with a named **Agent History · N** header,
+  a compact full-count accessibility label, and an explicit, keyboard-focusable
+  **Back to Sessions** control wired to the existing close lifecycle;
+- put the owning Session Rail footer's **Agent Tools**, **History**, and
+  **Workspaces** controls in the keyboard tab order; its two popover triggers
+  now report expanded state, and Agent Tools receives the same selected
+  treatment as Workspaces while open;
+- turned empty and no-results recovery into a named, vertically scrollable
+  region with bottom breathing room so its action remains reachable in a short
+  Session Rail;
+- retained immediate, reversible archive for completed and failed Agent
+  Sessions;
+- added focused product-copy assertions and a static identity guard;
+- no build, test binary, alternate binary, or visual launch was performed.
+
+Completed for the launchable Apple M2 workflow repair:
+
+- identified GitHub workflow run #2 as compile evidence only: its downloadable
+  tarball contained loose Mach-O executables rather than a Finder-launchable
+  macOS application;
+- routed the workflow through the canonical macOS bundler and stable Dez
+  identity so the output is `Dez.app` inside `Dez-macOS-M2.dmg`;
+- selected the Apple M2 target CPU and stripped thin-LTO release profile while
+  retaining the workspace's required Rust configuration flags;
+- omitted the unrelated remote server from this machine-focused application
+  artifact and cached the pinned `cargo-bundle` helper for later runs;
+- added CI checks for the DMG, property list, bundle identifier, executable
+  inventory, arm64 architecture, and deep signature;
+- changed the uploaded payload to the already-compressed DMG plus a build
+  manifest, SHA-256 checksum, and first-launch guide, with artifact ZIP
+  recompression disabled to reduce download overhead;
+- completed
+  [GitHub Actions run 30112409817](https://github.com/Oreoro/dez/actions/runs/30112409817)
+  in 1h7m25s at `91a1514f0236b7d63c946431b08a00114e41f4d4`;
+  the job built `Dez.app`, created and mounted the DMG, validated
+  `dev.dez.Dez`, confirmed the application, CLI, terminal Host, and Git helper
+  as arm64, passed strict deep signature verification, and uploaded the
+  144,521,832-byte `Dez-macOS-M2-91a1514f…` artifact;
+- kept distribution status honest: this snapshot is ad-hoc signed and not
+  notarized, and runtime is not proven until the exact downloaded app opens.
+
+Completed for the first helper-process source slice:
+
+- new crate instructions and a rollbackable `dez_terminal_host` workspace
+  member;
+- authenticated handshake and bounded framing tests authored;
+- helper lifecycle and detach-versus-terminate tests authored;
+- poll-driven raw PTY ownership, bounded replay, and sequential transport
+  client source;
+- opt-in connect-before-launch runtime supervisor and macOS helper packaging;
+- `cargo fmt --all -- --check`;
+- `git diff --check`;
+- Bash syntax checks for bundle and identity scripts;
+- Cargo metadata and lockfile update;
+- no Rust compile, test, helper launch, application launch, or cross-process
+  recovery claim.
+
+Completed at the 2026-07-22 consolidated gate:
+
+- warning-free locked app/helper build and locked CLI build using the recorded
+  single-codegen-unit, non-incremental dev profile;
+- 15 focused terminal tests, 8 focused helper tests, and 3 Session Rail
+  lifecycle tests;
+- exact raw-binary launch with the keymap and local-first startup regressions
+  corrected;
+- helper PID/Host/socket survival and single-instance reuse across GUI exit and
+  exact-client relaunch;
+- debug bundle creation, bundle identity and executable inventory, permission
+  copy, SHA-256 capture, and deep strict ad-hoc signature verification;
+- `cargo fmt --all -- --check`, offline Cargo metadata, identity, Bash syntax,
+  and diff checks.
+
+Still required after the consolidated gate:
+
+- app-facing modified-crate Clippy when enough local build storage is
+  available; the complete terminal Host target graph already passes with
+  warnings denied;
+- a live hosted PTY with Session ID, child PID, replay cursor, and
+  same-computation restart/reattach proof;
+- restored/empty/offline/failed/incompatible UI scenarios and the structured
+  Codex attention/review/restart hero flow;
+- visual density/theme/width matrix, keyboard/pointer parity, and macOS
+  accessibility audit after the desktop is unlocked;
+- Developer ID signing, notarization, installation/uninstallation, official
+  Zed coexistence, and design-partner proof.
+
+The build gate has run, but the public release remains unverified until these
+remaining runtime, visual, accessibility, distribution, and partner gates pass.
+
+Completed for the selected-session IDE handoff source slice:
+
+- made Return, Files, Review Changes, and Session Details explicit Session Rail
+  actions instead of depending on normal-width hover controls;
+- added Shift+Enter, Shift+F, Shift+G, and Shift+V routes to all three default
+  desktop keymaps;
+- routed Agent Sessions to their Agent change review and Terminal Sessions to
+  Git Changes after activating the existing Session and owning Workspace;
+- exposed stable Session Rail vocabulary in the Command Palette;
+- documented the workflow in the public product and terminal guides;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the closed-Workspace Files handoff source slice:
+
+- made the selected Session **Files** route restore a closed owning Workspace;
+- preserved the exact Agent or Terminal Session instead of creating a
+  replacement;
+- delayed the idempotent Files reveal until Workspace and Session activation
+  complete;
+- removed the previous silent no-op for saved Sessions whose Workspace was
+  closed;
+- guarded the ordering and documented the recovery behavior;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the whole-window Lumin glass and typography source slice:
+
+- bounded alpha for shell, rail, editor, terminal, toolbar, tab strip, title
+  bar, status bar, and overlays instead of compounding near-opaque layers;
+- checked dark, neutral, cool, white, blue-gray, and warm backdrops;
+- preserved measured region, interaction, focus, structural, text, syntax, and
+  terminal contrast;
+- applied bundled JetBrains Mono to interface, editor, terminal, prompt,
+  Markdown, Git, and review roles;
+- added a narrow product-scoped migration for the exact old Dez-generated
+  `.ZedSans` profile while protecting custom fonts and official Zed settings;
+- updated public product guidance, Fork Notes, source plans, and static guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the first-party control-icon source slice:
+
+- normalized Terminal, Workspace/Files, File, Diff, Session Details,
+  supervision, Agent History, and Settings roles across Welcome, Onboarding,
+  Session Rail, and terminal context;
+- replaced generic creation pluses on Dez file/terminal routes with
+  object-specific icons;
+- aligned Terminal Session details on the same Info symbol used by the terminal
+  context strip;
+- aligned first-run vocabulary with the product's Run, Supervise, Review loop;
+- documented and guarded the icon grammar while preserving official Zed
+  welcome icons;
+- exposed the built-in file/folder set as **Dez (Default)** while retaining
+  the original Zed name as a compatibility alias;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the terminal-to-diff source slice:
+
+- replaced the independent Git panel toggle/focus sequence with one
+  Workspace-owned **Review Changes** action;
+- made the action reveal Git Changes, select a real changed file, and open the
+  uncommitted diff in the Main Work Area;
+- kept clean repositories on their explicit clean state rather than opening an
+  empty diff;
+- routed terminal context bars, Session Rail row controls, context menus, and
+  selected-row keyboard actions through the same transition;
+- added product-vocabulary assertions and a static ownership guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the audited focus-root source slice:
+
+- traced the installed runtime's repeated missing-accessibility-node warnings
+  back to primary views that tracked focus without exposing a complete node;
+- gave populated and empty Files, Outline, Git Changes/History, Debug, Agent,
+  native and external Agent Sessions, Agent History, and terminal failure/panel
+  roots stable IDs, semantic roles, and specific labels;
+- preserved official Zed vocabulary where the fork shares those views;
+- added a static guard for every repaired source owner;
+- retained source-only evidence: the next rebuilt artifact must still prove a
+  clean accessibility log through the keyboard workflow.
+
+Completed for the post-activation orientation source slice:
+
+- kept **Run → Supervise → Review** available after the welcome guide
+  disappears;
+- placed **How Dez Works** inside the existing **Session Details** disclosure
+  instead of adding another permanent row or control;
+- made the trigger describe both purposes to assistive-technology and pointer
+  users;
+- documented the product model and protected its copy with a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Scratch Terminal-to-Workspace handoff source slice:
+
+- replaced the details-only Scratch Terminal context with a visible **Open
+  Workspace** next step;
+- forced that open into the current window so the running Terminal Session is
+  preserved;
+- switched automatically to the normal Files/Git handoff once codebase context
+  exists;
+- made **How Dez Works** say **Connect** while review is unavailable instead of
+  promising hidden actions;
+- protected the same-window and product-copy contract with a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Main Work Area review-identity source slice:
+
+- named the active Dez Project Diff **Diff · filename** instead of leaving a
+  generic inherited **Uncommitted Diff** tab;
+- kept the tab concise while preserving diff base and relative path in its
+  tooltip;
+- updated the title as the active reviewed file changes;
+- preserved official Zed's inherited Project Diff vocabulary;
+- added focused source assertions, public documentation, and a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Terminal Session evidence-disclosure source slice:
+
+- added a compact **Evidence** section inside existing **Session Details**;
+- distinguished Terminal/Host lifecycle from Workspace-owned Git counts;
+- stated that Dez does not assign Workspace changes to one Session without
+  evidence;
+- required trusted evidence for agent confidence/checks and rejected terminal
+  prose as proof;
+- kept the contract in progressive disclosure instead of adding permanent
+  shell chrome;
+- aligned public documentation and protected the copy with a static guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the idempotent Files-handoff source slice:
+
+- added one Project Panel **Reveal** action that opens and focuses Files;
+- routed the active terminal, Session Rail selected-session action, and terminal
+  context menu through the same destination;
+- prevented repeated **Files** activation from closing an already-visible
+  Files surface;
+- exposed the action as **files: open** in Dez's Command Palette;
+- added static guards that reject the old terminal/Session Rail toggle path;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Lumin region-hierarchy source slice:
+
+- separated rail/drawer, Main Work Area, tab strip, active tab, terminal, and
+  elevated-overlay layers across Lumin Blur, Lumin, and Lumin Light;
+- retained translucent dark/light shells while giving content surfaces
+  deliberate neutral fills;
+- strengthened neutral one-pixel structural boundaries without competing with
+  the accent focus ring;
+- measured panel/editor separation, panel/elevated separation, active-tab
+  separation, and a 1.5:1 structural-boundary floor after compositing;
+- retained the existing 3:1 focus and 4.5:1 text/syntax floors;
+- updated public and execution documentation plus the identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Lumin interaction-state source slice:
+
+- corrected the opaque fallback where active controls were weaker than hover
+  and the active editor line was transparent;
+- strengthened light selection so it cannot collapse onto hover;
+- normalized idle, hover, and drag scrollbar feedback across all variants;
+- measured hover, active, selected, ghost, scrollbar, and active-line states on
+  their actual composited surfaces;
+- enforced state ordering as well as minimum differentiation floors;
+- retained the existing text, syntax, focus, and region-hierarchy checks;
+- updated public and execution documentation;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the compact terminal-context source slice:
+
+- made lifecycle/repository metadata the explicitly shrinkable context-strip
+  region;
+- clipped that metadata before it can paint into the fixed action group;
+- preserved Files, Review Changes, Open Workspace, and Session Details as
+  higher-priority controls;
+- kept those action labels visible down to 560 px of terminal content width so
+  common split-pane terminals do not become icon-only handoffs;
+- retained full hidden values in Session Details and the toolbar accessibility
+  label;
+- added a static layout-order guard and updated terminal/product plans;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Scratch Terminal folder-picker source slice:
+
+- added a dedicated **Open Folder** Workspace action with explicit window
+  placement;
+- made **Open Workspace** accept one or more directories, never standalone
+  files;
+- forced the Scratch Terminal route into the current window so the running
+  computation survives;
+- guarded the action definition, picker options, and terminal alias;
+- updated the terminal and execution documentation;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the persistent Main Work Area budget source slice:
+
+- extended the 360 px/22% auxiliary-pane creation rule into a persistent
+  horizontal layout invariant;
+- capped Workspace Tools and Agent together at 40% so the Main Work Area keeps
+  at least 60% after pointer or keyboard resize, pane reveal, layout recipes,
+  window-bound reflow, and persisted-layout restoration;
+- corrected persisted Agent pane decoding so Agent restores as Agent instead of
+  an ordinary Main Work Area tab region;
+- added focused source assertions and identity guards for extreme restored
+  proportions and region ownership;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the responsive shell-hierarchy source slice:
+
+- made Workspace Tools and Agent mutually exclusive, with the newly revealed
+  drawer always winning;
+- collapsed restored double-drawer layouts toward the focused auxiliary region
+  or the active recipe's intended region when window bounds change;
+- gave ultrawide space back to the Main Work Area instead of allowing a second
+  persistent contextual drawer;
+- reduced terminal context to one 32 px tab-bar-aligned header and removed its
+  redundant visible Terminal Session title;
+- changed the supervisor's visible heading from internal **Session Rail**
+  jargon to **Sessions** while preserving its architectural accessibility name;
+- added source assertions and identity guards; no build, test binary,
+  alternate binary, or visual launch was performed.
+
+Completed for the transient-layer and recovery-surface source slice:
+
+- replaced the fixed 448 px, full-height Workspace notification column with a
+  named shelf measured from the actual Main Work Area;
+- bounded the shelf to 280-400 px when space permits, never wider than the
+  available surface, and 36% of surface height with internal scrolling;
+- removed the toast layer's invisible full-screen container and bounded visible
+  toast content to 90% of viewport width, 560 px, and 30% of viewport height
+  with status-bar clearance;
+- kept full-screen occlusion only for intentional modal and switcher scrims;
+- made the Session Switcher's intentional full-window boundary dismiss on
+  outside click while containing clicks inside its dialog, eliminating the
+  invisible blocked-window state;
+- consolidated the Run, Supervise, and Review explanation into one Welcome
+  panel instead of three competing cards;
+- made empty Workspace Tools and Agent drawers named regions with inward
+  directional recovery to the Main Work Area, and aligned New File on the File
+  icon;
+- added pure width assertions and static guards; no build, test binary,
+  alternate binary, or visual launch was performed.
+
+Completed for the single-work-area cleanup and focus-hierarchy source slice:
+
+- traced the unexplained blank middle column in the installed screenshots to
+  single-work-area recipes retaining surplus empty tab panes from an earlier
+  split;
+- made Full, Agent Control, and Editor Focus select one authoritative Main Work
+  Area and hide only surplus empty tab panes;
+- applied the same cleanup after ordinary Workspace restoration when no
+  multi-pane recipe owns the layout, so stale empty splits cannot survive a
+  relaunch as giant blank columns;
+- preserved requested empty panes for explicit multi-pane recipes;
+- preserved every visible pane containing a file, terminal, diff, or other user
+  Surface even when it exceeds the recipe's nominal pane count;
+- changed the default active-pane cue from a two-pixel full-surface rectangle to
+  the title and selected-tab state, while retaining configurable full-pane
+  border and inactive-pane dimming options that default off;
+- replaced the generic **Workspace ready** placeholder with one bounded **Run.
+  Supervise. Review.** launch panel and the three immediate Workspace actions;
+- recorded the blue droplet/task pill as Codex desktop overlay and the **Bin**
+  label as a macOS Dock tooltip rather than misattributing either to Dez;
+- added static layout-safety and visual-default guards; no build, test binary,
+  alternate binary, or visual launch was performed.
+
+Completed for the truthful start-state navigation source slice:
+
+- moved **Open Files** to one Workspace-owned action used by Welcome, Terminal,
+  and Session Rail;
+- kept Project Panel as the implementation owner while making every public
+  route reveal and focus Files idempotently;
+- changed Welcome and empty Session Rail **Open Workspace** controls to the
+  folder-only, same-window route;
+- named the pathless zero-state action **Open Scratch Terminal**;
+- kept loading in its own state and withheld creation controls until App
+  Session restoration is ready;
+- added focused source assertions and static guards for destination, scope, and
+  restoration behavior;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the first-party product-icon isolation source slice:
+
+- centralized app-aware Agent and Assistant icon resolution;
+- preserved Zed Agent and Assistant marks for official Zed while using Robot
+  and Sparkle in Dez;
+- removed direct inherited Assistant marks from editor, terminal, diagnostics,
+  Git branch/diff/conflict, settings, and setup controls;
+- changed Dez Agent creation to Robot and external-Agent discovery to Blocks
+  while preserving upstream plus icons in official Zed;
+- added focused source assertions and static rejection guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the primary-action and toolbar-focus source slice:
+
+- gave state-aware Welcome exactly one filled recommended action while keeping
+  secondary actions quieter;
+- used Debug and Stop for Dez debugger lifecycle controls while preserving
+  official Zed's Plus and Power compatibility behavior;
+- put visible Git, Debug, Outline, and Agent icon controls into the keyboard tab
+  order with specific accessible names;
+- kept Agent title editing visible in Dez instead of making it pointer-hover
+  only;
+- added focused source assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the progressive empty-app activation source slice:
+
+- aligned Welcome and the true-empty Session Rail on **Open Workspace** as the
+  single filled first action;
+- retained **Open Scratch Terminal** as an explicit secondary pathless route;
+- made **Start Terminal Session** the filled action when a Workspace exists but
+  has no Sessions;
+- gave loading state priority over stale attention icon and color state;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Session Rail focus-parity source slice:
+
+- made keyboard focus reveal the same Workspace New Terminal and Options
+  controls as pointer hover;
+- added explicit tab stops while preserving Workspace-specific accessible names
+  and tooltips;
+- kept scoped worktree close controls visible and keyboard-focusable inside the
+  already-open Options menu;
+- made session-search clearing and onboarding-banner dismissal explicit tab
+  stops;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Main Work Area pane-chrome source slice:
+
+- put Back, Forward, Add, Switch Surface, Split, Zoom, Hide Workspace Tools,
+  and Hide Agent into the keyboard tab order;
+- kept their specific accessible destination names and tooltips;
+- made the active unpinned Dez Surface close control visible and focusable
+  without filling every inactive tab with controls;
+- preserved pinned dirty/status indicators until hover reveals Unpin;
+- preserved official Zed's upstream active-tab presentation;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the installed generated-visual-profile source slice:
+
+- inspected the actual Superzed settings profile instead of relying on default
+  source claims;
+- identified its generated `.ZedSans`, light-only mode, and One Light pins as
+  the reason JetBrains/Lumin were absent from the installed screenshots;
+- expanded migration only for that exact generated signature, upgrading font,
+  appearance mode, and light theme together;
+- preserved unrelated settings plus arbitrary custom and official Zed
+  profiles;
+- aligned the current local generated profile directly without building or
+  launching Dez;
+- added focused pure assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Session Rail creation-priority source slice:
+
+- made an empty ready Workspace's only useful transition a filled **Start
+  Terminal Session** action;
+- included the target Workspace in accessibility output and retained explicit
+  destination wording in the tooltip;
+- kept populated terminal creation in the exact Workspace header and reserved
+  the Dez overview for status and All/Attention scope;
+- retained the overview launcher only for official Zed compatibility;
+- added static hierarchy and copy regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the compact healthy-status source slice:
+
+- removed terminal-only **Search files** and **No diagnostics** text that
+  duplicated conventional icons and the surrounding product orientation;
+- retained keyboard tab stops, action tooltips, and complete Workspace-scoped
+  accessible names;
+- preserved visible diagnostic errors, warnings, counts, and messages;
+- added static compactness and accessibility regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the visual-profile recovery source slice:
+
+- traced Lumin Blur/Light through the theme setting, transparent renderer, and
+  native macOS whole-window visual-effect path;
+- added **Restore Dez Visual Profile** to the app Settings menu and command
+  palette;
+- limited recovery to the Lumin pair, Dez icons, and JetBrains Mono UI, editor,
+  terminal, and Markdown-code roles while preserving sizes and unrelated
+  preferences;
+- awaited the settings write before success feedback and added a focused
+  settings-mutation regression test;
+- made first-run icon and Markdown-code choices explicit;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the pane-size reset hierarchy source slice:
+
+- found the one action path that could still return Workspace Tools/Git and the
+  Main Work Area to equal-width columns;
+- made **Reset Pane Sizes** reapply Dez's 22% per-auxiliary and 60% minimum Main
+  Work Area budget after recursively equalizing ordinary editor splits;
+- added focused two-pane coverage for the exact Workspace Tools plus terminal
+  layout shown in the installed screenshot;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the responsive Session Rail destination-label source slice:
+
+- expanded the wide footer's ambiguous **History** label to **Agent History**;
+- expanded the wide footer's **Workspaces** label to **Recent Workspaces**;
+- retained the shorter labels at the default compact width and the existing
+  accessible names, tooltips, selected state, and expanded state at every
+  width;
+- added focused three-breakpoint assertions and static regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the terminal-provider icon coherence source slice:
+
+- mapped recognized Codex/OpenAI, Claude, Gemini, OpenCode, Grok, Copilot, and
+  Cursor terminal agents to their bundled provider-specific icons;
+- retained the neutral Robot fallback for providers without a specific bundled
+  mark;
+- removed the session switcher's duplicate mapping and made it consume the
+  Session Rail's authoritative provider map;
+- added focused provider/fallback assertions and static anti-drift guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the responsive terminal-review handoff source slice:
+
+- made terminal context actions retain text at normal widths and collapse to
+  the same semantic, fully named, tooltip-backed icons in narrow panes;
+- aligned Workspace-wide changed-file counts with Review Changes routing;
+- retained an active dirty repository and otherwise selected the first dirty
+  repository deterministically before revealing Git Changes;
+- opened a real changed-file diff after repository switching and retained the
+  explicit clean state when every repository is clean;
+- added focused width/routing assertions and static ownership guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the compact Git Changes interaction source slice:
+
+- reduced the collapsed commit composer from six lines to four while retaining
+  explicit full-height and modal expansion;
+- made View Diff, Stage/Unstage All, Commit, and remote split-button actions
+  keyboard tab stops with specific accessible names;
+- gave every Git split-menu chevron a matching tooltip and reported expanded
+  state;
+- covered inline and modal commit flows with static density, naming, focus, and
+  popup-state guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent recovery and toolbar-state source slice:
+
+- replaced the Agent no-Workspace file-or-folder picker with the folder-only,
+  same-window Open Workspace route used by the rest of Dez;
+- made shared Open Workspace and Clone Repository recovery actions explicit
+  keyboard tab stops;
+- made Agent Options and New Agent Session triggers announce expanded state and
+  retain selected treatment while their popovers are open;
+- added static routing, focus, and popup-state regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent composer control-contract source slice:
+
+- made Expand/Minimize, Add Context, Follow, Fast Mode, Thinking Mode, thinking
+  effort, Send/Queue, Stop Agent Run, and Sandbox Settings explicit keyboard
+  tab stops;
+- supplied specific accessible names for icon-only controls and the current
+  value for thinking effort;
+- exposed toggle and popup state and supplemented icon color with selected
+  treatment;
+- documented that composer controls operate the current Agent Session and do
+  not create hidden terminal or Project ownership;
+- added static focus, naming, value, and state regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent response, queue, and permission source slice:
+
+- removed whole-row dimming from response follow-up actions and made copy,
+  navigation, feedback, feedback cancel, and feedback submit named tab stops;
+- made positive and negative feedback expose selected state in addition to
+  color;
+- made queued prompts a named ordered list with row position, next-message
+  state, unique status identifiers, and visible keyboard-reachable Remove,
+  Edit, Steer, and Send Now actions;
+- made Allow, Deny, retry, provider choices, pattern application, and Permission
+  Scope keyboard-reachable;
+- made Permission Scope expose its current value, expanded state, and open
+  treatment while retaining exact pending-tool-call ownership;
+- added static visibility, identity, ordering, focus, naming, and popup-state
+  regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent Review and checkpoint-safety source slice:
+
+- replaced hover-only per-file Review, Reject, and Keep controls with a quiet
+  but persistently visible row action group;
+- gave every changed-file action group and Review control row-specific
+  identity and retained exact Buffer ownership;
+- made per-file and review-all decisions explicit tab stops and explained
+  pending-edit disablement;
+- named and keyboard-enabled Stop Subagent and Return to Parent Agent Session,
+  preserving navigation-versus-cancellation semantics;
+- added a warning confirmation before Restore Checkpoint can replace Workspace
+  files, retaining exact message-checkpoint identity after confirmation;
+- named and keyboard-enabled edited-message cancel and Agent Session restart;
+- added static visibility, identity, ownership, focus, disabled-reason, and
+  confirmation regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent error, warning, and trust-recovery source slice:
+
+- replaced inherited **Zed will retry** provider copy with the active product
+  identity;
+- made Retry, Authenticate, Configure Provider, Select Model, plan clearing,
+  Unicode warning configuration, WSL recovery, skill-file recovery, updates,
+  and every audited dismiss action named keyboard tab stops;
+- made the shared Copy control keyboard-reachable with a matching accessible
+  name across all consumers;
+- gave long-description skill rows file-specific accessible names;
+- separated dismissing a notice from retrying or repairing its condition;
+- added a warning confirmation before data-retention consent can persist a Dez
+  setting and retry the current request;
+- retained Learn More, the retention-safe fallback, and a no-change Cancel
+  path;
+- added static product-identity, focus, naming, exact-file, and privacy-consent
+  regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent tool-card interaction source slice:
+
+- extended the shared Disclosure control with opt-in keyboard ordering and
+  context-specific accessible naming while preserving expanded state;
+- applied that explicit keyboard contract to every audited Agent tool-card
+  disclosure without creating invisible tab stops for inherited hover-only
+  consumers;
+- kept Copy Code, Copy Command, thinking, terminal-output, and general
+  tool-output controls visible without pointer hover;
+- named and keyboard-enabled running-command Stop, sandbox documentation,
+  interrupted-edit discard, and Open File;
+- represented output truncation and command failure as accessibility status
+  instead of non-actionable buttons;
+- separated Subagent preview, Stop, and the labeled Open Subagent Session
+  navigation action while retaining exact Session ownership;
+- added static visibility, role, naming, focus, and ownership guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Session Rail first-workflow clarity source slice:
+
+- replaced the true-empty rail's generic muted sentence with a quiet **Start
+  with a Workspace** heading and copy that connects Workspace context,
+  Terminal or Agent Sessions, and IDE review;
+- retained one filled, folder-only, same-window **Open Workspace…** action and
+  the secondary pathless **Open Scratch Terminal** route;
+- made Workspace-ready start, empty-search recovery, caught-up recovery,
+  Workspace-scoped creation, and All/Attention scope actions explicit tab
+  stops;
+- aligned an embedded pure assertion with the canonical Workspace-first copy;
+- added static hierarchy, routing, focus, and destination regression guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Session Rail recovery-notice source slice:
+
+- retained explicit no-shell, no-fallback, and process-untouched semantics for
+  Terminal Session preparation, reconnection, and failure;
+- made Open Local Log and Copy Details/Error named keyboard tab stops;
+- renamed vague Workspace **Remove Entry/Entries** actions to **Remove Recovery
+  Entry/Entries** and stated that they remove only rail recovery state;
+- made Workspace retry and recovery-record removal explicit tab stops while
+  preserving recent Workspace data;
+- updated pure presentation assertions and static wording, focus, diagnostics,
+  and removal-scope guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the secondary-window visual-identity source slice:
+
+- traced every production `WindowOptions` consumer rather than assuming the
+  main Workspace window propagated its material and typography;
+- made About and Copilot verification request the active Lumin native window
+  appearance instead of GPUI's opaque default;
+- initialized the configured JetBrains UI role in About, Copilot verification,
+  and Audio Test before rendering their root surfaces;
+- preserved transparent window shells for intentionally shaped Agent and
+  collaboration notification popups, which already initialize the configured
+  UI font;
+- added static guards for stable-window material/font inheritance and the
+  deliberate popup exception;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Welcome and empty-Main-Work-Area hierarchy source slice:
+
+- reduced Dez Welcome's primary section from five competing entries to the
+  planned three transitions for each Workspace state;
+- retained Open Workspace, Clone Repository, and the explicit pathless Scratch
+  Terminal route when no codebase is open;
+- retained Start Terminal Session, Open Files, and New File when the current
+  Workspace already supplies codebase context;
+- removed command-palette and Workspace-replacement utilities from the primary
+  start list without removing those capabilities from normal application
+  chrome;
+- aligned the empty Main Work Area on **Start Terminal Session** and removed
+  the false implication that default GUI-owned terminals are durable;
+- added static count, order, routing, naming, and terminal-ownership truth
+  guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent-provider onboarding identity source slice:
+
+- traced the Agent panel's reachable onboarding separately from the dormant
+  upstream Zed AI subscription component;
+- named the reachable setup card as an **Agent provider setup** accessibility
+  region;
+- replaced the last visible native-agent-thread copy with **Agent Session**;
+- renamed the ready action to **Start Agent Session** and the settings action
+  to **Configure Agent Providers**;
+- made both actions explicit keyboard tab stops with matching accessible names;
+- guarded the Agent entry path against importing inherited Zed AI
+  subscription onboarding;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the native shell and Lumin material source slice:
+
+- moved the stable macOS Dez window to the native under-window backdrop with
+  behind-window blending and active/inactive system-state tracking;
+- made Lumin Light controls translucent glass interaction layers and guarded
+  their composited contrast;
+- assigned semantic materials by region: Sessions and Workspace Tools use panel
+  material, the Main Work Area keeps editor/terminal material, empty work cards
+  use surface material, and feedback uses elevated surface material;
+- bounded Workspace notifications to a top Main Work Area shelf and kept toasts
+  above the status bar without a full-screen invisible interaction layer;
+- lowered nonblocking feedback elevation on glass and removed modal-grade
+  shadows;
+- aligned product copy around **Sessions**, **Start Terminal Session**, and one
+  Main Work Area terminal destination while preserving official-Zed compatibility
+  branches;
+- updated Fork Notes, the active plan, public docs, and static identity/theme
+  guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the empty Main Work Area route-clarity source slice:
+
+- added a compact route row to the existing **Run. Supervise. Review.** launch
+  panel: **Run** targets the Main Work Area, **Supervise** targets Sessions, and
+  **Review** targets Files + Git;
+- kept the route row inside the bounded surface card so it cannot become another
+  floating overlay or fifth region;
+- made the route row a named list with item roles for assistive technology;
+- added a static guard so the empty work area cannot regress to a vague
+  placeholder that hides how terminals, Sessions, and review fit together;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the empty Sessions route-clarity source slice:
+
+- added the same **Run -> Main Work Area**, **Supervise -> Sessions**, and
+  **Review -> Files + Git** route to the true-empty Sessions rail;
+- rendered the route vertically as a named list so it fits narrow rail widths
+  without clipping or becoming an overlay;
+- kept **Open Workspace…** as the primary zero-state action and **Open Scratch
+  Terminal** as a clearly transient secondary action;
+- added source assertions and identity guards for the route copy and material;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the default focus quieting source slice:
+
+- changed Dez's default active pane modifiers to `border_size: 0.0` and
+  `inactive_opacity: 1.0`, matching the public settings reference and removing
+  the screenshot-class full-surface focus rectangle/dimmed-pane effect;
+- kept title/selected-tab focus as the stable cue and rejected the inherited
+  full-pane overlay at Dez render time, including for imported border settings;
+- preserved the configurable upstream full-pane border for official Zed;
+- added static identity guards so the default cannot drift back to a visible
+  full-pane outline;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the public Sessions terminology source slice:
+
+- changed Dez Command Palette display namespaces for selected-session actions
+  from `session rail: ...` to `sessions: ...` while keeping internal action and
+  settings keys compatible;
+- renamed the Agent metadata debug buffer from **All Session Rail Agent Session
+  Metadata** to **All Sessions Agent Session Metadata**;
+- cleaned bundled settings/schema comments so users see **Sessions** rather
+  than architectural rail terminology;
+- updated Fork Notes, public docs, and identity guards for the public/internal
+  terminology boundary;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the terminal handoff label source slice:
+
+- lowered the Terminal Session context label threshold from 700 px to 560 px so
+  **Files**, **Review Changes**, **Open Workspace**, and **Session Details**
+  remain labeled in ordinary split-pane widths;
+- kept icon-only mode for genuinely narrow terminals while retaining tooltips,
+  accessibility labels, and Session Details as the full evidence disclosure;
+- updated public docs, the runtime UX recovery plan, tests, and identity guards
+  for the threshold;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Sessions row hierarchy source slices:
+
+- removed shared gradient masks from Session titles and action slots, relying
+  on bounded truncation and inline flex layout instead;
+- reduced Terminal Session rows to **Review** or **Details** plus their distinct
+  close/terminate lifecycle control;
+- reduced Agent Session rows to one state-derived action: **Stop**, **Discard**,
+  **Review**, or **Brief**;
+- kept normal/default rail labels visible at 280 px and above, with named
+  tooltip-backed icons reserved for narrower widths;
+- kept Rename, Archive, hook setup, and diagnostics in selected-Session
+  commands or existing context menus rather than secondary hover clusters;
+- prevented closed-Workspace Agent Sessions from presenting an inert Review
+  action;
+- updated source assertions, product docs, Fork Notes, and identity guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Workspace-header overlay cleanup source slice:
+
+- removed the two opaque-window gradient masks that could paint over Workspace
+  names and the Start Terminal Session/Options action boundary;
+- made the name, optional layout metadata, disclosure, and status indicators
+  use one bounded flexible allocation with unconditional truncation;
+- made the action cluster a fixed inline sibling and removed its duplicate
+  right padding, preventing overlap and theme-dependent header geometry;
+- removed the redundant header terminal control from expanded empty Workspaces,
+  leaving the full labeled **Start Terminal Session** action as the single
+  transition while retaining compact access for collapsed or populated groups;
+- removed the decorative **Ready for a session** dot-and-caption row because
+  the overview summary and accessible Workspace header already communicate that
+  state;
+- removed the now-unused window-appearance and gradient-fade dependencies from
+  Sessions;
+- added a static no-gradient header guard and updated the permanent UI
+  contract;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Sessions-footer hierarchy source slice:
+
+- kept Agent Tools, Agent History, and Recent Workspaces as three distinct,
+  keyboard-focusable destinations rather than hiding them behind one overflow
+  menu;
+- made the conventional Settings gear icon-only at compact/default widths while
+  retaining its complete **Agent Tools and Settings** tooltip and accessible
+  name;
+- preserved visible **History** and **Workspaces** labels at compact/default
+  widths because those destinations are ambiguous without text;
+- restored **Agent Tools**, **Agent History**, and **Recent Workspaces** labels
+  together at detailed widths, while genuinely narrow rails keep named icons;
+- added pure breakpoint assertions and static guards for the asymmetric label
+  hierarchy;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the populated Sessions creation-ownership source slice:
+
+- removed Dez's global **Start Terminal** overview launcher after Sessions
+  exist, eliminating the duplicate beside the active Workspace's scoped
+  terminal action;
+- retained terminal creation in collapsed, expanded, empty, and populated
+  Workspace states with the exact Workspace as the destination;
+- preserved keyboard shortcuts and command-palette creation through the same
+  Main Work Area terminal action;
+- retained the overview launcher for official Zed compatibility through an
+  explicit product branch;
+- added focused source assertions and a static identity guard for both products;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent attention overlay source slice:
+
+- kept unread and action-needed Agent state in Sessions without opening a
+  floating window over the Main Work Area by default;
+- added the explicit **Floating Attention Popups** Dez setting for users who
+  prefer cross-window alerts;
+- kept sound policy and accessible window-attention requests independent from
+  the visual popup;
+- preserved the shaped popup's Lumin material and JetBrains UI role when the
+  setting is enabled;
+- preserved official Zed's existing popup policy through a product branch;
+- added source assertions and static guards for the default, opt-in, and
+  compatibility states;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Superseded for the v0.1 native-navigation hardening slice:
+
+- removed the visible floating-popup opt-in from Dez Settings;
+- made the legacy flag inert in Dez release builds while retaining official
+  Zed behavior and test-only coverage of the inherited implementation; and
+- kept Workspaces, native window attention, accessibility announcements, and
+  configured notifications as the complete Agent attention path.
+
+Completed for the terminal handoff priority source slice:
+
+- replaced the single 560 px all-label breakpoint with a progressive action
+  hierarchy;
+- kept every action as a named, tooltip-backed icon below 480 px;
+- labeled exactly one primary transition from 480 px: **Review Changes** when
+  Git reports changes, otherwise **Files** or **Open Workspace**;
+- added the secondary Workspace label at 720 px and the long **Session
+  Details** label at 920 px;
+- preserved the 32 px strip, shrinkable lifecycle/repository context, action
+  destinations, keyboard focus, tooltips, and accessibility names;
+- added state-aware breakpoint assertions, permanent product documentation,
+  and an identity guard that rejects the previous all-at-once cluster;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the native empty Main Work Area source slice:
+
+- removed the bordered surface card from the already-empty Main Work Area so
+  orientation reads as part of the Workspace rather than another floating
+  panel;
+- replaced the slogan-like heading with **Run, supervise, and review in this
+  Workspace** and made the description name the Terminal/Agent, Sessions, and
+  IDE review relationship directly;
+- replaced the three bordered route tiles with passive icon-and-copy groups:
+  **Terminal in Main Work Area**, **Live state in Sessions**, and **Files, Git,
+  and diffs**;
+- preserved the named list semantics while reserving filled, outlined, and
+  subtle control treatments for the actual Start Terminal Session, Find File,
+  and New File actions;
+- added static rejection guards for both the floating card shell and
+  button-looking passive guidance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the true-empty Sessions visual-grammar source slice:
+
+- replaced the three bordered Run/Supervise/Review rows with passive
+  icon-and-copy list items so the narrow rail no longer presents five elements
+  as competing actions;
+- aligned the destinations with the Main Work Area language: **Terminal in Main
+  Work Area**, **Live state in Sessions**, and **Files, Git, and diffs**;
+- gave every route item an explicit accessible name while keeping the list and
+  list-item semantics;
+- preserved **Open Workspace…** as the sole filled transition and **Open
+  Scratch Terminal** as the outlined pathless alternative;
+- added source assertions and a rejection guard preventing borders, rounded
+  tiles, or control backgrounds from returning to the passive route;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Welcome visual-grammar source slice:
+
+- changed the Welcome summary from a duplicate Run/Supervise/Review sentence
+  into a concrete product promise about connecting Terminal and Agent work to
+  the Workspace and IDE;
+- removed the bordered **How Dez Works** panel, section dividers, and numbered
+  selected-looking pills;
+- rendered Run, Supervise, and Review as a native, passive list using Terminal,
+  Sessions, and Diff icons with the same grammar as the empty Main Work Area
+  and Sessions rail;
+- gave the workflow a named list and every step an explicit accessible name;
+- removed the decorative bordered Terminal icon tile from the Welcome heading
+  while preserving the product accent;
+- preserved the state-aware three-action entry hierarchy and the single filled
+  recommended first action;
+- added static guards rejecting the old card and numbered-pill treatment;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the auxiliary-drawer recovery geometry source slice:
+
+- made empty Workspace Tools and Agent recovery regions own the full drawer
+  height instead of inheriting centered placement from the pane placeholder;
+- top-anchored the compact explanation and single **Return to Main Work Area**
+  action with deliberate drawer padding;
+- added internal vertical scrolling and a zero minimum height so recovery
+  remains reachable in short windows;
+- preserved the bounded content measure, named region semantics, inward
+  directional icons, keyboard focus, and one-action hierarchy;
+- added a static layout guard preventing centered or clipping recovery
+  regressions;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the pane-header overlay source slice:
+
+- removed the inherited top-center whole-pane drag handle from Dez, including
+  its visible pill and larger invisible hit target over pane header chrome;
+- retained explicit split/move commands, ordinary Surface tab drag and drop,
+  and Canvas layout recipes as the coherent movement paths;
+- preserved the upstream whole-pane handle when the product identity is
+  official Zed;
+- added a pure product-identity assertion and static guards that reject an
+  unconditional pane-header overlay;
+- documented the stable-region rationale and the required runtime acceptance
+  proof;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent title-allocation source slice:
+
+- replaced Dez's always-visible but absolutely positioned title pencil with a
+  fixed inline header allocation;
+- gave the Agent Session or terminal title the remaining flexible width with
+  explicit minimum-width and overflow constraints;
+- removed the inherited gradient mask from the Dez title path so Lumin Blur
+  cannot show an opaque patch over title text;
+- preserved the named keyboard action, Agent Session and terminal edit routing,
+  and official Zed's upstream hover overlay;
+- added a pure product-identity assertion and a static geometry/action guard;
+- documented compact-width, long-title, keyboard, and Lumin Blur runtime
+  acceptance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Agent plan-allocation source slice:
+
+- replaced Dez's collapsed-plan count overlay with separate flexible task-text
+  and fixed remaining-count allocations;
+- removed the unconditional right-edge gradient mask from Dez plan rows and
+  used ordinary constrained overflow instead;
+- retained each row's full-text tooltip, status icon, plan disclosure, and
+  keyboard-focusable clear action;
+- preserved official Zed's inherited gradient presentation through an explicit
+  product branch;
+- added a pure product-identity assertion and a static summary/row geometry
+  guard;
+- documented compact-width, pending-count, tooltip, keyboard, disclosure, and
+  Lumin runtime acceptance;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the minimalist one-drawer shell source slice:
+
+- made Workspace Tools and Agent mutually exclusive at every Dez window size;
+- preserved Sessions as the stable supervision rail and the Main Work Area as
+  the dominant work surface;
+- made a newly revealed drawer close its competitor and made restoration keep
+  the active or recipe-appropriate drawer deterministically;
+- removed the former 1800 px/1.6:1 coexistence exception so ultrawide width
+  benefits active work instead of accumulating tool columns;
+- preserved official Zed's upstream coexistence behavior;
+- added a pure product assertion, a 2400 px focused-drawer source test, and a
+  static regression guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the minimalist launch-profile source slice:
+
+- initially hid persistent Main Work Area Back and Forward buttons while
+  retaining keyboard and command navigation; the v0.1 profile now enables
+  those native controls by default without forcing them over user preference;
+- hid generic editor quick-action and selection-menu chrome by default while
+  retaining breadcrumbs, diagnostics, Agent review, shortcuts, and commands;
+- reduced default Sessions metadata to live Agent state and latest attention,
+  leaving branch, worktree, and Canvas Layout detail with the owning Workspace;
+- kept Add to Main Work Area, Switch Surface, split, and contextual Workspace
+  Canvas Layout controls visible;
+- updated public settings examples and added static default-profile guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the opinionated Canvas command-surface source slice:
+
+- matched command search to the six workflow recipes already exposed by
+  Workspace Options;
+- retained Cycle Layout, Save Layout As, Manage Saved Layouts, and Restore
+  Previous as the four understandable management routes;
+- removed the generic centered-editor toggle, legacy layout-mode toggles,
+  experimental recipes, numeric slot commands, and clipboard/storage internals
+  from Dez command search;
+- kept underlying action types intact for saved-layout UI, keybinding
+  compatibility, and official Zed's full upstream command inventory;
+- added a pure product-policy assertion and a static action-set guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the Main Work Area terminal projection and responsive Sessions
+source slice:
+
+- added an explicit foreground-process-change terminal event after
+  asynchronous process refresh and cleared stale cached process information
+  when no foreground process remains;
+- subscribed Sessions to terminal entities already present in every Workspace
+  and to terminals added later, without creating or relocating a terminal;
+- changed Agent and local Host metadata updates from raw PTY wakeups to exact
+  title, breadcrumb, process, exit, and attention transitions;
+- kept shell → Codex → shell on one stable terminal and Session identity while
+  allowing its detected provider and evidence to update;
+- made a live Main Work Area terminal take precedence over matching persisted
+  metadata and Host snapshots, so Session activation focuses the exact existing
+  Surface instead of attempting to reattach or duplicating it;
+- rejected stale stored-path ownership when the live terminal belongs to a
+  different Workspace group;
+- added a viewport-responsive width contract used by both the outer workspace
+  reservation and the inner Sessions render;
+- pinned compact widths at 280 px on wide windows, 240 px at an 800 px
+  viewport, and a 200 px narrow-window floor;
+- added pure source assertions and identity guards for state-change
+  subscriptions, output-frame rejection, and the 600/800/1400 px width matrix;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Runtime acceptance remains open.
+
+Completed for the foreground Agent acknowledgement source slice:
+
+- made the semantic process-info transition invalidate the existing terminal
+  Surface as well as request a tab refresh;
+- assigned provider identity to the existing terminal tab icon and the concise
+  **Agent running** state to the 32 px context strip, without repeating the
+  glyph or creating a panel, overlay, replacement terminal, or second Session;
+- omitted the generic **Active** segment for ordinary shells while preserving
+  failures and other meaningful task states;
+- collapsed the visible activity label below 360 px while preserving the
+  tab's provider icon and complete accessible/details copy;
+- kept agent detection product-scoped, normalized-command based, and
+  independent of terminal output; ordinary shells remain visually quiet and
+  official Zed keeps upstream terminal chrome;
+- disclosed foreground-process observation in terminal details without
+  attributing Workspace Git changes to that process;
+- added a pure product-policy assertion and a static identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Runtime acceptance remains open.
+
+Completed for the normal-flow Sessions geometry source slice:
+
+- kept the client-decorated Dez Sessions root inside the exact flex reservation
+  already owned by `MultiWorkspace`, removing the inherited second absolute
+  surface and its independent hit-test geometry;
+- moved the header divider onto the header container and removed its absolute
+  full-size decorative child;
+- preserved official Zed's inherited client-decoration geometry;
+- added a pure product-policy assertion and static guards for normal-flow root
+  ownership and overlay-free header decoration;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Pointer and corner rendering remain runtime
+  acceptance work for the next artifact.
+
+Completed for the narrow interaction-allocation source slice:
+
+- shortened the 200 px Sessions attention scope to **Needs** while retaining
+  counts, full accessibility names, tooltips, keyboard behavior, and the
+  complete **Attention** label from 240 px upward;
+- made both narrow scope targets compact and gave truncated overview status a
+  direct tooltip;
+- replaced the optional drawer's fixed 22% initial budget with a bounded
+  responsive target: 240 px when possible, 360 px maximum, and 40% maximum on
+  smaller workspaces;
+- preserved at least 60% of every horizontal allocation for the Main Work Area
+  and retained one-drawer exclusivity;
+- added pure source matrices for 200/240 px scope behavior and
+  2000/1000/560/400 px drawer allocation plus static guards;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed.
+
+Completed for the viable native-window floor source slice:
+
+- derived the narrow shell boundary from the existing 200 px Sessions floor
+  and 400 px Main Work Area checkpoint instead of allowing the inherited
+  360 px window to produce a 160 px primary surface;
+- set Dez's native minimum to 600 × 400 px while preserving official Zed's
+  360 × 240 px behavior;
+- added a pure product-policy assertion and static identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Native resize enforcement remains runtime
+  acceptance work for the next artifact.
+
+Completed for the visible terminal-agent handoff source slice:
+
+- replaced compact terminal-agent state such as **Detected · Live** with the
+  user-facing actor and state, such as **Codex · Running**;
+- summarized a running terminal agent in collapsed Workspace headers without
+  auto-expanding the group or moving focus out of the Main Work Area;
+- counted terminal-agent attention in the same Workspace summary as native
+  Agent Sessions;
+- preserved the existing terminal, Session identity, layout, and normal-flow
+  Sessions geometry—no panel, toast, duplicate terminal, or overlay is created;
+- added pure assertions plus a static identity guard for the compact and
+  collapsed response;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Expanded/collapsed shell → Codex → shell proof
+  remains open for the next artifact.
+
+Completed for the terminal-termination failure source slice:
+
+- replaced the auto-hiding **Durable session was not terminated** message with
+  terminal-specific product copy stating that the process may still be running;
+- kept the uncertainty visible until dismissal instead of implying that a
+  destructive request succeeded;
+- added **Return to Session**, routed through the preserved terminal metadata,
+  Workspace, and source so recovery cannot open a substitute computation;
+- retained detailed transport errors in logs and removed Host/durability jargon
+  from public copy;
+- used a terminal-specific notification identity so one failure does not
+  silently replace another terminal's failure;
+- added a pure copy assertion and static identity guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Transport-failure runtime proof remains open for
+  the next artifact.
+
+Completed for the direct Session navigation source slice:
+
+- removed Dez's inherited full-window Session Switcher from the switch-session
+  action;
+- routed forward and reverse switching through the existing direct
+  Agent/terminal activation path, preserving Workspace and terminal-source
+  ownership;
+- retained conventional Main Work Area Surface switching and the discoverable
+  command-search action;
+- preserved the modal Thread Switcher for official Zed compatibility;
+- added a pure product-policy assertion and static regression guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Shortcut and focus proof remains open for the
+  next artifact.
+
+Completed for the on-demand Sessions filtering source slice:
+
+- removed the permanent filter row and the redundant scope row from a
+  one-Session, unfiltered Dez rail;
+- retained scope controls for multiple Sessions and an active Attention
+  projection so the filtered state always has an exit;
+- added one compact, named overview control when multiple Sessions make
+  filtering useful and retained the keyboard-reachable filter at every count;
+- revealed the inline field only while focused or carrying a query and removed
+  the duplicate overview trigger while active;
+- made close clear the query, return focus to Sessions, and collapse the field;
+- preserved official Zed's populated-rail search behavior;
+- added pure visibility assertions and a static interaction guard;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Pointer, focus, and search-result proof remains
+  open for the next artifact.
+
+Completed for the focused empty-work-area hierarchy source slice:
+
+- kept the Run/Supervise/Review orientation only in the active empty Main Work
+  Area, where first-use guidance can explain the product without becoming
+  permanent chrome;
+- changed inactive empty panes to compact **Open something here** copy while
+  preserving Start Terminal Session, Find File, and New File in the same order;
+- made the region accessibility description follow the active or compact copy;
+- preserved the inherited all-pane presentation for official Zed;
+- removed floating-card elevation from sticky Sessions Workspace headers in
+  Dez while retaining the material boundary and bottom divider;
+- added pure product-policy assertions and static guards for focused-only
+  orientation, official-Zed compatibility, and flat sticky-header chrome;
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Focus transitions, explicit split layouts, and
+  both Lumin variants remain runtime acceptance work for the next artifact.
+
+Completed for the Settings information-architecture source slice:
+
+- ordered Dez's workflow pages as Workspace, Sessions, Agents, Attention, and
+  Evidence before inherited IDE customization;
+- kept every retained editor, language, layout, Git, network, and compatibility
+  control available after the product path;
+- moved **Sessions Side** from Agent provider configuration to
+  **Sessions & Terminal**;
+- renamed the first Agent section **Agent Runtime & Providers** and exposed the
+  compatibility kill switch as **Disable Agent Features** in Dez;
+- preserved official Zed's page order and labels;
+- added pure ordering assertions and static regression guards; and
+- retained source-only evidence: no build, test binary, alternate binary, or
+  visual launch was performed. Rendered Settings proof remains open for the
+  next consolidated artifact.
+
+Completed for the compact Lumin chrome source slice:
+
+- audited the already-running installed Dez window and confirmed it still
+  predates current source: it shows idle Workspace rows and an unsolicited
+  Workspace Tools drawer that current source has removed;
+- traced Lumin Light and Lumin Blur from bundled defaults through transparent
+  rendering to the native macOS under-window material;
+- kept the measured translucent shell, region, interaction, contrast, and
+  active/inactive behavior unchanged;
+- changed fresh and restored Dez profiles from balanced to compact Canvas
+  density while preserving the 14 px typography baseline and existing control
+  targets;
+- extended the theme and identity gates to pin compact density and accurate
+  visual-profile recovery copy; and
+- retained source-only evidence: no build, test binary, or alternate binary
+  was launched. The running installed artifact is diagnostic evidence only and
+  remains stale until the consolidated build.
+
+Completed for the public-shell and glass-opacity source slice:
+
+- removed the staff-only **Advanced** instrumentation page from ordinary Dez
+  Settings navigation while retaining it in official Zed and staff override
+  builds;
+- kept the underlying profiler setting and command compatible rather than
+  deleting implementation needed by deliberate developer workflows;
+- lowered the maximum opacity of Lumin's root, title/status chrome, Sessions,
+  auxiliary surfaces, editor, terminal, toolbar, and tab strip while keeping
+  elevated menus and feedback denser;
+- retained one native macOS under-window material instead of adding nested blur
+  surfaces;
+- tightened the theme gate so a future palette cannot flatten the backdrop,
+  while preserving measured text, interaction, region, scrollbar, and focus
+  contrast;
+- added pure Settings policy coverage and an identity guard; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed. The next consolidated artifact must
+  prove both Lumin variants against real desktop backdrops and the reduced
+  Settings root.
+
+Completed for the coherent View-menu source slice:
+
+- kept **Sessions** and **Agent** as separate application regions;
+- grouped Files, Outline, Git, and Debug beneath one **Workspace Tools**
+  submenu instead of presenting the drawer and its modes as unrelated
+  top-level panels;
+- added **Toggle Workspace Tools** inside that submenu so visibility and
+  mode selection share one discoverable owner;
+- kept **Editor Layout** and **Diagnostics** separate from drawer content;
+- preserved official Zed's Project Tab/Panel and Terminal Panel hierarchy;
+- retained every underlying action and command-palette route;
+- added a pure product-policy assertion and static identity guard; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  visual launch was performed. Rendered menu navigation and focus proof remain
+  open for the consolidated artifact.
+
+Completed for the integrated Agent-provider setup source slice:
+
+- traced the reachable provider setup through the Agent pane and its shared
+  upstream onboarding-card component;
+- kept the explicit provider copy, keyboard actions, and configured-provider
+  state behavior;
+- rendered the Dez path as a flat in-flow section with one material boundary;
+- removed its outer surface repaint, elevation, nested translucent frame, and
+  absolute gradient while preserving the upstream card for official Zed;
+- added static guards against restoring either the elevated card or a
+  double-painted Lumin panel; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  visual launch was performed. The next artifact must prove the section in
+  Lumin Light and Lumin Blur at compact and default Agent widths.
+
+Completed for the flush Main Work Area frame source slice:
+
+- traced the apparent pane overlap and clipping risk to rounded upstream card
+  frames surviving beneath Dez's zero-gap pane grid;
+- made Dez leaf panes borderless and moved the structural boundary to the pane
+  axis, which paints each shared one-pixel seam exactly once;
+- left the native window as the only owner of the outer radius and eliminated
+  clipped inner corners, double-width dividers, and double-card silhouettes;
+- preserved content clipping, resize handles, inactive-pane opacity, pane
+  decoration, and official Zed's individually bordered rounded cards;
+- added source policy coverage and a static regression guard; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the single-header Agent drawer source slice:
+
+- traced the stacked Agent chrome to the generic pane tab bar rendering above
+  Agent's own complete session toolbar;
+- removed the redundant outer Agent tab bar only for Dez;
+- moved the direct **Hide Agent** action into the native toolbar beside expand
+  and options, with keyboard focus, accessible naming, action tooltip, and the
+  normal drawer toggle path;
+- retained Workspace Tools tabs for its real Files/Git/Outline/Debug modes and
+  preserved official Zed's inherited Agent-pane tab bar;
+- added pure product-policy coverage and static regression guards; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the terminal context hierarchy source slice:
+
+- traced the apparent duplicate Terminal header to the context row reusing the
+  same material as the real pane tab bar;
+- kept the pane tab bar as the sole navigation layer and moved status,
+  Workspace, review, and details controls onto the quieter toolbar material;
+- made subtoolbar height, spacing, and horizontal padding follow compact,
+  balanced, and spacious canvas density;
+- preserved progressive action-label collapse, keyboard focus, accessible
+  names, tooltips, and the existing Workspace and Git handoffs;
+- added pure density assertions and static regression guards against restoring
+  a second tab-bar material; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the unified contextual-drawer reveal source slice:
+
+- audited direct toggles, typed panel activation, entity-ID activation, and
+  remote panel-ID activation instead of assuming they shared one layout path;
+- found that alternate activation routes could reveal Workspace Tools or Agent
+  without applying the shared Sessions exclusion;
+- centralized the responsive preparation step so every pane-backed tool reveal
+  first retires the competing drawer and Sessions at every window size;
+- routed remote panel activation through the same visibility, focus, sizing,
+  and serialization behavior as local panel activation;
+- added focused source coverage and a static regression guard for the
+  alternate activation path; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the minimal Welcome hierarchy source slice:
+
+- compared the rendered Welcome structure with the permanent three-transition
+  product contract instead of counting only its primary section;
+- removed the trailing **Configure Dez** launcher catalogue from both empty and
+  Workspace-backed Dez Welcome states;
+- kept Settings, keymaps, and extensions in the application menu and Command
+  Palette, where those global destinations already belong;
+- preserved recent Workspaces as useful secondary content when history exists,
+  the three state-dependent workflow actions, and official Zed's inherited
+  Personalize section;
+- added product assertions and static guards against restoring unrelated
+  configuration actions to the first canvas; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the stale empty split restoration source slice:
+
+- traced the field-captured **Session unavailable + blank Main Work Area**
+  composition to single-work-area selection prioritizing stale active emptiness
+  over a visible pane containing user work;
+- changed restoration priority to retain active work first, then other visible
+  terminal, file, or recovery surfaces, using active emptiness only as a
+  fallback;
+- repaired active-pane command ownership when normalization retires the stale
+  pane, without forcing keyboard focus during application restoration;
+- added focused regression coverage and static guards for both retention order
+  and active-pane promotion; and
+- retained source-only evidence at implementation time. The subsequent release
+  validation is tracked by the macOS build workflow.
+
+Completed for the Sessions structural-splitter source slice:
+
+- traced the last full-height interaction boundary between Sessions and the
+  Main Work Area instead of treating a six-pixel transparent hit target as
+  harmless by definition;
+- kept pointer drag and double-click reset while preventing the Dez boundary
+  from occluding the adjacent work surface;
+- exposed one named vertical splitter with its current responsive width,
+  restrained hover/focus feedback, physical Left/Right Arrow resizing on
+  either rail side, and Enter reset;
+- preserved official Zed's upstream mouse-blocking resize boundary;
+- added pure direction/policy assertions, a static identity guard, and runtime
+  acceptance for interaction directly beside the seam; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the active Editor-Surface identity source slice:
+
+- audited the Main Work Area vocabulary after Terminal and Project Diff had
+  gained explicit owners and found ordinary files still presented as bare,
+  ambiguous filenames;
+- added a quiet **Editor ·** prefix only to the selected file in the focused
+  pane, leaving inactive tabs filename-only for a minimal tab bar;
+- kept the filename in a flexible truncating allocation ahead of tab actions
+  and added **Editor · full path** to its tooltip;
+- normalized staged, unstaged, branch, file-to-file, clipboard, solo, and
+  multi-diff tabs to the same bounded **Diff · scope** grammar already used by
+  Project Diff;
+- preserved official Zed's upstream filename-only presentation;
+- added product-policy assertions, a static identity guard, and a four-Surface
+  runtime acceptance case; and
+- retained source-only evidence. No app build, test binary, alternate binary,
+  or fresh visual launch was performed.
+
+Completed for the project-scoped activation funnel source slice:
+
+- removed the pathless Agent Terminal action from empty Welcome and empty
+  Sessions, where it could not provide file or Git review context;
+- made **Open Workspace** or **Clone Repository** the only empty-application
+  decisions and retained **Open Agent Terminal** as the primary transition once
+  a Workspace exists;
+- compressed Welcome's Run → Supervise → Review explanation into one passive
+  inline route and removed the duplicate route from the empty Main Work Area;
+- preserved official Zed's inherited scratch-terminal path;
+- added product assertions and static guards for the progressive-disclosure
+  boundary; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the native activation and Sessions hierarchy source slice:
+
+- replaced the centered Dez first-run canvas with a compact, top-anchored
+  settings surface;
+- flattened the three-card workflow into one responsive native list and
+  removed hook installation plus pathless terminal launch from setup;
+- top-aligned Workspace Welcome, removed its hero badge, and changed Dez
+  actions from filled dashboard controls to quiet command rows;
+- moved the only visible **Sessions** title into the native titlebar, removed
+  the repeated dashboard heading, and kept status and scope in the next row;
+- removed decorative icon-card frames and filled calls to action from Dez
+  empty, caught-up, search, and start states;
+- preserved official Zed behavior through explicit product gates;
+- added policy assertions and static identity guards for the native hierarchy;
+  and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the residual Lumin callout-material source slice:
+
+- audited the remaining reachable gradients after the outer shell and Agent
+  onboarding-card repairs;
+- retained official Zed's inherited gradient treatments;
+- changed Dez's Sessions import guidance and unsupported-Agent recovery to
+  low-opacity semantic fills that preserve the native under-window blur as the
+  only blur owner;
+- added pure product-policy assertions and static regression guards; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the Terminal/Sessions product-noun source slice:
+
+- made **Terminal** the interactive Main Work Area surface and reserved
+  **Sessions** for the agent-supervision projection;
+- renamed the terminal disclosure to **Terminal Details**, destructive action
+  to **End Terminal**, and unavailable state to **Terminal unavailable**;
+- simplified terminal-service notices without hiding whether a shell started
+  or whether running work was touched;
+- kept ordinary shells outside Sessions while preserving their terminal facts,
+  files, Git handoff, and evidence boundary;
+- retained official Zed's inherited Terminal Session copy behind product
+  gates;
+- updated permanent Fork Notes, public product and terminal guides, assertions,
+  and static guards; and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the Live Preview and agent-surface decision slice:
+
+- audited the local preview and URL-opening paths and confirmed that Markdown,
+  SVG, and CSV are native file previews while `OpenBrowser` opens the system
+  browser;
+- confirmed that the inherited `BrowserDevelopment` recipe contains only pane
+  geometry and creates no browser Workspace item;
+- audited GPUI's macOS window ownership and found one full-window native view,
+  with no pane-scoped child-surface lifecycle, clipping, z-order, focus, or
+  accessibility contract suitable for `WKWebView`;
+- made Agent Terminal the recommended execution path for Codex, Claude Code,
+  OpenCode, and other terminal-native tools while retaining Built-in Agent as
+  an optional structured planning and Project-context surface;
+- defined Live Preview as a normal Main Work Area Surface whose terminal or
+  task owns the dev server and whose browser item owns only navigation and
+  viewport state;
+- rejected hidden layout recipes in Dez so `browser_development` and other
+  legacy commands cannot manufacture empty panes before their named surfaces
+  exist;
+- added the platform-host, browser-item, Project-pairing, bounded agent-control,
+  security, restoration, visual, and runtime acceptance sequence in
+  [Live Preview and Agent Model](./live-preview-and-agent-model.md); and
+- retained source-only evidence. No build, test binary, alternate binary, or
+  app launch was performed.
+
+Completed for the v0.0.3 studio-navigation source slice:
+
+- replaced the rejected three-mode Navigator with a stable global **Workspaces**
+  navigator, a native draggable **Main Work Area**, and one contextual
+  right-side **Workspace Tools** surface;
+- kept Files, Outline, Git, and Debug scoped to the active Project and made
+  Built-in Agent replace that contextual surface rather than creating another
+  drawer;
+- stopped Workspace Tool activation from closing Workspaces and moved the Files
+  surface to the right by default;
+- removed the compressed titlebar activity switcher so native work tabs keep
+  their reorder, cross-pane drag, preview replacement, pin, and close behavior;
+- centered the bounded Home content, added Herdr to the supported terminal
+  agent vocabulary, and kept the advanced layout picker out of default chrome;
+- renamed public Settings pages to **Workspaces & Terminals** and **Workspace
+  Tools**, added an explicit Workspaces startup control, and hid inherited
+  sidebar controls that do not affect the Dez shell;
+- preserved the tmux/Herdr ownership boundary: Workspaces summarizes semantic
+  state, while a real PTY remains the interactive source of truth; and
+- retained source-only evidence pending the exact tagged macOS build and
+  runtime matrix.
+
+Completed for the Workspace Layout ownership source slice:
+
+- renamed the active Workspace's native pane/tab projection from **Open Tabs &
+  Tools** to **Layout**;
+- nested Layout beneath the active Workspace instead of mounting a second
+  global inventory above the Workspace list;
+- made every projected row activation-only by removing duplicate close and
+  middle-click-close behavior while retaining native dirty and pinned state;
+- named the focused pane in text, including a single-pane Workspace with
+  multiple tabs, so focus does not depend on accent color;
+- kept search focused on its filtered Workspace/session results and hid Layout
+  while a query is active;
+- preserved official Zed behavior through product-gated labels and visibility;
+- updated the native surface contract and static identity guards; and
+- retained source-only verification. No build, test binary, alternate binary,
+  package, or app launch was performed.
+
+Completed for the explicit running-session result source slice:
+
+- kept **Other Running Sessions** absent when ordinary navigation has no rows,
+  while preserving one bounded result after **Browse Running Sessions…**;
+- distinguished checking, source failure, private cmux activity, sessions
+  already grouped under open Workspaces, and a genuinely empty inventory;
+- prevented one healthy source from masking a failed or access-limited source;
+- removed the decorative zero-session count from the explicit empty result;
+- changed the disclosure from a pointer-only row to a keyboard target with an
+  announced expanded state, and exposed Retry only when discovery can help;
+- aligned the empty Main Work Area button with the full **Browse Running
+  Sessions** product noun; and
+- retained source-only verification. No build, test binary, alternate binary,
+  package, or app launch was performed.
+
+Completed for the Layout noun and running-session disclosure source slice:
+
+- restored **Layout** as the final name for the active Workspace's
+  activation-only native pane/tab projection, replacing the regressed
+  **Open** label;
+- aligned the surface contract, release-readiness contract, annotated
+  wireframe, permanent fork decision, exact-copy assertion, and static guard;
+- announced the Running Sessions disclosure's expanded state, natural
+  singular/plural count, and attention count to keyboard and assistive
+  navigation;
+- kept pane lifecycle, tab ordering, and split ownership in the native Main
+  Work Area; and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the Activity noun source slice:
+
+- corrected the active Workspace's bounded live projection from **Sessions**
+  to **Activity**, matching the existing actionable-lifecycle filters and
+  Workspace-first information architecture;
+- preserved official Zed's existing **Activity** wording and kept **Session**
+  as the entity noun in Agent History, Running Sessions, resume, and
+  multiplexer actions;
+- kept idle open tabs in **Layout**, completed inactive Agent Sessions in Agent
+  History, and only current authoritative signals in Activity;
+- synchronized the native surface contract, v0.4 readiness contract,
+  navigation wireframe, permanent fork decision, source assertion, and static
+  identity guards; and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the fresh Workspace ownership source slice:
+
+- aligned the bundled Files startup default with the existing first-run
+  profile so a fresh Workspace begins in the Main Work Area instead of opening
+  a second column;
+- preserved restored layouts and the explicit Files startup preference;
+- renamed the graphical toggle **Open Files Automatically** and explained its
+  Main Work Area consequence without inherited panel language;
+- synchronized the v0.4 contract, public guides, and static identity guard;
+  and
+- retained source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the final Workspace navigation-copy source slice:
+
+- changed the empty Workspaces headline to the complete **No Workspace is
+  open** sentence and named folders or repositories as the next context;
+- replaced the public guide's superseded **Open Tabs & Tools** and
+  **Open/Sessions** hierarchy with activation-only **Layout** and bounded
+  **Activity**;
+- removed guide claims that Workspaces owns close or middle-click lifecycle,
+  keeping those actions with the native tab strip;
+- preserved official Zed's existing empty-state wording; and
+- synchronized tests, the annotated wireframe, Fork Notes, and static identity
+  guards with source-only verification. No local build, test binary, alternate
+  binary, package, or app launch was performed.
+
+Completed for the installed Lumin contrast source slice:
+
+- used the installed Preview to identify a real whole-window compositing
+  failure rather than reshaping native navigation from screenshots alone;
+- retained one macOS under-window material and the existing Home, Workspace,
+  Layout, Activity, tab-strip, and status-line ownership;
+- deepened Lumin Blur's translucent structural layers so a bright desktop
+  cannot flatten the product into a middle-gray field;
+- raised muted text, placeholder, and icon roles while keeping ordinary
+  selected controls neutral and reserving the warm accent for attention;
+- extended the dark blurred-theme gate to white, blue-gray, and warm light
+  desktop samples so the installed failure mode remains covered;
+- promoted only the primary Workspace name at Compact density, leaving section
+  labels and metadata compact; and
+- retained source-only verification. A new exact-SHA Preview is still required
+  to validate the revised hierarchy in Home, Workspaces, Settings, native tabs,
+  terminal/editor content, and the status line.

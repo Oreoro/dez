@@ -1,6 +1,12 @@
 use gpui::{Context, Task};
 use parking_lot::{MappedRwLockReadGuard, Mutex, RwLock, RwLockReadGuard};
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::PathBuf,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 #[cfg(target_os = "windows")]
 use windows::Win32::{Foundation::HANDLE, System::Threading::GetProcessId};
@@ -65,58 +71,53 @@ impl ProcessIdGetter {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ProcessInfo {
-    pub(crate) name: String,
     pub(crate) cwd: PathBuf,
     pub(crate) argv: Vec<String>,
 }
 
-/// Fetches dez-relevant Pseudo-Terminal (PTY) process information
+/// Fetches Zed-relevant Pseudo-Terminal (PTY) process information
 pub(crate) struct PtyProcessInfo {
     system: RwLock<System>,
     refresh_kind: ProcessRefreshKind,
     pid_getter: ProcessIdGetter,
-    #[cfg(windows)]
-    process_job: Option<util::process::WindowsProcessJob>,
     last_foreground_pid: Mutex<Option<Pid>>,
     pub(crate) current: RwLock<Option<ProcessInfo>>,
     task: Mutex<Option<Task<()>>>,
+    refresh_pending: AtomicBool,
 }
 
 impl PtyProcessInfo {
     pub(crate) fn new(pid_getter: ProcessIdGetter) -> PtyProcessInfo {
-        // sysinfo retains an open procfs handle for every process and task entry on Linux.
+        // Task enumeration is on by default and would retain a `Process` entry
+        // per thread, each pinning an open `/proc/<pid>/task/<tid>/stat` handle
+        // on Linux (#58651).
         let process_refresh_kind = ProcessRefreshKind::nothing()
             .with_cmd(UpdateKind::Always)
             .with_cwd(UpdateKind::Always)
             .with_exe(UpdateKind::Always)
             .without_tasks();
+        // `System::new_with_specifics` with a process refresh kind would
+        // snapshot every process on the machine into this terminal's `System`,
+        // retaining one open procfs handle per process for the lifetime of the
+        // terminal (#58651). Refresh only the spawned child so that
+        // `kill_child_process` works before the first foreground refresh.
         let mut system = System::new();
-        // A full initial refresh would retain every process on the machine for this terminal.
         system.refresh_processes_specifics(
             ProcessesToUpdate::Some(&[pid_getter.fallback_pid()]),
             true,
             process_refresh_kind,
         );
 
-        #[cfg(windows)]
-        let process_job =
-            util::process::WindowsProcessJob::assign(pid_getter.fallback_pid().as_u32())
-                .map_err(|error| {
-                    log::error!("failed to assign terminal process to a job object: {error:#}");
-                })
-                .ok();
-
         PtyProcessInfo {
             system: RwLock::new(system),
             refresh_kind: process_refresh_kind,
             pid_getter,
-            #[cfg(windows)]
-            process_job,
             last_foreground_pid: Mutex::new(None),
             current: RwLock::new(None),
             task: Mutex::new(None),
+            refresh_pending: AtomicBool::new(false),
         }
     }
 
@@ -128,7 +129,11 @@ impl PtyProcessInfo {
         let pid = self.pid_getter.pid()?;
         let fallback_pid = self.pid_getter.fallback_pid();
         let mut system = self.system.write();
-        // Targeted refreshes do not evict earlier PIDs, so rebuild when the foreground job changes.
+        // sysinfo never evicts processes that are absent from the refreshed pid
+        // set, so entries for former foreground processes (each pinning an open
+        // `/proc/<pid>/stat` handle on Linux) would otherwise accumulate for as
+        // long as this terminal lives (#58651). Rebuild the `System` whenever
+        // the foreground process changes to keep the map bounded.
         if self.last_foreground_pid.lock().replace(pid) != Some(pid) {
             *system = System::new();
         }
@@ -156,20 +161,7 @@ impl PtyProcessInfo {
         unsafe { libc::killpg(pid.as_u32() as i32, libc::SIGKILL) == 0 }
     }
 
-    #[cfg(windows)]
-    pub(crate) fn kill_current_process(&self) -> bool {
-        if let Some(process_job) = &self.process_job {
-            match process_job.terminate() {
-                Ok(()) => return true,
-                Err(error) => {
-                    log::error!("failed to terminate terminal process job: {error:#}");
-                }
-            }
-        }
-        self.refresh().is_some_and(|process| process.kill())
-    }
-
-    #[cfg(all(not(unix), not(windows)))]
+    #[cfg(not(unix))]
     pub(crate) fn kill_current_process(&self) -> bool {
         self.refresh().is_some_and(|process| process.kill())
     }
@@ -190,20 +182,16 @@ impl PtyProcessInfo {
     }
 
     fn load(&self) -> Option<ProcessInfo> {
-        let process = self.refresh()?;
-        let cwd = process.cwd().map_or(PathBuf::new(), |p| p.to_owned());
-
-        let info = ProcessInfo {
-            name: process.name().to_str()?.to_owned(),
-            cwd,
+        let info = self.refresh().map(|process| ProcessInfo {
+            cwd: process.cwd().map_or(PathBuf::new(), |p| p.to_owned()),
             argv: process
                 .cmd()
                 .iter()
                 .filter_map(|s| s.to_str().map(ToOwned::to_owned))
                 .collect(),
-        };
-        *self.current.write() = Some(info.clone());
-        Some(info)
+        });
+        *self.current.write() = info.clone();
+        info
     }
 
     #[cfg(all(test, unix))]
@@ -211,32 +199,50 @@ impl PtyProcessInfo {
         self.load()
     }
 
-    /// Updates the cached process info, emitting a [`Event::TitleChanged`] event if the dez-relevant info has changed
-    pub(crate) fn emit_title_changed_if_changed(self: &Arc<Self>, cx: &mut Context<'_, Terminal>) {
+    pub(crate) fn refresh_current(self: &Arc<Self>, cx: &mut Context<'_, Terminal>) {
         if self.task.lock().is_some() {
+            // Process refresh is asynchronous. A command can replace the shell
+            // while the previous inspection is still in flight, and a quiet
+            // TUI may not emit another wakeup after that transition. Coalesce
+            // the burst, but retain one trailing refresh so the final
+            // foreground process is never stranded behind stale shell state.
+            self.refresh_pending.store(true, Ordering::Release);
             return;
         }
+        self.refresh_pending.store(false, Ordering::Release);
+        let previous = self.current.read().clone();
         let this = self.clone();
-        let has_changed = cx.background_executor().spawn(async move {
-            let previous = this.current.read().clone();
+        let refresh = cx.background_executor().spawn(async move {
             let current = this.load();
-            let has_changed = match (previous.as_ref(), current.as_ref()) {
-                (None, None) => false,
-                (Some(prev), Some(now)) => prev.cwd != now.cwd || prev.name != now.name,
-                _ => true,
+            let changed = current != previous;
+            let changed_cwd = match (&previous, &current) {
+                (Some(previous), Some(current)) if previous.cwd != current.cwd => {
+                    Some(current.cwd.clone())
+                }
+                (None, Some(current)) => Some(current.cwd.clone()),
+                _ => None,
             };
-            if has_changed {
-                *this.current.write() = current;
-            }
-            has_changed
+            (changed, changed_cwd)
         });
         let this = Arc::downgrade(self);
-        *self.task.lock() = Some(cx.spawn(async move |term, cx| {
-            if has_changed.await {
-                term.update(cx, |_, cx| cx.emit(Event::TitleChanged)).ok();
-            }
+        *self.task.lock() = Some(cx.spawn(async move |terminal, cx| {
+            let (changed, changed_cwd) = refresh.await;
             if let Some(this) = this.upgrade() {
                 this.task.lock().take();
+                let refresh_again = this.refresh_pending.swap(false, Ordering::AcqRel);
+                terminal
+                    .update(cx, |terminal, cx| {
+                        if let Some(working_directory) = changed_cwd {
+                            terminal.record_cwd_change(working_directory);
+                        }
+                        if changed {
+                            cx.emit(Event::ProcessInfoChanged);
+                        }
+                        if refresh_again {
+                            this.refresh_current(cx);
+                        }
+                    })
+                    .ok();
             }
         }));
     }
@@ -250,83 +256,46 @@ impl PtyProcessInfo {
 mod tests {
     use super::*;
 
+    /// Regression test for <https://github.com/zed-industries/zed/issues/58651>:
+    /// on Linux, sysinfo keeps an open `/proc/<pid>/stat` handle for every
+    /// `Process` entry retained in a `System`, and never evicts entries that are
+    /// absent from the refreshed pid set. The per-terminal `System` must
+    /// therefore not snapshot every process on the machine, nor accumulate an
+    /// entry per foreground process that has ever run in this terminal.
     #[test]
     #[allow(
         clippy::disallowed_methods,
         reason = "the test needs real short-lived child processes and may block"
     )]
-    fn process_map_stays_bounded_during_foreground_process_churn() {
+    fn process_map_stays_bounded() {
         let mut info = PtyProcessInfo::new(ProcessIdGetter::new(-1, std::process::id()));
         assert!(
             info.get_child().is_some(),
-            "the spawned child must be inspectable before the first foreground refresh"
+            "the spawned child must be inspectable for kill_child_process \
+             before the first foreground refresh"
         );
         assert!(info.load_for_test().is_some());
-        let initial_process_count = info.system.read().processes().len();
+        let initial_len = info.system.read().processes().len();
         assert!(
-            initial_process_count <= 2,
-            "creating one terminal retained {initial_process_count} process entries"
+            initial_len <= 2,
+            "creating a terminal retained {initial_len} process entries"
         );
 
         for _ in 0..3 {
             let mut child = std::process::Command::new("sleep")
                 .arg("30")
                 .spawn()
-                .expect("spawn foreground process");
+                .expect("failed to spawn child process");
             info.pid_getter = ProcessIdGetter::new(-1, child.id());
-            let loaded = info.load_for_test().is_some();
-            child.kill().expect("kill foreground process");
-            child.wait().expect("wait for foreground process");
-            assert!(loaded, "foreground process should be inspectable");
+            assert!(info.load_for_test().is_some());
+            child.kill().expect("failed to kill child process");
+            child.wait().expect("failed to wait for child process");
         }
 
-        let churned_process_count = info.system.read().processes().len();
+        let churned_len = info.system.read().processes().len();
         assert!(
-            churned_process_count <= 2,
-            "foreground churn retained {churned_process_count} process entries"
-        );
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    #[allow(
-        clippy::disallowed_methods,
-        reason = "the test needs real short-lived child processes and may block"
-    )]
-    fn foreground_process_churn_does_not_retain_procfs_descriptors() {
-        fn open_descriptor_count() -> usize {
-            std::fs::read_dir("/proc/self/fd")
-                .expect("read process descriptors")
-                .count()
-        }
-
-        let mut info = PtyProcessInfo::new(ProcessIdGetter::new(-1, std::process::id()));
-        let baseline_descriptor_count = open_descriptor_count();
-
-        for _ in 0..16 {
-            let mut child = std::process::Command::new("sleep")
-                .arg("30")
-                .spawn()
-                .expect("spawn foreground process");
-            info.pid_getter = ProcessIdGetter::new(-1, child.id());
-            let loaded = info.load_for_test().is_some();
-            child.kill().expect("kill foreground process");
-            child.wait().expect("wait for foreground process");
-            assert!(loaded, "foreground process should be inspectable");
-        }
-
-        let churned_descriptor_count = open_descriptor_count();
-        assert!(
-            churned_descriptor_count <= baseline_descriptor_count + 2,
-            "foreground churn retained {} procfs descriptors",
-            churned_descriptor_count.saturating_sub(baseline_descriptor_count)
-        );
-        assert!(
-            std::process::Command::new("true")
-                .status()
-                .expect("spawn process after descriptor stress")
-                .success(),
-            "new process should run after descriptor stress"
+            churned_len <= 2,
+            "foreground process churn retained {churned_len} process entries"
         );
     }
 }

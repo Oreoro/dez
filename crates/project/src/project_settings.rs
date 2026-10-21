@@ -1,6 +1,6 @@
 use anyhow::Context as _;
 use collections::HashMap;
-#[cfg(any())]
+use context_server::ContextServerCommand;
 use dap::adapters::DebugAdapterName;
 use fs::Fs;
 use futures::StreamExt as _;
@@ -8,9 +8,9 @@ use git::repository::DEFAULT_WORKTREE_DIRECTORY;
 use gpui::{AsyncApp, BorrowAppContext, Context, Entity, EventEmitter, Subscription, Task};
 use lsp::{DEFAULT_LSP_REQUEST_TIMEOUT_SECS, LanguageServerName};
 use paths::{
-    EDITORCONFIG_NAME, local_debug_file_relative_path, local_settings_file_relative_path,
-    local_tasks_file_relative_path, local_vscode_launch_file_relative_path,
-    local_vscode_tasks_file_relative_path, task_file_name,
+    EDITORCONFIG_NAME, debug_task_file_name, local_debug_file_relative_path,
+    local_settings_file_relative_path, local_tasks_file_relative_path,
+    local_vscode_launch_file_relative_path, local_vscode_tasks_file_relative_path, task_file_name,
 };
 use rpc::{
     AnyProtoClient, TypedEnvelope,
@@ -19,18 +19,16 @@ use rpc::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 pub use settings::BinarySettings;
-#[cfg(any())]
-use settings::DapSettingsContent;
 pub use settings::DirenvSettings;
 pub use settings::LspSettings;
 use settings::{
-    EditorconfigEvent, InvalidSettingsError, LocalSettingsKind, LocalSettingsPath, RegisterSetting,
-    SemanticTokenRules, Settings, SettingsLocation, SettingsStore, parse_json_with_comments,
-    watch_config_file,
+    DapSettingsContent, EditorconfigEvent, InvalidSettingsError, LocalSettingsKind,
+    LocalSettingsPath, RegisterSetting, SemanticTokenRules, Settings, SettingsLocation,
+    SettingsStore, parse_json_with_comments, watch_config_file,
 };
 use std::{cell::OnceCell, collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
 use task::{DebugTaskFile, TaskTemplates, VsCodeDebugTaskFile, VsCodeTaskFile};
-use util::{ResultExt, rel_path::RelPath};
+use util::{ResultExt, rel_path::RelPath, serde::default_true};
 use worktree::{PathChange, UpdatedEntriesSet, Worktree, WorktreeId};
 
 use crate::{
@@ -58,8 +56,14 @@ pub struct ProjectSettings {
     /// Common language server settings.
     pub global_lsp_settings: GlobalLspSettings,
 
-    #[cfg(any())]
+    /// Configuration for Debugger-related features
     pub dap: HashMap<DebugAdapterName, DapSettings>,
+
+    /// Settings for context servers used for AI-related features.
+    pub context_servers: HashMap<Arc<str>, ContextServerSettings>,
+
+    /// Default timeout for context server requests in seconds.
+    pub context_server_timeout: u64,
 
     /// Configuration for Diagnostics-related features.
     pub diagnostics: DiagnosticsSettings,
@@ -98,9 +102,9 @@ pub struct SessionSettings {
 pub struct NodeBinarySettings {
     /// The path to the Node binary.
     pub path: Option<String>,
-    /// The path to the npm binary dez should use (defaults to `.path/../npm`).
+    /// The path to the npm binary Zed should use (defaults to `.path/../npm`).
     pub npm_path: Option<String>,
-    /// If enabled, dez will download its own copy of Node.
+    /// If enabled, Zed will download its own copy of Node.
     pub ignore_system_version: bool,
 }
 
@@ -129,6 +133,10 @@ pub struct GlobalLspSettings {
     ///
     /// Default: `120`
     pub request_timeout: u64,
+    /// The maximum line length a buffer may contain before language server features are disabled for the entire buffer.
+    ///
+    /// Default: `20000`
+    pub max_buffer_line_length: u32,
     pub notifications: LspNotificationSettings,
 
     /// Rules for highlighting semantic tokens.
@@ -140,6 +148,7 @@ impl Default for GlobalLspSettings {
         Self {
             button: true,
             request_timeout: DEFAULT_LSP_REQUEST_TIMEOUT_SECS,
+            max_buffer_line_length: 20_000,
             notifications: LspNotificationSettings::default(),
             semantic_token_rules: SemanticTokenRules::default(),
         }
@@ -169,6 +178,171 @@ impl Default for LspNotificationSettings {
     fn default() -> Self {
         Self {
             dismiss_timeout_ms: Some(5000),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
+#[serde(tag = "source", rename_all = "snake_case")]
+pub enum ContextServerSettings {
+    Stdio {
+        /// Whether the context server is enabled.
+        #[serde(default = "default_true")]
+        enabled: bool,
+        /// If true, run this server on the remote server when using remote development.
+        #[serde(default)]
+        remote: bool,
+        #[serde(flatten)]
+        command: ContextServerCommand,
+    },
+    Http {
+        /// Whether the context server is enabled.
+        #[serde(default = "default_true")]
+        enabled: bool,
+        /// The URL of the remote context server.
+        url: String,
+        /// Optional authentication configuration for the remote server.
+        #[serde(skip_serializing_if = "HashMap::is_empty", default)]
+        headers: HashMap<String, String>,
+        /// Timeout for tool calls in milliseconds.
+        timeout: Option<u64>,
+        /// Pre-registered OAuth client credentials for authorization servers that
+        /// require out-of-band client registration.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        oauth: Option<OAuthClientSettings>,
+    },
+    Extension {
+        /// Whether the context server is enabled.
+        #[serde(default = "default_true")]
+        enabled: bool,
+        /// If true, run this server on the remote server when using remote development.
+        #[serde(default)]
+        remote: bool,
+        /// The settings for this context server specified by the extension.
+        ///
+        /// Consult the documentation for the context server to see what settings
+        /// are supported.
+        settings: serde_json::Value,
+    },
+}
+
+impl From<settings::ContextServerSettingsContent> for ContextServerSettings {
+    fn from(value: settings::ContextServerSettingsContent) -> Self {
+        match value {
+            settings::ContextServerSettingsContent::Stdio {
+                enabled,
+                remote,
+                command,
+            } => ContextServerSettings::Stdio {
+                enabled,
+                remote,
+                command,
+            },
+            settings::ContextServerSettingsContent::Extension {
+                enabled,
+                remote,
+                settings,
+            } => ContextServerSettings::Extension {
+                enabled,
+                remote,
+                settings,
+            },
+            settings::ContextServerSettingsContent::Http {
+                enabled,
+                url,
+                headers,
+                timeout,
+                oauth,
+            } => ContextServerSettings::Http {
+                enabled,
+                url,
+                headers,
+                timeout,
+                oauth: oauth.map(|o| OAuthClientSettings {
+                    client_id: o.client_id,
+                    client_secret: o.client_secret,
+                }),
+            },
+        }
+    }
+}
+impl Into<settings::ContextServerSettingsContent> for ContextServerSettings {
+    fn into(self) -> settings::ContextServerSettingsContent {
+        match self {
+            ContextServerSettings::Stdio {
+                enabled,
+                remote,
+                command,
+            } => settings::ContextServerSettingsContent::Stdio {
+                enabled,
+                remote,
+                command,
+            },
+            ContextServerSettings::Extension {
+                enabled,
+                remote,
+                settings,
+            } => settings::ContextServerSettingsContent::Extension {
+                enabled,
+                remote,
+                settings,
+            },
+            ContextServerSettings::Http {
+                enabled,
+                url,
+                headers,
+                timeout,
+                oauth,
+            } => settings::ContextServerSettingsContent::Http {
+                enabled,
+                url,
+                headers,
+                timeout,
+                oauth: oauth.map(|o| settings::OAuthClientSettings {
+                    client_id: o.client_id,
+                    client_secret: o.client_secret,
+                }),
+            },
+        }
+    }
+}
+
+/// Pre-registered OAuth client credentials for MCP servers that don't support
+/// Dynamic Client Registration.
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, JsonSchema, Debug)]
+pub struct OAuthClientSettings {
+    /// The OAuth client ID obtained from out-of-band registration with the
+    /// authorization server.
+    pub client_id: String,
+    /// The OAuth client secret, if this is a confidential client. For security,
+    /// prefer providing this interactively; we will prompt and store it in
+    /// the system keychain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_secret: Option<String>,
+}
+
+impl ContextServerSettings {
+    pub fn default_extension() -> Self {
+        Self::Extension {
+            enabled: true,
+            remote: false,
+            settings: serde_json::json!({}),
+        }
+    }
+
+    pub fn enabled(&self) -> bool {
+        match self {
+            ContextServerSettings::Stdio { enabled, .. } => *enabled,
+            ContextServerSettings::Http { enabled, .. } => *enabled,
+            ContextServerSettings::Extension { enabled, .. } => *enabled,
+        }
+    }
+
+    pub fn set_enabled(&mut self, enabled: bool) {
+        match self {
+            ContextServerSettings::Stdio { enabled: e, .. } => *e = enabled,
+            ContextServerSettings::Http { enabled: e, .. } => *e = enabled,
+            ContextServerSettings::Extension { enabled: e, .. } => *e = enabled,
         }
     }
 }
@@ -310,6 +484,10 @@ pub struct GitSettings {
     ///
     /// Default: staged_hollow
     pub hunk_style: settings::GitHunkStyleSetting,
+    /// Which base git features diff against.
+    ///
+    /// Default: head
+    pub diff_base: settings::GitDiffBaseSetting,
     /// How file paths are displayed in the git gutter.
     ///
     /// Default: file_name_first
@@ -355,6 +533,22 @@ impl From<settings::GitPathStyle> for GitPathStyle {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum InlineBlameLocation {
+    #[default]
+    Inline,
+    StatusBar,
+}
+
+impl From<settings::InlineBlameLocation> for InlineBlameLocation {
+    fn from(location: settings::InlineBlameLocation) -> Self {
+        match location {
+            settings::InlineBlameLocation::Inline => InlineBlameLocation::Inline,
+            settings::InlineBlameLocation::StatusBar => InlineBlameLocation::StatusBar,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct InlineBlameSettings {
     /// Whether or not to show git blame data inline in
@@ -367,6 +561,10 @@ pub struct InlineBlameSettings {
     ///
     /// Default: 0
     pub delay_ms: settings::DelayMs,
+    /// Where to render the blame information when enabled.
+    ///
+    /// Default: inline
+    pub location: InlineBlameLocation,
     /// The amount of padding between the end of the source line and the start
     /// of the inline blame in units of columns.
     ///
@@ -426,7 +624,7 @@ pub struct DiagnosticsSettings {
     /// Whether or not to include warning diagnostics.
     pub include_warnings: bool,
 
-    /// Settings for using LSP pull diagnostics mechanism in dez.
+    /// Settings for using LSP pull diagnostics mechanism in Zed.
     pub lsp_pull_diagnostics: LspPullDiagnosticsSettings,
 
     /// Settings for showing inline diagnostics.
@@ -495,6 +693,7 @@ impl Settings for ProjectSettings {
                 InlineBlameSettings {
                     enabled: inline.enabled.unwrap(),
                     delay_ms: inline.delay_ms.unwrap(),
+                    location: inline.location.unwrap().into(),
                     padding: inline.padding.unwrap(),
                     min_column: inline.min_column.unwrap(),
                     show_commit_summary: inline.show_commit_summary.unwrap(),
@@ -513,6 +712,7 @@ impl Settings for ProjectSettings {
                 }
             },
             hunk_style: git.hunk_style.unwrap(),
+            diff_base: git.diff_base.unwrap_or_default(),
             path_style: git.path_style.unwrap().into(),
             show_stage_restore_buttons: git.show_stage_restore_buttons.unwrap_or(true),
             worktree_directory: git
@@ -521,6 +721,13 @@ impl Settings for ProjectSettings {
                 .unwrap_or_else(|| DEFAULT_WORKTREE_DIRECTORY.to_string()),
         };
         Self {
+            context_servers: project
+                .context_servers
+                .clone()
+                .into_iter()
+                .map(|(key, value)| (key, value.into()))
+                .collect(),
+            context_server_timeout: project.context_server_timeout.unwrap_or(60),
             lsp: project
                 .lsp
                 .clone()
@@ -539,6 +746,12 @@ impl Settings for ProjectSettings {
                     .as_ref()
                     .unwrap()
                     .request_timeout
+                    .unwrap(),
+                max_buffer_line_length: content
+                    .global_lsp_settings
+                    .as_ref()
+                    .unwrap()
+                    .max_buffer_line_length
                     .unwrap(),
                 notifications: LspNotificationSettings {
                     dismiss_timeout_ms: content
@@ -559,7 +772,6 @@ impl Settings for ProjectSettings {
                     .unwrap()
                     .clone(),
             },
-            #[cfg(any())]
             dap: project
                 .dap
                 .clone()
@@ -602,6 +814,8 @@ pub enum SettingsObserverEvent {
     LocalSettingsUpdated(Result<PathBuf, InvalidSettingsError>),
     LocalTasksUpdated(Result<PathBuf, InvalidSettingsError>),
     LocalDebugScenariosUpdated(Result<PathBuf, InvalidSettingsError>),
+    GlobalTasksUpdated(Result<PathBuf, InvalidSettingsError>),
+    GlobalDebugScenariosUpdated(Result<PathBuf, InvalidSettingsError>),
 }
 
 impl EventEmitter<SettingsObserverEvent> for SettingsObserver {}
@@ -621,10 +835,10 @@ pub struct SettingsObserver {
     _global_debug_config_watcher: Task<()>,
 }
 
-/// SettingsObserver observers changes to .dez/{settings, task}.json files in local worktrees
+/// SettingsObserver observers changes to .zed/{settings, task}.json files in local worktrees
 /// (or the equivalent protobuf messages from upstream) and updates local settings
 /// and sends notifications downstream.
-/// In ssh mode it also monitors ~/.config/dez/{settings, task}.json and sends the content
+/// In ssh mode it also monitors ~/.config/zed/{settings, task}.json and sends the content
 /// upstream.
 impl SettingsObserver {
     pub fn init(client: &AnyProtoClient) {
@@ -827,7 +1041,7 @@ impl SettingsObserver {
                     .send(proto::UpdateWorktreeSettings {
                         project_id,
                         worktree_id,
-                        path: path.to_proto(),
+                        path: path.as_unix_str().to_owned(),
                         content: Some(content),
                         kind: Some(
                             local_settings_kind_to_proto(LocalSettingsKind::Settings).into(),
@@ -867,7 +1081,8 @@ impl SettingsObserver {
         mut cx: AsyncApp,
     ) -> anyhow::Result<()> {
         let kind = match envelope.payload.kind {
-            Some(kind) => proto::LocalSettingsKind::from_i32(kind)
+            Some(kind) => proto::LocalSettingsKind::try_from(kind)
+                .ok()
                 .with_context(|| format!("unknown kind {kind}"))?,
             None => proto::LocalSettingsKind::Settings,
         };
@@ -1010,7 +1225,7 @@ impl SettingsObserver {
                     .unwrap()
                     .into();
                 (settings_dir, LocalSettingsKind::Debug)
-            } else if path.ends_with(RelPath::unix(EDITORCONFIG_NAME).unwrap()) {
+            } else if path.ends_with(RelPath::from_unix_str(EDITORCONFIG_NAME).unwrap()) {
                 let Some(settings_dir) = path.parent().map(Arc::from) else {
                     continue;
                 };
@@ -1055,15 +1270,15 @@ impl SettingsObserver {
                                             .with_context(|| {
                                                 format!("parsing VSCode tasks, file {abs_path:?}")
                                             })?;
-                                    let dez_tasks = TaskTemplates::try_from(vscode_tasks)
+                                    let zed_tasks = TaskTemplates::try_from(vscode_tasks)
                                         .with_context(|| {
                                             format!(
-                                        "converting VSCode tasks into dez ones, file {abs_path:?}"
+                                        "converting VSCode tasks into Zed ones, file {abs_path:?}"
                                     )
                                         })?;
-                                    serde_json::to_string(&dez_tasks).with_context(|| {
+                                    serde_json::to_string(&zed_tasks).with_context(|| {
                                         format!(
-                                            "serializing dez tasks into JSON, file {abs_path:?}"
+                                            "serializing Zed tasks into JSON, file {abs_path:?}"
                                         )
                                     })
                                 } else if abs_path.ends_with(local_vscode_launch_file_relative_path().as_std_path()) {
@@ -1072,15 +1287,15 @@ impl SettingsObserver {
                                             .with_context(|| {
                                                 format!("parsing VSCode debug tasks, file {abs_path:?}")
                                             })?;
-                                    let dez_tasks = DebugTaskFile::try_from(vscode_tasks)
+                                    let zed_tasks = DebugTaskFile::try_from(vscode_tasks)
                                         .with_context(|| {
                                             format!(
-                                        "converting VSCode debug tasks into dez ones, file {abs_path:?}"
+                                        "converting VSCode debug tasks into Zed ones, file {abs_path:?}"
                                     )
                                         })?;
-                                    serde_json::to_string(&dez_tasks).with_context(|| {
+                                    serde_json::to_string(&zed_tasks).with_context(|| {
                                         format!(
-                                            "serializing dez tasks into JSON, file {abs_path:?}"
+                                            "serializing Zed tasks into JSON, file {abs_path:?}"
                                         )
                                     })
                                 } else {
@@ -1213,17 +1428,17 @@ impl SettingsObserver {
                             log::error!(
                                 "Failed to set local debug scenarios in {path:?}: {message:?}"
                             );
-                            cx.emit(SettingsObserverEvent::LocalTasksUpdated(Err(
+                            cx.emit(SettingsObserverEvent::LocalDebugScenariosUpdated(Err(
                                 InvalidSettingsError::Debug { path, message },
                             )));
                         }
                         Err(e) => {
-                            log::error!("Failed to set local tasks: {e}");
+                            log::error!("Failed to set local debug scenarios: {e}");
                         }
                         Ok(()) => {
-                            cx.emit(SettingsObserverEvent::LocalTasksUpdated(Ok(directory
-                                .as_std_path()
-                                .join(task_file_name()))));
+                            cx.emit(SettingsObserverEvent::LocalDebugScenariosUpdated(Ok(
+                                directory.as_std_path().join(debug_task_file_name()),
+                            )));
                         }
                     }
                 }
@@ -1272,20 +1487,9 @@ impl SettingsObserver {
             }) else {
                 return;
             };
-            if let Some(user_tasks_content) = user_tasks_content {
-                task_store
-                    .update(cx, |task_store, cx| {
-                        task_store
-                            .update_user_tasks(
-                                TaskSettingsLocation::Global(&file_path),
-                                Some(&user_tasks_content),
-                                cx,
-                            )
-                            .log_err();
-                    })
-                    .ok();
-            }
-            while let Some(user_tasks_content) = user_tasks_file_rx.next().await {
+            let mut user_tasks_contents =
+                futures::stream::iter(user_tasks_content).chain(user_tasks_file_rx);
+            while let Some(user_tasks_content) = user_tasks_contents.next().await {
                 let Ok(result) = task_store.update(cx, |task_store, cx| {
                     task_store.update_user_tasks(
                         TaskSettingsLocation::Global(&file_path),
@@ -1298,20 +1502,16 @@ impl SettingsObserver {
 
                 settings_observer
                     .update(cx, |_, cx| match result {
-                        Ok(()) => cx.emit(SettingsObserverEvent::LocalTasksUpdated(Ok(
+                        Ok(()) => cx.emit(SettingsObserverEvent::GlobalTasksUpdated(Ok(
                             file_path.clone()
                         ))),
-                        Err(err) => cx.emit(SettingsObserverEvent::LocalTasksUpdated(Err(
-                            InvalidSettingsError::Tasks {
-                                path: file_path.clone(),
-                                message: err.to_string(),
-                            },
-                        ))),
+                        Err(err) => cx.emit(SettingsObserverEvent::GlobalTasksUpdated(Err(err))),
                     })
                     .ok();
             }
         })
     }
+
     fn subscribe_to_global_debug_scenarios_changes(
         fs: Arc<dyn Fs>,
         file_path: PathBuf,
@@ -1327,20 +1527,9 @@ impl SettingsObserver {
             }) else {
                 return;
             };
-            if let Some(user_tasks_content) = user_tasks_content {
-                task_store
-                    .update(cx, |task_store, cx| {
-                        task_store
-                            .update_user_debug_scenarios(
-                                TaskSettingsLocation::Global(&file_path),
-                                Some(&user_tasks_content),
-                                cx,
-                            )
-                            .log_err();
-                    })
-                    .ok();
-            }
-            while let Some(user_tasks_content) = user_tasks_file_rx.next().await {
+            let mut user_tasks_contents =
+                futures::stream::iter(user_tasks_content).chain(user_tasks_file_rx);
+            while let Some(user_tasks_content) = user_tasks_contents.next().await {
                 let Ok(result) = task_store.update(cx, |task_store, cx| {
                     task_store.update_user_debug_scenarios(
                         TaskSettingsLocation::Global(&file_path),
@@ -1353,15 +1542,12 @@ impl SettingsObserver {
 
                 settings_observer
                     .update(cx, |_, cx| match result {
-                        Ok(()) => cx.emit(SettingsObserverEvent::LocalDebugScenariosUpdated(Ok(
+                        Ok(()) => cx.emit(SettingsObserverEvent::GlobalDebugScenariosUpdated(Ok(
                             file_path.clone(),
                         ))),
-                        Err(err) => cx.emit(SettingsObserverEvent::LocalDebugScenariosUpdated(
-                            Err(InvalidSettingsError::Tasks {
-                                path: file_path.clone(),
-                                message: err.to_string(),
-                            }),
-                        )),
+                        Err(err) => {
+                            cx.emit(SettingsObserverEvent::GlobalDebugScenariosUpdated(Err(err)))
+                        }
                     })
                     .ok();
             }
@@ -1422,14 +1608,12 @@ pub fn local_settings_kind_to_proto(kind: LocalSettingsKind) -> proto::LocalSett
 }
 
 #[derive(Debug, Clone)]
-#[cfg(any())]
 pub struct DapSettings {
     pub binary: DapBinary,
     pub args: Option<Vec<String>>,
     pub env: Option<HashMap<String, String>>,
 }
 
-#[cfg(any())]
 impl From<DapSettingsContent> for DapSettings {
     fn from(content: DapSettingsContent) -> Self {
         DapSettings {

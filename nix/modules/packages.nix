@@ -8,18 +8,21 @@
       ...
     }:
     let
-      mkDez = import ../toolchain.nix { inherit inputs; };
-      dez-editor = mkDez pkgs;
+      mkZed = import ../toolchain.nix { inherit inputs; };
+      zed-editor = mkZed pkgs;
     in
     {
       packages = {
-        default = dez-editor;
-        debug = dez-editor.override { profile = "dev"; };
+        default = zed-editor;
+        debug = zed-editor.override { profile = "dev"; };
       };
     }
     // lib.optionalAttrs (lib.hasSuffix "linux" system) {
-      checks.a11y-test = import ../tests/a11y.nix {
-        inherit pkgs inputs;
-      };
+      checks = {
+        a11y-test = import ../tests/a11y.nix {
+          inherit pkgs inputs;
+        };
+      }
+      // import ../tests/sandboxing { inherit pkgs inputs; };
     };
 }

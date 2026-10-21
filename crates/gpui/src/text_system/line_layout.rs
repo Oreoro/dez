@@ -125,6 +125,68 @@ impl LineLayout {
         None
     }
 
+    /// Split this layout at a byte index, returning `(prefix, suffix)`.
+    ///
+    /// - `prefix` contains glyphs for bytes `[0, byte_index)` with original positions.
+    ///   Its width equals the x-advance up to the split point.
+    /// - `suffix` contains glyphs for bytes `[byte_index, len)` with positions
+    ///   shifted left so the first glyph starts at x=0, and byte indices rebased to 0.
+    /// - `font_size`, `ascent`, and `descent` are copied to both halves.
+    pub fn split_at(&self, byte_index: usize) -> (LineLayout, LineLayout) {
+        let x_offset = self.x_for_index(byte_index);
+
+        // Partition glyph runs. A single run may contribute glyphs to both halves.
+        let mut left_runs = Vec::new();
+        let mut right_runs = Vec::new();
+
+        for run in &self.runs {
+            let split_pos = run.glyphs.partition_point(|g| g.index < byte_index);
+
+            if split_pos > 0 {
+                left_runs.push(ShapedRun {
+                    font_id: run.font_id,
+                    glyphs: run.glyphs[..split_pos].to_vec(),
+                });
+            }
+
+            if split_pos < run.glyphs.len() {
+                let right_glyphs = run.glyphs[split_pos..]
+                    .iter()
+                    .map(|g| ShapedGlyph {
+                        id: g.id,
+                        position: point(g.position.x - x_offset, g.position.y),
+                        index: g.index - byte_index,
+                        is_emoji: g.is_emoji,
+                    })
+                    .collect();
+                right_runs.push(ShapedRun {
+                    font_id: run.font_id,
+                    glyphs: right_glyphs,
+                });
+            }
+        }
+
+        let left = LineLayout {
+            font_size: self.font_size,
+            width: x_offset,
+            ascent: self.ascent,
+            descent: self.descent,
+            runs: left_runs,
+            len: byte_index,
+        };
+
+        let right = LineLayout {
+            font_size: self.font_size,
+            width: self.width - x_offset,
+            ascent: self.ascent,
+            descent: self.descent,
+            runs: right_runs,
+            len: self.len - byte_index,
+        };
+
+        (left, right)
+    }
+
     fn compute_wrap_boundaries(
         &self,
         text: &str,
@@ -204,6 +266,60 @@ impl LineLayout {
         }
 
         boundaries
+    }
+
+    /// The width of the widest segment of this line that wrapping cannot
+    /// break: the maximum distance between successive wrap opportunities, as
+    /// determined by the same break-candidate rules as
+    /// [`Self::compute_wrap_boundaries`]. Wrapping this line to any width at
+    /// least this wide is guaranteed to break only at candidate positions or
+    /// whitespace, never mid-word.
+    ///
+    /// Trailing whitespace is excluded from each segment, matching how CSS
+    /// computes min-content widths (whitespace at a wrap point hangs rather
+    /// than forcing the line wider).
+    ///
+    /// `text` must be the string this line was shaped from.
+    pub fn min_content_width(&self, text: &str) -> Pixels {
+        let mut max_segment_width = px(0.);
+        let mut segment_start_x = px(0.);
+        let mut first_non_whitespace_ix = None;
+        let mut prev_ch = '\0';
+        let mut glyphs = self
+            .runs
+            .iter()
+            .flat_map(|run| run.glyphs.iter())
+            .peekable();
+
+        while let Some(glyph) = glyphs.next() {
+            let ch = text[glyph.index..].chars().next().unwrap();
+            if ch == '\n' {
+                continue;
+            }
+
+            // Break-candidate rules must match `compute_wrap_boundaries`
+            // exactly; a segment is the span between successive candidates.
+            let is_break_candidate = if LineWrapper::is_word_char(ch) {
+                prev_ch == ' ' && ch != ' ' && first_non_whitespace_ix.is_some()
+            } else {
+                ch != ' ' && first_non_whitespace_ix.is_some()
+            };
+            if is_break_candidate {
+                segment_start_x = glyph.position.x;
+            }
+
+            if ch != ' ' && first_non_whitespace_ix.is_none() {
+                first_non_whitespace_ix = Some(glyph.index);
+            }
+
+            if ch != ' ' {
+                let glyph_end_x = glyphs.peek().map_or(self.width, |glyph| glyph.position.x);
+                max_segment_width = max_segment_width.max(glyph_end_x - segment_start_x);
+            }
+            prev_ch = ch;
+        }
+
+        max_segment_width
     }
 }
 
@@ -1077,33 +1193,186 @@ mod tests {
     }
 
     #[test]
-    fn wraps_simplified_chinese_without_spaces() {
-        let text = "中文界面";
-        let layout = make_layout(vec![
-            glyph_at(0., 0),
-            glyph_at(10., 3),
-            glyph_at(20., 6),
-            glyph_at(30., 9),
-        ]);
+    fn test_min_content_width_uniform_glyphs() {
+        // Widest word wins; the shorter segments don't contribute.
+        assert_eq!(min_content_width_of("aaa bbb cc", 8.), px(24.));
+        assert_eq!(min_content_width_of("aa bbbbb", 8.), px(40.));
 
-        let boundaries = layout.compute_wrap_boundaries(text, px(15.), None);
+        // A single unbreakable line is its own min-content width.
+        assert_eq!(min_content_width_of("abcdef", 8.), px(48.));
 
-        assert_eq!(
-            boundaries.as_slice(),
-            [
-                WrapBoundary {
-                    run_ix: 0,
-                    glyph_ix: 1,
-                },
-                WrapBoundary {
-                    run_ix: 0,
-                    glyph_ix: 2,
-                },
-                WrapBoundary {
-                    run_ix: 0,
-                    glyph_ix: 3,
-                },
-            ]
-        );
+        // Trailing whitespace hangs rather than widening the segment.
+        assert_eq!(min_content_width_of("aaa   ", 8.), px(24.));
+
+        // CJK allows a break after every character.
+        assert_eq!(min_content_width_of("你好世界", 8.), px(8.));
+
+        // A latin word cannot break away from a preceding CJK character, so
+        // "你cd" forms one segment.
+        assert_eq!(min_content_width_of("ab你cd", 8.), px(24.));
+
+        // Word-glue punctuation stays attached (`-` is a word character).
+        assert_eq!(min_content_width_of("a-b cc", 8.), px(24.));
+
+        // Degenerate inputs.
+        assert_eq!(min_content_width_of("", 8.), px(0.));
+        assert_eq!(min_content_width_of("   ", 8.), px(0.));
+    }
+
+    /// Shape `text` as uniform-width glyphs and return its min-content width.
+    fn min_content_width_of(text: &str, char_width: f32) -> Pixels {
+        let mut glyphs = Vec::new();
+        let mut x = 0.;
+        for (byte_ix, _) in text.char_indices() {
+            glyphs.push(glyph_at(x, byte_ix));
+            x += char_width;
+        }
+        let layout = LineLayout {
+            font_size: px(16.),
+            width: px(x),
+            ascent: px(12.),
+            descent: px(4.),
+            runs: vec![ShapedRun {
+                font_id: FontId(0),
+                glyphs,
+            }],
+            len: text.len(),
+        };
+        layout.min_content_width(text)
+    }
+
+    /// The theorem content-sized text measurement rests on: wrapping at
+    /// exactly the min-content width never breaks mid-word, and wrapping any
+    /// narrower does. Uses the bundled IBM Plex face so glyph metrics are
+    /// stable regardless of what fonts the host machine has installed.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn test_min_content_width_agrees_with_wrap_boundaries() {
+        use crate::{TestAppContext, TestDispatcher, TextRun, WindowTextSystem, font};
+
+        const IBM_PLEX_SANS_REGULAR: &[u8] =
+            include_bytes!("../../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf");
+
+        let dispatcher = TestDispatcher::new(0);
+        let cx = TestAppContext::build(dispatcher, None);
+        {
+            cx.text_system()
+                .add_fonts(vec![IBM_PLEX_SANS_REGULAR.into()])
+                .unwrap();
+            let text_system = WindowTextSystem::new(cx.text_system().clone());
+            let font_size = px(16.);
+
+            let corpus = [
+                "aa bbb cccc ddddd eeee",
+                "The quick brown fox jumps over the lazy dog",
+                "supercalifragilisticexpialidocious tiny words",
+                "Hello world你好世界",
+                "word-with-hyphens and_underscores 3.1415 I'm",
+                "multiple   spaces   between words",
+                "trailing spaces   ",
+                "onewordonly",
+                "hard\nline breaks\nwith words",
+            ];
+
+            for text in corpus {
+                let run = TextRun {
+                    len: text.len(),
+                    font: font("IBM Plex Sans"),
+                    ..Default::default()
+                };
+
+                let unwrapped = text_system
+                    .shape_text(
+                        text.into(),
+                        font_size,
+                        std::slice::from_ref(&run),
+                        None,
+                        None,
+                    )
+                    .unwrap();
+                let min_content_width = unwrapped.iter().fold(px(0.), |width, line| {
+                    width.max(line.unwrapped_layout.min_content_width(&line.text))
+                });
+                let max_content_width = unwrapped
+                    .iter()
+                    .fold(px(0.), |width, line| width.max(line.unwrapped_layout.width));
+                assert!(
+                    min_content_width <= max_content_width,
+                    "min-content width {min_content_width:?} exceeds unwrapped width \
+                     {max_content_width:?} for {text:?}"
+                );
+
+                let wrapped = text_system
+                    .shape_text(
+                        text.into(),
+                        font_size,
+                        &[run],
+                        Some(min_content_width),
+                        None,
+                    )
+                    .unwrap();
+                for boundary_char in wrap_boundary_chars(&wrapped) {
+                    let (ch, prev) = boundary_char;
+                    assert!(
+                        !(LineWrapper::is_word_char(ch) && prev != ' '),
+                        "wrapping {text:?} at its min-content width \
+                         {min_content_width:?} broke mid-word before {ch:?}"
+                    );
+                }
+            }
+
+            // Tightness: any narrower than min-content forces a mid-word break
+            // inside the widest segment.
+            let text = "tiny extraordinarily tiny";
+            let run = TextRun {
+                len: text.len(),
+                font: font("IBM Plex Sans"),
+                ..Default::default()
+            };
+            let unwrapped = text_system
+                .shape_text(
+                    text.into(),
+                    font_size,
+                    std::slice::from_ref(&run),
+                    None,
+                    None,
+                )
+                .unwrap();
+            let min_content_width = unwrapped.iter().fold(px(0.), |width, line| {
+                width.max(line.unwrapped_layout.min_content_width(&line.text))
+            });
+            let wrapped = text_system
+                .shape_text(
+                    text.into(),
+                    font_size,
+                    &[run],
+                    Some(min_content_width - px(1.)),
+                    None,
+                )
+                .unwrap();
+            assert!(
+                wrap_boundary_chars(&wrapped)
+                    .into_iter()
+                    .any(|(ch, prev)| LineWrapper::is_word_char(ch) && prev != ' '),
+                "wrapping narrower than the min-content width should force a mid-word break"
+            );
+        }
+    }
+
+    /// The characters at each wrap boundary of `lines`, paired with the
+    /// character immediately preceding the break.
+    #[cfg(target_os = "macos")]
+    fn wrap_boundary_chars(lines: &[crate::WrappedLine]) -> Vec<(char, char)> {
+        let mut chars = Vec::new();
+        for line in lines {
+            for boundary in line.wrap_boundaries() {
+                let ix =
+                    line.unwrapped_layout.runs[boundary.run_ix].glyphs[boundary.glyph_ix].index;
+                let ch = line.text[ix..].chars().next().unwrap();
+                let prev = line.text[..ix].chars().next_back().unwrap();
+                chars.push((ch, prev));
+            }
+        }
+        chars
     }
 }

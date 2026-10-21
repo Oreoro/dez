@@ -19,7 +19,7 @@ use std::{
 ///
 /// This will create actions with names like `editor::MoveUp`, `editor::MoveDown`, etc.
 ///
-/// The namespace argument `editor` can also be omitted, though it is required for dez actions.
+/// The namespace argument `editor` can also be omitted, though it is required for Zed actions.
 #[macro_export]
 macro_rules! actions {
     ($namespace:path, [ $( $(#[$attr:meta])* $name:ident),* $(,)? ]) => {
@@ -67,11 +67,11 @@ macro_rules! actions {
 ///
 /// The derive macro for `Action` requires that the type implement `Clone` and `PartialEq`. It also
 /// requires `serde::Deserialize` and `schemars::JsonSchema` unless `#[action(no_json)]` is
-/// specified. In dez these trait impls are used to load keymaps from JSON.
+/// specified. In Zed these trait impls are used to load keymaps from JSON.
 ///
 /// Multiple arguments separated by commas may be specified in `#[action(...)]`:
 ///
-/// - `namespace = some_namespace` sets the namespace. In dez this is required.
+/// - `namespace = some_namespace` sets the namespace. In Zed this is required.
 ///
 /// - `name = "ActionName"` overrides the action's name. This must not contain `::`.
 ///
@@ -83,11 +83,11 @@ macro_rules! actions {
 ///
 /// - `deprecated_aliases = ["editor::SomeAction"]` specifies deprecated old names for the action.
 ///   These action names should *not* correspond to any actions that are registered. These old names
-///   can then still be used to refer to invoke this action. In dez, the keymap JSON schema will
+///   can then still be used to refer to invoke this action. In Zed, the keymap JSON schema will
 ///   accept these old names and provide warnings.
 ///
 /// - `deprecated = "Message about why this action is deprecation"` specifies a deprecation message.
-///   In dez, the keymap JSON schema will cause this to be displayed as a warning.
+///   In Zed, the keymap JSON schema will cause this to be displayed as a warning.
 ///
 /// # Manual Implementation
 ///
@@ -144,7 +144,7 @@ pub trait Action: Any + Send {
     }
 
     /// A list of alternate, deprecated names for this action. These names can still be used to
-    /// invoke the action. In dez, the keymap JSON schema will accept these old names and provide
+    /// invoke the action. In Zed, the keymap JSON schema will accept these old names and provide
     /// warnings.
     fn deprecated_aliases() -> &'static [&'static str]
     where
@@ -153,7 +153,7 @@ pub trait Action: Any + Send {
         &[]
     }
 
-    /// Returns the deprecation message for this action, if any. In dez, the keymap JSON schema will
+    /// Returns the deprecation message for this action, if any. In Zed, the keymap JSON schema will
     /// cause this to be displayed as a warning.
     fn deprecation_message() -> Option<&'static str>
     where
@@ -187,7 +187,7 @@ impl dyn Action {
     }
 }
 
-/// Error type for `Keystroke::parse`. This is used instead of `anyhow::Error` so that dez can use
+/// Error type for `Keystroke::parse`. This is used instead of `anyhow::Error` so that Zed can use
 /// markdown to display it.
 #[derive(Debug)]
 pub enum ActionBuildError {
@@ -342,6 +342,7 @@ impl ActionRegistry {
         Ok(self.build_action(name, None)?)
     }
 
+    #[cfg(feature = "profiler")]
     pub(crate) fn try_resolve_action(&self, type_id: &TypeId) -> Option<&'static str> {
         self.names_by_type_id.get(type_id).copied()
     }
@@ -427,7 +428,7 @@ mod no_action {
     use serde::Deserialize;
 
     actions!(
-        dez,
+        zed,
         [
             /// Action with special handling which unbinds the keybinding this is associated with,
             /// if it is the highest precedence match.
@@ -440,9 +441,9 @@ mod no_action {
     ///
     /// In keymap JSON this is written as:
     ///
-    /// `["dez::Unbind", "editor::NewLine"]`
+    /// `["zed::Unbind", "editor::NewLine"]`
     #[derive(Clone, Debug, PartialEq, Deserialize, JsonSchema, gpui::Action)]
-    #[action(namespace = dez)]
+    #[action(namespace = zed)]
     pub struct Unbind(pub gpui::SharedString);
 
     /// Returns whether or not this action represents a removed key binding.

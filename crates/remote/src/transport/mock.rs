@@ -30,8 +30,8 @@
 //! ```
 
 use crate::remote_client::{
-    ChannelClient, CommandTemplate, ConnectionSharing, Interactive, RemoteClientDelegate,
-    RemoteConnection, RemoteConnectionOptions,
+    ChannelClient, CommandTemplate, Interactive, RemoteClientDelegate, RemoteConnection,
+    RemoteConnectionOptions,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -162,16 +162,8 @@ impl MockConnection {
     ) -> (AnyProtoClient, ConnectGuard) {
         let (outgoing_tx, _) = mpsc::unbounded::<Envelope>();
         let (_, incoming_rx) = mpsc::unbounded::<Envelope>();
-        let server_client = server_cx.update(|cx| {
-            ChannelClient::new(
-                incoming_rx,
-                outgoing_tx,
-                cx,
-                "mock-server",
-                false,
-                Vec::new(),
-            )
-        });
+        let server_client = server_cx
+            .update(|cx| ChannelClient::new(incoming_rx, outgoing_tx, cx, "mock-server", false));
 
         let connection = Arc::new(MockRemoteConnection {
             options: opts.clone(),
@@ -193,14 +185,6 @@ impl MockConnection {
 
 #[async_trait(?Send)]
 impl RemoteConnection for MockRemoteConnection {
-    fn platform(&self) -> Option<crate::RemotePlatform> {
-        Some(crate::RemotePlatform {
-            os: crate::RemoteOs::Linux,
-            arch: crate::RemoteArch::X86_64,
-            libc: Some(crate::RemoteLibc::Glibc),
-        })
-    }
-
     async fn kill(&self) -> Result<()> {
         Ok(())
     }
@@ -217,7 +201,6 @@ impl RemoteConnection for MockRemoteConnection {
         _working_dir: Option<String>,
         _port_forward: Option<(u16, String, u16)>,
         _interactive: Interactive,
-        _connection_sharing: ConnectionSharing,
     ) -> Result<CommandTemplate> {
         let shell_program = program.unwrap_or_else(|| "sh".to_string());
         let mut shell_args = Vec::new();
@@ -252,36 +235,6 @@ impl RemoteConnection for MockRemoteConnection {
         _cx: &App,
     ) -> Task<Result<()>> {
         Task::ready(Ok(()))
-    }
-
-    fn upload_file(
-        &self,
-        _src_path: PathBuf,
-        _dest_path: RemotePathBuf,
-        _cx: &App,
-    ) -> Task<Result<()>> {
-        Task::ready(Ok(()))
-    }
-
-    async fn upload_file_now(&self, _src_path: PathBuf, _dest_path: RemotePathBuf) -> Result<()> {
-        Ok(())
-    }
-
-    async fn open_reverse_port_forward(
-        &self,
-        _local_port: u16,
-        _executor: &gpui::BackgroundExecutor,
-    ) -> Result<crate::RemotePortForward> {
-        anyhow::bail!("mock connection does not support reverse port forwarding")
-    }
-
-    async fn open_local_port_forward(
-        &self,
-        _local_port: u16,
-        _remote_port: u16,
-        _executor: &gpui::BackgroundExecutor,
-    ) -> Result<crate::LocalPortForward> {
-        anyhow::bail!("mock connection does not support local port forwarding")
     }
 
     fn connection_options(&self) -> RemoteConnectionOptions {
@@ -339,6 +292,17 @@ impl RemoteConnection for MockRemoteConnection {
         PathStyle::local()
     }
 
+    fn remote_platform(&self) -> crate::RemotePlatform {
+        crate::RemotePlatform {
+            os: crate::RemoteOs::Linux,
+            arch: crate::RemoteArch::X86_64,
+        }
+    }
+
+    fn remote_os_version(&self) -> Option<String> {
+        None
+    }
+
     fn shell(&self) -> String {
         "sh".to_owned()
     }
@@ -360,6 +324,7 @@ impl RemoteClientDelegate for MockDelegate {
         &self,
         _prompt: String,
         _sender: futures::channel::oneshot::Sender<askpass::EncryptedPassword>,
+        _cancellation: futures::channel::oneshot::Receiver<()>,
         _cx: &mut AsyncApp,
     ) {
         unreachable!("MockDelegate::ask_password should not be called in tests")

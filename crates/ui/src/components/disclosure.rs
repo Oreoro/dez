@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use gpui::{AnyView, ClickEvent, CursorStyle, SharedString};
+use gpui::{AnyView, ClickEvent, SharedString};
 
+use crate::IconButtonShape;
 use crate::prelude::*;
 
 #[derive(IntoElement, RegisterComponent)]
@@ -10,12 +11,15 @@ pub struct Disclosure {
     is_open: bool,
     selected: bool,
     disabled: bool,
-    on_toggle_expanded: Option<Arc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
-    cursor_style: CursorStyle,
-    opened_icon: IconName,
     closed_icon: IconName,
+    shape: Option<IconButtonShape>,
     visible_on_hover: Option<SharedString>,
+    visible_on_focus: Option<bool>,
     tooltip: Option<Box<dyn Fn(&mut Window, &mut App) -> AnyView + 'static>>,
+    aria_label: Option<SharedString>,
+    tab_index: Option<isize>,
+    on_toggle_expanded: Option<Arc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
+    opened_icon: IconName,
 }
 
 impl Disclosure {
@@ -26,16 +30,33 @@ impl Disclosure {
             selected: false,
             disabled: false,
             on_toggle_expanded: None,
-            cursor_style: CursorStyle::PointingHand,
             opened_icon: IconName::ChevronDown,
             closed_icon: IconName::ChevronRight,
+            shape: None,
             visible_on_hover: None,
+            visible_on_focus: None,
             tooltip: None,
+            aria_label: None,
+            tab_index: None,
         }
     }
 
     pub fn tooltip(mut self, tooltip: impl Fn(&mut Window, &mut App) -> AnyView + 'static) -> Self {
         self.tooltip = Some(Box::new(tooltip));
+        self
+    }
+
+    /// Adds the disclosure trigger to an explicit keyboard tab order.
+    pub fn tab_index(mut self, tab_index: impl Into<isize>) -> Self {
+        self.tab_index = Some(tab_index.into());
+        self
+    }
+
+    /// Sets a context-specific label for the disclosure trigger.
+    ///
+    /// When omitted, the trigger is announced as "Expand" or "Collapse".
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
         self
     }
 
@@ -61,6 +82,17 @@ impl Disclosure {
         self.disabled = disabled;
         self
     }
+
+    /// Sets the shape of the underlying [`IconButton`].
+    pub fn shape(mut self, shape: IconButtonShape) -> Self {
+        self.shape = Some(shape);
+        self
+    }
+
+    /// Alias for [`Self::on_toggle_expanded`].
+    pub fn on_click(self, handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
+        self.on_toggle_expanded(Arc::new(handler) as Arc<_>)
+    }
 }
 
 impl Toggleable for Disclosure {
@@ -70,21 +102,15 @@ impl Toggleable for Disclosure {
     }
 }
 
-impl Clickable for Disclosure {
-    fn on_click(mut self, handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
-        self.on_toggle_expanded = Some(Arc::new(handler));
-        self
-    }
-
-    fn cursor_style(mut self, cursor_style: gpui::CursorStyle) -> Self {
-        self.cursor_style = cursor_style;
-        self
-    }
-}
-
 impl VisibleOnHover for Disclosure {
     fn visible_on_hover(mut self, group_name: impl Into<SharedString>) -> Self {
         self.visible_on_hover = Some(group_name.into());
+        self
+    }
+
+    fn visible_on_hover_or_focus(mut self, group_name: impl Into<SharedString>) -> Self {
+        self.visible_on_hover = Some(group_name.into());
+        self.visible_on_focus = Some(true);
         self
     }
 }
@@ -100,10 +126,24 @@ impl RenderOnce for Disclosure {
         )
         .icon_color(Color::Muted)
         .icon_size(IconSize::Small)
+        .when_some(self.tab_index, |this, tab_index| this.tab_index(tab_index))
+        .aria_label(self.aria_label.unwrap_or_else(|| {
+            if self.is_open {
+                "Collapse".into()
+            } else {
+                "Expand".into()
+            }
+        }))
+        .aria_expanded(self.is_open)
         .disabled(self.disabled)
+        .when_some(self.shape, |this, shape| this.shape(shape))
         .toggle_state(self.selected)
         .when_some(self.visible_on_hover.clone(), |this, group_name| {
-            this.visible_on_hover(group_name)
+            if self.visible_on_focus == Some(true) {
+                this.visible_on_hover_or_focus(group_name)
+            } else {
+                this.visible_on_hover(group_name)
+            }
         })
         .when_some(self.tooltip, |this, tooltip| this.tooltip(tooltip))
         .when_some(self.on_toggle_expanded, move |this, on_toggle| {

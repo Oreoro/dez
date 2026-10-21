@@ -5,7 +5,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: '1'
   CARGO_INCREMENTAL: '0'
-  ZED_EXTENSION_CLI_SHA: ca0fd8d4e16e0e2687058552a9545625f00e0fb3
+  ZED_EXTENSION_CLI_SHA: 9ee3c503a4bbbc6b4a0f8a789acca4871d773223
 on:
   workflow_call:
     inputs:
@@ -28,10 +28,12 @@ on:
       app-secret:
         description: The app secret for the corresponding app ID
         required: true
+permissions:
+  contents: read
 jobs:
   check_version_changed:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -71,7 +73,7 @@ jobs:
     if: |-
       (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') &&
       (inputs.force-bump == true || needs.check_version_changed.outputs.version_changed == 'false')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -79,15 +81,21 @@ jobs:
       with:
         app-id: ${{ secrets.app-id }}
         private-key: ${{ secrets.app-secret }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+        permission-contents: write
+        permission-issues: write
+        permission-pull-requests: write
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: extension_bump::install_bump_2_version
       run: pip install bump2version --break-system-packages
     - id: bump-version
@@ -116,7 +124,7 @@ jobs:
             {
                 echo "title=Bump version to ${NEW_VERSION}";
                 echo "body=This PR bumps the version of this extension to v${NEW_VERSION}";
-                echo "branch_name=dez-zippy-autobump";
+                echo "branch_name=zed-zippy-autobump";
             } >> "$GITHUB_OUTPUT"
         else
             {
@@ -128,7 +136,7 @@ jobs:
                 echo "";
                 echo "- N/A";
                 echo "EOF";
-                echo "branch_name=dez-zippy-${EXTENSION_ID}-autobump";
+                echo "branch_name=zed-zippy-${EXTENSION_ID}-autobump";
             } >> "$GITHUB_OUTPUT"
         fi
 
@@ -144,8 +152,8 @@ jobs:
         body: ${{ steps.bump-version.outputs.body }}
         commit-message: ${{ steps.bump-version.outputs.title }}
         branch: ${{ steps.bump-version.outputs.branch_name }}
-        committer: dez-zippy[bot] <234243425+dez-zippy[bot]@users.noreply.github.com>
-        author: dez-zippy[bot] <234243425+dez-zippy[bot]@users.noreply.github.com>
+        committer: zed-zippy[bot] <234243425+zed-zippy[bot]@users.noreply.github.com>
+        author: zed-zippy[bot] <234243425+zed-zippy[bot]@users.noreply.github.com>
         base: main
         delete-branch: true
         token: ${{ steps.generate-token.outputs.token }}
@@ -160,7 +168,7 @@ jobs:
     needs:
     - check_version_changed
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check_version_changed.outputs.version_changed == 'true'
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -168,6 +176,9 @@ jobs:
       with:
         app-id: ${{ secrets.app-id }}
         private-key: ${{ secrets.app-secret }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+        permission-contents: write
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
@@ -210,7 +221,7 @@ jobs:
     - check_version_changed
     - create_version_label
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -220,6 +231,10 @@ jobs:
         private-key: ${{ secrets.app-secret }}
         owner: zed-industries
         repositories: extensions
+        permission-contents: write
+        permission-issues: write
+        permission-members: read
+        permission-pull-requests: write
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
@@ -253,7 +268,7 @@ jobs:
           let isStaff = false;
           try {
               const response = await github.rest.teams.getMembershipForUserInOrg({
-                  org: 'zed-industries',
+                  org: context.repo.owner,
                   team_slug: 'staff',
                   username: author
               });
@@ -273,7 +288,7 @@ jobs:
           const pullNumber = parseInt(prNumber);
 
           await github.rest.issues.addAssignees({
-              owner: 'zed-industries',
+              owner: context.repo.owner,
               repo: 'extensions',
               issue_number: pullNumber,
               assignees: [author]
@@ -282,7 +297,7 @@ jobs:
 
           // Get the GraphQL node ID
           const { data: pr } = await github.rest.pulls.get({
-              owner: 'zed-industries',
+              owner: context.repo.owner,
               repo: 'extensions',
               pull_number: pullNumber
           });

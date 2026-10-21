@@ -1,6 +1,6 @@
-//! # UI – dez UI Primitives & Components
+//! # UI – Zed UI Primitives & Components
 //!
-//! This crate provides a set of UI primitives and components that are used to build all of the elements in dez's UI.
+//! This crate provides a set of UI primitives and components that are used to build all of the elements in Zed's UI.
 //!
 //! ## Related Crates:
 //!

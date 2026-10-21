@@ -1,3 +1,7 @@
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_row_background,
+    debugger_row_border_color, debugger_row_hover_background,
+};
 use crate::session::running::{RunningState, memory_view::MemoryView};
 
 use super::stack_frame_list::{StackFrameList, StackFrameListEvent};
@@ -298,9 +302,10 @@ impl VariableList {
                     contains_local_scope = true;
                 }
 
-                self.session.update(cx, |session, cx| {
-                    !session.variables(scope.variables_reference, cx).is_empty()
-                })
+                scope.expensive
+                    || self.session.update(cx, |session, cx| {
+                        !session.variables(scope.variables_reference, cx).is_empty()
+                    })
             })
             .map(|scope| {
                 (
@@ -347,12 +352,13 @@ impl VariableList {
                 .or_insert(EntryState {
                     depth: path.indices.len(),
                     is_expanded: dap_kind.as_scope().is_some_and(|scope| {
-                        (scopes_count == 1 && !contains_local_scope)
-                            || scope
-                                .presentation_hint
-                                .as_ref()
-                                .map(|hint| *hint == ScopePresentationHint::Locals)
-                                .unwrap_or(scope.name.to_lowercase().starts_with("local"))
+                        !scope.expensive
+                            && ((scopes_count == 1 && !contains_local_scope)
+                                || scope
+                                    .presentation_hint
+                                    .as_ref()
+                                    .map(|hint| *hint == ScopePresentationHint::Locals)
+                                    .unwrap_or(scope.name.to_lowercase().starts_with("local")))
                     }),
                     parent_reference: container_reference,
                     has_children: variables_reference != 0,
@@ -703,66 +709,33 @@ impl VariableList {
                 None
             };
             cx.update(|window, cx| {
-                let context_menu = ContextMenu::build(window, cx, |menu, _, cx| {
+                let context_menu = ContextMenu::build(window, cx, |menu, _, _| {
                     menu.when_some(entry.as_variable(), |menu, _| {
-                        menu.action(
-                            localization::text(cx, "debugger-copy-name"),
-                            CopyVariableName.boxed_clone(),
-                        )
-                        .action(
-                            localization::text(cx, "debugger-copy-value"),
-                            CopyVariableValue.boxed_clone(),
-                        )
-                        .when(supports_set_variable, |menu| {
-                            menu.action(
-                                localization::text(cx, "debugger-edit-value"),
-                                EditVariable.boxed_clone(),
-                            )
-                        })
-                        .when(supports_go_to_memory, |menu| {
-                            menu.action(
-                                localization::text(cx, "debugger-go-to-memory"),
-                                GoToMemory.boxed_clone(),
-                            )
-                        })
-                        .action(
-                            localization::text(cx, "debugger-watch-variable"),
-                            AddWatch.boxed_clone(),
-                        )
-                        .when_some(
-                            can_toggle_data_breakpoint,
-                            |mut menu, data_info| {
+                        menu.action("Copy Name", CopyVariableName.boxed_clone())
+                            .action("Copy Value", CopyVariableValue.boxed_clone())
+                            .when(supports_set_variable, |menu| {
+                                menu.action("Edit Value", EditVariable.boxed_clone())
+                            })
+                            .when(supports_go_to_memory, |menu| {
+                                menu.action("Go To Memory", GoToMemory.boxed_clone())
+                            })
+                            .action("Watch Variable", AddWatch.boxed_clone())
+                            .when_some(can_toggle_data_breakpoint, |mut menu, data_info| {
                                 menu = menu.separator();
                                 if let Some(access_types) = data_info.access_types {
-                                    for access_type in access_types {
-                                        let access = match access_type {
-                                            dap::DataBreakpointAccessType::Read => {
-                                                localization::text(
-                                                    cx,
-                                                    "debugger-data-breakpoint-read",
-                                                )
-                                            }
-                                            dap::DataBreakpointAccessType::Write => {
-                                                localization::text(
-                                                    cx,
-                                                    "debugger-data-breakpoint-write",
-                                                )
-                                            }
-                                            dap::DataBreakpointAccessType::ReadWrite => {
-                                                localization::text(
-                                                    cx,
-                                                    "debugger-data-breakpoint-read-write",
-                                                )
-                                            }
-                                        };
+                                    for access in access_types {
                                         menu = menu.action(
-                                            localization::tr!(
-                                                cx,
-                                                "debugger-toggle-data-breakpoint-type",
-                                                access = access.to_string(),
+                                            format!(
+                                                "Toggle {} Data Breakpoint",
+                                                match access {
+                                                    dap::DataBreakpointAccessType::Read => "Read",
+                                                    dap::DataBreakpointAccessType::Write => "Write",
+                                                    dap::DataBreakpointAccessType::ReadWrite =>
+                                                        "Read/Write",
+                                                }
                                             ),
                                             crate::ToggleDataBreakpoint {
-                                                access_type: Some(access_type),
+                                                access_type: Some(access),
                                             }
                                             .boxed_clone(),
                                         );
@@ -771,33 +744,20 @@ impl VariableList {
                                     menu
                                 } else {
                                     menu.action(
-                                        localization::text(cx, "debugger-toggle-data-breakpoint"),
+                                        "Toggle Data Breakpoint",
                                         crate::ToggleDataBreakpoint { access_type: None }
                                             .boxed_clone(),
                                     )
                                 }
-                            },
-                        )
+                            })
                     })
                     .when(entry.as_watcher().is_some(), |menu| {
-                        menu.action(
-                            localization::text(cx, "debugger-copy-name"),
-                            CopyVariableName.boxed_clone(),
-                        )
-                        .action(
-                            localization::text(cx, "debugger-copy-value"),
-                            CopyVariableValue.boxed_clone(),
-                        )
-                        .when(supports_set_variable, |menu| {
-                            menu.action(
-                                localization::text(cx, "debugger-edit-value"),
-                                EditVariable.boxed_clone(),
-                            )
-                        })
-                        .action(
-                            localization::text(cx, "debugger-remove-watch"),
-                            RemoveWatch.boxed_clone(),
-                        )
+                        menu.action("Copy Name", CopyVariableName.boxed_clone())
+                            .action("Copy Value", CopyVariableValue.boxed_clone())
+                            .when(supports_set_variable, |menu| {
+                                menu.action("Edit Value", EditVariable.boxed_clone())
+                            })
+                            .action("Remove Watch", RemoveWatch.boxed_clone())
                     })
                     .context(focus_handle.clone())
                 });
@@ -1202,7 +1162,7 @@ impl VariableList {
                                 },
                             )
                             .child(
-                                Label::new(format!("=  {}", &value))
+                                Label::new(format!("=  {value}"))
                                     .single_line()
                                     .truncate()
                                     .size(LabelSize::Small)
@@ -1380,6 +1340,8 @@ impl VariableList {
                         SharedString::from(format!("watcher-{}-remove-button", watcher.expression)),
                         IconName::Close,
                     )
+                    .tab_index(0isize)
+                    .aria_label("Remove Watch")
                     .on_click({
                         move |_, window, cx| {
                             weak.update(cx, |variable_list, cx| {
@@ -1390,12 +1352,7 @@ impl VariableList {
                         }
                     })
                     .tooltip(move |_window, cx| {
-                        Tooltip::for_action_in(
-                            localization::text(cx, "debugger-remove-watch"),
-                            &RemoveWatch,
-                            &focus_handle,
-                            cx,
-                        )
+                        Tooltip::for_action_in("Remove Watch", &RemoveWatch, &focus_handle, cx)
                     })
                     .icon_size(ui::IconSize::Indicator),
                 ),
@@ -1596,6 +1553,8 @@ impl Render for VariableList {
             .id("variable-list")
             .group("variable-list")
             .size_full()
+            .p(debugger_panel_padding(cx))
+            .bg(debugger_panel_background(cx))
             .on_action(cx.listener(Self::select_first))
             .on_action(cx.listener(Self::select_last))
             .on_action(cx.listener(Self::select_prev))
@@ -1640,7 +1599,7 @@ impl Render for VariableList {
             .custom_scrollbars(
                 ui::Scrollbars::new(ScrollAxes::Both)
                     .tracked_scroll_handle(&self.list_handle)
-                    .with_track_along(ScrollAxes::Both, cx.theme().colors().panel_background)
+                    .with_track_along(ScrollAxes::Both, debugger_panel_background(cx))
                     .tracked_entity(cx.entity_id()),
                 window,
                 cx,
@@ -1655,12 +1614,12 @@ struct EntryColors {
 }
 
 fn get_entry_color(cx: &Context<VariableList>) -> EntryColors {
-    let colors = cx.theme().colors();
+    let selected_background = debugger_row_background(true, cx);
 
     EntryColors {
-        default: colors.panel_background,
-        hover: colors.ghost_element_hover,
-        marked_active: colors.ghost_element_selected,
+        default: debugger_panel_background(cx),
+        hover: debugger_row_hover_background(cx),
+        marked_active: debugger_row_border_color(selected_background, true, cx),
     }
 }
 

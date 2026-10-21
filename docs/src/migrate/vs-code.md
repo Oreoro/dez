@@ -14,7 +14,7 @@ It covers which settings import automatically, which shortcuts map cleanly, and 
 Zed is available on macOS, Windows, and Linux.
 
 For macOS, you can download it from zed.dev/download, or install via Homebrew:
-`brew install zed-editor/zed/zed`
+`brew install --cask zed`
 
 For most Linux users, the easiest way to install Zed is through our installation script:
 `curl -f https://zed.dev/install.sh | sh`
@@ -62,6 +62,7 @@ The following VS Code settings are automatically imported when you use **Import 
 | `editor.hover.sticky`                       | `hover_popover_sticky`                         |
 | `editor.hover.hidingDelay`                  | `hover_popover_hiding_delay`                   |
 | `editor.parameterHints.enabled`             | `auto_signature_help`                          |
+| `workbench.editor.languageDetection`        | `language_detection`                           |
 | `editor.multiCursorModifier`                | `multi_cursor_modifier`                        |
 | `editor.selectionHighlight`                 | `selection_highlight`                          |
 | `editor.roundedSelection`                   | `rounded_selection`                            |
@@ -155,15 +156,16 @@ The following VS Code settings are automatically imported when you use **Import 
 
 **Other**
 
-| VS Code Setting            | Zed Setting                                              |
-| -------------------------- | -------------------------------------------------------- |
-| `http.proxy`               | `proxy`                                                  |
-| `npm.packageManager`       | `node.npm_path`                                          |
-| `outline.icons`            | `outline_panel.file_icons`, `outline_panel.folder_icons` |
-| `chat.agent.enabled`       | `agent.enabled`                                          |
-| `mcp`                      | `context_servers`                                        |
+| VS Code Setting            | Zed Setting                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `http.proxy`               | `proxy`                                                      |
+| `npm.packageManager`       | `node.npm_path`                                              |
+| `telemetry.telemetryLevel` | `telemetry.metrics`, `telemetry.diagnostics`                 |
+| `outline.icons`            | `outline_panel.file_icons`, `outline_panel.folder_indicator` |
+| `chat.agent.enabled`       | `agent.enabled`                                              |
+| `mcp`                      | `context_servers`                                            |
 
-dez doesn’t import extensions or keybindings, but this import gets core editor behavior close to your VS Code setup. VS Code's telemetry setting has no dez equivalent because dez has no telemetry uploader. If you skip that step during setup, you can still import settings manually later via the command palette:
+Zed doesn’t import extensions or keybindings, but this import gets core editor behavior close to your VS Code setup. If you skip that step during setup, you can still import settings manually later via the command palette:
 
 `Cmd+Shift+P → {#action zed::ImportVsCodeSettings}`
 
@@ -185,7 +187,7 @@ Zed also supports per-project settings. You can find these in the Settings Edito
 
 ## Open or Create a Project
 
-After setup, press `Cmd+O` (`Ctrl+O` on Linux) to open a folder. By default, new folders open in the current window's threads sidebar, letting you work on multiple projects without juggling windows. See [Windows & Projects](../windows-and-projects.md) for details on managing multiple projects and opening in new windows.
+After setup, press `Cmd+O` (`Ctrl+O` on Linux) to open a folder. By default, new folders open in the current window's sidebar, letting you work on multiple projects without juggling windows. See [Windows & Projects](../windows-and-projects.md) for details on managing multiple projects and opening in new windows.
 
 To start a new project, create a directory using your terminal or file manager, then open it in Zed. The editor will treat that folder as the root of your project.
 
@@ -258,7 +260,7 @@ Zed takes a different approach.
 
 In Zed:
 
-- **Multiple projects in one window**: You can open multiple folders in the same window. Each appears in the threads sidebar on the left, and you can switch between them while preserving your layout and agent threads. See [Windows & Projects](../windows-and-projects.md).
+- **Multiple projects in one window**: You can open multiple folders in the same window. Each appears in the sidebar on the left, and you can switch between them while preserving your layout and agent threads. See [Windows & Projects](../windows-and-projects.md).
 
 - **No workspace file format**: There’s no `.code-workspace` equivalent. Opening a folder is your project context.
 

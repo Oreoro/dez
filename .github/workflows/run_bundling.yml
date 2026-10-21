@@ -9,14 +9,18 @@ on:
     types:
     - labeled
     - synchronize
+permissions:
+  contents: read
 jobs:
   bundle_linux_aarch64:
     if: |-
       (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
-    runs-on: namespace-profile-8x32-ubuntu-2004-arm-m4
+    runs-on: ubuntu-24.04-arm
     env:
       CARGO_INCREMENTAL: 0
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       CC: clang-18
       CXX: clang++-18
     steps:
@@ -24,53 +28,44 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
+    - name: steps::cache_rust_dependencies_namespace
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
+    - name: steps::setup_sentry
+      uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b
+      with:
+        token: ${{ secrets.SENTRY_AUTH_TOKEN }}
     - name: steps::setup_linux
       run: ./script/linux
     - name: steps::download_wasi_sdk
       run: ./script/download-wasi-sdk
-    - name: Install Linux packaging tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cpio desktop-file-utils rpm
-        ./script/install-nfpm
-    - name: ./script/test-package-linux
-      run: ./script/test-package-linux
     - name: ./script/bundle-linux
       run: ./script/bundle-linux
-    - name: ./script/package-linux
-      run: ./script/package-linux
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-linux-aarch64.tar.gz
-        path: target/release/dez-linux-aarch64.tar.gz
+        name: zed-linux-aarch64.tar.gz
+        path: target/release/zed-linux-aarch64.tar.gz
         if-no-files-found: error
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-linux-aarch64.deb
-        path: target/release/dez-linux-aarch64.deb
-        if-no-files-found: error
-    - name: run_bundling::upload_artifact
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-      with:
-        name: dez-linux-aarch64.rpm
-        path: target/release/dez-linux-aarch64.rpm
-        if-no-files-found: error
-    - name: run_bundling::upload_artifact
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
-      with:
-        name: dez-remote-server-linux-aarch64.gz
-        path: target/dez-remote-server-linux-aarch64.gz
+        name: zed-remote-server-linux-aarch64.gz
+        path: target/zed-remote-server-linux-aarch64.gz
         if-no-files-found: error
     timeout-minutes: 60
   bundle_linux_x86_64:
     if: |-
       (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
-    runs-on: namespace-profile-32x64-ubuntu-2004
+    runs-on: ubuntu-24.04
     env:
       CARGO_INCREMENTAL: 0
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       CC: clang-18
       CXX: clang++-18
     steps:
@@ -78,53 +73,116 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
+    - name: steps::cache_rust_dependencies_namespace
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
+    - name: steps::setup_sentry
+      uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b
+      with:
+        token: ${{ secrets.SENTRY_AUTH_TOKEN }}
     - name: steps::setup_linux
       run: ./script/linux
     - name: steps::download_wasi_sdk
       run: ./script/download-wasi-sdk
-    - name: Install Linux packaging tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y cpio desktop-file-utils rpm
-        ./script/install-nfpm
-    - name: ./script/test-package-linux
-      run: ./script/test-package-linux
     - name: ./script/bundle-linux
       run: ./script/bundle-linux
-    - name: ./script/package-linux
-      run: ./script/package-linux
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-linux-x86_64.tar.gz
-        path: target/release/dez-linux-x86_64.tar.gz
+        name: zed-linux-x86_64.tar.gz
+        path: target/release/zed-linux-x86_64.tar.gz
         if-no-files-found: error
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-linux-x86_64.deb
-        path: target/release/dez-linux-x86_64.deb
+        name: zed-remote-server-linux-x86_64.gz
+        path: target/zed-remote-server-linux-x86_64.gz
         if-no-files-found: error
+    timeout-minutes: 60
+  build_static_bwrap_linux_aarch64:
+    if: |-
+      (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
+    runs-on: ubuntu-24.04-arm
+    steps:
+    - name: steps::cache_nix_dependencies_namespace
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: /nix/store
+        key: dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-store-${{ runner.os }}-
+    - name: run_bundling::build_static_bwrap
+      uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: run_bundling::build_static_bwrap
+      uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad
+      with:
+        name: zed
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        cachixArgs: -v
+    - name: run_bundling::build_static_bwrap
+      run: nix build nixpkgs#pkgsStatic.bubblewrap -L
+    - name: run_bundling::build_static_bwrap
+      run: |
+        cp result/bin/bwrap bwrap-linux-aarch64
+        chmod 755 bwrap-linux-aarch64
+        gzip -f --stdout --best bwrap-linux-aarch64 > bwrap-linux-aarch64.gz
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-linux-x86_64.rpm
-        path: target/release/dez-linux-x86_64.rpm
+        name: bwrap-linux-aarch64.gz
+        path: bwrap-linux-aarch64.gz
         if-no-files-found: error
+    timeout-minutes: 60
+  build_static_bwrap_linux_x86_64:
+    if: |-
+      (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
+    runs-on: ubuntu-24.04
+    steps:
+    - name: steps::cache_nix_dependencies_namespace
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: /nix/store
+        key: dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-store-${{ runner.os }}-
+    - name: run_bundling::build_static_bwrap
+      uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
+      with:
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: run_bundling::build_static_bwrap
+      uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad
+      with:
+        name: zed
+        authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+        cachixArgs: -v
+    - name: run_bundling::build_static_bwrap
+      run: nix build nixpkgs#pkgsStatic.bubblewrap -L
+    - name: run_bundling::build_static_bwrap
+      run: |
+        cp result/bin/bwrap bwrap-linux-x86_64
+        chmod 755 bwrap-linux-x86_64
+        gzip -f --stdout --best bwrap-linux-x86_64 > bwrap-linux-x86_64.gz
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-remote-server-linux-x86_64.gz
-        path: target/dez-remote-server-linux-x86_64.gz
+        name: bwrap-linux-x86_64.gz
+        path: bwrap-linux-x86_64.gz
         if-no-files-found: error
     timeout-minutes: 60
   bundle_mac_aarch64:
     if: |-
       (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     env:
       CARGO_INCREMENTAL: 0
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
       APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
@@ -135,10 +193,22 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
-    - name: steps::setup_node
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+    - name: steps::cache_rust_dependencies_namespace
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        node-version: '20'
+        path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
+    - name: steps::setup_node
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+      with:
+        node-version: '24'
+        check-latest: true
+        package-manager-cache: false
+    - name: steps::setup_sentry
+      uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b
+      with:
+        token: ${{ secrets.SENTRY_AUTH_TOKEN }}
     - name: steps::clear_target_dir_if_large
       run: ./script/clear-target-dir-if-larger-than 350 200
     - name: run_bundling::bundle_mac::bundle_mac
@@ -146,23 +216,25 @@ jobs:
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-aarch64.dmg
-        path: target/aarch64-apple-darwin/release/dez-aarch64.dmg
+        name: Zed-aarch64.dmg
+        path: target/aarch64-apple-darwin/release/Zed-aarch64.dmg
         if-no-files-found: error
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-remote-server-macos-aarch64.gz
-        path: target/dez-remote-server-macos-aarch64.gz
+        name: zed-remote-server-macos-aarch64.gz
+        path: target/zed-remote-server-macos-aarch64.gz
         if-no-files-found: error
     timeout-minutes: 60
   bundle_mac_x86_64:
     if: |-
       (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     env:
       CARGO_INCREMENTAL: 0
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
       APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
@@ -173,10 +245,22 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
-    - name: steps::setup_node
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+    - name: steps::cache_rust_dependencies_namespace
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        node-version: '20'
+        path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
+    - name: steps::setup_node
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+      with:
+        node-version: '24'
+        check-latest: true
+        package-manager-cache: false
+    - name: steps::setup_sentry
+      uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b
+      with:
+        token: ${{ secrets.SENTRY_AUTH_TOKEN }}
     - name: steps::clear_target_dir_if_large
       run: ./script/clear-target-dir-if-larger-than 350 200
     - name: run_bundling::bundle_mac::bundle_mac
@@ -184,23 +268,25 @@ jobs:
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-x86_64.dmg
-        path: target/x86_64-apple-darwin/release/dez-x86_64.dmg
+        name: Zed-x86_64.dmg
+        path: target/x86_64-apple-darwin/release/Zed-x86_64.dmg
         if-no-files-found: error
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-remote-server-macos-x86_64.gz
-        path: target/dez-remote-server-macos-x86_64.gz
+        name: zed-remote-server-macos-x86_64.gz
+        path: target/zed-remote-server-macos-x86_64.gz
         if-no-files-found: error
     timeout-minutes: 60
   bundle_windows_aarch64:
     if: |-
       (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
-    runs-on: self-32vcpu-windows-2022
+    runs-on: windows-2022
     env:
       CARGO_INCREMENTAL: 0
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_SIGNING_CLIENT_SECRET }}
@@ -215,6 +301,13 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
+    - name: steps::setup_sentry
+      uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b
+      with:
+        token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+    - name: steps::clear_target_dir_if_large
+      run: ./script/clear-target-dir-if-larger-than.ps1 350 200
+      shell: pwsh
     - name: run_bundling::bundle_windows::bundle_windows
       run: script/bundle-windows.ps1 -Architecture aarch64
       shell: pwsh
@@ -222,23 +315,25 @@ jobs:
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-aarch64.exe
-        path: target/dez-aarch64.exe
+        name: Zed-aarch64.exe
+        path: target/Zed-aarch64.exe
         if-no-files-found: error
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-remote-server-windows-aarch64.zip
-        path: target/dez-remote-server-windows-aarch64.zip
+        name: zed-remote-server-windows-aarch64.zip
+        path: target/zed-remote-server-windows-aarch64.zip
         if-no-files-found: error
     timeout-minutes: 60
   bundle_windows_x86_64:
     if: |-
       (github.event.action == 'labeled' && github.event.label.name == 'run-bundling') ||
       (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'run-bundling'))
-    runs-on: self-32vcpu-windows-2022
+    runs-on: windows-2022
     env:
       CARGO_INCREMENTAL: 0
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
       AZURE_CLIENT_ID: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_SIGNING_CLIENT_SECRET }}
@@ -253,6 +348,13 @@ jobs:
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
+    - name: steps::setup_sentry
+      uses: matbour/setup-sentry-cli@3e938c54b3018bdd019973689ef984e033b0454b
+      with:
+        token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+    - name: steps::clear_target_dir_if_large
+      run: ./script/clear-target-dir-if-larger-than.ps1 350 200
+      shell: pwsh
     - name: run_bundling::bundle_windows::bundle_windows
       run: script/bundle-windows.ps1 -Architecture x86_64
       shell: pwsh
@@ -260,14 +362,14 @@ jobs:
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-x86_64.exe
-        path: target/dez-x86_64.exe
+        name: Zed-x86_64.exe
+        path: target/Zed-x86_64.exe
         if-no-files-found: error
     - name: run_bundling::upload_artifact
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
       with:
-        name: dez-remote-server-windows-x86_64.zip
-        path: target/dez-remote-server-windows-x86_64.zip
+        name: zed-remote-server-windows-x86_64.zip
+        path: target/zed-remote-server-windows-x86_64.zip
         if-no-files-found: error
     timeout-minutes: 60
 concurrency:

@@ -6,7 +6,7 @@ use gpui::{Subscription, WeakEntity};
 use picker::{Picker, PickerDelegate};
 use project::Project;
 use rpc::proto;
-use task::DezDebugConfig;
+use task::ZedDebugConfig;
 use util::debug_panic;
 
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub(super) struct Candidate {
 
 pub(crate) enum ModalIntent {
     ResolveProcessId(Option<oneshot::Sender<Option<i32>>>),
-    AttachToProcess(DezDebugConfig),
+    AttachToProcess(ZedDebugConfig),
 }
 
 pub(crate) struct AttachModalDelegate {
@@ -103,7 +103,7 @@ impl AttachModal {
                 window,
                 cx,
             )
-            .modal(modal)
+            .when(!modal, |picker| picker.embedded())
         });
         Self {
             _subscription: cx.subscribe(&picker, |_, _, _, cx| {
@@ -119,7 +119,6 @@ impl Render for AttachModal {
         v_flex()
             .key_context("AttachModal")
             .track_focus(&self.focus_handle(cx))
-            .w(rems(34.))
             .child(self.picker.clone())
     }
 }
@@ -136,6 +135,10 @@ impl ModalView for AttachModal {}
 
 impl PickerDelegate for AttachModalDelegate {
     type ListItem = ListItem;
+
+    fn name() -> &'static str {
+        "attach modal"
+    }
 
     fn match_count(&self) -> usize {
         self.matches.len()
@@ -250,7 +253,11 @@ impl PickerDelegate for AttachModalDelegate {
 
                 let workspace = self.workspace.clone();
                 let Some(panel) = workspace
-                    .update(cx, |workspace, cx| workspace.panel::<DebugPanel>(cx))
+                    .update(cx, |workspace, cx| {
+                        workspace
+                            .item_of_type::<DebugPanel>(cx)
+                            .or_else(|| workspace.panel::<DebugPanel>(cx))
+                    })
                     .ok()
                     .flatten()
                 else {
@@ -265,7 +272,7 @@ impl PickerDelegate for AttachModalDelegate {
 
                 let definition = definition.clone();
                 cx.spawn_in(window, async move |this, cx| {
-                    let Ok(scenario) = adapter.config_from_dez_format(definition).await else {
+                    let Ok(scenario) = adapter.config_from_zed_format(definition).await else {
                         return;
                     };
 

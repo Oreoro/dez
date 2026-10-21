@@ -1,4 +1,3 @@
-use dez_actions::{ExtensionCategoryFilter, Extensions};
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
@@ -13,6 +12,9 @@ use theme_settings::{IconThemeName, IconThemeSelection, ThemeSettings};
 use ui::{ListItem, ListItemSpacing, prelude::*, v_flex};
 use util::ResultExt;
 use workspace::{ModalView, ui::HighlightedLabel};
+use zed_actions::{ExtensionCategoryFilter, Extensions};
+
+use super::{picker_surface_contrast, picker_surface_density, picker_surface_radius};
 
 pub(crate) struct IconThemeSelector {
     picker: Entity<Picker<IconThemeSelectorDelegate>>,
@@ -45,7 +47,12 @@ impl IconThemeSelector {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(picker_surface_density(cx))
+                .surface_radius(picker_surface_radius(cx))
+                .surface_contrast(picker_surface_contrast(cx))
+        });
         Self { picker }
     }
 }
@@ -162,8 +169,12 @@ impl IconThemeSelectorDelegate {
 impl PickerDelegate for IconThemeSelectorDelegate {
     type ListItem = ui::ListItem;
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "icon-theme-selector-placeholder").into()
+    fn name() -> &'static str {
+        "icon theme selector"
+    }
+
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Select Icon Theme...".into()
     }
 
     fn match_count(&self) -> usize {
@@ -183,6 +194,12 @@ impl PickerDelegate for IconThemeSelectorDelegate {
             .icon_theme
             .name(SystemAppearance::global(cx).0);
 
+        telemetry::event!(
+            "Settings Changed",
+            setting = "icon_theme",
+            value = theme_name
+        );
+
         let appearance = Appearance::from(window.appearance());
 
         update_settings_file(self.fs.clone(), cx, move |settings, _| {
@@ -199,9 +216,7 @@ impl PickerDelegate for IconThemeSelectorDelegate {
     fn dismissed(&mut self, _: &mut Window, cx: &mut Context<Picker<IconThemeSelectorDelegate>>) {
         self.revert_theme(cx);
 
-        self.selector
-            .update(cx, |_, cx| cx.emit(DismissEvent))
-            .log_err();
+        self.selector.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
     }
 
     fn selected_index(&self) -> usize {
@@ -324,33 +339,28 @@ impl PickerDelegate for IconThemeSelectorDelegate {
                 .border_t_1()
                 .border_color(cx.theme().colors().border_variant)
                 .child(
-                    Button::new(
-                        "docs",
-                        localization::text(cx, "icon-theme-selector-view-docs"),
-                    )
-                    .end_icon(
-                        Icon::new(IconName::ArrowUpRight)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    )
-                    .on_click(|_event, _window, cx| {
-                        cx.open_url(&release_channel::docs_url("icon-themes", cx));
-                    }),
+                    Button::new("docs", "View Icon Theme Docs")
+                        .end_icon(
+                            Icon::new(IconName::ArrowUpRight)
+                                .size(IconSize::Small)
+                                .color(Color::Muted),
+                        )
+                        .on_click(|_event, _window, cx| {
+                            cx.open_url("https://zed.dev/docs/icon-themes");
+                        }),
                 )
                 .child(
-                    Button::new(
-                        "more-icon-themes",
-                        localization::text(cx, "icon-theme-selector-install"),
-                    )
-                    .on_click(move |_event, window, cx| {
-                        window.dispatch_action(
-                            Box::new(Extensions {
-                                category_filter: Some(ExtensionCategoryFilter::IconThemes),
-                                id: None,
-                            }),
-                            cx,
-                        );
-                    }),
+                    Button::new("more-icon-themes", "Install Icon Themes").on_click(
+                        move |_event, window, cx| {
+                            window.dispatch_action(
+                                Box::new(Extensions {
+                                    category_filter: Some(ExtensionCategoryFilter::IconThemes),
+                                    id: None,
+                                }),
+                                cx,
+                            );
+                        },
+                    ),
                 )
                 .into_any_element(),
         )
@@ -422,7 +432,7 @@ mod tests {
         workspace: &Entity<workspace::Workspace>,
         cx: &mut VisualTestContext,
     ) -> Entity<Picker<IconThemeSelectorDelegate>> {
-        cx.dispatch_action(dez_actions::icon_theme_selector::Toggle {
+        cx.dispatch_action(zed_actions::icon_theme_selector::Toggle {
             themes_filter: None,
         });
         cx.run_until_parked();

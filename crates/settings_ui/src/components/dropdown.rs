@@ -1,10 +1,12 @@
 use std::rc::Rc;
 
-use gpui::{App, ElementId, IntoElement, RenderOnce};
+use gpui::ParentElement;
+use gpui::Styled;
+use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString};
 use heck::ToTitleCase as _;
 use ui::{
-    ButtonSize, ContextMenu, Disableable as _, DropdownMenu, DropdownStyle, FluentBuilder as _,
-    IconPosition, px,
+    ButtonSize, ContextMenu, ContextMenuEntry, Disableable as _, DropdownMenu, DropdownStyle,
+    FluentBuilder as _, Icon, IconName, IconPosition, IconSize, h_flex, px,
 };
 
 #[derive(IntoElement)]
@@ -19,6 +21,9 @@ where
     should_do_title_case: bool,
     tab_index: Option<isize>,
     disabled: bool,
+    aria_label: Option<SharedString>,
+    aria_description: Option<SharedString>,
+    icon_for_value: Option<Rc<dyn Fn(T) -> IconName + 'static>>,
     on_change: Rc<dyn Fn(T, &mut ui::Window, &mut App) + 'static>,
 }
 
@@ -41,6 +46,9 @@ where
             should_do_title_case: true,
             tab_index: None,
             disabled: false,
+            aria_label: None,
+            aria_description: None,
+            icon_for_value: None,
             on_change: Rc::new(on_change),
         }
     }
@@ -59,6 +67,25 @@ where
         self.disabled = disabled;
         self
     }
+
+    pub fn icon_for_value(mut self, icon_for_value: impl Fn(T) -> IconName + 'static) -> Self {
+        self.icon_for_value = Some(Rc::new(icon_for_value));
+        self
+    }
+
+    /// Sets the label announced by assistive technology.
+    /// Defaults to the currently selected value's label.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
+        self
+    }
+
+    /// Sets the supplementary description announced by assistive technology
+    /// after the combobox's name, role, and value (e.g. a setting subtitle).
+    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
+        self.aria_description = Some(description.into());
+        self
+    }
 }
 
 impl<T> RenderOnce for EnumVariantDropdown<T>
@@ -66,55 +93,90 @@ where
     T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
 {
     fn render(self, window: &mut ui::Window, cx: &mut ui::App) -> impl gpui::IntoElement {
-        let current_value_label = self.labels[self
-            .variants
+        let Self {
+            id,
+            current_value,
+            variants,
+            labels,
+            should_do_title_case,
+            tab_index,
+            disabled,
+            aria_label,
+            aria_description,
+            icon_for_value,
+            on_change,
+        } = self;
+
+        let current_value_index = variants
             .iter()
-            .position(|v| *v == self.current_value)
-            .unwrap()];
+            .position(|value| *value == current_value)
+            .unwrap_or_default();
+        let current_value_label = labels.get(current_value_index).copied().unwrap_or_default();
+        let visible_label = if should_do_title_case {
+            current_value_label.to_title_case()
+        } else {
+            current_value_label.to_string()
+        };
+        let menu_icon_for_value = icon_for_value.clone();
+        let popover_handle = window
+            .use_keyed_state((id.clone(), "enum-variant-dropdown-handle"), cx, |_, _| {
+                ui::PopoverMenuHandle::<ContextMenu>::default()
+            })
+            .read(cx)
+            .clone();
 
         let context_menu = window.use_keyed_state(current_value_label, cx, |window, cx| {
-            ContextMenu::new(window, cx, move |mut menu, _, cx| {
-                for (&value, &label) in std::iter::zip(self.variants, self.labels) {
-                    let on_change = self.on_change.clone();
-                    let current_value = self.current_value;
-                    let label = if self.should_do_title_case {
+            ContextMenu::new(window, cx, move |mut menu, _, _| {
+                for (&value, &label) in std::iter::zip(variants, labels) {
+                    let on_change = on_change.clone();
+                    let entry = ContextMenuEntry::new(if should_do_title_case {
                         label.to_title_case()
                     } else {
                         label.to_string()
+                    })
+                    .toggleable(IconPosition::End, value == current_value)
+                    .handler(move |window, cx| {
+                        on_change(value, window, cx);
+                    });
+                    menu = if let Some(icon_for_value) = menu_icon_for_value.as_ref() {
+                        menu.item(entry.icon(icon_for_value(value)))
+                    } else {
+                        menu.item(entry)
                     };
-                    menu = menu.toggleable_entry(
-                        crate::settings_source_text(cx, &label).to_string(),
-                        value == current_value,
-                        IconPosition::End,
-                        None,
-                        move |window, cx| {
-                            on_change(value, window, cx);
-                        },
-                    );
                 }
                 menu
             })
         });
 
-        let current_value_label = if self.should_do_title_case {
-            current_value_label.to_title_case()
+        let dropdown = if let Some(icon_for_value) = icon_for_value {
+            DropdownMenu::new_with_element(
+                id,
+                h_flex()
+                    .gap_1p5()
+                    .child(Icon::new(icon_for_value(current_value)).size(IconSize::Small))
+                    .child(visible_label.clone())
+                    .into_any_element(),
+                context_menu,
+            )
+            .aria_value(visible_label)
         } else {
-            current_value_label.to_string()
+            DropdownMenu::new(id, visible_label, context_menu)
         };
 
-        DropdownMenu::new(
-            self.id,
-            crate::settings_source_text(cx, &current_value_label).to_string(),
-            context_menu,
-        )
-        .disabled(self.disabled)
-        .when_some(self.tab_index, |elem, tab_index| elem.tab_index(tab_index))
-        .trigger_size(ButtonSize::Medium)
-        .style(DropdownStyle::Outlined)
-        .offset(gpui::Point {
-            x: px(0.0),
-            y: px(2.0),
-        })
-        .into_any_element()
+        dropdown
+            .handle(popover_handle)
+            .when_some(aria_label, |this, label| this.aria_label(label))
+            .when_some(aria_description, |this, description| {
+                this.aria_description(description)
+            })
+            .disabled(disabled)
+            .when_some(tab_index, |elem, tab_index| elem.tab_index(tab_index))
+            .trigger_size(ButtonSize::Medium)
+            .style(DropdownStyle::Outlined)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(2.0),
+            })
+            .into_any_element()
     }
 }

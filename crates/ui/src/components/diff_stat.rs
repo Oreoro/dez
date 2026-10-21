@@ -42,15 +42,19 @@ impl RenderOnce for DiffStat {
         h_flex()
             .id(self.id)
             .gap_1()
+            .min_w_0()
+            .overflow_hidden()
             .child(
-                Label::new(format!("+\u{2009}{added}"))
+                Label::new(format!("+ {added}"))
                     .color(Color::Success)
-                    .size(self.label_size),
+                    .size(self.label_size)
+                    .truncate(),
             )
             .child(
-                Label::new(format!("\u{2012}\u{2009}{removed}"))
+                Label::new(format!("- {removed}"))
                     .color(Color::Error)
-                    .size(self.label_size),
+                    .size(self.label_size)
+                    .truncate(),
             )
             .when_some(tooltip, |this, tooltip| {
                 this.tooltip(Tooltip::text(tooltip))

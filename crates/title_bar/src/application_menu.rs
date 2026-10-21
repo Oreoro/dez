@@ -1,5 +1,7 @@
-use gpui::{Action, Entity, OwnedMenu, OwnedMenuItem, actions};
-use settings::Settings;
+use gpui::{Action, Entity, OwnedMenu, OwnedMenuItem, Subscription, actions};
+use project::DisableAiSettings;
+use settings::{Settings, SettingsStore};
+use workspace::AccessibleMode;
 
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -7,7 +9,7 @@ use serde::Deserialize;
 use smallvec::SmallVec;
 use ui::{ContextMenu, PopoverMenu, PopoverMenuHandle, Tooltip, prelude::*};
 
-use crate::title_bar_settings::TitleBarSettings;
+use crate::sidebar_chrome_settings::SidebarChromeSettings;
 
 actions!(
     app_menu,
@@ -31,6 +33,13 @@ actions!(
 pub struct OpenApplicationMenu(String);
 
 #[cfg(not(target_os = "macos"))]
+impl OpenApplicationMenu {
+    pub fn menu_name(&self) -> &str {
+        &self.0
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
 pub enum ActivateDirection {
     Left,
     Right,
@@ -45,21 +54,49 @@ struct MenuEntry {
 pub struct ApplicationMenu {
     entries: SmallVec<[MenuEntry; 8]>,
     pending_menu_open: Option<String>,
-    menus_generation: u64,
+    _settings_subscription: Subscription,
+}
+
+#[cfg(any(not(target_os = "macos"), test))]
+fn application_menu_name_for_product<'a>(menu_name: &'a str, app_name: &'a str) -> &'a str {
+    if app_name != "Zed" && menu_name == "Zed" {
+        app_name
+    } else {
+        menu_name
+    }
 }
 
 impl ApplicationMenu {
     pub fn new(_: &mut Window, cx: &mut Context<Self>) -> Self {
+        let menus = cx.get_menus().unwrap_or_default();
+
+        let entries = Self::build_entries(menus);
+        let mut disable_ai = DisableAiSettings::get_global(cx).disable_ai;
+        let settings_subscription =
+            cx.observe_global::<SettingsStore>(move |application_menu, cx| {
+                let new_disable_ai = DisableAiSettings::get_global(cx).disable_ai;
+                if new_disable_ai != disable_ai {
+                    disable_ai = new_disable_ai;
+                    for entry in &application_menu.entries {
+                        if entry.handle.is_deployed() {
+                            entry.handle.hide(cx);
+                        }
+                    }
+                    let menus = cx.get_menus().unwrap_or_default();
+                    application_menu.entries = Self::build_entries(menus);
+                }
+                cx.notify();
+            });
+
         Self {
-            entries: Self::build_entries(cx),
+            entries,
             pending_menu_open: None,
-            menus_generation: localization::generation(cx),
+            _settings_subscription: settings_subscription,
         }
     }
 
-    fn build_entries(cx: &mut Context<Self>) -> SmallVec<[MenuEntry; 8]> {
-        cx.get_menus()
-            .unwrap_or_default()
+    fn build_entries(menus: Vec<OwnedMenu>) -> SmallVec<[MenuEntry; 8]> {
+        menus
             .into_iter()
             .map(|menu| MenuEntry {
                 menu,
@@ -152,7 +189,7 @@ impl ApplicationMenu {
         })
     }
 
-    fn render_application_menu(&self, entry: &MenuEntry, cx: &App) -> impl IntoElement {
+    fn render_application_menu(&self, entry: &MenuEntry) -> impl IntoElement {
         let handle = entry.handle.clone();
 
         let menu_name = entry.menu.name.clone();
@@ -173,8 +210,10 @@ impl ApplicationMenu {
                             ui::IconName::Menu,
                         )
                         .style(ButtonStyle::Subtle)
-                        .icon_size(IconSize::Small),
-                        Tooltip::text(localization::text(cx, "title-bar-open-application-menu")),
+                        .icon_size(IconSize::Small)
+                        .tab_index(0isize)
+                        .aria_label("Application menu"),
+                        Tooltip::text("Open Application Menu"),
                     )
                     .with_handle(handle),
             )
@@ -206,7 +245,8 @@ impl ApplicationMenu {
                             menu_name,
                         )
                         .style(ButtonStyle::Subtle)
-                        .label_size(LabelSize::Small),
+                        .label_size(LabelSize::Small)
+                        .tab_index(0isize),
                     )
                     .with_handle(current_handle.clone()),
             )
@@ -222,13 +262,9 @@ impl ApplicationMenu {
     }
 
     #[cfg(not(target_os = "macos"))]
-    pub fn open_menu(
-        &mut self,
-        action: &OpenApplicationMenu,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) {
-        self.pending_menu_open = Some(action.0.clone());
+    pub fn open_menu_name(&mut self, menu_name: String) {
+        self.pending_menu_open =
+            Some(application_menu_name_for_product(&menu_name, paths::APP_NAME).to_owned());
     }
 
     #[cfg(not(target_os = "macos"))]
@@ -243,6 +279,12 @@ impl ApplicationMenu {
             .iter()
             .position(|entry| entry.handle.is_deployed());
         let Some(current_index) = current_index else {
+            // No menu is open, so there is nothing to switch between. Let the
+            // arrow key continue to the title bar's toolbar navigation so it
+            // can move focus between title bar controls. Without this, the
+            // `left`/`right` bindings in the `ApplicationMenu` context would
+            // silently swallow the key as a no-op.
+            cx.propagate();
             return;
         };
 
@@ -274,27 +316,19 @@ impl ApplicationMenu {
         show_menus(cx)
             || self.entries.iter().any(|entry| entry.handle.is_deployed())
             || self.pending_menu_open.is_some()
+            // In accessible mode, keep the full menu bar expanded so every menu
+            // is individually reachable and labeled for assistive technology.
+            || cx.accessible_mode()
     }
 }
 
 pub(crate) fn show_menus(cx: &mut App) -> bool {
-    TitleBarSettings::get_global(cx).show_menus
+    SidebarChromeSettings::get_global(cx).show_menus
         && (cfg!(not(target_os = "macos")) || option_env!("ZED_USE_CROSS_PLATFORM_MENU").is_some())
 }
 
 impl Render for ApplicationMenu {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Menu items (e.g. their labels) can change independently of this view, most notably
-        // when the UI language changes: `main.rs` recomputes and installs new localized menus
-        // via `cx.set_menus`, but doesn't know about (and can't directly refresh) this
-        // already-constructed view's cached `entries`. Re-fetch whenever the localization
-        // generation moves, since that's the only thing that currently invalidates menu content.
-        let current_generation = localization::generation(cx);
-        if current_generation != self.menus_generation {
-            self.menus_generation = current_generation;
-            self.entries = Self::build_entries(cx);
-        }
-
         let all_menus_shown = self.all_menus_shown(cx);
 
         if let Some(pending_menu_open) = self.pending_menu_open.take()
@@ -331,7 +365,7 @@ impl Render for ApplicationMenu {
             .flex_row()
             .gap_x_1()
             .when(!all_menus_shown && !self.entries.is_empty(), |this| {
-                this.child(self.render_application_menu(&self.entries[0], cx))
+                this.child(self.render_application_menu(&self.entries[0]))
             })
             .when(all_menus_shown, |this| {
                 this.children(
@@ -340,5 +374,211 @@ impl Render for ApplicationMenu {
                         .map(|entry| self.render_standard_menu(entry)),
                 )
             })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::application_menu_name_for_product;
+    use gpui::{Action, Menu, MenuItem, OwnedMenu, OwnedMenuItem, TestAppContext, UpdateGlobal};
+    use project::DisableAiSettings;
+    use settings::{Settings, SettingsStore};
+
+    use crate::application_menu::{ApplicationMenu, MenuEntry, OpenApplicationMenu};
+
+    #[test]
+    fn inherited_application_menu_shortcuts_follow_the_product_name() {
+        assert_eq!(application_menu_name_for_product("Zed", "Dez"), "Dez");
+        assert_eq!(application_menu_name_for_product("Dez", "Dez"), "Dez");
+        assert_eq!(application_menu_name_for_product("Zed", "Zed"), "Zed");
+        assert_eq!(application_menu_name_for_product("File", "Dez"), "File");
+    }
+
+    fn init_test(cx: &mut TestAppContext) {
+        cx.update(|cx| {
+            let settings_store = SettingsStore::test(cx);
+            cx.set_global(settings_store);
+            DisableAiSettings::register(cx);
+            theme_settings::init(theme::LoadThemes::JustBase, cx);
+        });
+    }
+
+    fn owned_menu(name: &str, item_name: &str) -> OwnedMenu {
+        OwnedMenu {
+            name: name.into(),
+            disabled: false,
+            items: vec![OwnedMenuItem::Action {
+                name: item_name.to_string(),
+                action: OpenApplicationMenu(String::new()).boxed_clone(),
+                os_action: None,
+                checked: false,
+                disabled: false,
+            }],
+        }
+    }
+
+    fn has_item(entries: &[MenuEntry], menu_name: &str, item_name: &str) -> bool {
+        entries.iter().any(|entry| {
+            entry.menu.name == menu_name
+                && entry.menu.items.iter().any(
+                    |item| matches!(item, OwnedMenuItem::Action { name, .. } if name == item_name),
+                )
+        })
+    }
+
+    fn menu_entry<'a>(entries: &'a [MenuEntry], menu_name: &str) -> &'a MenuEntry {
+        entries
+            .iter()
+            .find(|entry| entry.menu.name == menu_name)
+            .expect("expected menu")
+    }
+
+    fn view_menu(include_agent_panel: bool) -> Menu {
+        let mut items = Vec::new();
+        if include_agent_panel {
+            items.push(MenuItem::action(
+                "Agent Panel",
+                OpenApplicationMenu(String::new()),
+            ));
+        }
+        items.push(MenuItem::action(
+            "Diagnostics",
+            OpenApplicationMenu(String::new()),
+        ));
+
+        Menu {
+            name: "View".into(),
+            items,
+            disabled: false,
+        }
+    }
+
+    #[test]
+    fn test_build_entries_reflects_current_menu_data() {
+        let with_agent_panel =
+            ApplicationMenu::build_entries(vec![owned_menu("View", "Agent Panel")]);
+        assert!(has_item(&with_agent_panel, "View", "Agent Panel"));
+
+        let without_agent_panel =
+            ApplicationMenu::build_entries(vec![owned_menu("View", "Diagnostics")]);
+        assert!(!has_item(&without_agent_panel, "View", "Agent Panel"));
+    }
+
+    #[gpui::test]
+    fn test_entries_refresh_on_settings_change(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        cx.update(|cx| {
+            cx.set_menus(vec![view_menu(true)]);
+        });
+
+        let (app_menu, cx) = cx.add_window_view(|window, cx| ApplicationMenu::new(window, cx));
+        let view_handle = cx.update(|window, cx| {
+            let view_handle = app_menu.read_with(cx, |app_menu, _| {
+                menu_entry(&app_menu.entries, "View").handle.clone()
+            });
+            view_handle.show(window, cx);
+            view_handle
+        });
+        assert!(view_handle.is_deployed());
+
+        assert!(app_menu.read_with(cx, |app_menu, _| has_item(
+            &app_menu.entries,
+            "View",
+            "Agent Panel"
+        )));
+
+        assert!(app_menu.read_with(cx, |app_menu, _| has_item(
+            &app_menu.entries,
+            "View",
+            "Diagnostics"
+        )));
+
+        cx.update(|_, cx| {
+            cx.set_menus(vec![view_menu(false)]);
+            DisableAiSettings::override_global(DisableAiSettings { disable_ai: true }, cx);
+        });
+
+        assert!(!view_handle.is_deployed());
+        assert!(
+            !app_menu.read_with(cx, |app_menu, _| has_item(
+                &app_menu.entries,
+                "View",
+                "Agent Panel"
+            )),
+            "expected Agent Panel is not in the View menu"
+        );
+
+        assert!(app_menu.read_with(cx, |app_menu, _| has_item(
+            &app_menu.entries,
+            "View",
+            "Diagnostics"
+        )));
+
+        cx.update(|_, cx| {
+            cx.set_menus(vec![view_menu(true)]);
+            DisableAiSettings::override_global(DisableAiSettings { disable_ai: false }, cx);
+        });
+
+        assert!(app_menu.read_with(cx, |app_menu, _| has_item(
+            &app_menu.entries,
+            "View",
+            "Agent Panel"
+        )));
+        assert!(app_menu.read_with(cx, |app_menu, _| has_item(
+            &app_menu.entries,
+            "View",
+            "Diagnostics"
+        )));
+    }
+
+    #[gpui::test]
+    fn test_entries_preserve_deployed_menu_on_unrelated_settings_change(cx: &mut TestAppContext) {
+        init_test(cx);
+
+        cx.update(|cx| {
+            cx.set_menus(vec![
+                Menu::new("Zed").items([MenuItem::action(
+                    "Settings",
+                    OpenApplicationMenu(String::new()),
+                )]),
+                view_menu(true),
+            ]);
+        });
+
+        let (app_menu, cx) = cx.add_window_view(|window, cx| ApplicationMenu::new(window, cx));
+
+        let zed_handle = cx.update(|window, cx| {
+            let zed_handle = app_menu.read_with(cx, |app_menu, _| {
+                menu_entry(&app_menu.entries, "Zed").handle.clone()
+            });
+            zed_handle.show(window, cx);
+            zed_handle
+        });
+        cx.run_until_parked();
+        assert!(zed_handle.is_deployed());
+
+        cx.update(|window, cx| {
+            let view_handle = app_menu.read_with(cx, |app_menu, _| {
+                menu_entry(&app_menu.entries, "View").handle.clone()
+            });
+            zed_handle.hide(cx);
+            view_handle.show(window, cx);
+        });
+        cx.run_until_parked();
+        assert!(!zed_handle.is_deployed());
+
+        assert!(app_menu.read_with(cx, |app_menu, _| {
+            menu_entry(&app_menu.entries, "View").handle.is_deployed()
+        }));
+
+        cx.update(|_, cx| {
+            SettingsStore::update_global(cx, |_, _| {});
+        });
+        cx.run_until_parked();
+
+        assert!(app_menu.read_with(cx, |app_menu, _| {
+            menu_entry(&app_menu.entries, "View").handle.is_deployed()
+        }));
     }
 }

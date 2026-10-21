@@ -1,9 +1,9 @@
 id = "proto"
 name = "Proto"
 description = "Protocol Buffers support."
-version = "0.3.2"
+version = "0.3.3"
 schema_version = 1
-authors = ["dez Industries <support@dez.dev>"]
+authors = ["Zed Industries <support@zed.dev>"]
 repository = "https://github.com/zed-industries/zed"
 
 [grammars.proto]

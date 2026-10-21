@@ -1,11 +1,14 @@
 //! UI-related utilities
 
-use gpui::App;
+use gpui::{AnyElement, App, IntoElement, px};
 use theme::ActiveTheme;
+
+use crate::{Divider, DividerColor, prelude::*};
 
 mod apca_contrast;
 mod color_contrast;
 mod constants;
+mod control_characters;
 mod corner_solver;
 mod format_distance;
 mod search_input;
@@ -14,6 +17,7 @@ mod with_rem_size;
 pub use apca_contrast::*;
 pub use color_contrast::*;
 pub use constants::*;
+pub use control_characters::*;
 pub use corner_solver::{CornerSolver, inner_corner_radius};
 pub use format_distance::*;
 pub use search_input::*;
@@ -22,6 +26,21 @@ pub use with_rem_size::*;
 /// Returns true if the current theme is light or vibrant light.
 pub fn is_light(cx: &mut App) -> bool {
     cx.theme().appearance.is_light()
+}
+
+pub fn buffer_text_style(cx: &App) -> gpui::TextStyle {
+    let settings = theme::theme_settings(cx);
+    let buffer_font = settings.buffer_font(cx);
+    gpui::TextStyle {
+        color: cx.theme().colors().text,
+        font_family: buffer_font.family.clone(),
+        font_features: buffer_font.features.clone(),
+        font_fallbacks: buffer_font.fallbacks.clone(),
+        font_size: gpui::AbsoluteLength::from(settings.buffer_font_size(cx)),
+        font_weight: buffer_font.weight,
+        line_height: gpui::relative(1.),
+        ..gpui::TextStyle::default()
+    }
 }
 
 /// Returns the platform-appropriate label for the "reveal in file manager" action.
@@ -33,6 +52,36 @@ pub fn reveal_in_file_manager_label(is_remote: bool) -> &'static str {
     } else {
         "Reveal in File Manager"
     }
+}
+
+pub fn traffic_light_spacer(cx: &mut App, include_bottom_border: bool) -> impl IntoElement {
+    traffic_light_spacer_with_child(cx, include_bottom_border, None)
+}
+
+pub fn traffic_light_spacer_with_child(
+    cx: &mut App,
+    include_bottom_border: bool,
+    child: Option<AnyElement>,
+) -> impl IntoElement {
+    const CHILD_GAP: f32 = 6.;
+    const SDK_26_EXTRA_TRAFFIC_LIGHT_PADDING: f32 = 2.;
+
+    let padding_left = if child.is_some() && MACOS_SDK_26_OR_LATER {
+        TRAFFIC_LIGHT_PADDING - SDK_26_EXTRA_TRAFFIC_LIGHT_PADDING
+    } else {
+        TRAFFIC_LIGHT_PADDING
+    };
+
+    h_flex()
+        .flex_none()
+        .h_full()
+        .pl(px(padding_left))
+        .border_color(cx.theme().colors().border)
+        .when(include_bottom_border, |this| this.border_b_1())
+        .when_some(child, |this, child| {
+            this.child(h_flex().h_full().pr(px(CHILD_GAP)).child(child))
+        })
+        .child(Divider::vertical().color(DividerColor::Border))
 }
 
 /// Capitalizes the first character of a string.

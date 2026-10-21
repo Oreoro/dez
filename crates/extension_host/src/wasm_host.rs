@@ -4,11 +4,12 @@ use crate::capability_granter::CapabilityGranter;
 use crate::{ExtensionManifest, ExtensionSettings};
 use anyhow::{Context as _, Result, anyhow, bail};
 use async_trait::async_trait;
+use dap::{DebugRequest, StartDebuggingRequestArgumentsRequest};
 use extension::{
     CodeLabel, Command, Completion, ContextServerConfiguration, DebugAdapterBinary,
     DebugTaskDefinition, ExtensionCapability, ExtensionHostProxy, KeyValueStoreDelegate,
-    ProjectDelegate, SlashCommand, SlashCommandArgumentCompletion, SlashCommandOutput,
-    StartDebuggingRequestArgumentsRequest, Symbol, WorktreeDelegate,
+    ProjectDelegate, SlashCommand, SlashCommandArgumentCompletion, SlashCommandOutput, Symbol,
+    WorktreeDelegate,
 };
 use fs::Fs;
 use futures::future::LocalBoxFuture;
@@ -20,10 +21,10 @@ use futures::{
     },
     future::BoxFuture,
 };
-use gpui::{App, AsyncApp, BackgroundExecutor, Task};
+use gpui::{App, AsyncApp, BackgroundExecutor, EntityId, Task};
 use http_client::HttpClient;
 use language::LanguageName;
-use lsp::{LanguageServerBinaryOptions, LanguageServerName};
+use lsp::LanguageServerName;
 use moka::sync::Cache;
 use node_runtime::NodeRuntime;
 use release_channel::ReleaseChannel;
@@ -35,7 +36,7 @@ use std::{
     sync::{Arc, LazyLock, OnceLock},
     time::Duration,
 };
-use task::{DebugRequest, DebugScenario, DezDebugConfig, SpawnInTerminal, TaskTemplate};
+use task::{DebugScenario, SpawnInTerminal, TaskTemplate, ZedDebugConfig};
 use util::paths::SanitizedPath;
 use wasmtime::{
     CacheStore, Engine, Store,
@@ -64,7 +65,7 @@ pub struct WasmExtension {
     pub manifest: Arc<ExtensionManifest>,
     pub work_dir: Arc<Path>,
     #[allow(unused)]
-    pub dez_api_version: Version,
+    pub zed_api_version: Version,
     _task: Arc<Task<Result<(), gpui_tokio::JoinError>>>,
 }
 
@@ -88,10 +89,10 @@ impl extension::Extension for WasmExtension {
         &self,
         language_server_id: LanguageServerName,
         language_name: LanguageName,
-        binary_options: LanguageServerBinaryOptions,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Command> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 let command = extension
@@ -99,7 +100,6 @@ impl extension::Extension for WasmExtension {
                         store,
                         &language_server_id,
                         &language_name,
-                        &binary_options,
                         resource,
                     )
                     .await?
@@ -117,8 +117,9 @@ impl extension::Extension for WasmExtension {
         language_server_id: LanguageServerName,
         language_name: LanguageName,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Option<String>> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 let options = extension
@@ -141,8 +142,9 @@ impl extension::Extension for WasmExtension {
         &self,
         language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Option<String>> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 let options = extension
@@ -164,8 +166,9 @@ impl extension::Extension for WasmExtension {
         &self,
         language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Option<String>> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 extension
@@ -179,14 +182,16 @@ impl extension::Extension for WasmExtension {
             .boxed()
         })
         .await?
+        .map_err(anyhow::Error::from)
     }
 
     async fn language_server_workspace_configuration_schema(
         &self,
         language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Option<String>> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 extension
@@ -200,6 +205,7 @@ impl extension::Extension for WasmExtension {
             .boxed()
         })
         .await?
+        .map_err(anyhow::Error::from)
     }
 
     async fn language_server_additional_initialization_options(
@@ -207,8 +213,9 @@ impl extension::Extension for WasmExtension {
         language_server_id: LanguageServerName,
         target_language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Option<String>> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 let options = extension
@@ -232,8 +239,9 @@ impl extension::Extension for WasmExtension {
         language_server_id: LanguageServerName,
         target_language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        status_source: EntityId,
     ) -> Result<Option<String>> {
-        self.call(|extension, store| {
+        self.call_with_language_server_status_source(status_source, move |extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
                 let options = extension
@@ -446,10 +454,6 @@ impl extension::Extension for WasmExtension {
         self.call(|extension, store| {
             async move {
                 let resource = store.data_mut().table.push(worktree)?;
-                store
-                    .data()
-                    .capability_granter
-                    .set_binary_options(&crate::capability_granter::BinaryOptions::permissive());
                 let dap_binary = extension
                     .call_get_dap_binary(store, dap_name, config, user_installed_path, resource)
                     .await?
@@ -479,7 +483,7 @@ impl extension::Extension for WasmExtension {
         .await?
     }
 
-    async fn dap_config_to_scenario(&self, config: DezDebugConfig) -> Result<DebugScenario> {
+    async fn dap_config_to_scenario(&self, config: ZedDebugConfig) -> Result<DebugScenario> {
         self.call(|extension, store| {
             async move {
                 let kind = extension
@@ -515,6 +519,7 @@ impl extension::Extension for WasmExtension {
             .boxed()
         })
         .await?
+        .map_err(anyhow::Error::from)
     }
     async fn run_dap_locator(
         &self,
@@ -540,6 +545,7 @@ pub struct WasmState {
     ctx: WasiCtx,
     pub host: Arc<WasmHost>,
     pub(crate) capability_granter: CapabilityGranter,
+    pub(crate) language_server_status_source: Option<gpui::EntityId>,
 }
 
 type MainThreadCall = Box<dyn Send + for<'a> FnOnce(&'a mut AsyncApp) -> LocalBoxFuture<'a, ()>>;
@@ -554,7 +560,6 @@ fn wasm_engine(executor: &BackgroundExecutor) -> wasmtime::Engine {
         .get_or_init(|| {
             let mut config = wasmtime::Config::new();
             config.wasm_component_model(true);
-            config.async_support(true);
             config
                 .enable_incremental_compilation(cache_store())
                 .unwrap();
@@ -652,15 +657,16 @@ impl WasmHost {
             let engine = this.engine.clone();
 
             executor.spawn(async move {
-                let dez_api_version = parse_wasm_extension_version(&manifest_id, &wasm_bytes)?;
+                let zed_api_version = parse_wasm_extension_version(&manifest_id, &wasm_bytes)?;
                 let component = Component::from_binary(&engine, &wasm_bytes)
+                    .map_err(anyhow::Error::from)
                     .context("failed to compile wasm component")?;
 
-                anyhow::Ok((dez_api_version, component))
+                anyhow::Ok((zed_api_version, component))
             })
         };
 
-        let load_extension = |dez_api_version: Version, component| async move {
+        let load_extension = |zed_api_version: Version, component| async move {
             let wasi_ctx = this.build_wasi_ctx(&manifest).await?;
             let mut store = wasmtime::Store::new(
                 &this.engine,
@@ -673,6 +679,7 @@ impl WasmHost {
                         this.granted_capabilities.clone(),
                         manifest.clone(),
                     ),
+                    language_server_status_source: None,
                 },
             );
             // Store will yield after 1 tick, and get a new deadline of 1 tick after each yield.
@@ -683,7 +690,7 @@ impl WasmHost {
                 &executor,
                 &mut store,
                 this.release_channel,
-                dez_api_version.clone(),
+                zed_api_version.clone(),
                 &component,
             )
             .await?;
@@ -691,6 +698,7 @@ impl WasmHost {
             extension
                 .call_init_extension(&mut store)
                 .await
+                .map_err(anyhow::Error::from)
                 .context("failed to initialize wasm extension")?;
 
             let (tx, mut rx) = mpsc::unbounded::<ExtensionCall>();
@@ -705,17 +713,17 @@ impl WasmHost {
                 manifest.clone(),
                 this.work_dir.join(manifest.id.as_ref()).into(),
                 tx,
-                dez_api_version,
+                zed_api_version,
             ))
         };
 
         cx.spawn(async move |cx| {
-            let (dez_api_version, component) = compile_task.await?;
+            let (zed_api_version, component) = compile_task.await?;
 
             // Run wasi-dependent operations on tokio.
             // wasmtime_wasi internally uses tokio for I/O operations.
-            let (extension_task, manifest, work_dir, tx, dez_api_version) =
-                gpui_tokio::Tokio::spawn(cx, load_extension(dez_api_version, component)).await??;
+            let (extension_task, manifest, work_dir, tx, zed_api_version) =
+                gpui_tokio::Tokio::spawn(cx, load_extension(zed_api_version, component)).await??;
 
             // Run the extension message loop on tokio since extension
             // calls may invoke wasi functions that require a tokio runtime.
@@ -725,7 +733,7 @@ impl WasmHost {
                 manifest,
                 work_dir,
                 tx,
-                dez_api_version,
+                zed_api_version,
                 _task: task,
             })
         })
@@ -738,8 +746,7 @@ impl WasmHost {
             .await
             .context("failed to create extension work dir")?;
 
-        let file_perms = wasmtime_wasi::FilePerms::all();
-        let dir_perms = wasmtime_wasi::DirPerms::all();
+        let permissions = wasmtime_wasi::FsPerms::ReadWrite;
         let path = SanitizedPath::new(&extension_work_dir).to_string();
         #[cfg(target_os = "windows")]
         let path = path.replace('\\', "/");
@@ -749,8 +756,8 @@ impl WasmHost {
             .env("PWD", &path)
             .env("RUST_BACKTRACE", "full");
 
-        ctx.preopened_dir(&path, ".", dir_perms, file_perms)?;
-        ctx.preopened_dir(&path, &path, dir_perms, file_perms)?;
+        ctx.preopened_dir(&path, ".", permissions)?;
+        ctx.preopened_dir(&path, &path, permissions)?;
 
         Ok(ctx.build())
     }
@@ -815,17 +822,13 @@ pub fn parse_wasm_extension_version(extension_id: &str, wasm_bytes: &[u8]) -> Re
     for part in wasmparser::Parser::new(0).parse_all(wasm_bytes) {
         if let wasmparser::Payload::CustomSection(s) =
             part.context("error parsing wasm extension")?
-            // Extensions built with dez's own `extension_api` crate embed
-            // `dez:api-version`, but extensions fetched from upstream Zed's
-            // registry embed `zed:api-version`.
-            && (s.name() == "dez:api-version" || s.name() == "zed:api-version")
+            && s.name() == "zed:api-version"
         {
             version = parse_wasm_extension_version_custom_section(s.data());
             if version.is_none() {
                 bail!(
-                    "extension {} has invalid {} section: {:?}",
+                    "extension {} has invalid zed:api-version section: {:?}",
                     extension_id,
-                    s.name(),
                     s.data()
                 );
             }
@@ -837,9 +840,7 @@ pub fn parse_wasm_extension_version(extension_id: &str, wasm_bytes: &[u8]) -> Re
     //
     // By parsing the entirety of the Wasm bytes before we return, we're able to detect this problem
     // earlier as an `Err` rather than as a panic.
-    version.with_context(|| {
-        format!("extension {extension_id} has no dez:api-version or zed:api-version section")
-    })
+    version.with_context(|| format!("extension {extension_id} has no zed:api-version section"))
 }
 
 fn parse_wasm_extension_version_custom_section(data: &[u8]) -> Option<Version> {
@@ -880,6 +881,34 @@ impl WasmExtension {
             .with_context(|| format!("loading wasm extension: {}", manifest.id))
     }
 
+    async fn call_with_language_server_status_source<T, Fn>(
+        &self,
+        source: EntityId,
+        f: Fn,
+    ) -> Result<T>
+    where
+        T: 'static + Send,
+        Fn: 'static
+            + Send
+            + for<'a> FnOnce(&'a mut Extension, &'a mut Store<WasmState>) -> BoxFuture<'a, T>,
+    {
+        self.call(move |extension, store| {
+            async move {
+                debug_assert!(store.data().language_server_status_source.is_none());
+
+                // The installation-status WIT methods do not receive a worktree, so expose the
+                // source through WasmState for the duration of this serialized extension call.
+                // Clear it before returning so failed calls cannot affect the next invocation.
+                store.data_mut().language_server_status_source = Some(source);
+                let result = f(extension, store).await;
+                store.data_mut().language_server_status_source = None;
+                result
+            }
+            .boxed()
+        })
+        .await
+    }
+
     pub async fn call<T, Fn>(&self, f: Fn) -> Result<T>
     where
         T: 'static + Send,
@@ -891,10 +920,6 @@ impl WasmExtension {
         self.tx
             .unbounded_send(Box::new(move |extension, store| {
                 async {
-                    store
-                        .data()
-                        .capability_granter
-                        .set_binary_options(&crate::capability_granter::BinaryOptions::permissive());
                     let result = f(extension, store).await;
                     return_tx.send(result).ok();
                 }

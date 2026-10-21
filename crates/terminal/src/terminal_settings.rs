@@ -1,5 +1,5 @@
 use collections::HashMap;
-use gpui::{FontFallbacks, FontFeatures, FontWeight, Pixels, px};
+use gpui::{FontFallbacks, FontFeatures, FontWeight, Pixels};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +38,7 @@ pub struct TerminalSettings {
     pub open_links_in_mouse_mode: bool,
     pub button: bool,
     pub dock: TerminalDockPosition,
+    pub starts_open: bool,
     pub flexible: bool,
     pub default_width: Pixels,
     pub default_height: Pixels,
@@ -51,7 +52,6 @@ pub struct TerminalSettings {
     pub path_hyperlink_timeout_ms: u64,
     pub show_count_badge: bool,
     pub bell: TerminalBell,
-    pub dedicated_ssh_connection: bool,
 }
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
@@ -110,8 +110,9 @@ impl settings::Settings for TerminalSettings {
             open_links_in_mouse_mode: user_content.open_links_in_mouse_mode.unwrap(),
             button: user_content.button.unwrap(),
             dock: user_content.dock.unwrap(),
-            default_width: px(user_content.default_width.unwrap()),
-            default_height: px(user_content.default_height.unwrap()),
+            starts_open: user_content.starts_open.unwrap(),
+            default_width: user_content.default_width.unwrap().into_gpui(),
+            default_height: user_content.default_height.unwrap().into_gpui(),
             flexible: user_content.flexible.unwrap(),
             detect_venv: project_content.detect_venv.unwrap(),
             scroll_multiplier: user_content.scroll_multiplier.unwrap(),
@@ -135,7 +136,6 @@ impl settings::Settings for TerminalSettings {
             path_hyperlink_timeout_ms: project_content.path_hyperlink_timeout_ms.unwrap(),
             show_count_badge: user_content.show_count_badge.unwrap(),
             bell: user_content.bell.unwrap(),
-            dedicated_ssh_connection: user_content.dedicated_ssh_connection.unwrap(),
         }
     }
 }

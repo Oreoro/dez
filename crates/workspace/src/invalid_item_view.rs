@@ -1,12 +1,12 @@
 use std::{path::Path, sync::Arc};
 
-use dez_actions::workspace::OpenWithSystem;
-use gpui::{EventEmitter, FocusHandle, Focusable};
+use gpui::{EventEmitter, FocusHandle, Focusable, StatefulInteractiveElement};
 use ui::{
     App, Button, ButtonCommon, ButtonStyle, Clickable, Context, FluentBuilder, InteractiveElement,
     KeyBinding, Label, LabelCommon, LabelSize, ParentElement, Render, SharedString, Styled as _,
     Window, h_flex, v_flex,
 };
+use zed_actions::workspace::OpenWithSystem;
 
 use crate::Item;
 
@@ -79,6 +79,9 @@ impl Render for InvalidItemView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl gpui::IntoElement {
         let abs_path = self.abs_path.clone();
         v_flex()
+            .id(("invalid-item", cx.entity_id()))
+            .role(gpui::Role::Alert)
+            .aria_label("Could not open file")
             .size_full()
             .track_focus(&self.focus_handle(cx))
             .flex_none()
@@ -90,11 +93,7 @@ impl Render for InvalidItemView {
                     v_flex()
                         .justify_center()
                         .gap_2()
-                        .child(
-                            h_flex()
-                                .justify_center()
-                                .child(localization::text(cx, "common-could-not-open-file")),
-                        )
+                        .child(h_flex().justify_center().child("Could not open file"))
                         .child(
                             h_flex()
                                 .justify_center()
@@ -103,15 +102,12 @@ impl Render for InvalidItemView {
                         .when(self.is_local, |contents| {
                             contents.child(
                                 h_flex().justify_center().child(
-                                    Button::new(
-                                        "open-with-system",
-                                        localization::text(cx, "common-open-default-app"),
-                                    )
-                                    .on_click(move |_, _, cx| {
-                                        cx.open_with_system(&abs_path);
-                                    })
-                                    .style(ButtonStyle::Outlined)
-                                    .key_binding(KeyBinding::for_action(&OpenWithSystem, cx)),
+                                    Button::new("open-with-system", "Open in Default App")
+                                        .on_click(move |_, _, cx| {
+                                            cx.open_with_system(&abs_path);
+                                        })
+                                        .style(ButtonStyle::Outlined)
+                                        .key_binding(KeyBinding::for_action(&OpenWithSystem, cx)),
                                 ),
                             )
                         }),

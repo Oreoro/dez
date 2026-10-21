@@ -76,21 +76,19 @@ impl Render for ActiveBufferEncoding {
         }
 
         let (disabled, tooltip_text) = if self.is_dirty {
-            (true, localization::text(cx, "encoding-selector-save-first"))
+            (true, "Save file to change encoding")
         } else if self.is_shared {
-            (
-                true,
-                localization::text(cx, "encoding-selector-collaboration"),
-            )
+            (true, "Cannot change encoding during collaboration")
         } else if self.is_via_remote_server {
-            (true, localization::text(cx, "encoding-selector-remote"))
+            (true, "Cannot change encoding of remote server file")
         } else {
-            (false, localization::text(cx, "encoding-selector-action"))
+            (false, "Reopen with Encoding")
         };
 
         div().child(
             Button::new("change-encoding", text)
                 .label_size(LabelSize::Small)
+                .tab_index(0isize)
                 .on_click(cx.listener(move |this, _, window, cx| {
                     if disabled {
                         return;
@@ -103,9 +101,9 @@ impl Render for ActiveBufferEncoding {
                 }))
                 .tooltip(move |_window, cx| {
                     if disabled {
-                        Tooltip::text(tooltip_text.clone())(_window, cx)
+                        Tooltip::text(tooltip_text)(_window, cx)
                     } else {
-                        Tooltip::for_action(tooltip_text.clone(), &Toggle, cx)
+                        Tooltip::for_action(tooltip_text, &Toggle, cx)
                     }
                 }),
         )

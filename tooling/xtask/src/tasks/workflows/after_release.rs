@@ -2,9 +2,11 @@ use gh_workflow::*;
 
 use crate::tasks::workflows::{
     deploy_docs::deploy_docs_workflow_call,
-    release::notify_on_failure,
+    release::{self, notify_on_failure},
     runners,
-    steps::{CommonJobConditions, NamedJob, checkout_repo, dependant_job, named},
+    steps::{
+        CommonJobConditions, CommonPermissionSets, NamedJob, checkout_repo, dependant_job, named,
+    },
     vars::{self, StepOutput, WorkflowInput},
 };
 
@@ -24,9 +26,14 @@ pub fn after_release() -> Workflow {
     let deploy_docs = deploy_docs_workflow_call(DOCS_CHANNEL, TAG_NAME_ENV);
     let post_to_discord = post_to_discord(&[&refresh_zed_dev]);
     let publish_winget = publish_winget();
+    let create_sentry_release = create_sentry_release();
     let notify_on_failure = {
-        let notify_on_failure =
-            notify_on_failure(&[&refresh_zed_dev, &post_to_discord, &publish_winget]);
+        let notify_on_failure = notify_on_failure(&[
+            &refresh_zed_dev,
+            &post_to_discord,
+            &publish_winget,
+            &create_sentry_release,
+        ]);
         NamedJob {
             name: notify_on_failure.name,
             job: notify_on_failure.job.add_need(deploy_docs.name.clone()),
@@ -34,6 +41,7 @@ pub fn after_release() -> Workflow {
     };
 
     named::workflow()
+        .with_minimal_permissions()
         .add_env(("TAG_NAME", TAG_NAME_ENV))
         .add_env(("IS_PRERELEASE", IS_PRERELEASE_ENV))
         .on(Event::default()
@@ -48,6 +56,7 @@ pub fn after_release() -> Workflow {
         .add_job(deploy_docs.name, deploy_docs.job)
         .add_job(post_to_discord.name, post_to_discord.job)
         .add_job(publish_winget.name, publish_winget.job)
+        .add_job(create_sentry_release.name, create_sentry_release.job)
         .add_job(notify_on_failure.name, notify_on_failure.job)
 }
 
@@ -56,8 +65,11 @@ fn rebuild_releases_page() -> NamedJob {
         named::bash("curl -fX POST \"https://cloud.zed.dev/releases/refresh?expect_tag=$TAG_NAME\"")
     }
 
-    fn redeploy_zed_dev() -> Step<Run> {
-        named::bash("./script/redeploy-vercel").add_env(("VERCEL_TOKEN", vars::VERCEL_TOKEN))
+    fn revalidate_zed_dev() -> Step<Run> {
+        named::bash(
+            "curl -fX GET \"https://zed.dev/api/revalidate?tag=releases\" -H \"Authorization: Bearer $ZED_DEV_REVALIDATE_TOKEN\"",
+        )
+        .add_env(("ZED_DEV_REVALIDATE_TOKEN", vars::ZED_DEV_REVALIDATE_TOKEN))
     }
 
     named::job(
@@ -65,8 +77,7 @@ fn rebuild_releases_page() -> NamedJob {
             .runs_on(runners::LINUX_SMALL)
             .with_repository_owner_guard()
             .add_step(refresh_cloud_releases())
-            .add_step(checkout_repo())
-            .add_step(redeploy_zed_dev()),
+            .add_step(revalidate_zed_dev()),
     )
 }
 
@@ -177,4 +188,13 @@ echo "PACKAGE_NAME=$PACKAGE_NAME" >> $env:GITHUB_OUTPUT
             .add_step(set_package_name)
             .add_step(winget_releaser(&package_name)),
     )
+}
+
+fn create_sentry_release() -> NamedJob {
+    let job = Job::default()
+        .runs_on(runners::LINUX_SMALL)
+        .with_repository_owner_guard()
+        .add_step(checkout_repo())
+        .add_step(release::create_sentry_release());
+    named::job(job)
 }
