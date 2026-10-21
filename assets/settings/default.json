@@ -1970,6 +1970,22 @@
     //
     // Trailing slashes are ignored.
     "worktree_directory": "../worktrees",
+    // Generate commit messages with an external command instead of a model
+    // provider. The command receives the prompt as its final argument, or at
+    // the `{prompt}` placeholder in `args`, and writes the message to stdout.
+    "commit_message_generator": {
+      // Executable to run, for example "codex" or a custom script.
+      "command": null,
+      "args": [],
+      // Maximum time to wait for the command, in milliseconds.
+      "timeout_ms": 60000,
+      // Maximum number of diff bytes included in the prompt.
+      "max_diff_bytes": 20000,
+      // Whether to include project and user rule files in the prompt.
+      "include_project_rules": true,
+      // Extra instructions included in the prompt.
+      "instructions": null,
+    },
   },
   // The list of custom Git hosting providers.
   "git_hosting_providers": [

@@ -503,6 +503,25 @@ pub struct GitSettings {
     ///
     /// Default: ../worktrees
     pub worktree_directory: String,
+    /// External command used to generate commit messages, when configured.
+    pub commit_message_generator: Option<CommitMessageGeneratorSettings>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CommitMessageGeneratorSettings {
+    /// The executable to run.
+    pub command: String,
+    /// Arguments passed to the command. `{prompt}` is replaced with the prompt;
+    /// otherwise the prompt is appended as the final argument.
+    pub args: Vec<String>,
+    /// Maximum time to wait for the command.
+    pub timeout: Duration,
+    /// Maximum number of diff bytes included in the prompt.
+    pub max_diff_bytes: usize,
+    /// Whether to include project and user rule files in the prompt.
+    pub include_project_rules: bool,
+    /// Extra instructions included in the prompt.
+    pub instructions: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -719,6 +738,20 @@ impl Settings for ProjectSettings {
                 .worktree_directory
                 .clone()
                 .unwrap_or_else(|| DEFAULT_WORKTREE_DIRECTORY.to_string()),
+            commit_message_generator: git.commit_message_generator.as_ref().and_then(|generator| {
+                let command = generator.command.as_ref()?.trim().to_string();
+                if command.is_empty() {
+                    return None;
+                }
+                Some(CommitMessageGeneratorSettings {
+                    command,
+                    args: generator.args.clone().unwrap_or_default(),
+                    timeout: Duration::from_millis(generator.timeout_ms.unwrap_or(60_000)),
+                    max_diff_bytes: generator.max_diff_bytes.unwrap_or(20_000),
+                    include_project_rules: generator.include_project_rules.unwrap_or(true),
+                    instructions: generator.instructions.clone(),
+                })
+            }),
         };
         Self {
             context_servers: project

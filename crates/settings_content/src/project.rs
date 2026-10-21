@@ -613,6 +613,40 @@ pub struct GitSettings {
     ///
     /// Default: ../worktrees
     pub worktree_directory: Option<String>,
+    /// Configure an external command that writes git commit messages.
+    ///
+    /// When set, the generate-commit-message action runs this command instead
+    /// of requiring a native language-model provider. The command receives the
+    /// prompt as its final argument, or at the `{prompt}` placeholder in
+    /// `args`, and must write the commit message to stdout.
+    pub commit_message_generator: Option<CommitMessageGeneratorSettingsContent>,
+}
+
+#[with_fallible_options]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
+#[serde(rename_all = "snake_case")]
+pub struct CommitMessageGeneratorSettingsContent {
+    /// The executable to run, for example `codex` or a custom script.
+    pub command: Option<String>,
+    /// Arguments passed to the command.
+    ///
+    /// If an argument contains `{prompt}`, it is replaced with the generated
+    /// prompt. Otherwise the prompt is appended as the final argument.
+    pub args: Option<Vec<String>>,
+    /// Maximum time to wait for the command, in milliseconds.
+    ///
+    /// Default: 60000
+    pub timeout_ms: Option<u64>,
+    /// Maximum number of diff bytes included in the prompt.
+    ///
+    /// Default: 20000
+    pub max_diff_bytes: Option<usize>,
+    /// Whether to include project and user rule files in the prompt.
+    ///
+    /// Default: true
+    pub include_project_rules: Option<bool>,
+    /// Extra instructions included in the prompt.
+    pub instructions: Option<String>,
 }
 
 #[with_fallible_options]

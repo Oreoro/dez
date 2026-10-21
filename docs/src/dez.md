@@ -709,6 +709,14 @@ expansion for a longer message. View Diff, stage/unstage, commit, remote, and
 split-menu controls remain keyboard reachable and announce their action and
 open state.
 
+Generate Commit Message can run a command you own instead of requiring a model
+provider. Set `git.commit_message_generator.command` and optional `args` in
+settings; the prompt is passed as the final argument, or at a `{prompt}`
+placeholder in `args`, and the command's stdout becomes the message. Staged
+changes are used when present, otherwise worktree changes; the diff is bounded
+by `max_diff_bytes`. Missing commands, non-zero exits, and timeouts are reported
+in the workspace instead of being silently discarded.
+
 Git History uses the same native tab hierarchy. Its tab is keyboard reachable
 and announces whether it is selected. Missing-repository, loading, no-commit,
 and load-failure states begin at the tab content edge with a specific title and
