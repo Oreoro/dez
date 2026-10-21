@@ -906,12 +906,10 @@ async fn open_workspaces(
                     ..Default::default()
                 };
                 workspace::open_new(open_options, app_state, cx, |workspace, window, cx| {
-                    if crate::zed::should_seed_empty_workspace_with_home(paths::APP_NAME) {
-                        crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
-                    } else if crate::zed::should_seed_empty_workspace_with_blank_file(
-                        paths::APP_NAME,
-                    ) {
+                    if crate::zed::should_seed_empty_workspace_with_blank_file(paths::APP_NAME) {
                         Editor::new_file(workspace, &Default::default(), window, cx);
+                    } else if crate::zed::should_seed_empty_workspace_with_home(paths::APP_NAME) {
+                        crate::zed::seed_empty_workspace_with_home(workspace, window, cx);
                     }
                 })
                 .detach_and_log_err(cx);
