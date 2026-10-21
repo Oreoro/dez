@@ -971,8 +971,8 @@ require_pattern crates/settings_ui/src/page_data.rs \
     'dez_settings_page_visible\(paths::APP_NAME, "Collaboration"\)' \
     'Dez Settings can regress to exposing the inherited Calls and Collaboration page'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
-    'if paths::APP_NAME != "Zed".*?let built_in_agent_items = agents_page\.items.*?let mut agent_items = evidence_page\(\)\.items\.into_vec\(\).*?agent_items\.extend\(attention_page\(\)\.items\).*?agent_items\.extend\(built_in_agent_items\).*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspaces & Terminals" => 0.*?"Agents" => 1.*?"Appearance" => 2.*?"Workspace & Privacy" => 3.*?"Navigation & Layout" => 8.*?"Workspace Tools" => 9.*?"Advanced" => 13' \
-    'Dez Settings can regress to burying its product workflow below inherited IDE customization'
+    'if paths::APP_NAME != "Zed".*?let mut agent_items = evidence_page\(\)\.items\.into_vec\(\).*?agent_items\.extend\(attention_page\(\)\.items\).*?agents_page\.items = agent_items\.into_boxed_slice\(\).*?pages\.sort_by_key\(\|page\| dez_settings_page_priority\(page\.title\)\).*?fn dez_settings_page_priority.*?"Workspaces & Terminals" => 0.*?"Agents" => 1.*?"Appearance" => 2.*?"Workspace & Privacy" => 3.*?"Navigation & Layout" => 8.*?"Workspace Tools" => 9.*?"Advanced" => 13' \
+    'Dez Settings can regress to exposing Built-in Agent controls or burying its product workflow below inherited IDE customization'
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn appearance_page\(\) -> SettingsPage.*?fn dez_visual_profile_section.*?paths::APP_NAME == "Zed".*?return Vec::new\(\).*?SectionHeader\("Dez Visual Profile"\).*?title: "Restore Native Dez Appearance".*?button_text: "Restore Profile".*?icon: IconName::RotateCcw.*?scope: ActionLinkScope::Window.*?zed_actions::dez::RestoreVisualProfile\.boxed_clone\(\).*?original_window\.activate_window\(\).*?window\.remove_window\(\).*?dez_visual_profile_section\(\).*?theme_section\(\)' \
     'graphical Appearance settings can regress to losing the scoped Dez visual-profile recovery action'
@@ -2001,6 +2001,12 @@ reject_pattern crates/sidebar/src/sidebar.rs \
 require_multiline_pattern crates/settings_ui/src/page_data.rs \
     'fn cmux_integration_action_link.*?"cmux Workspace Handoff".*?cmux owns its tabs, splits, browser, agent hooks, and action registry.*?Open Workspace in cmux works without live sharing.*?cross-app API access.*?cmux Workspace, port, and notification rows in Dez.*?never changes cmux permissions or hooks.*?"Open API & Access Guide".*?icon: IconName::ArrowUpRight.*?https://cmux\.com/docs/api.*?fn terminal_page.*?SectionHeader\("Terminal Launch"\).*?terminal_session_init_setting_item\(\).*?cmux_integration_action_link\(\)' \
     'Dez settings can regress to implying ownership of cmux agent actions or hiding the official workflow configuration route'
+require_multiline_pattern crates/settings_ui/src/page_data.rs \
+    'if paths::APP_NAME != "Zed" \{.*?let mut agent_items = evidence_page\(\).items.into_vec\(\).*?agent_items.extend\(attention_page\(\).items\).*?agents_page.items = agent_items.into_boxed_slice\(\)' \
+    'Dez settings can expose Built-in Agent provider controls'
+reject_pattern crates/settings_ui/src/page_data.rs \
+    'agent_items.extend\(built_in_agent_items\)' \
+    'Dez settings can merge Built-in Agent provider controls back into the session settings page'
 require_multiline_pattern crates/sidebar/src/sidebar.rs \
     'fn create_new_thread.*?if APP_NAME != "Zed".*?return;.*?create_agent_thread_in_workspace' \
     'the Built-in Agent thread path can run in terminal-first Dez'

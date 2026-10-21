@@ -83,10 +83,8 @@ pub(crate) fn settings_data(cx: &App) -> Vec<SettingsPage> {
     }
     let mut agents_page = ai_page(cx);
     if paths::APP_NAME != "Zed" {
-        let built_in_agent_items = agents_page.items;
         let mut agent_items = evidence_page().items.into_vec();
         agent_items.extend(attention_page().items);
-        agent_items.extend(built_in_agent_items);
         agents_page.items = agent_items.into_boxed_slice();
     }
     pages.push(agents_page);
