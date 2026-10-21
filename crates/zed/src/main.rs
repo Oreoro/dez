@@ -2032,11 +2032,21 @@ fn copy_missing_config_directory(source: &Path, destination: &Path) {
         if file_name == ".DS_Store" {
             continue;
         }
+        let file_type = match entry.file_type() {
+            Ok(file_type) => file_type,
+            Err(error) => {
+                eprintln!(
+                    "Could not inspect an entry in legacy config directory {}: {error}",
+                    source.display()
+                );
+                continue;
+            }
+        };
         let source_path = entry.path();
         let destination_path = destination.join(file_name);
-        if source_path.is_dir() {
+        if file_type.is_dir() {
             copy_missing_config_directory(&source_path, &destination_path);
-        } else {
+        } else if file_type.is_file() {
             copy_missing_config_file(&source_path, &destination_path);
         }
     }
