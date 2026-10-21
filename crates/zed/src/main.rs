@@ -1948,7 +1948,103 @@ pub(crate) async fn restorable_workspace_locations(
     }
 }
 
+/// Copies user configuration from the legacy storage directory into the new
+/// product-facing config directory. Existing destination files always win.
+fn migrate_legacy_config() {
+    let destination = paths::config_dir();
+    let legacy = paths::legacy_config_dir();
+    if destination == &legacy || !legacy.is_dir() {
+        return;
+    }
+
+    for file in [
+        "settings.json",
+        "keymap.json",
+        "tasks.json",
+        "debug.json",
+        "AGENTS.md",
+    ] {
+        copy_missing_config_file(&legacy.join(file), &destination.join(file));
+    }
+
+    for directory in ["themes", "prompts", "snippets"] {
+        copy_missing_config_directory(&legacy.join(directory), &destination.join(directory));
+    }
+}
+
+fn copy_missing_config_file(source: &Path, destination: &Path) {
+    if destination.exists() || !source.is_file() {
+        return;
+    }
+    if let Some(parent) = destination.parent()
+        && let Err(error) = std::fs::create_dir_all(parent)
+    {
+        eprintln!(
+            "Could not create config directory {}: {error}",
+            parent.display()
+        );
+        return;
+    }
+    if let Err(error) = std::fs::copy(source, destination) {
+        eprintln!(
+            "Could not copy legacy config file {} to {}: {error}",
+            source.display(),
+            destination.display()
+        );
+    }
+}
+
+fn copy_missing_config_directory(source: &Path, destination: &Path) {
+    if !source.is_dir() {
+        return;
+    }
+    if let Err(error) = std::fs::create_dir_all(destination) {
+        eprintln!(
+            "Could not create config directory {}: {error}",
+            destination.display()
+        );
+        return;
+    }
+
+    let entries = match std::fs::read_dir(source) {
+        Ok(entries) => entries,
+        Err(error) => {
+            eprintln!(
+                "Could not read legacy config directory {}: {error}",
+                source.display()
+            );
+            return;
+        }
+    };
+
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                eprintln!(
+                    "Could not read an entry in legacy config directory {}: {error}",
+                    source.display()
+                );
+                continue;
+            }
+        };
+        let file_name = entry.file_name();
+        if file_name == ".DS_Store" {
+            continue;
+        }
+        let source_path = entry.path();
+        let destination_path = destination.join(file_name);
+        if source_path.is_dir() {
+            copy_missing_config_directory(&source_path, &destination_path);
+        } else {
+            copy_missing_config_file(&source_path, &destination_path);
+        }
+    }
+}
+
 fn init_paths() -> HashMap<io::ErrorKind, Vec<&'static Path>> {
+    migrate_legacy_config();
+
     [
         paths::config_dir(),
         paths::extensions_dir(),
@@ -2187,6 +2283,11 @@ fn prewarm_fonts(cx: &mut App) {
     .detach();
 }
 
+fn is_user_theme_path(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("json"))
+}
+
 /// Spawns a background task to load the user themes from the themes directory.
 fn load_user_themes_in_background(fs: Arc<dyn fs::Fs>, cx: &mut App) {
     cx.spawn({
@@ -2220,6 +2321,9 @@ fn load_user_themes_in_background(fs: Arc<dyn fs::Fs>, cx: &mut App) {
                 let Some(theme_path) = theme_path.log_err() else {
                     continue;
                 };
+                if !is_user_theme_path(&theme_path) {
+                    continue;
+                }
                 let Some(bytes) = fs.load_bytes(&theme_path).await.log_err() else {
                     continue;
                 };
@@ -2250,6 +2354,7 @@ fn watch_themes(fs: Arc<dyn fs::Fs>, cx: &mut App) {
                     .ok()
                     .flatten()
                     .is_some_and(|m| !m.is_dir)
+                    && is_user_theme_path(&event.path)
                 {
                     let theme_registry = cx.update(|cx| ThemeRegistry::global(cx));
                     if let Some(bytes) = fs.load_bytes(&event.path).await.log_err()
