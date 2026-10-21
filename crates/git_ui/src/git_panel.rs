@@ -4452,6 +4452,7 @@ impl GitPanel {
                 });
 
                 if let Some(ConfiguredModel { provider, .. }) = &model {
+                    let provider = provider.clone();
                     if let Some(task) = cx.update(|cx| {
                         if !provider.is_authenticated(cx) {
                             Some(provider.authenticate(cx))
@@ -6518,7 +6519,7 @@ impl GitPanel {
 
         let button = if can_commit && has_commit_model_configuration_error {
             button.hoverable_tooltip(move |_window, cx| {
-                cx.new(|_| GenerateCommitMessageConfigurationTooltip {
+                cx.new(move |_| GenerateCommitMessageConfigurationTooltip {
                     external_only: !agent_enabled,
                 })
                 .into()
