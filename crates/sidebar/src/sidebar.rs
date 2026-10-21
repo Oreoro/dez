@@ -1699,7 +1699,7 @@ fn session_start_state_copy(
     } else {
         (
             "No Workspace is open",
-            "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+            "Open a folder to start a Workspace.",
             "Open Workspace…",
             None,
         )
@@ -3291,7 +3291,7 @@ mod session_start_state_tests {
             session_start_state_copy("Dez"),
             (
                 "No Workspace is open",
-                "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+                "Open a folder to start a Workspace.",
                 "Open Workspace…",
                 None
             ),
