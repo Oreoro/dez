@@ -731,7 +731,7 @@ fn start_state_waits_for_restore_and_only_describes_a_true_empty_app() {
     assert_eq!(session_start_state_copy("Dez").0, "No Workspace is open");
     assert_eq!(
         session_start_state_copy("Dez").1,
-        "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area."
+        "Open a folder to start a Workspace."
     );
     assert_eq!(
         session_start_state_copy("Dez").2,

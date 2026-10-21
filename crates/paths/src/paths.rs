@@ -21,14 +21,39 @@ pub const APP_NAME: &str = "Dez";
 /// risking a seemingly empty first launch.
 pub const APP_STORAGE_NAME: &str = "Superzed";
 
+/// Directory name used for user configuration.
+///
+/// Configuration is deliberately separate from the legacy data directory so
+/// that the product-facing `~/.config/dez` path is authoritative. Data keeps
+/// using [`APP_STORAGE_NAME`] until its transactional migration lands.
+pub const APP_CONFIG_NAME: &str = "Dez";
+
 /// Lowercased form of [`APP_STORAGE_NAME`] for XDG-style paths.
 pub const APP_STORAGE_NAME_LOWERCASE: &str = "superzed";
+
+/// Lowercased form of [`APP_CONFIG_NAME`] for XDG-style paths.
+pub const APP_CONFIG_NAME_LOWERCASE: &str = "dez";
 const _: () = assert!(
     APP_STORAGE_NAME_LOWERCASE
         .as_bytes()
         .eq_ignore_ascii_case(APP_STORAGE_NAME.as_bytes()),
     "APP_STORAGE_NAME_LOWERCASE must match APP_STORAGE_NAME",
 );
+const _: () = assert!(
+    APP_CONFIG_NAME_LOWERCASE
+        .as_bytes()
+        .eq_ignore_ascii_case(APP_CONFIG_NAME.as_bytes()),
+    "APP_CONFIG_NAME_LOWERCASE must match APP_CONFIG_NAME",
+);
+
+/// Schema namespace for the Preview 2 database.
+///
+/// Preview 2 and newer Dez builds previously shared `db/0-preview`. When the
+/// newer build advanced migrations first, Preview 2 saw a migration table that
+/// claimed columns existed while the physical schema did not, producing
+/// "no such column" failures. A separate namespace gives each product line a
+/// single schema owner and keeps the old database intact for recovery.
+pub const DB_SCHEMA_NAMESPACE: &str = "preview-2-v0.6";
 
 /// Lowercased form of [`APP_NAME`], used for executable identity.
 pub const APP_NAME_LOWERCASE: &str = {
@@ -138,18 +163,39 @@ pub fn config_dir() -> &'static PathBuf {
         } else if cfg!(target_os = "windows") {
             dirs::config_dir()
                 .expect("failed to determine RoamingAppData directory")
-                .join(APP_STORAGE_NAME)
+                .join(APP_CONFIG_NAME)
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             if let Ok(flatpak_xdg_config) = std::env::var("FLATPAK_XDG_CONFIG_HOME") {
                 flatpak_xdg_config.into()
             } else {
                 dirs::config_dir().expect("failed to determine XDG_CONFIG_HOME directory")
             }
-            .join(APP_STORAGE_NAME_LOWERCASE)
+            .join(APP_CONFIG_NAME_LOWERCASE)
         } else {
-            home_dir().join(".config").join(APP_STORAGE_NAME_LOWERCASE)
+            home_dir().join(".config").join(APP_CONFIG_NAME_LOWERCASE)
         }
     })
+}
+
+/// Returns the legacy configuration directory from before the config/data split.
+///
+/// Used once at startup to copy user configuration into [`config_dir`] without
+/// overwriting files the user has already created there.
+pub fn legacy_config_dir() -> PathBuf {
+    if cfg!(target_os = "windows") {
+        dirs::config_dir()
+            .expect("failed to determine RoamingAppData directory")
+            .join(APP_STORAGE_NAME)
+    } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
+        if let Ok(flatpak_xdg_config) = std::env::var("FLATPAK_XDG_CONFIG_HOME") {
+            PathBuf::from(flatpak_xdg_config)
+        } else {
+            dirs::config_dir().expect("failed to determine XDG_CONFIG_HOME directory")
+        }
+        .join(APP_STORAGE_NAME_LOWERCASE)
+    } else {
+        home_dir().join(".config").join(APP_STORAGE_NAME_LOWERCASE)
+    }
 }
 
 /// Returns the path to the data directory used by Zed.
@@ -270,9 +316,12 @@ pub fn old_log_file() -> &'static PathBuf {
 }
 
 /// Returns the path to the database directory.
+///
+/// The schema namespace keeps Preview 2 databases separate from newer Dez
+/// builds that share the legacy data directory.
 pub fn database_dir() -> &'static PathBuf {
     static DATABASE_DIR: OnceLock<PathBuf> = OnceLock::new();
-    DATABASE_DIR.get_or_init(|| data_dir().join("db"))
+    DATABASE_DIR.get_or_init(|| data_dir().join("db").join(DB_SCHEMA_NAMESPACE))
 }
 
 /// Returns the path to the crashes directory, if it exists for the current platform.
@@ -352,10 +401,10 @@ pub fn agents_file() -> &'static PathBuf {
 /// readability in announcement copy.
 #[cfg(target_os = "windows")]
 pub const GLOBAL_AGENTS_FILE_DISPLAY: &str =
-    const_format::concatcp!("%APPDATA%\\", APP_STORAGE_NAME, "\\AGENTS.md");
+    const_format::concatcp!("%APPDATA%\\", APP_CONFIG_NAME, "\\AGENTS.md");
 #[cfg(not(target_os = "windows"))]
 pub const GLOBAL_AGENTS_FILE_DISPLAY: &str =
-    const_format::concatcp!("~/.config/", APP_STORAGE_NAME_LOWERCASE, "/AGENTS.md");
+    const_format::concatcp!("~/.config/", APP_CONFIG_NAME_LOWERCASE, "/AGENTS.md");
 
 /// Returns the path to the extensions directory.
 ///

@@ -11,12 +11,17 @@ on:
         options:
           - preview
           - stable
+      skip_tests:
+        description: Skip focused regression tests for a faster artifact
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 concurrency:
-  group: dez-macos-build-${{ github.ref }}
+  group: dez-macos-build-${{ github.ref }}-${{ inputs.skip_tests }}
   cancel-in-progress: true
 
 env:
@@ -134,6 +139,7 @@ jobs:
           fi
 
       - name: Run focused Workspace, terminal, and integration regressions
+        if: ${{ !inputs.skip_tests }}
         run: |
           set -euo pipefail
           cargo test \

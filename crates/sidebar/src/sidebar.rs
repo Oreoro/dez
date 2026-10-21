@@ -1699,7 +1699,7 @@ fn session_start_state_copy(
     } else {
         (
             "No Workspace is open",
-            "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+            "Open a folder to start a Workspace.",
             "Open Workspace…",
             None,
         )
@@ -3291,7 +3291,7 @@ mod session_start_state_tests {
             session_start_state_copy("Dez"),
             (
                 "No Workspace is open",
-                "Open a folder or repository. Its terminals, Agent Sessions, files, and review stay together in one Main Work Area.",
+                "Open a folder to start a Workspace.",
                 "Open Workspace…",
                 None
             ),
@@ -20927,13 +20927,14 @@ impl Render for Sidebar {
             self.session_search_open,
         );
         let show_start_state = installation_required
-            || session_start_state_visible(
-                self.contents.has_open_projects,
-                self.contents.session_count,
-                has_query,
-                self.attention_only,
-                self.workspace_restore_status_is_visible(cx),
-            );
+            || (APP_NAME == "Zed"
+                && session_start_state_visible(
+                    self.contents.has_open_projects,
+                    self.contents.session_count,
+                    has_query,
+                    self.attention_only,
+                    self.workspace_restore_status_is_visible(cx),
+                ));
         let external_terminal_section = if installation_required {
             None
         } else {

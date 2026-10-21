@@ -1098,6 +1098,13 @@ impl Domain for WorkspaceDb {
                 ON UPDATE CASCADE
             ) STRICT;
         ),
+        sql!(
+            ALTER TABLE panes ADD COLUMN kind TEXT;
+            ALTER TABLE panes ADD COLUMN visible INTEGER;
+            ALTER TABLE workspaces ADD COLUMN active_canvas_layout_recipe TEXT;
+            ALTER TABLE workspaces ADD COLUMN saved_canvas_layouts TEXT;
+            ALTER TABLE workspaces ADD COLUMN user_selected_review_evidence TEXT;
+        ),
     ];
 
     // Allow recovering from bad migration that was initially shipped to nightly
