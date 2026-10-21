@@ -1017,6 +1017,7 @@ impl Render for WelcomePage {
                 )
                 .into_any_element(),
             ),
+            WelcomeRecentState::Empty if APP_NAME != "Zed" => None,
             WelcomeRecentState::Empty => Some(
                 Self::render_recent_workspace_status(
                     "No recent Workspaces",
