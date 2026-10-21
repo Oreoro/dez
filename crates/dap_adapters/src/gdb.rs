@@ -4,7 +4,7 @@ use collections::HashMap;
 use dap::{StartDebuggingRequestArguments, adapters::DebugTaskDefinition};
 use gpui::AsyncApp;
 use std::ffi::OsStr;
-use task::{DebugScenario, DezDebugConfig};
+use task::{DebugScenario, ZedDebugConfig};
 
 use crate::*;
 
@@ -29,10 +29,10 @@ impl DebugAdapter for GdbDebugAdapter {
         DebugAdapterName(Self::ADAPTER_NAME.into())
     }
 
-    async fn config_from_dez_format(&self, dez_scenario: DezDebugConfig) -> Result<DebugScenario> {
+    async fn config_from_zed_format(&self, zed_scenario: ZedDebugConfig) -> Result<DebugScenario> {
         let mut obj = serde_json::Map::default();
 
-        match &dez_scenario.request {
+        match &zed_scenario.request {
             dap::DebugRequest::Attach(attach) => {
                 obj.insert("request".into(), "attach".into());
                 obj.insert("pid".into(), attach.process_id.into());
@@ -50,7 +50,7 @@ impl DebugAdapter for GdbDebugAdapter {
                     obj.insert("env".into(), launch.env_json());
                 }
 
-                if let Some(stop_on_entry) = dez_scenario.stop_on_entry {
+                if let Some(stop_on_entry) = zed_scenario.stop_on_entry {
                     obj.insert(
                         "stopAtBeginningOfMainSubprogram".into(),
                         stop_on_entry.into(),
@@ -63,8 +63,8 @@ impl DebugAdapter for GdbDebugAdapter {
         }
 
         Ok(DebugScenario {
-            adapter: dez_scenario.adapter,
-            label: dez_scenario.label,
+            adapter: zed_scenario.adapter,
+            label: zed_scenario.label,
             build: None,
             config: serde_json::Value::Object(obj),
             tcp_connection: None,

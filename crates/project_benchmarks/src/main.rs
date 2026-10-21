@@ -3,7 +3,9 @@ use std::{sync::Arc, time::Duration};
 use anyhow::anyhow;
 use askpass::EncryptedPassword;
 use clap::Parser;
+use client::{Client, UserStore};
 use futures::channel::oneshot;
+use gpui::AppContext as _;
 use gpui::TaskExt;
 use http_client::FakeHttpClient;
 use language::LanguageRegistry;
@@ -47,6 +49,7 @@ impl RemoteClientDelegate for BenchmarkRemoteClient {
         &self,
         prompt: String,
         tx: oneshot::Sender<EncryptedPassword>,
+        _cancellation: oneshot::Receiver<()>,
         _cx: &mut gpui::AsyncApp,
     ) {
         eprintln!("SSH asking for password: {}", prompt);
@@ -127,9 +130,11 @@ fn main() -> Result<(), anyhow::Error> {
     gpui_platform::headless().run(|cx| {
         release_channel::init_test(semver::Version::new(0, 0, 0), ReleaseChannel::Dev, cx);
         settings::init(cx);
+        let client = Client::production(cx);
         let http_client = FakeHttpClient::with_200_response();
         let (_, rx) = watch::channel(None);
-        let node = NodeRuntime::new(http_client.clone(), None, rx);
+        let node = NodeRuntime::new(http_client, None, rx);
+        let user_store = cx.new(|cx| UserStore::new(client.clone(), cx));
         let registry = Arc::new(LanguageRegistry::new(cx.background_executor().clone()));
         let fs = Arc::new(RealFs::new(None, cx.background_executor().clone()));
 
@@ -137,7 +142,7 @@ fn main() -> Result<(), anyhow::Error> {
 
             cx.spawn(async move |cx| {
                 let project = if let Some(ssh_target) = args.ssh {
-                    println!("Setting up SSH connection for {}", &ssh_target);
+                    println!("Setting up SSH connection for {ssh_target}");
                     let ssh_connection_options = SshConnectionOptions::parse_command_line(&ssh_target)?;
 
                     let connection_options = remote::RemoteConnectionOptions::from(ssh_connection_options);
@@ -147,12 +152,13 @@ fn main() -> Result<(), anyhow::Error> {
                     let (_tx, rx) = oneshot::channel();
                     let remote_client =  cx.update(|cx| remote::RemoteClient::new(ConnectionIdentifier::setup(), remote_connection, rx, delegate.clone(), cx )).await?.ok_or_else(|| anyhow!("ssh initialization returned None"))?;
 
-                    cx.update(|cx| Project::remote(remote_client, http_client, node, registry, fs, false, cx))
+                    cx.update(|cx| Project::remote(remote_client,  client, node, user_store, registry, fs, false, cx))
                 } else {
                     println!("Setting up local project");
                     cx.update(|cx| Project::local(
-                    http_client,
+                    client,
                     node,
+                    user_store,
                     registry,
                     fs,
                     Some(Default::default()),

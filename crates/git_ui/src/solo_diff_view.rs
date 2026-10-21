@@ -1,34 +1,33 @@
-use crate::{git_panel::GitStatusEntry, git_status_icon};
+use crate::{git_panel::GitStatusEntry, git_panel_settings::GitPanelSettings, git_status_icon};
 use anyhow::{Context as _, Result};
 use buffer_diff::DiffHunkSecondaryStatus;
 use editor::{
-    Direction, Editor, EditorEvent, EditorSettings, SplittableEditor, ToggleSplitDiff,
+    DiffStyleControls, Direction, Editor, EditorEvent, EditorSettings, SplittableEditor,
+    ToggleSplitDiff,
     actions::{GoToHunk, GoToPreviousHunk},
+    file_status_label_color,
 };
-use fs::Fs;
 use git::{
     Commit, Restore, StageAndNext, StageFile, ToggleStaged, UnstageAndNext, UnstageFile,
     repository::RepoPath, status::StageStatus,
 };
 use gpui::{
-    Action, AnyElement, App, AppContext as _, Context, Entity, EventEmitter, FocusHandle,
-    Focusable, IntoElement, Render, Subscription, Task, WeakEntity, Window,
+    Action, App, AppContext as _, Context, Empty, Entity, EventEmitter, FocusHandle, Focusable,
+    HighlightStyle, IntoElement, Render, Subscription, Task, WeakEntity, Window,
 };
-use language::{Buffer, HighlightedText};
-use multi_buffer::MultiBuffer;
+use language::{Anchor, Buffer, HighlightedText, OffsetRangeExt as _, Point};
+use multi_buffer::{MultiBuffer, PathKey, excerpt_context_lines};
 use project::{
     Project,
     git_store::{Repository, RepositoryId},
 };
-use settings::{DiffViewStyle, Settings, SettingsStore, update_settings_file};
+use settings::{Settings, SettingsStore, StatusStyle};
 use std::{
     any::{Any, TypeId},
+    ops::Range,
     sync::Arc,
 };
-use ui::{
-    Color, DiffStat, Divider, Icon, IconButton, IconButtonShape, IconName, Label, LabelCommon as _,
-    SharedString, Tooltip, prelude::*, vertical_divider,
-};
+use ui::{DiffStat, Divider, Tooltip, prelude::*};
 use util::paths::{PathExt as _, PathStyle};
 use workspace::{
     Item, ItemHandle, ItemNavHistory, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView,
@@ -43,8 +42,10 @@ pub struct SoloDiffView {
     repository_id: RepositoryId,
     repo_path: RepoPath,
     buffer: Entity<Buffer>,
+    diff: Entity<buffer_diff::BufferDiff>,
     editor: Entity<SplittableEditor>,
     workspace: WeakEntity<Workspace>,
+    showing_full_file: bool,
     _settings_subscription: Subscription,
 }
 
@@ -117,34 +118,6 @@ impl SoloDiffView {
         })
     }
 
-    pub fn open_or_focus_for_buffer(
-        buffer: Entity<Buffer>,
-        project: Entity<Project>,
-        workspace: WeakEntity<Workspace>,
-        window: &mut Window,
-        cx: &mut App,
-    ) -> Task<Result<Entity<Self>>> {
-        let buffer_id = buffer.read(cx).remote_id();
-        let Some((repository, repo_path)) = project
-            .read(cx)
-            .git_store()
-            .read(cx)
-            .repository_and_path_for_buffer_id(buffer_id, cx)
-        else {
-            return Task::ready(Err(anyhow::anyhow!("file is not part of a git repository")));
-        };
-        let Some(status_entry) = repository.read(cx).status_for_path(&repo_path) else {
-            return Task::ready(Err(anyhow::anyhow!("file has no changes to diff")));
-        };
-        let entry = GitStatusEntry {
-            repo_path: status_entry.repo_path,
-            status: status_entry.status,
-            staging: status_entry.status.staging(),
-            diff_stat: status_entry.diff_stat,
-        };
-        Self::open_or_focus(entry, repository, workspace, window, cx)
-    }
-
     fn new(
         project: Entity<Project>,
         repository: Entity<Repository>,
@@ -156,12 +129,9 @@ impl SoloDiffView {
         cx: &mut Context<Self>,
     ) -> Self {
         let repository_id = repository.read(cx).id;
-        let multibuffer = cx.new(|cx| {
-            let mut multibuffer = MultiBuffer::singleton(buffer.clone(), cx);
-            multibuffer.add_diff(diff, cx);
-            multibuffer.set_all_diff_hunks_expanded(cx);
-            multibuffer
-        });
+        let showing_full_file = EditorSettings::get_global(cx).file_diff.show_full_file;
+        let multibuffer = cx
+            .new(|cx| Self::build_multibuffer(buffer.clone(), diff.clone(), showing_full_file, cx));
         let editor = cx.new(|cx| {
             let editor = SplittableEditor::new(
                 EditorSettings::get_global(cx).diff_view_style,
@@ -173,6 +143,7 @@ impl SoloDiffView {
             );
             editor.rhs_editor().update(cx, |editor, cx| {
                 editor.set_should_serialize(false, cx);
+                editor.set_allow_git_diff_scrollbar_markers(showing_full_file, cx);
                 let snapshot = editor.snapshot(window, cx);
                 editor.go_to_hunk_before_or_after_position(
                     &snapshot,
@@ -206,10 +177,88 @@ impl SoloDiffView {
             repository_id,
             repo_path,
             buffer,
+            diff,
             editor,
             workspace: workspace.downgrade(),
+            showing_full_file,
             _settings_subscription: settings_subscription,
         }
+    }
+
+    fn build_multibuffer(
+        buffer: Entity<Buffer>,
+        diff: Entity<buffer_diff::BufferDiff>,
+        showing_full_file: bool,
+        cx: &mut Context<MultiBuffer>,
+    ) -> MultiBuffer {
+        let (ranges, context_line_count) =
+            Self::excerpt_ranges(&buffer, &diff, showing_full_file, cx);
+
+        let mut multibuffer = MultiBuffer::without_headers(buffer.read(cx).capability());
+        multibuffer.set_excerpts_for_buffer(buffer, ranges, context_line_count, cx);
+        multibuffer.add_diff(diff, cx);
+        multibuffer
+    }
+
+    fn excerpt_ranges(
+        buffer: &Entity<Buffer>,
+        diff: &Entity<buffer_diff::BufferDiff>,
+        showing_full_file: bool,
+        cx: &App,
+    ) -> (Vec<Range<Point>>, u32) {
+        if showing_full_file {
+            (vec![Point::zero()..buffer.read(cx).max_point()], 0)
+        } else {
+            (
+                Self::hunk_ranges(buffer, diff, cx),
+                excerpt_context_lines(cx),
+            )
+        }
+    }
+
+    fn hunk_ranges(
+        buffer: &Entity<Buffer>,
+        diff: &Entity<buffer_diff::BufferDiff>,
+        cx: &App,
+    ) -> Vec<Range<Point>> {
+        let buffer = buffer.read(cx);
+        diff.read(cx)
+            .snapshot(cx)
+            .hunks_intersecting_range(
+                Anchor::min_for_buffer(buffer.remote_id())
+                    ..Anchor::max_for_buffer(buffer.remote_id()),
+                buffer,
+            )
+            .map(|diff_hunk| diff_hunk.buffer_range.to_point(buffer))
+            .collect()
+    }
+
+    fn set_showing_full_file(&mut self, showing_full_file: bool, cx: &mut Context<Self>) {
+        if self.showing_full_file == showing_full_file {
+            return;
+        }
+
+        let (ranges, context_line_count) =
+            Self::excerpt_ranges(&self.buffer, &self.diff, showing_full_file, cx);
+
+        self.editor.update(cx, |editor, cx| {
+            let path = PathKey::for_buffer(&self.buffer, cx);
+            editor.remove_excerpts_for_path(path.clone(), cx);
+            editor.update_excerpts_for_path(
+                path,
+                self.buffer.clone(),
+                ranges,
+                context_line_count,
+                self.diff.clone(),
+                cx,
+            );
+            editor.rhs_editor().update(cx, |editor, cx| {
+                editor.set_allow_git_diff_scrollbar_markers(showing_full_file, cx);
+            });
+        });
+
+        self.showing_full_file = showing_full_file;
+        cx.notify();
     }
 
     fn matches(&self, repository: &Entity<Repository>, repo_path: &RepoPath, cx: &App) -> bool {
@@ -220,7 +269,7 @@ impl SoloDiffView {
         let editor = self.editor.read(cx).rhs_editor().read(cx);
         let multibuffer = editor.buffer().read(cx);
         let snapshot = multibuffer.snapshot(cx);
-        let prev_next = snapshot.diff_hunks().nth(1).is_some();
+        let prev_next = snapshot.diff_hunks().next().is_some();
         let mut selection = true;
 
         let mut ranges = editor
@@ -329,13 +378,18 @@ impl Item for SoloDiffView {
     }
 
     fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
-        Label::new(self.tab_content_text(params.detail.unwrap_or_default(), cx))
-            .color(if params.selected {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .into_any_element()
+        let title = self.tab_content_text(params.detail.unwrap_or_default(), cx);
+        Label::new(crate::diff_surface_tab_label(
+            paths::APP_NAME,
+            title.as_ref(),
+        ))
+        .truncate()
+        .color(if params.selected {
+            Color::Default
+        } else {
+            Color::Muted
+        })
+        .into_any_element()
     }
 
     fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
@@ -379,6 +433,10 @@ impl Item for SoloDiffView {
         Editor::to_item_events(event, f)
     }
 
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("Solo Diff View Opened")
+    }
+
     fn deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.editor.deactivated(window, cx);
     }
@@ -391,6 +449,8 @@ impl Item for SoloDiffView {
     ) -> Option<gpui::AnyEntity> {
         if type_id == TypeId::of::<Self>() {
             Some(self_handle.clone().into())
+        } else if type_id == TypeId::of::<SplittableEditor>() {
+            None
         } else {
             self.editor.act_as_type(type_id, cx)
         }
@@ -439,7 +499,37 @@ impl Item for SoloDiffView {
     }
 
     fn breadcrumbs(&self, cx: &App) -> Option<(Vec<HighlightedText>, Option<gpui::Font>)> {
-        self.editor.breadcrumbs(cx)
+        let text: SharedString = self
+            .repo_path
+            .as_ref()
+            .display(PathStyle::local())
+            .into_owned()
+            .into();
+
+        // When the git panel is set to convey status via label color rather
+        // than an icon, tint the whole path like multibuffer headers do.
+        let mut highlights = Vec::new();
+        if GitPanelSettings::get_global(cx).status_style == StatusStyle::LabelColor
+            && let Some(status) = self
+                .repository
+                .read(cx)
+                .status_for_path(&self.repo_path)
+                .map(|entry| entry.status)
+        {
+            highlights.push((
+                0..text.len(),
+                HighlightStyle::color(file_status_label_color(Some(status)).color(cx)),
+            ));
+        }
+
+        Some((
+            vec![HighlightedText { text, highlights }],
+            Some(
+                theme_settings::ThemeSettings::get_global(cx)
+                    .buffer_font
+                    .clone(),
+            ),
+        ))
     }
 
     fn added_to_workspace(
@@ -493,41 +583,12 @@ impl SoloDiffStyleToolbar {
         self.solo_diff.as_ref()?.upgrade()
     }
 
-    fn set_diff_view_style(
-        &mut self,
-        diff_view_style: DiffViewStyle,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(solo_diff) = self.solo_diff() else {
-            return;
-        };
-        let workspace = solo_diff.read(cx).workspace.clone();
-
-        update_settings_file(<dyn Fs>::global(cx), cx, move |settings, _| {
-            settings.editor.diff_view_style = Some(diff_view_style);
-        });
-
-        if let Some(workspace) = workspace.upgrade() {
-            let splittable_editors = {
-                workspace
-                    .read(cx)
-                    .items(cx)
-                    .filter_map(|item| item.act_as_type(TypeId::of::<SplittableEditor>(), cx))
-                    .filter_map(|item| item.downcast::<SplittableEditor>().ok())
-                    .collect::<Vec<_>>()
-            };
-
-            for editor in splittable_editors {
-                editor.update(cx, |editor, cx| {
-                    if editor.diff_view_style() != diff_view_style {
-                        editor.toggle_split(&ToggleSplitDiff, window, cx);
-                    }
-                });
-            }
+    fn toggle_showing_full_file(&mut self, cx: &mut Context<Self>) {
+        if let Some(solo_diff) = self.solo_diff() {
+            solo_diff.update(cx, |solo_diff, cx| {
+                solo_diff.set_showing_full_file(!solo_diff.showing_full_file, cx);
+            });
         }
-
-        cx.notify();
     }
 }
 
@@ -554,42 +615,49 @@ impl ToolbarItemView for SoloDiffStyleToolbar {
 impl Render for SoloDiffStyleToolbar {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(solo_diff) = self.solo_diff() else {
-            return div();
+            return Empty.into_any_element();
         };
-        let editor_entity = solo_diff.read(cx).editor.clone();
-        let editor = editor_entity.read(cx);
-        let diff_view_style = editor.diff_view_style();
-        let is_split_set = diff_view_style == DiffViewStyle::Split;
-        let split_icon = if is_split_set && !editor.is_split() {
-            IconName::DiffSplitAuto
+
+        let (editor_entity, showing_full_file, status) = {
+            let solo_diff = solo_diff.read(cx);
+            (
+                solo_diff.editor.clone(),
+                solo_diff.showing_full_file,
+                solo_diff
+                    .repository
+                    .read(cx)
+                    .status_for_path(&solo_diff.repo_path)
+                    .map(|entry| entry.status),
+            )
+        };
+
+        let show_status_icon =
+            GitPanelSettings::get_global(cx).status_style != StatusStyle::LabelColor;
+
+        let (expand_icon, expand_tooltip) = if showing_full_file {
+            (IconName::ChevronDownUp, "Show Changes Only")
         } else {
-            IconName::DiffSplit
+            (IconName::ChevronUpDown, "Show Full File")
         };
 
         h_flex()
-            .h_8()
-            .items_center()
+            .pl_0p5()
             .gap_1()
             .child(
-                IconButton::new("solo-diff-unified", IconName::DiffUnified)
+                IconButton::new("solo-diff-toggle-excerpts", expand_icon)
                     .icon_size(IconSize::Small)
-                    .toggle_state(diff_view_style == DiffViewStyle::Unified)
-                    .tooltip(Tooltip::text(localization::text(cx, "git-unified")))
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.set_diff_view_style(DiffViewStyle::Unified, window, cx);
+                    .tooltip(Tooltip::text(expand_tooltip))
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.toggle_showing_full_file(cx);
                     })),
             )
-            .child(
-                IconButton::new("solo-diff-split", split_icon)
-                    .icon_size(IconSize::Small)
-                    .toggle_state(diff_view_style == DiffViewStyle::Split)
-                    .tooltip(Tooltip::text(localization::text(cx, "git-split")))
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.set_diff_view_style(DiffViewStyle::Split, window, cx);
-                    })),
+            .child(DiffStyleControls::new(editor_entity))
+            .child(Divider::vertical().mr_1())
+            .when_some(
+                show_status_icon.then_some(status).flatten(),
+                |this, status| this.child(git_status_icon(status)),
             )
-            .child(vertical_divider())
-            .child(div().w_1())
+            .into_any_element()
     }
 }
 
@@ -657,11 +725,53 @@ struct SoloDiffButtonStates {
     unstage_file: bool,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::TestAppContext;
+    use multi_buffer::MultiBufferRow;
+
+    #[gpui::test]
+    fn test_changes_only_multibuffer_has_one_buffer_and_expand_controls(cx: &mut TestAppContext) {
+        let base_text = (0..20)
+            .map(|line| format!("line {line}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let current_text = base_text.replace("line 10", "changed line 10");
+        let buffer = cx.new(|cx| Buffer::local(current_text, cx));
+        let diff = cx.new(|cx| {
+            buffer_diff::BufferDiff::new_with_base_text(
+                &base_text,
+                &buffer.read(cx).text_snapshot(),
+                cx,
+            )
+        });
+        let multibuffer = cx.new(|cx| SoloDiffView::build_multibuffer(buffer, diff, false, cx));
+
+        let (is_singleton, buffer_count, has_expand_controls) =
+            multibuffer.update(cx, |multibuffer, cx| {
+                (
+                    multibuffer.is_singleton(),
+                    multibuffer.snapshot(cx).all_buffer_ids().count(),
+                    multibuffer
+                        .snapshot(cx)
+                        .row_infos(MultiBufferRow(0))
+                        .any(|row| row.expand_info.is_some()),
+                )
+            });
+
+        assert!(!is_singleton);
+        assert_eq!(buffer_count, 1);
+        assert!(has_expand_controls);
+    }
+}
+
 impl Render for SoloDiffGitToolbar {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let Some(solo_diff) = self.solo_diff() else {
-            return div();
+            return gpui::Empty.into_any_element();
         };
+
         let focus_handle = solo_diff.focus_handle(cx);
         let solo_diff = solo_diff.read(cx);
         let button_states = solo_diff.button_states(cx);
@@ -669,31 +779,59 @@ impl Render for SoloDiffGitToolbar {
             .repository
             .read(cx)
             .status_for_path(&solo_diff.repo_path);
-        let status = status_entry.as_ref().map(|entry| entry.status);
         let diff_stat = status_entry.and_then(|entry| entry.diff_stat);
 
-        h_group_xl()
+        h_flex()
             .my_neg_1()
             .py_1()
-            .items_center()
+            .gap_1p5()
             .flex_wrap()
             .justify_between()
-            .children(status.map(|status| git_status_icon(status).into_any_element()))
             .children(diff_stat.map(|stat| {
                 DiffStat::new("solo-diff-stat", stat.added as usize, stat.deleted as usize)
-                    .into_any_element()
             }))
+            .child(Divider::vertical().ml_1())
+            .child(
+                h_group_sm()
+                    .child(
+                        IconButton::new("up", IconName::ArrowUp)
+                            .icon_size(IconSize::Small)
+                            .disabled(!button_states.prev_next)
+                            .tooltip(Tooltip::for_action_title_in(
+                                "Go to Previous Hunk",
+                                &GoToPreviousHunk,
+                                &focus_handle,
+                            ))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.dispatch_action(&GoToPreviousHunk, window, cx)
+                            })),
+                    )
+                    .child(
+                        IconButton::new("down", IconName::ArrowDown)
+                            .icon_size(IconSize::Small)
+                            .disabled(!button_states.prev_next)
+                            .tooltip(Tooltip::for_action_title_in(
+                                "Go to Next Hunk",
+                                &GoToHunk,
+                                &focus_handle,
+                            ))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.dispatch_action(&GoToHunk, window, cx)
+                            })),
+                    ),
+            )
+            .child(Divider::vertical())
             .child(
                 h_group_sm()
                     .when(button_states.selection, |el| {
                         el.child(
-                            Button::new("stage", localization::text(cx, "git-toggle-staged"))
+                            Button::new("stage", "Toggle Staged")
+                                .disabled(!button_states.stage && !button_states.unstage)
                                 .tooltip(Tooltip::for_action_title_in(
-                                    localization::text(cx, "git-toggle-staged"),
+                                    "Toggle Staged",
                                     &ToggleStaged,
                                     &focus_handle,
                                 ))
-                                .disabled(!button_states.stage && !button_states.unstage)
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.dispatch_action(&ToggleStaged, window, cx)
                                 })),
@@ -701,34 +839,34 @@ impl Render for SoloDiffGitToolbar {
                     })
                     .when(!button_states.selection, |el| {
                         el.child(
-                            Button::new("stage", localization::text(cx, "git-stage"))
+                            Button::new("stage", "Stage")
+                                .disabled(!button_states.stage)
                                 .tooltip(Tooltip::for_action_title_in(
-                                    localization::text(cx, "git-stage-next"),
+                                    "Stage and Go to Next Hunk",
                                     &StageAndNext,
                                     &focus_handle,
                                 ))
-                                .disabled(!button_states.stage)
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.dispatch_action(&StageAndNext, window, cx)
                                 })),
                         )
                         .child(
-                            Button::new("unstage", localization::text(cx, "git-unstage"))
+                            Button::new("unstage", "Unstage")
+                                .disabled(!button_states.unstage)
                                 .tooltip(Tooltip::for_action_title_in(
-                                    localization::text(cx, "git-unstage-next"),
+                                    "Unstage and Go to Next Hunk",
                                     &UnstageAndNext,
                                     &focus_handle,
                                 ))
-                                .disabled(!button_states.unstage)
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.dispatch_action(&UnstageAndNext, window, cx)
                                 })),
                         )
                     })
                     .child(
-                        Button::new("restore", localization::text(cx, "git-restore"))
+                        Button::new("restore", "Restore")
                             .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "git-restore-selected"),
+                                "Restore selected hunk",
                                 &Restore,
                                 &focus_handle,
                             ))
@@ -738,219 +876,40 @@ impl Render for SoloDiffGitToolbar {
                             })),
                     ),
             )
+            .child(Divider::vertical())
+            .child(h_group_sm().child(if button_states.stage_file {
+                Button::new("stage-file", "Stage All")
+                    .width(rems_from_px(80_f32))
+                    .disabled(!button_states.stage_file)
+                    .tooltip(Tooltip::for_action_title_in(
+                        "Stage All",
+                        &StageFile,
+                        &focus_handle,
+                    ))
+                    .on_click(cx.listener(|this, _, window, cx| this.stage_file(window, cx)))
+            } else {
+                Button::new("unstage-file", "Unstage All")
+                    .width(rems_from_px(80_f32))
+                    .disabled(!button_states.unstage_file)
+                    .tooltip(Tooltip::for_action_title_in(
+                        "Unstage All",
+                        &UnstageFile,
+                        &focus_handle,
+                    ))
+                    .on_click(cx.listener(|this, _, window, cx| this.unstage_file(window, cx)))
+            }))
+            .child(Divider::vertical())
             .child(
-                h_group_sm()
-                    .child(
-                        IconButton::new("up", IconName::ArrowUp)
-                            .shape(IconButtonShape::Square)
-                            .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "git-previous-hunk"),
-                                &GoToPreviousHunk,
-                                &focus_handle,
-                            ))
-                            .disabled(!button_states.prev_next)
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.dispatch_action(&GoToPreviousHunk, window, cx)
-                            })),
-                    )
-                    .child(
-                        IconButton::new("down", IconName::ArrowDown)
-                            .shape(IconButtonShape::Square)
-                            .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "git-next-hunk"),
-                                &GoToHunk,
-                                &focus_handle,
-                            ))
-                            .disabled(!button_states.prev_next)
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.dispatch_action(&GoToHunk, window, cx)
-                            })),
-                    ),
+                Button::new("commit", "Commit")
+                    .tooltip(Tooltip::for_action_title_in(
+                        "Commit",
+                        &Commit,
+                        &focus_handle,
+                    ))
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.dispatch_action(&Commit, window, cx);
+                    })),
             )
-            .child(vertical_divider())
-            .child(
-                h_group_sm()
-                    .child(
-                        Button::new("stage-file", localization::text(cx, "git-stage-file"))
-                            .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "git-stage-file"),
-                                &StageFile,
-                                &focus_handle,
-                            ))
-                            .disabled(!button_states.stage_file)
-                            .on_click(
-                                cx.listener(|this, _, window, cx| this.stage_file(window, cx)),
-                            ),
-                    )
-                    .child(
-                        Button::new("unstage-file", localization::text(cx, "git-unstage-file"))
-                            .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "git-unstage-file"),
-                                &UnstageFile,
-                                &focus_handle,
-                            ))
-                            .disabled(!button_states.unstage_file)
-                            .on_click(
-                                cx.listener(|this, _, window, cx| this.unstage_file(window, cx)),
-                            ),
-                    )
-                    .child(Divider::vertical())
-                    .child(
-                        Button::new("commit", localization::text(cx, "git-commit"))
-                            .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "git-commit"),
-                                &Commit,
-                                &focus_handle,
-                            ))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.dispatch_action(&Commit, window, cx);
-                            })),
-                    ),
-            )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use git::status::{FileStatus, StatusCode, TrackedStatus};
-    use gpui::TestAppContext;
-    use project::FakeFs;
-    use settings::SettingsStore;
-    use std::path::Path;
-    use util::path;
-    use workspace::MultiWorkspace;
-
-    fn init_test(cx: &mut TestAppContext) {
-        cx.update(|cx| {
-            let settings_store = SettingsStore::test(cx);
-            cx.set_global(settings_store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
-            theme_settings::init(theme::LoadThemes::JustBase, cx);
-            editor::init(cx);
-            crate::init(cx);
-        });
-    }
-
-    #[gpui::test]
-    async fn test_open_or_focus_for_buffer_opens_diff(cx: &mut TestAppContext) {
-        init_test(cx);
-
-        let fs = FakeFs::new(cx.executor());
-        fs.insert_tree(
-            path!("/project"),
-            serde_json::json!({
-                ".git": {},
-                "modified.txt": "new content\n",
-                "staged.txt": "staged content\n",
-                "untracked.txt": "untracked content\n",
-            }),
-        )
-        .await;
-        fs.set_status_for_repo(
-            path!("/project/.git").as_ref(),
-            &[
-                (
-                    "modified.txt",
-                    FileStatus::Tracked(TrackedStatus {
-                        index_status: StatusCode::Unmodified,
-                        worktree_status: StatusCode::Modified,
-                    }),
-                ),
-                (
-                    "staged.txt",
-                    FileStatus::Tracked(TrackedStatus {
-                        index_status: StatusCode::Modified,
-                        worktree_status: StatusCode::Unmodified,
-                    }),
-                ),
-                ("untracked.txt", FileStatus::Untracked),
-            ],
-        );
-
-        let project = Project::test(fs.clone(), [path!("/project").as_ref()], cx).await;
-        let (multi_workspace, cx) =
-            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
-        let workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
-        cx.run_until_parked();
-
-        for file_name in ["modified.txt", "staged.txt", "untracked.txt"] {
-            let buffer = project
-                .update(cx, |project, cx| {
-                    let project_path = project
-                        .find_project_path(Path::new(path!("/project")).join(file_name), cx)
-                        .unwrap_or_else(|| panic!("missing project path for {file_name}"));
-                    project.open_buffer(project_path, cx)
-                })
-                .await
-                .unwrap_or_else(|err| panic!("{file_name}: failed to open buffer: {err}"));
-
-            let solo_diff = cx
-                .update(|window, cx| {
-                    SoloDiffView::open_or_focus_for_buffer(
-                        buffer,
-                        project.clone(),
-                        workspace.downgrade(),
-                        window,
-                        cx,
-                    )
-                })
-                .await
-                .unwrap_or_else(|err| panic!("{file_name}: {err}"));
-
-            workspace.read_with(cx, |workspace, cx| {
-                assert_eq!(
-                    workspace.active_item_as::<SoloDiffView>(cx),
-                    Some(solo_diff),
-                    "{file_name} should open as the active SoloDiffView"
-                );
-            });
-        }
-    }
-
-    #[gpui::test]
-    async fn test_open_or_focus_for_buffer_errors_without_changes(cx: &mut TestAppContext) {
-        init_test(cx);
-
-        let fs = FakeFs::new(cx.executor());
-        fs.insert_tree(
-            path!("/project"),
-            serde_json::json!({
-                ".git": {},
-                "unchanged.txt": "same\n",
-            }),
-        )
-        .await;
-        fs.set_status_for_repo(path!("/project/.git").as_ref(), &[]);
-
-        let project = Project::test(fs.clone(), [path!("/project").as_ref()], cx).await;
-        let (multi_workspace, cx) =
-            cx.add_window_view(|window, cx| MultiWorkspace::test_new(project.clone(), window, cx));
-        let workspace = multi_workspace.read_with(cx, |mw, _| mw.workspace().clone());
-        cx.run_until_parked();
-
-        let buffer = project
-            .update(cx, |project, cx| {
-                let project_path = project
-                    .find_project_path(path!("/project/unchanged.txt"), cx)
-                    .unwrap();
-                project.open_buffer(project_path, cx)
-            })
-            .await
-            .unwrap();
-
-        let result = cx
-            .update(|window, cx| {
-                SoloDiffView::open_or_focus_for_buffer(
-                    buffer,
-                    project.clone(),
-                    workspace.downgrade(),
-                    window,
-                    cx,
-                )
-            })
-            .await;
-        assert!(result.is_err(), "unchanged file should not open a diff");
+            .into_any_element()
     }
 }

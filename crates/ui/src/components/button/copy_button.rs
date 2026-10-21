@@ -103,6 +103,8 @@ impl RenderOnce for CopyButton {
             .icon_color(color)
             .icon_size(self.icon_size)
             .disabled(self.disabled)
+            .tab_index(0isize)
+            .aria_label(tooltip.clone())
             .tooltip(Tooltip::text(tooltip))
             .on_click(move |_, window, cx| {
                 state.update(cx, |state, _cx| {

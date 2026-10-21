@@ -14,7 +14,7 @@ use util::serde::default_true;
 
 use crate::{
     AllLanguageSettingsContent, DelayMs, ExtendingVec, ParseStatus, ProjectTerminalSettingsContent,
-    RootUserSettings, fallible_options,
+    RootUserSettings, SaturatingBool, SplicingVec, fallible_options,
 };
 
 #[with_fallible_options]
@@ -40,7 +40,7 @@ impl RootUserSettings for ProjectSettingsContent {
 }
 
 #[with_fallible_options]
-#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
+#[derive(Debug, PartialEq, Clone, Default, Serialize, JsonSchema, MergeFrom)]
 pub struct ProjectSettingsContent {
     #[serde(flatten)]
     pub all_languages: AllLanguageSettingsContent,
@@ -65,12 +65,35 @@ pub struct ProjectSettingsContent {
     #[serde(default)]
     pub dap: HashMap<Arc<str>, DapSettingsContent>,
 
+    /// Settings for context servers used for AI-related features.
+    #[serde(default)]
+    pub context_servers: HashMap<Arc<str>, ContextServerSettingsContent>,
+
+    /// Default timeout in seconds for context server tool calls.
+    /// Can be overridden per-server in context_servers configuration.
+    ///
+    /// Default: 60
+    pub context_server_timeout: Option<u64>,
+
     /// Configuration for how direnv configuration should be loaded
     pub load_direnv: Option<DirenvSettings>,
 
     /// The list of custom Git hosting providers.
     pub git_hosting_providers: Option<ExtendingVec<GitHostingProviderConfig>>,
+
+    /// Whether to disable all AI features in Zed.
+    ///
+    /// Default: false
+    pub disable_ai: Option<SaturatingBool>,
 }
+
+crate::fallible_options::flattened_deserialize!(ProjectSettingsContent {
+    sections: { all_languages, worktree },
+    options: {
+        terminal, context_server_timeout, load_direnv, git_hosting_providers, disable_ai,
+    },
+    defaults: { lsp, dap, context_servers },
+});
 
 /// When to scan content of linked directories.
 #[derive(
@@ -108,6 +131,10 @@ pub struct WorktreeSettingsContent {
     /// Completely ignore files matching globs from `file_scan_exclusions`. Overrides
     /// `file_scan_inclusions`.
     ///
+    /// A `"..."` entry expands to the value being overridden, so
+    /// `["**/node_modules", "..."]` adds to the inherited globs instead of
+    /// replacing them. Leave `"..."` out to replace them.
+    ///
     /// Default: [
     ///   "**/.git",
     ///   "**/.svn",
@@ -119,7 +146,7 @@ pub struct WorktreeSettingsContent {
     ///   "**/.classpath",
     ///   "**/.settings"
     /// ]
-    pub file_scan_exclusions: Option<Vec<String>>,
+    pub file_scan_exclusions: Option<SplicingVec>,
 
     /// Always include files that match these globs when scanning for files, even if they're
     /// ignored by git. This setting is overridden by `file_scan_exclusions`.
@@ -133,6 +160,17 @@ pub struct WorktreeSettingsContent {
     ///
     /// Default: expanded
     pub scan_symlinks: Option<ScanSymlinksSetting>,
+
+    /// Maximum directory depth to eagerly index outside of git repositories;
+    /// contents of directories at this depth or deeper are indexed on demand.
+    /// Repositories rooted shallower than this depth are always indexed fully.
+    /// In projects that are not rooted at a git repository, repositories directly
+    /// inside a root folder activate their git features immediately; deeper ones
+    /// activate on first use.
+    /// `0` means no limit and activates all git repositories immediately.
+    ///
+    /// Default: 5
+    pub file_scan_depth: Option<u32>,
 
     /// Treat the files matching these globs as `.env` files.
     /// Default: ["**/.env*", "**/*.pem", "**/*.key", "**/*.cert", "**/*.crt", "**/secrets.yml"]
@@ -167,7 +205,7 @@ pub struct LspSettings {
     /// Consult the documentation for the specific language server to see which settings are supported.
     pub settings: Option<serde_json::Value>,
     /// If the server supports sending tasks over LSP extensions,
-    /// this setting can be used to enable or disable them in dez.
+    /// this setting can be used to enable or disable them in Zed.
     /// Default: true
     #[serde(default = "default_true")]
     pub enable_lsp_tasks: bool,
@@ -219,6 +257,11 @@ pub struct GlobalLspSettingsContent {
     ///
     /// Default: `120`
     pub request_timeout: Option<u64>,
+    /// The maximum line length a buffer may contain before language server features are disabled for the entire buffer.
+    ///
+    /// Default: `20000`
+    #[schemars(range(min = 1))]
+    pub max_buffer_line_length: Option<u32>,
     /// Settings for language server notifications
     pub notifications: Option<LspNotificationSettingsContent>,
     /// Rules for rendering LSP semantic tokens.
@@ -246,19 +289,24 @@ impl SemanticTokenRules {
     pub const FILE_NAME: &'static str = "semantic_token_rules.json";
 
     pub fn load(file_path: &Path) -> anyhow::Result<Self> {
-        let rules_content = std::fs::read(file_path).with_context(|| {
+        let rules_content = std::fs::read_to_string(file_path).with_context(|| {
             anyhow::anyhow!(
                 "Could not read semantic token rules from {}",
                 file_path.display()
             )
         })?;
 
-        serde_json_lenient::from_slice::<SemanticTokenRules>(&rules_content).with_context(|| {
+        Self::parse(&rules_content).with_context(|| {
             anyhow::anyhow!(
                 "Failed to parse semantic token rules from {}",
                 file_path.display()
             )
         })
+    }
+
+    pub fn parse(file_content: &str) -> anyhow::Result<Self> {
+        serde_json_lenient::from_str::<SemanticTokenRules>(file_content)
+            .context("failed to parse semantic token rules")
     }
 }
 
@@ -374,6 +422,131 @@ pub struct SessionSettingsContent {
     pub trust_all_worktrees: Option<bool>,
 }
 
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, JsonSchema, MergeFrom, Debug)]
+#[serde(untagged, rename_all = "snake_case")]
+pub enum ContextServerSettingsContent {
+    Stdio {
+        /// Whether the context server is enabled.
+        #[serde(default = "default_true")]
+        enabled: bool,
+        /// Whether to run the context server on the remote server when using remote development.
+        ///
+        /// If this is false, the context server will always run on the local machine.
+        ///
+        /// Default: false
+        #[serde(default)]
+        remote: bool,
+        #[serde(flatten)]
+        command: ContextServerCommand,
+    },
+    Http {
+        /// Whether the context server is enabled.
+        #[serde(default = "default_true")]
+        enabled: bool,
+        /// The URL of the remote context server.
+        url: String,
+        /// Optional headers to send.
+        #[serde(skip_serializing_if = "HashMap::is_empty", default)]
+        headers: HashMap<String, String>,
+        /// Timeout for tool calls in seconds. Defaults to global context_server_timeout if not specified.
+        timeout: Option<u64>,
+        /// Pre-registered OAuth client credentials for authorization servers that
+        /// require out-of-band client registration.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        oauth: Option<OAuthClientSettings>,
+    },
+    Extension {
+        /// Whether the context server is enabled.
+        #[serde(default = "default_true")]
+        enabled: bool,
+        /// Whether to run the context server on the remote server when using remote development.
+        ///
+        /// If this is false, the context server will always run on the local machine.
+        ///
+        /// Default: false
+        #[serde(default)]
+        remote: bool,
+        /// The settings for this context server specified by the extension.
+        ///
+        /// Consult the documentation for the context server to see what settings
+        /// are supported.
+        #[serde(default)]
+        settings: serde_json::Value,
+    },
+}
+
+impl ContextServerSettingsContent {
+    pub fn set_enabled(&mut self, enabled: bool) {
+        match self {
+            ContextServerSettingsContent::Stdio {
+                enabled: custom_enabled,
+                ..
+            } => {
+                *custom_enabled = enabled;
+            }
+            ContextServerSettingsContent::Extension {
+                enabled: ext_enabled,
+                ..
+            } => *ext_enabled = enabled,
+            ContextServerSettingsContent::Http {
+                enabled: remote_enabled,
+                ..
+            } => *remote_enabled = enabled,
+        }
+    }
+}
+
+/// Pre-registered OAuth client credentials for MCP servers that don't support
+/// Dynamic Client Registration.
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, JsonSchema, MergeFrom, Debug)]
+pub struct OAuthClientSettings {
+    /// The OAuth client ID obtained from out-of-band registration with the
+    /// authorization server.
+    pub client_id: String,
+    /// The OAuth client secret, if this is a confidential client. For security,
+    /// prefer providing this interactively; we will prompt and store it in
+    /// the system keychain.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_secret: Option<String>,
+}
+
+#[with_fallible_options]
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq, JsonSchema, MergeFrom)]
+pub struct ContextServerCommand {
+    #[serde(rename = "command")]
+    pub path: PathBuf,
+    #[serde(default)]
+    pub args: Vec<String>,
+    pub env: Option<HashMap<String, String>>,
+    /// Timeout for tool calls in seconds. Defaults to 60 if not specified.
+    pub timeout: Option<u64>,
+}
+
+impl std::fmt::Debug for ContextServerCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let filtered_env = self.env.as_ref().map(|env| {
+            env.iter()
+                .map(|(k, v)| {
+                    (
+                        k,
+                        if util::redact::should_redact(k) {
+                            "[REDACTED]"
+                        } else {
+                            v
+                        },
+                    )
+                })
+                .collect::<Vec<_>>()
+        });
+
+        f.debug_struct("ContextServerCommand")
+            .field("path", &self.path)
+            .field("args", &self.args)
+            .field("env", &filtered_env)
+            .finish()
+    }
+}
+
 #[with_fallible_options]
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct GitSettings {
@@ -401,10 +574,16 @@ pub struct GitSettings {
     ///
     /// Default: on
     pub branch_picker: Option<BranchPickerSettingsContent>,
+    /// File diff settings.
+    pub file_diff: Option<FileDiffSettingsContent>,
     /// How hunks are displayed visually in the editor.
     ///
     /// Default: staged_hollow
     pub hunk_style: Option<GitHunkStyleSetting>,
+    /// Which base git features (gutter, file colors, git::Diff) diff against.
+    ///
+    /// Default: head
+    pub diff_base: Option<GitDiffBaseSetting>,
     /// How file paths are displayed in the git gutter.
     ///
     /// Default: file_name_first
@@ -419,73 +598,21 @@ pub struct GitSettings {
     /// When the resolved directory is outside the project root, the
     /// project's directory name is automatically appended so that
     /// sibling repos don't collide. For example, with the default
-    /// `"../worktrees"` and a project at `~/code/dez`, worktrees are
-    /// created under `~/code/worktrees/dez/`.
+    /// `"../worktrees"` and a project at `~/code/zed`, worktrees are
+    /// created under `~/code/worktrees/zed/`.
     ///
     /// When the resolved directory is inside the project root, no
     /// extra component is added (it's already project-scoped).
     ///
     /// Examples:
     /// - `"../worktrees"` — `~/code/worktrees/<project>/` (default)
-    /// - `".git/dez-worktrees"` — `<project>/.git/dez-worktrees/`
+    /// - `".git/zed-worktrees"` — `<project>/.git/zed-worktrees/`
     /// - `"my-worktrees"` — `<project>/my-worktrees/`
     ///
     /// Trailing slashes are ignored.
     ///
     /// Default: ../worktrees
     pub worktree_directory: Option<String>,
-    /// External command used to generate commit messages from a prompt sent on stdin.
-    pub commit_message_generator: Option<GitCommitMessageGeneratorSettings>,
-}
-
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Default,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-    MergeFrom,
-    strum::VariantArray,
-    strum::VariantNames,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum CommitMessageGeneratorAgent {
-    /// Claude Code, run non-interactively via `claude -p`.
-    #[default]
-    Claude,
-    /// Codex, run non-interactively via `codex exec`.
-    Codex,
-    /// Pi, run non-interactively via `pi -p`.
-    Pi,
-}
-
-#[with_fallible_options]
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
-pub struct GitCommitMessageGeneratorSettings {
-    /// Preset agent used to fill in `command` and `args` with tested defaults. Selecting an
-    /// agent in the Settings UI overwrites `command` and `args`; hand-editing `command`/`args`
-    /// in settings.json for a different tool works too and doesn't require setting this.
-    pub agent: Option<CommitMessageGeneratorAgent>,
-    /// Command executable used to generate commit messages.
-    pub command: Option<String>,
-    /// Arguments passed to the generator command.
-    pub args: Option<Vec<String>>,
-    /// Model passed to the generator command: as `--model <value>` for the "claude" agent, or
-    /// `-m <value>` for the "codex" agent. Leave blank to use the command's own default model.
-    pub model: Option<String>,
-    /// Environment variables added to the generator command.
-    pub env: Option<HashMap<String, String>>,
-    /// Working directory for the generator command. Defaults to the repository root.
-    pub cwd: Option<PathBuf>,
-    /// Timeout in seconds before the generator command is killed.
-    pub timeout_seconds: Option<u64>,
-    /// Maximum diff bytes included in the prompt before compression.
-    pub max_diff_bytes: Option<usize>,
-    /// Additional user instructions for commit message generation.
-    pub instructions: Option<String>,
 }
 
 #[with_fallible_options]
@@ -529,6 +656,28 @@ pub enum GitGutterSetting {
     Hide,
 }
 
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum InlineBlameLocation {
+    /// Show git blame inline at the current line.
+    #[default]
+    Inline,
+    /// Show git blame in the status bar at the bottom of the window.
+    StatusBar,
+}
+
 #[with_fallible_options]
 #[derive(Clone, Copy, Debug, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
 #[serde(rename_all = "snake_case")]
@@ -543,6 +692,10 @@ pub struct InlineBlameSettings {
     ///
     /// Default: 0
     pub delay_ms: Option<DelayMs>,
+    /// Where to render the blame information when enabled.
+    ///
+    /// Default: inline
+    pub location: Option<InlineBlameLocation>,
     /// The amount of padding between the end of the source line and the start
     /// of the inline blame in units of columns.
     ///
@@ -578,6 +731,16 @@ pub struct BranchPickerSettingsContent {
     pub show_author_name: Option<bool>,
 }
 
+#[with_fallible_options]
+#[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
+#[serde(rename_all = "snake_case")]
+pub struct FileDiffSettingsContent {
+    /// Whether newly opened file diffs show the full file instead of changes only.
+    ///
+    /// Default: true
+    pub show_full_file: Option<bool>,
+}
+
 #[derive(
     Clone,
     Copy,
@@ -598,6 +761,32 @@ pub enum GitHunkStyleSetting {
     StagedHollow,
     /// Show unstaged hunks hollow and staged hunks with a filled background.
     UnstagedHollow,
+}
+
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    strum::VariantArray,
+    strum::VariantNames,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum GitDiffBaseSetting {
+    /// Diff against HEAD: show working (uncommitted) changes.
+    #[default]
+    Head,
+    /// Diff against the merge base between HEAD and the repository's
+    /// default branch: show all changes on the branch.
+    ///
+    /// Repositories where no default branch can be resolved fall back
+    /// to `head` behavior.
+    DefaultBranch,
 }
 
 #[with_fallible_options]
@@ -634,7 +823,7 @@ pub struct DiagnosticsSettingsContent {
     /// Default: true
     pub include_warnings: Option<bool>,
 
-    /// Settings for using LSP pull diagnostics mechanism in dez.
+    /// Settings for using LSP pull diagnostics mechanism in Zed.
     pub lsp_pull_diagnostics: Option<LspPullDiagnosticsSettingsContent>,
 
     /// Settings for showing inline diagnostics.
@@ -691,9 +880,9 @@ pub struct InlineDiagnosticsSettingsContent {
 pub struct NodeBinarySettings {
     /// The path to the Node binary.
     pub path: Option<String>,
-    /// The path to the npm binary dez should use (defaults to `.path/../npm`).
+    /// The path to the npm binary Zed should use (defaults to `.path/../npm`).
     pub npm_path: Option<String>,
-    /// If enabled, dez will download its own copy of Node.
+    /// If enabled, Zed will download its own copy of Node.
     pub ignore_system_version: Option<bool>,
 }
 
@@ -741,7 +930,7 @@ pub enum DiagnosticSeverityContent {
 pub struct GitHostingProviderConfig {
     /// The type of the provider.
     ///
-    /// Must be one of `github`, `gitlab`, `bitbucket`, `gitea`, `forgejo`, or `source_hut`.
+    /// Must be one of `github`, `gitlab`, `bitbucket`, `gitea`, `forgejo`, `sourcehut`, or `tangled`.
     pub provider: GitHostingProviderKind,
 
     /// The base URL for the provider (e.g., "https://code.corp.big.com").
@@ -760,4 +949,119 @@ pub enum GitHostingProviderKind {
     Gitea,
     Forgejo,
     SourceHut,
+    Tangled,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{REST_OF_FILE_SCAN_EXCLUSIONS, merge_from::MergeFrom};
+
+    fn exclusions(globs: &[&str]) -> WorktreeSettingsContent {
+        WorktreeSettingsContent {
+            file_scan_exclusions: Some(SplicingVec::from(
+                globs
+                    .iter()
+                    .map(|glob| glob.to_string())
+                    .collect::<Vec<_>>(),
+            )),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_file_scan_exclusions_splice_rest_of_list() {
+        let defaults = exclusions(&["**/.git", "**/.DS_Store"]);
+
+        let mut extended = defaults.clone();
+        extended.merge_from(&exclusions(&[
+            "**/node_modules",
+            REST_OF_FILE_SCAN_EXCLUSIONS,
+        ]));
+        assert_eq!(
+            extended.file_scan_exclusions.unwrap().0,
+            vec!["**/node_modules", "**/.git", "**/.DS_Store"]
+        );
+
+        let mut replaced = defaults;
+        replaced.merge_from(&exclusions(&["**/node_modules"]));
+        assert_eq!(
+            replaced.file_scan_exclusions.unwrap().0,
+            vec!["**/node_modules"]
+        );
+    }
+
+    #[test]
+    fn test_file_scan_exclusions_splice_each_layer() {
+        let mut settings = exclusions(&["**/.git"]);
+        settings.merge_from(&exclusions(&[REST_OF_FILE_SCAN_EXCLUSIONS, "**/target"]));
+        settings.merge_from(&exclusions(&[REST_OF_FILE_SCAN_EXCLUSIONS, "**/dist"]));
+
+        assert_eq!(
+            settings.file_scan_exclusions.unwrap().0,
+            vec!["**/.git", "**/target", "**/dist"]
+        );
+    }
+
+    #[test]
+    fn test_file_scan_exclusions_splice_edge_cases() {
+        let mut repeated = exclusions(&["**/.git"]);
+        repeated.merge_from(&exclusions(&[
+            REST_OF_FILE_SCAN_EXCLUSIONS,
+            REST_OF_FILE_SCAN_EXCLUSIONS,
+        ]));
+        assert_eq!(repeated.file_scan_exclusions.unwrap().0, vec!["**/.git"]);
+
+        let mut relisted = exclusions(&["**/.git", "**/.DS_Store"]);
+        relisted.merge_from(&exclusions(&["**/.git", REST_OF_FILE_SCAN_EXCLUSIONS]));
+        assert_eq!(
+            relisted.file_scan_exclusions.unwrap().0,
+            vec!["**/.git", "**/.DS_Store"]
+        );
+
+        let mut cleared = exclusions(&["**/.git"]);
+        cleared.merge_from(&exclusions(&[]));
+        assert!(cleared.file_scan_exclusions.unwrap().0.is_empty());
+
+        let mut unchanged = exclusions(&["**/.git", "**/.DS_Store"]);
+        unchanged.merge_from(&exclusions(&[REST_OF_FILE_SCAN_EXCLUSIONS]));
+        assert_eq!(
+            unchanged.file_scan_exclusions.unwrap().0,
+            vec!["**/.git", "**/.DS_Store"]
+        );
+    }
+
+    #[test]
+    fn test_file_scan_exclusions_splice_without_a_base_layer() {
+        let mut settings = WorktreeSettingsContent::default();
+        settings.merge_from(&exclusions(&[REST_OF_FILE_SCAN_EXCLUSIONS, "**/target"]));
+
+        // `Option::merge_from` replaces a `None` base outright rather than
+        // splicing, so the sentinel survives here. `assets/settings/default.json`
+        // always populates this field, and `WorktreeSettings::from_settings`
+        // unwraps it, so no glob is ever compiled from this state.
+        assert_eq!(
+            settings.file_scan_exclusions.unwrap().0,
+            vec![REST_OF_FILE_SCAN_EXCLUSIONS, "**/target"]
+        );
+    }
+
+    #[test]
+    fn test_stdio_context_server_without_args() {
+        let settings: ContextServerSettingsContent =
+            serde_json::from_str(r#"{ "command": "echo" }"#)
+                .expect("stdio context server without `args` should parse");
+        let ContextServerSettingsContent::Stdio { command, .. } = settings else {
+            panic!("expected Stdio variant, got {settings:?}");
+        };
+        assert_eq!(command.path, PathBuf::from("echo"));
+        assert!(command.args.is_empty());
+
+        let settings: ContextServerSettingsContent =
+            serde_json::from_str(r#"{ "command": "echo", "args": ["hello"] }"#).unwrap();
+        let ContextServerSettingsContent::Stdio { command, .. } = settings else {
+            panic!("expected Stdio variant, got {settings:?}");
+        };
+        assert_eq!(command.args, vec!["hello".to_string()]);
+    }
 }

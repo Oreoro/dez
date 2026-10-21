@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dez Workspace Design"
+  short_description: "Design and refine native Dez workflows"
+  default_prompt: "Use $dez-workspace-design to audit and refine a Dez Workspace workflow with an annotated monochrome wireframe."

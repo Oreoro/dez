@@ -13,7 +13,7 @@ use gpui::{
 use paths::{local_settings_file_relative_path, task_file_name};
 use schemars::{JsonSchema, json_schema};
 use serde_json::Value;
-use settings_content::{ActionName, ParseStatus};
+use settings_content::{CommandAliasTarget, ParseStatus};
 use std::{
     any::{Any, TypeId, type_name},
     fmt::Debug,
@@ -32,18 +32,18 @@ use util::{
 use crate::editorconfig_store::EditorconfigStore;
 
 use crate::{
-    ActiveSettingsProfileName, FontFamilyName, IconThemeName, LanguageSettingsContent,
+    ActiveSettingsProfileName, FileTypeMap, FontFamilyName, IconThemeName, LanguageSettingsContent,
     LanguageToSettingsMap, LspSettings, LspSettingsMap, SemanticTokenRules, ThemeName,
     UserSettingsContentExt, VsCodeSettings, WorktreeId,
     settings_content::{
-        ExtensionsSettingsContent, ProfileBase, ProjectSettingsContent, RootUserSettings,
-        SettingsContent, UiLanguage, UserSettingsContent, merge_from::MergeFrom,
+        ExtendingSet, ExtensionsSettingsContent, ProfileBase, ProjectSettingsContent,
+        RootUserSettings, SettingsContent, UserSettingsContent, merge_from::MergeFrom,
     },
 };
 
 use settings_json::{infer_json_indent_size, update_value_in_json_text};
 
-pub const LSP_SETTINGS_SCHEMA_URL_PREFIX: &str = "dez://schemas/settings/lsp/";
+pub const LSP_SETTINGS_SCHEMA_URL_PREFIX: &str = "zed://schemas/settings/lsp/";
 
 pub trait SettingsKey: 'static + Send + Sync {
     /// The name of a key within the JSON file from which this setting should
@@ -58,11 +58,11 @@ pub trait SettingsKey: 'static + Send + Sync {
 ///
 /// Settings can be loaded from a combination of multiple JSON files.
 pub trait Settings: 'static + Send + Sync + Sized {
-    /// The name of the keys in the [`FileContent`](Self::FileContent) that should
+    /// The name of the keys in the [`SettingsContent`] that should
     /// always be written to a settings file, even if their value matches the default
     /// value.
     ///
-    /// This is useful for tagged [`FileContent`](Self::FileContent)s where the tag
+    /// This is useful for tagged [`SettingsContent`]s where the tag
     /// is a "version" field that should always be persisted, even if the current
     /// user settings match the current version of the settings.
     const PRESERVED_KEYS: Option<&'static [&'static str]> = None;
@@ -228,7 +228,7 @@ impl LocalSettingsPath {
 
     pub fn to_proto(&self) -> String {
         match self {
-            Self::InWorktree(path) => path.to_proto(),
+            Self::InWorktree(path) => path.as_unix_str().to_owned(),
             Self::OutsideWorktree(path) => path.to_string_lossy().to_string(),
         }
     }
@@ -237,7 +237,7 @@ impl LocalSettingsPath {
         if is_outside_worktree {
             Ok(Self::OutsideWorktree(PathBuf::from(path).into()))
         } else {
-            Ok(Self::InWorktree(RelPath::from_proto(path)?))
+            Ok(Self::InWorktree(RelPath::from_unix_str(path)?.into()))
         }
     }
 }
@@ -498,13 +498,6 @@ impl SettingsStore {
         self.user_settings.as_ref()
     }
 
-    pub fn ui_language(&self) -> UiLanguage {
-        self.user_settings
-            .as_ref()
-            .and_then(|settings| settings.ui_language)
-            .unwrap_or_default()
-    }
-
     /// Get the default settings content as a raw JSON value.
     pub fn raw_default_settings(&self) -> &SettingsContent {
         &self.default_settings
@@ -566,7 +559,7 @@ impl SettingsStore {
     fn update_settings_file_inner(
         &self,
         fs: Arc<dyn Fs>,
-        update: impl 'static + Send + FnOnce(String, AsyncApp) -> Result<String>,
+        update: Box<dyn Send + FnOnce(String, AsyncApp) -> Result<String>>,
     ) -> oneshot::Receiver<Result<()>> {
         let (tx, rx) = oneshot::channel::<Result<()>>();
         self.setting_file_updates_tx
@@ -633,31 +626,17 @@ impl SettingsStore {
         fs: Arc<dyn Fs>,
         update: impl 'static + Send + FnOnce(&mut SettingsContent, &App),
     ) -> oneshot::Receiver<Result<()>> {
-        self.update_settings_file_inner(fs, move |old_text: String, cx: AsyncApp| {
-            cx.read_global(|store: &SettingsStore, cx| {
-                store.new_text_for_update(old_text, |content| update(content, cx))
-            })
-        })
-    }
-
-    pub fn update_user_settings_file(
-        &self,
-        fs: Arc<dyn Fs>,
-        update: impl 'static + Send + FnOnce(&mut UserSettingsContent, &App),
-    ) {
-        _ = self.update_user_settings_file_with_completion(fs, update);
-    }
-
-    pub fn update_user_settings_file_with_completion(
-        &self,
-        fs: Arc<dyn Fs>,
-        update: impl 'static + Send + FnOnce(&mut UserSettingsContent, &App),
-    ) -> oneshot::Receiver<Result<()>> {
-        self.update_settings_file_inner(fs, move |old_text: String, cx: AsyncApp| {
-            cx.read_global(|store: &SettingsStore, cx| {
-                store.new_text_for_user_settings_update(old_text, |content| update(content, cx))
-            })
-        })
+        let mut update = Some(update);
+        self.update_settings_file_inner(
+            fs,
+            Box::new(move |old_text: String, cx: AsyncApp| {
+                cx.read_global(|store: &SettingsStore, cx| {
+                    store.new_text_for_update_inner(old_text, &mut |content| {
+                        (update.take().expect("called once"))(content, cx)
+                    })
+                })
+            }),
+        )
     }
 
     pub fn import_vscode_settings(
@@ -665,11 +644,14 @@ impl SettingsStore {
         fs: Arc<dyn Fs>,
         vscode_settings: VsCodeSettings,
     ) -> oneshot::Receiver<Result<()>> {
-        self.update_settings_file_inner(fs, move |old_text: String, cx: AsyncApp| {
-            cx.read_global(|store: &SettingsStore, _cx| {
-                store.get_vscode_edits(old_text, &vscode_settings)
-            })
-        })
+        self.update_settings_file_inner(
+            fs,
+            Box::new(move |old_text: String, cx: AsyncApp| {
+                cx.read_global(|store: &SettingsStore, _cx| {
+                    store.get_vscode_edits(old_text, &vscode_settings)
+                })
+            }),
+        )
     }
 
     pub fn get_all_files(&self) -> Vec<SettingsFile> {
@@ -811,7 +793,7 @@ impl SettingsStore {
     }
 
     #[inline(always)]
-    fn parse_and_migrate_dez_settings<SettingsContentType: RootUserSettings>(
+    fn parse_and_migrate_zed_settings<SettingsContentType: RootUserSettings>(
         &mut self,
         user_settings_content: &str,
         file: SettingsFile,
@@ -820,8 +802,17 @@ impl SettingsStore {
         let (settings, parse_status) = if user_settings_content.is_empty() {
             SettingsContentType::parse_json("{}")
         } else {
-            let migration_res = migrator::migrate_settings(user_settings_content);
+            let dez_visual_profile_migration = matches!(file, SettingsFile::User)
+                .then(|| {
+                    migrate_dez_generated_visual_profile(paths::APP_NAME, user_settings_content)
+                })
+                .flatten();
+            let migration_input = dez_visual_profile_migration
+                .as_deref()
+                .unwrap_or(user_settings_content);
+            let migration_res = migrator::migrate_settings(migration_input);
             migration_status = match &migration_res {
+                Ok(_) if dez_visual_profile_migration.is_some() => MigrationStatus::Succeeded,
                 Ok(Some(_)) => MigrationStatus::Succeeded,
                 Ok(None) => MigrationStatus::NotNeeded,
                 Err(err) => MigrationStatus::Failed {
@@ -830,8 +821,8 @@ impl SettingsStore {
             };
             let content = match &migration_res {
                 Ok(Some(content)) => content,
-                Ok(None) => user_settings_content,
-                Err(_) => user_settings_content,
+                Ok(None) => migration_input,
+                Err(_) => migration_input,
             };
             SettingsContentType::parse_json(content)
         };
@@ -860,15 +851,18 @@ impl SettingsStore {
         old_text: String,
         update: impl FnOnce(&mut SettingsContent),
     ) -> Result<String> {
-        self.new_text_for_user_settings_update(old_text, |content| update(&mut content.content))
+        let mut update = Some(update);
+        self.new_text_for_update_inner(old_text, &mut |content| {
+            (update.take().expect("called once"))(content)
+        })
     }
 
-    pub fn new_text_for_user_settings_update(
+    fn new_text_for_update_inner(
         &self,
         old_text: String,
-        update: impl FnOnce(&mut UserSettingsContent),
+        update: &mut dyn FnMut(&mut SettingsContent),
     ) -> Result<String> {
-        let edits = self.edits_for_user_settings_update(&old_text, update)?;
+        let edits = self.edits_for_update_inner(&old_text, update)?;
         let mut new_text = old_text;
         for (range, replacement) in edits.into_iter() {
             new_text.replace_range(range, &replacement);
@@ -889,13 +883,16 @@ impl SettingsStore {
         text: &str,
         update: impl FnOnce(&mut SettingsContent),
     ) -> Result<Vec<(Range<usize>, String)>> {
-        self.edits_for_user_settings_update(text, |content| update(&mut content.content))
+        let mut update = Some(update);
+        self.edits_for_update_inner(text, &mut |content| {
+            (update.take().expect("called once"))(content)
+        })
     }
 
-    pub fn edits_for_user_settings_update(
+    fn edits_for_update_inner(
         &self,
         text: &str,
-        update: impl FnOnce(&mut UserSettingsContent),
+        update: &mut dyn FnMut(&mut SettingsContent),
     ) -> Result<Vec<(Range<usize>, String)>> {
         let old_content = if text.trim().is_empty() {
             UserSettingsContent::default()
@@ -908,7 +905,7 @@ impl SettingsStore {
                 .context("Settings file could not be parsed. Fix syntax errors before updating.")?
         };
         let mut new_content = old_content.clone();
-        update(&mut new_content);
+        update(&mut new_content.content);
 
         let old_value = serde_json::to_value(&old_content).unwrap();
         let new_value = serde_json::to_value(new_content).unwrap();
@@ -981,7 +978,7 @@ impl SettingsStore {
         }
         self.last_user_settings_content = Some(user_settings_content.to_string());
 
-        let (settings, parse_result) = self.parse_and_migrate_dez_settings::<UserSettingsContent>(
+        let (settings, parse_result) = self.parse_and_migrate_zed_settings::<UserSettingsContent>(
             user_settings_content,
             SettingsFile::User,
         );
@@ -1008,7 +1005,7 @@ impl SettingsStore {
         }
         self.last_global_settings_content = Some(global_settings_content.to_string());
 
-        let (settings, parse_result) = self.parse_and_migrate_dez_settings::<SettingsContent>(
+        let (settings, parse_result) = self.parse_and_migrate_zed_settings::<SettingsContent>(
             global_settings_content,
             SettingsFile::Global,
         );
@@ -1085,13 +1082,13 @@ impl SettingsStore {
         let content = settings_content
             .map(|content| content.trim())
             .filter(|content| !content.is_empty());
-        let mut dez_settings_changed = false;
+        let mut zed_settings_changed = false;
         match (path.clone(), kind, content) {
             (LocalSettingsPath::InWorktree(directory_path), LocalSettingsKind::Tasks, _) => {
                 return Err(InvalidSettingsError::Tasks {
                     message: "Attempted to submit tasks into the settings store".to_string(),
                     path: directory_path
-                        .join(RelPath::unix(task_file_name()).unwrap())
+                        .join(RelPath::from_unix_str(task_file_name()).unwrap())
                         .as_std_path()
                         .to_path_buf(),
                 });
@@ -1101,13 +1098,13 @@ impl SettingsStore {
                     message: "Attempted to submit debugger config into the settings store"
                         .to_string(),
                     path: directory_path
-                        .join(RelPath::unix(task_file_name()).unwrap())
+                        .join(RelPath::from_unix_str(task_file_name()).unwrap())
                         .as_std_path()
                         .to_path_buf(),
                 });
             }
             (LocalSettingsPath::InWorktree(directory_path), LocalSettingsKind::Settings, None) => {
-                dez_settings_changed = self
+                zed_settings_changed = self
                     .local_settings
                     .remove(&(root_id, directory_path.clone()))
                     .is_some();
@@ -1120,7 +1117,7 @@ impl SettingsStore {
                 Some(settings_contents),
             ) => {
                 let (new_settings, parse_result) = self
-                    .parse_and_migrate_dez_settings::<ProjectSettingsContent>(
+                    .parse_and_migrate_zed_settings::<ProjectSettingsContent>(
                         settings_contents,
                         SettingsFile::Project((root_id, directory_path.clone())),
                     );
@@ -1128,7 +1125,9 @@ impl SettingsStore {
                     ParseStatus::Success => Ok(()),
                     ParseStatus::Unchanged => Ok(()),
                     ParseStatus::Failed { error } => Err(InvalidSettingsError::LocalSettings {
-                        path: directory_path.join(local_settings_file_relative_path()),
+                        path: directory_path
+                            .join(local_settings_file_relative_path())
+                            .into(),
                         message: error,
                     }),
                 }?;
@@ -1139,7 +1138,7 @@ impl SettingsStore {
                                 project: new_settings,
                                 ..Default::default()
                             });
-                            dez_settings_changed = true;
+                            zed_settings_changed = true;
                         }
                         btree_map::Entry::Occupied(mut o) => {
                             if &o.get().project != &new_settings {
@@ -1147,7 +1146,7 @@ impl SettingsStore {
                                     project: new_settings,
                                     ..Default::default()
                                 });
-                                dez_settings_changed = true;
+                                zed_settings_changed = true;
                             }
                         }
                     }
@@ -1168,7 +1167,7 @@ impl SettingsStore {
             }
         }
         if let LocalSettingsPath::InWorktree(directory_path) = &path {
-            if dez_settings_changed {
+            if zed_settings_changed {
                 self.recompute_values(Some((root_id, &directory_path)), cx);
             }
         }
@@ -1212,10 +1211,10 @@ impl SettingsStore {
     ) -> impl '_ + Iterator<Item = (Arc<RelPath>, &ProjectSettingsContent)> {
         self.local_settings
             .range(
-                (root_id, RelPath::empty().into())
+                (root_id, RelPath::empty_arc())
                     ..(
                         WorktreeId::from_usize(root_id.to_usize() + 1),
-                        RelPath::empty().into(),
+                        RelPath::empty_arc(),
                     ),
             )
             .map(|((_, path), content)| (path.clone(), &content.project))
@@ -1240,6 +1239,17 @@ impl SettingsStore {
                     "type": "object",
                     "errorMessage": "No language with this name is installed.",
                     "properties": params.language_names.iter().map(|name| (name.clone(), language_settings_content_ref.clone())).collect::<serde_json::Map<_, _>>()
+                })
+            });
+
+            let file_type_patterns_ref =
+                generator.subschema_for::<ExtendingSet<String>>().to_value();
+            replace_subschema::<FileTypeMap>(generator, || {
+                json_schema!({
+                    "type": "object",
+                    "errorMessage": "No language with this name is installed.",
+                    "properties": params.language_names.iter().map(|name| (name.clone(), file_type_patterns_ref.clone())).collect::<serde_json::Map<_, _>>(),
+                    "additionalProperties": file_type_patterns_ref.clone()
                 })
             });
         }
@@ -1330,9 +1340,9 @@ impl SettingsStore {
         }
 
         if !params.action_names.is_empty() {
-            replace_subschema::<ActionName>(&mut generator, || {
-                ActionName::build_schema(
-                    params.action_names.iter().copied(),
+            replace_subschema::<CommandAliasTarget>(&mut generator, || {
+                CommandAliasTarget::build_schema(
+                    params.action_names,
                     params.action_documentation,
                     params.deprecations,
                     params.deprecation_messages,
@@ -1391,6 +1401,17 @@ impl SettingsStore {
             }
             merged.merge_from_option(self.server_settings.as_deref());
 
+            // Merge `disable_ai` from all project/local settings into the global value.
+            // Since `SaturatingBool` uses OR logic, if any project has `disable_ai: true`,
+            // the global value will be true. This allows project-level `disable_ai` to
+            // affect the global setting used by UI elements without file context.
+            for local_settings in self.local_settings.values() {
+                merged
+                    .project
+                    .disable_ai
+                    .merge_from(&local_settings.project.disable_ai);
+            }
+
             self.merged_settings = Rc::new(merged);
 
             for setting_value in self.setting_values.values_mut() {
@@ -1398,7 +1419,35 @@ impl SettingsStore {
                 setting_value.set_global_value(value);
             }
         } else {
-            let merged = (*self.merged_settings).clone();
+            // When only a local path changed, we still need to recompute the global
+            // `disable_ai` value since it depends on all local settings.
+            let mut merged = (*self.merged_settings).clone();
+            // Reset disable_ai to compute fresh from base settings
+            merged.project.disable_ai = self.default_settings.project.disable_ai;
+            if let Some(global) = &self.global_settings {
+                merged
+                    .project
+                    .disable_ai
+                    .merge_from(&global.project.disable_ai);
+            }
+            if let Some(user) = &self.user_settings {
+                merged
+                    .project
+                    .disable_ai
+                    .merge_from(&user.content.project.disable_ai);
+            }
+            if let Some(server) = &self.server_settings {
+                merged
+                    .project
+                    .disable_ai
+                    .merge_from(&server.project.disable_ai);
+            }
+            for local_settings in self.local_settings.values() {
+                merged
+                    .project
+                    .disable_ai
+                    .merge_from(&local_settings.project.disable_ai);
+            }
             self.merged_settings = Rc::new(merged);
 
             for setting_value in self.setting_values.values_mut() {
@@ -1641,6 +1690,173 @@ impl<T: Settings> AnySettingValue for SettingValue<T> {
     }
 }
 
+fn migrate_dez_generated_visual_profile(app_name: &str, content: &str) -> Option<String> {
+    const GENERATED_MONO_CODE_PROFILE: &str =
+        "// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif";
+    const GENERATED_ONE_LIGHT_PROFILE: &str = "// Lumin follows the system appearance. JetBrains Mono is used for code and\n// terminals; the bundled sans-serif face keeps interface chrome readable.";
+    const GENERATED_ALL_JETBRAINS_PROFILE: &str = "// Dez starts with compact Lumin chrome and JetBrains Mono across the interface,\n// editor, terminal, prompts, and review surfaces.";
+    const GENERATED_AYU_ALL_JETBRAINS_PROFILE: &str = "// Lumin follows the system appearance. JetBrains Mono is used across interface,\n// code, terminals, prompts, and review surfaces.";
+    const GENERATED_BALANCED_LUMIN_PROFILE: &str = "// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and\n// terminal text keep those native surfaces visually coherent.";
+    const OLD_UI_FONT: &str = "\"ui_font_family\": \".ZedSans\"";
+    const OLD_LIGHT_MODE: &str = "\"mode\": \"light\"";
+    const OLD_LIGHT_THEME: &str = "\"light\": \"One Light\"";
+
+    if app_name != "Dez" || !content.contains("// Dez settings") {
+        return None;
+    }
+
+    let restore_current_typography = |content: &str| {
+        content
+            .replace(
+                "\"ui_font_family\": \"JetBrains Mono\"",
+                "\"ui_font_family\": \"IBM Plex Sans\"",
+            )
+            .replace(OLD_UI_FONT, "\"ui_font_family\": \"IBM Plex Sans\"")
+            .replace(
+                "\"buffer_font_family\": \"JetBrains Mono\"",
+                "\"buffer_font_family\": \"Lilex\"",
+            )
+            .replace(
+                "\"markdown_preview_code_font_family\": \"JetBrains Mono\"",
+                "\"markdown_preview_code_font_family\": \"Lilex\"",
+            )
+            .replace(
+                "\"font_family\": \"JetBrains Mono\"",
+                "\"font_family\": \"Lilex\"",
+            )
+    };
+
+    if content.contains(GENERATED_BALANCED_LUMIN_PROFILE)
+        && content.contains("\"design_system\": {\n    \"density\": \"balanced\"\n  }")
+    {
+        return Some(
+            content
+                .replacen(
+                    GENERATED_BALANCED_LUMIN_PROFILE,
+                    "// Rounded, high-contrast Lumin chrome, IBM Plex Sans interface text, and Lilex\n// code and terminal text keep those native surfaces visually coherent.",
+                    1,
+                )
+                .replacen(
+                    "\"design_system\": {\n    \"density\": \"balanced\"\n  }",
+                    "\"design_system\": {\n    \"density\": \"balanced\",\n    \"radius\": \"rounded\",\n    \"contrast\": \"high\"\n  }",
+                    1,
+                ),
+        );
+    }
+
+    if content.contains(GENERATED_ALL_JETBRAINS_PROFILE)
+        && content.contains("\"ui_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"font_family\": \"JetBrains Mono\"")
+        && content.contains("\"light\": \"Lumin Light\"")
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        return Some(
+            restore_current_typography(content).replacen(
+                GENERATED_ALL_JETBRAINS_PROFILE,
+                "// Dez starts with compact Lumin chrome, IBM Plex Sans for native-feeling\n// interface text, and Lilex for code and terminals.",
+                1,
+            ),
+        );
+    }
+
+    if content.contains(GENERATED_AYU_ALL_JETBRAINS_PROFILE)
+        && content.contains("\"ui_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"font_family\": \"JetBrains Mono\"")
+        && content.contains("\"mode\": \"light\"")
+        && content.contains("\"light\": \"Ayu Light\"")
+        && content.contains("\"dark\": \"One Dark\"")
+    {
+        let migrated = restore_current_typography(content)
+            .replacen(
+                GENERATED_AYU_ALL_JETBRAINS_PROFILE,
+                "// Dez follows the system appearance with Lumin, IBM Plex Sans for native-feeling\n// interface text, and Lilex for code, terminals, prompts, and review surfaces.",
+                1,
+            )
+            .replacen("\"mode\": \"light\"", "\"mode\": \"system\"", 1)
+            .replacen("\"light\": \"Ayu Light\"", "\"light\": \"Lumin Light\"", 1)
+            .replacen("\"dark\": \"One Dark\"", "\"dark\": \"Lumin Blur\"", 1);
+        let migrated = if migrated.contains("\"icon_theme\"") {
+            migrated
+        } else {
+            migrated.replacen("{\n", "{\n  \"icon_theme\": \"Dez (Default)\",\n", 1)
+        };
+        let migrated = if migrated.contains("\"markdown_preview_code_font_family\"") {
+            migrated
+        } else {
+            migrated.replacen(
+                "\"buffer_font_family\": \"Lilex\",\n",
+                "\"buffer_font_family\": \"Lilex\",\n  \"markdown_preview_code_font_family\": \"Lilex\",\n",
+                1,
+            )
+        };
+        return Some(migrated);
+    }
+
+    if content.contains(GENERATED_AYU_ALL_JETBRAINS_PROFILE)
+        && content.contains("\"ui_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
+        && content.contains("\"font_family\": \"JetBrains Mono\"")
+        && content.contains("\"mode\": \"dark\"")
+        && content.contains("\"light\": \"Ayu Light\"")
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        let migrated = restore_current_typography(content)
+            .replacen(
+                GENERATED_AYU_ALL_JETBRAINS_PROFILE,
+                "// Dez follows the system appearance with Lumin, IBM Plex Sans for native-feeling\n// interface text, and Lilex for code, terminals, prompts, and review surfaces.",
+                1,
+            )
+            .replacen("\"mode\": \"dark\"", "\"mode\": \"system\"", 1)
+            .replacen("\"light\": \"Ayu Light\"", "\"light\": \"Lumin Light\"", 1);
+        let migrated = if migrated.contains("\"icon_theme\"") {
+            migrated
+        } else {
+            migrated.replacen("{\n", "{\n  \"icon_theme\": \"Dez (Default)\",\n", 1)
+        };
+        let migrated = if migrated.contains("\"markdown_preview_code_font_family\"") {
+            migrated
+        } else {
+            migrated.replacen(
+                "\"buffer_font_family\": \"Lilex\",\n",
+                "\"buffer_font_family\": \"Lilex\",\n  \"markdown_preview_code_font_family\": \"Lilex\",\n",
+                1,
+            )
+        };
+        return Some(migrated);
+    }
+
+    if !content.contains(OLD_UI_FONT)
+        || !content.contains("\"buffer_font_family\": \"JetBrains Mono\"")
+        || !content.contains("\"terminal\"")
+        || !content.contains("\"font_family\": \"JetBrains Mono\"")
+    {
+        return None;
+    }
+
+    if content.contains(GENERATED_MONO_CODE_PROFILE)
+        && content.contains("\"light\": \"Lumin Light\"")
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        return Some(restore_current_typography(content));
+    }
+
+    if content.contains(GENERATED_ONE_LIGHT_PROFILE)
+        && content.contains(OLD_LIGHT_MODE)
+        && content.contains(OLD_LIGHT_THEME)
+        && content.contains("\"dark\": \"Lumin Blur\"")
+    {
+        return Some(
+            restore_current_typography(content)
+                .replacen(OLD_LIGHT_MODE, "\"mode\": \"system\"", 1)
+                .replacen(OLD_LIGHT_THEME, "\"light\": \"Lumin Light\"", 1),
+        );
+    }
+
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, num::NonZeroU32};
@@ -1654,6 +1870,155 @@ mod tests {
     use fs::FakeFs;
     use unindent::Unindent;
     use util::rel_path::rel_path;
+
+    #[test]
+    fn migrates_only_known_generated_dez_visual_profiles() {
+        let balanced_lumin_generated = r#"// Dez settings
+//
+// Balanced Lumin chrome, IBM Plex Sans interface text, and Lilex code and
+// terminal text keep those native surfaces visually coherent.
+{
+  "ui_font_family": "IBM Plex Sans",
+  "design_system": {
+    "density": "balanced"
+  },
+  "ui_font_size": 17
+}"#;
+        let migrated =
+            migrate_dez_generated_visual_profile("Dez", balanced_lumin_generated).unwrap();
+        assert!(migrated.contains("\"radius\": \"rounded\""));
+        assert!(migrated.contains("\"contrast\": \"high\""));
+        assert!(migrated.contains("\"ui_font_size\": 17"));
+
+        let generated = r#"// Dez starts with Lumin, JetBrains Mono for code, and a readable sans-serif
+{
+  "ui_font_family": ".ZedSans",
+  "buffer_font_family": "JetBrains Mono",
+  "theme": { "light": "Lumin Light", "dark": "Lumin Blur" },
+  "terminal": { "font_family": "JetBrains Mono" }
+}"#;
+
+        let migrated = migrate_dez_generated_visual_profile("Dez", generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
+        assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"font_family\": \"Lilex\""));
+        assert_eq!(migrate_dez_generated_visual_profile("Zed", generated), None);
+
+        let one_light_generated = r#"// Dez settings
+//
+// Lumin follows the system appearance. JetBrains Mono is used for code and
+// terminals; the bundled sans-serif face keeps interface chrome readable.
+{
+  "diff_view_style": "unified",
+  "ui_font_family": ".ZedSans",
+  "buffer_font_family": "JetBrains Mono",
+  "theme": {
+    "mode": "light",
+    "light": "One Light",
+    "dark": "Lumin Blur"
+  },
+  "terminal": { "font_family": "JetBrains Mono" }
+}"#;
+        let migrated = migrate_dez_generated_visual_profile("Dez", one_light_generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
+        assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"mode\": \"system\""));
+        assert!(migrated.contains("\"light\": \"Lumin Light\""));
+        assert!(migrated.contains("\"diff_view_style\": \"unified\""));
+        let all_jetbrains_generated = r#"// Dez settings
+//
+// Dez starts with compact Lumin chrome and JetBrains Mono across the interface,
+// editor, terminal, prompts, and review surfaces.
+{
+  "ui_font_family": "JetBrains Mono",
+  "buffer_font_family": "JetBrains Mono",
+  "markdown_preview_code_font_family": "JetBrains Mono",
+  "theme": { "light": "Lumin Light", "dark": "Lumin Blur" },
+  "terminal": { "font_family": "JetBrains Mono" }
+}"#;
+        let migrated =
+            migrate_dez_generated_visual_profile("Dez", all_jetbrains_generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
+        assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"markdown_preview_code_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"font_family\": \"Lilex\""));
+
+        let ayu_all_jetbrains_generated = r#"// Dez settings
+//
+// Lumin follows the system appearance. JetBrains Mono is used across interface,
+// code, terminals, prompts, and review surfaces.
+{
+  "diff_view_style": "unified",
+  "ui_font_family": "JetBrains Mono",
+  "ui_font_size": 14,
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "theme": {
+    "mode": "light",
+    "light": "Ayu Light",
+    "dark": "One Dark"
+  },
+  "terminal": {
+    "font_family": "JetBrains Mono",
+    "font_size": 14
+  }
+}"#;
+        let migrated =
+            migrate_dez_generated_visual_profile("Dez", ayu_all_jetbrains_generated).unwrap();
+        assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
+        assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"markdown_preview_code_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"mode\": \"system\""));
+        assert!(migrated.contains("\"light\": \"Lumin Light\""));
+        assert!(migrated.contains("\"dark\": \"Lumin Blur\""));
+        assert!(migrated.contains("\"icon_theme\": \"Dez (Default)\""));
+        assert!(migrated.contains("\"ui_font_size\": 14"));
+        assert!(migrated.contains("\"buffer_font_size\": 14"));
+
+        let dark_lumin_all_jetbrains_generated = r#"// Dez settings
+//
+// Lumin follows the system appearance. JetBrains Mono is used across interface,
+// code, terminals, prompts, and review surfaces.
+{
+  "project_panel": { "dock": "right" },
+  "ui_font_family": "JetBrains Mono",
+  "ui_font_size": 14,
+  "buffer_font_family": "JetBrains Mono",
+  "buffer_font_size": 14,
+  "theme": {
+    "mode": "dark",
+    "light": "Ayu Light",
+    "dark": "Lumin Blur"
+  },
+  "terminal": {
+    "font_family": "JetBrains Mono",
+    "font_size": 14
+  }
+}"#;
+        let migrated =
+            migrate_dez_generated_visual_profile("Dez", dark_lumin_all_jetbrains_generated)
+                .unwrap();
+        assert!(migrated.contains("\"project_panel\": { \"dock\": \"right\" }"));
+        assert!(migrated.contains("\"ui_font_family\": \"IBM Plex Sans\""));
+        assert!(migrated.contains("\"buffer_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"markdown_preview_code_font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"font_family\": \"Lilex\""));
+        assert!(migrated.contains("\"mode\": \"system\""));
+        assert!(migrated.contains("\"light\": \"Lumin Light\""));
+        assert!(migrated.contains("\"dark\": \"Lumin Blur\""));
+        assert!(migrated.contains("\"icon_theme\": \"Dez (Default)\""));
+        assert!(migrated.contains("\"ui_font_size\": 14"));
+        assert!(migrated.contains("\"buffer_font_size\": 14"));
+        assert_eq!(
+            migrate_dez_generated_visual_profile(
+                "Dez",
+                r#"{ "ui_font_family": ".ZedSans", "buffer_font_family": "JetBrains Mono" }"#,
+            ),
+            None
+        );
+    }
 
     #[derive(Debug, PartialEq)]
     struct AutoUpdateSetting {
@@ -2130,9 +2495,9 @@ mod tests {
             }
             "#
             .unindent(),
-            |settings| settings.title_bar.get_or_insert_default().show_branch_name = Some(true),
+            |settings| settings.sidebar.get_or_insert_default().show_branch_name = Some(true),
             r#"{
-              "title_bar": {
+              "sidebar": {
                 "show_branch_name": true
               }
             }
@@ -2164,33 +2529,6 @@ mod tests {
             .unindent(),
             cx,
         );
-    }
-
-    #[gpui::test]
-    fn ui_language_is_read_only_from_user_settings(cx: &mut App) {
-        let mut store = SettingsStore::new(cx, &test_settings());
-        assert_eq!(store.ui_language(), UiLanguage::English);
-
-        store
-            .set_user_settings(r#"{ "ui_language": "zh-CN" }"#, cx)
-            .unwrap();
-        assert_eq!(store.ui_language(), UiLanguage::SimplifiedChinese);
-
-        let project_schema = serde_json::to_value(schemars::schema_for!(ProjectSettingsContent))
-            .expect("project settings schema must serialize");
-        assert!(project_schema.pointer("/properties/ui_language").is_none());
-    }
-
-    #[gpui::test]
-    fn edits_ui_language_in_user_settings(cx: &mut App) {
-        let store = SettingsStore::new(cx, &test_settings());
-        let updated = store
-            .new_text_for_user_settings_update("{}".into(), |content| {
-                content.ui_language = Some(UiLanguage::SimplifiedChinese);
-            })
-            .unwrap();
-
-        assert_eq!(updated, "{\n  \"ui_language\": \"zh-CN\"\n}\n");
     }
 
     #[gpui::test]
@@ -2492,6 +2830,219 @@ mod tests {
             .unindent(),
             cx,
         );
+
+        // formatOnSave: true with formatOnSaveMode: modificationsIfAvailable
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSave": true, "editor.formatOnSaveMode": "modificationsIfAvailable" }"#
+                .to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "format_on_save": "modifications_if_available"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // formatOnSave: true with formatOnSaveMode: modifications
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSave": true, "editor.formatOnSaveMode": "modifications" }"#
+                .to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "format_on_save": "modifications"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // formatOnSave: true with formatOnSaveMode: file
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSave": true, "editor.formatOnSaveMode": "file" }"#.to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "format_on_save": "on"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // formatOnSaveMode is ignored when formatOnSave is disabled, as in VS Code
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSave": false, "editor.formatOnSaveMode": "modifications" }"#
+                .to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "format_on_save": "off"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // formatOnSaveMode alone does nothing, as formatOnSave defaults to false in VS Code
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSaveMode": "modifications" }"#.to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              }
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // formatOnSaveMode not set, formatOnSave: true
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSave": true }"#.to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "format_on_save": "on"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // formatOnSaveMode not set, formatOnSave: false
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{ "editor.formatOnSave": false }"#.to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "format_on_save": "off"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        // re-importing a file association that is already present should be
+        // idempotent rather than appending a duplicate extension (#56536)
+        check_vscode_import(
+            &mut store,
+            r#"{
+              "file_types": {
+                "c": ["*.keymap"]
+              }
+            }
+            "#
+            .unindent(),
+            r#"{ "files.associations": { "*.keymap": "c" } }"#.to_owned(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "file_types": {
+                "c": ["*.keymap"]
+              }
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{
+              "window.title": "${activeEditorShort}${separator}${rootName}${separator}${appName}",
+              "window.titleSeparator": " - "
+            }"#
+            .unindent(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              },
+              "window_title_separator": " - ",
+              "window_title_format": "${fileName}${separator}${projectName}${separator}${appName}"
+            }
+            "#
+            .unindent(),
+            cx,
+        );
+
+        check_vscode_import(
+            &mut store,
+            r#"{
+            }
+            "#
+            .unindent(),
+            r#"{
+              "window.title": "${unsupportedVariable}"
+            }"#
+            .unindent(),
+            r#"{
+              "base_keymap": "VSCode",
+              "minimap": {
+                "show": "always"
+              }
+            }
+            "#
+            .unindent(),
+            cx,
+        );
     }
 
     #[track_caller]
@@ -2597,7 +3148,7 @@ mod tests {
         store
             .set_user_settings(r#"{"preferred_line_length": 0}"#, cx)
             .unwrap();
-        let local = (WorktreeId::from_usize(0), RelPath::empty().into_arc());
+        let local = (WorktreeId::from_usize(0), RelPath::empty_arc());
         store
             .set_local_settings(
                 local.0,
@@ -2657,27 +3208,21 @@ mod tests {
         store.register_setting::<DefaultLanguageSettings>();
         store.register_setting::<AutoUpdateSetting>();
 
-        let local_1 = (WorktreeId::from_usize(0), RelPath::empty().into_arc());
+        let local_1 = (WorktreeId::from_usize(0), RelPath::empty_arc());
 
         let local_1_child = (
             WorktreeId::from_usize(0),
-            RelPath::new(
-                std::path::Path::new("child1"),
-                util::paths::PathStyle::Posix,
-            )
-            .unwrap()
-            .into_arc(),
+            RelPath::new(std::path::Path::new("child1"), util::paths::PathStyle::Unix)
+                .unwrap()
+                .into_arc(),
         );
 
-        let local_2 = (WorktreeId::from_usize(1), RelPath::empty().into_arc());
+        let local_2 = (WorktreeId::from_usize(1), RelPath::empty_arc());
         let local_2_child = (
             WorktreeId::from_usize(1),
-            RelPath::new(
-                std::path::Path::new("child2"),
-                util::paths::PathStyle::Posix,
-            )
-            .unwrap()
-            .into_arc(),
+            RelPath::new(std::path::Path::new("child2"), util::paths::PathStyle::Unix)
+                .unwrap()
+                .into_arc(),
         );
 
         fn get(content: &SettingsContent) -> Option<&u32> {
@@ -2790,11 +3335,11 @@ mod tests {
         let mut store = SettingsStore::new(cx, &test_settings());
         store.register_setting::<DefaultLanguageSettings>();
 
-        let wt0_root = (WorktreeId::from_usize(0), RelPath::empty().into_arc());
+        let wt0_root = (WorktreeId::from_usize(0), RelPath::empty_arc());
         let wt0_child1 = (WorktreeId::from_usize(0), rel_path("child1").into_arc());
         let wt0_child2 = (WorktreeId::from_usize(0), rel_path("child2").into_arc());
 
-        let wt1_root = (WorktreeId::from_usize(1), RelPath::empty().into_arc());
+        let wt1_root = (WorktreeId::from_usize(1), RelPath::empty_arc());
         let wt1_subdir = (WorktreeId::from_usize(1), rel_path("subdir").into_arc());
 
         fn get(content: &SettingsContent) -> &Option<u32> {
@@ -2912,15 +3457,13 @@ mod tests {
 
     #[test]
     fn test_file_ord() {
-        let wt0_root =
-            SettingsFile::Project((WorktreeId::from_usize(0), RelPath::empty().into_arc()));
+        let wt0_root = SettingsFile::Project((WorktreeId::from_usize(0), RelPath::empty_arc()));
         let wt0_child1 =
             SettingsFile::Project((WorktreeId::from_usize(0), rel_path("child1").into_arc()));
         let wt0_child2 =
             SettingsFile::Project((WorktreeId::from_usize(0), rel_path("child2").into_arc()));
 
-        let wt1_root =
-            SettingsFile::Project((WorktreeId::from_usize(1), RelPath::empty().into_arc()));
+        let wt1_root = SettingsFile::Project((WorktreeId::from_usize(1), RelPath::empty_arc()));
         let wt1_subdir =
             SettingsFile::Project((WorktreeId::from_usize(1), rel_path("subdir").into_arc()));
 
@@ -2957,9 +3500,9 @@ mod tests {
 
         let schema = SettingsStore::json_schema(&SettingsJsonSchemaParams {
             language_names: &["Rust".to_string(), "TypeScript".to_string()],
-            font_names: &["dez Mono".to_string()],
+            font_names: &["Zed Mono".to_string()],
             theme_names: &["One Dark".into()],
-            icon_theme_names: &["dez Icons".into()],
+            icon_theme_names: &["Zed Icons".into()],
             lsp_adapter_names: &[
                 "rust-analyzer".to_string(),
                 "typescript-language-server".to_string(),
@@ -2989,7 +3532,7 @@ mod tests {
 
         assert_eq!(
             init_options_ref,
-            "dez://schemas/settings/lsp/rust-analyzer/initialization_options"
+            "zed://schemas/settings/lsp/rust-analyzer/initialization_options"
         );
 
         let settings_ref = properties
@@ -3002,7 +3545,7 @@ mod tests {
 
         assert_eq!(
             settings_ref,
-            "dez://schemas/settings/lsp/rust-analyzer/settings"
+            "zed://schemas/settings/lsp/rust-analyzer/settings"
         );
     }
 
@@ -3012,9 +3555,9 @@ mod tests {
 
         let schema = SettingsStore::project_json_schema(&SettingsJsonSchemaParams {
             language_names: &["Rust".to_string(), "TypeScript".to_string()],
-            font_names: &["dez Mono".to_string()],
+            font_names: &["Zed Mono".to_string()],
             theme_names: &["One Dark".into()],
-            icon_theme_names: &["dez Icons".into()],
+            icon_theme_names: &["Zed Icons".into()],
             lsp_adapter_names: &[
                 "rust-analyzer".to_string(),
                 "typescript-language-server".to_string(),
@@ -3044,7 +3587,7 @@ mod tests {
 
         assert_eq!(
             init_options_ref,
-            "dez://schemas/settings/lsp/rust-analyzer/initialization_options"
+            "zed://schemas/settings/lsp/rust-analyzer/initialization_options"
         );
 
         let settings_ref = properties
@@ -3057,8 +3600,44 @@ mod tests {
 
         assert_eq!(
             settings_ref,
-            "dez://schemas/settings/lsp/rust-analyzer/settings"
+            "zed://schemas/settings/lsp/rust-analyzer/settings"
         );
+    }
+
+    #[gpui::test]
+    fn test_file_types_schema_generation(cx: &mut App) {
+        SettingsStore::test(cx);
+
+        let schema = SettingsStore::json_schema(&SettingsJsonSchemaParams {
+            language_names: &["Rust".to_string(), "TypeScript".to_string()],
+            font_names: &["Zed Mono".to_string()],
+            theme_names: &["One Dark".into()],
+            icon_theme_names: &["Zed Icons".into()],
+            lsp_adapter_names: &[],
+            action_names: &[],
+            action_documentation: &HashMap::default(),
+            deprecations: &HashMap::default(),
+            deprecation_messages: &HashMap::default(),
+        });
+
+        let file_type_map = schema
+            .pointer("/$defs/FileTypeMap")
+            .expect("schema should have a FileTypeMap definition");
+        let properties = file_type_map
+            .pointer("/properties")
+            .expect("FileTypeMap should have properties")
+            .as_object()
+            .expect("FileTypeMap properties should be an object");
+
+        let mut language_names = properties.keys().collect::<Vec<_>>();
+        language_names.sort();
+        assert_eq!(language_names, ["Rust", "TypeScript"]);
+
+        let patterns_schema = file_type_map
+            .pointer("/additionalProperties")
+            .expect("FileTypeMap should validate values of unknown language names");
+        assert_eq!(properties.get("Rust"), Some(patterns_schema));
+        assert_eq!(properties.get("TypeScript"), Some(patterns_schema));
     }
 
     #[gpui::test]
@@ -3067,9 +3646,9 @@ mod tests {
 
         let params = SettingsJsonSchemaParams {
             language_names: &["Rust".to_string()],
-            font_names: &["dez Mono".to_string()],
+            font_names: &["Zed Mono".to_string()],
             theme_names: &["One Dark".into()],
-            icon_theme_names: &["dez Icons".into()],
+            icon_theme_names: &["Zed Icons".into()],
             lsp_adapter_names: &["rust-analyzer".to_string()],
             action_names: &[],
             action_documentation: &HashMap::default(),

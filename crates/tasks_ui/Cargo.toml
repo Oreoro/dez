@@ -19,17 +19,20 @@ file_icons.workspace = true
 fuzzy.workspace = true
 itertools.workspace = true
 gpui.workspace = true
-localization.workspace = true
 menu.workspace = true
+paths.workspace = true
 picker.workspace = true
 project.workspace = true
 task.workspace = true
 serde.workspace = true
+settings.workspace = true
+tree-sitter.workspace = true
+tree-sitter-json.workspace = true
 ui.workspace = true
 util.workspace = true
 workspace.workspace = true
 language.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 
 [dev-dependencies]
 editor = { workspace = true, features = ["test-support"] }

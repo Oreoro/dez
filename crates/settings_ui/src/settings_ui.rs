@@ -2,55 +2,69 @@ mod components;
 mod page_data;
 pub mod pages;
 
+use agent_settings::{AgentSettings, language_model_to_selection, terminal_launcher_icon};
+use agent_skills::SkillIndex;
+use agent_ui::{LanguageModelSelector, language_model_selector};
 use anyhow::{Context as _, Result};
+use cloud_api_types::OrganizationConfiguration;
 use editor::{Editor, EditorEvent};
 use futures::{StreamExt, channel::mpsc};
 use fuzzy::StringMatchCandidate;
 use gpui::{
     Action, App, AsyncApp, ClipboardItem, DEFAULT_ADDITIONAL_WINDOW_SIZE, Div, Entity, FocusHandle,
-    Focusable, Global, KeyContext, ListState, ReadGlobal as _, ScrollHandle, Stateful,
-    Subscription, Task, Tiling, TitlebarOptions, UniformListScrollHandle, WeakEntity, Window,
-    WindowBounds, WindowHandle, WindowOptions, actions, div, list, point, prelude::*, px,
-    uniform_list,
+    Focusable, Global, Hsla, KeyContext, ListState, ReadGlobal as _, Role, ScrollHandle, Stateful,
+    Subscription, Task, TitlebarOptions, UniformListScrollHandle, WeakEntity, Window, WindowBounds,
+    WindowHandle, WindowOptions, actions, div, list, point, prelude::*, px, uniform_list,
 };
 
 use language::Buffer;
+use language_model::{
+    ConfiguredModel, LanguageModelId, LanguageModelProviderId, LanguageModelRegistry,
+};
 use platform_title_bar::PlatformTitleBar;
 use project::{Project, ProjectPath, Worktree, WorktreeId};
 use release_channel::ReleaseChannel;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{
-    IntoGpui, Settings, SettingsContent, SettingsStore, UiLanguage,
-    initial_project_settings_content,
+    IntoGpui, Settings, SettingsContent, SettingsStore, initial_project_settings_content,
 };
 use std::{
     any::{Any, TypeId, type_name},
     cell::RefCell,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     num::{NonZero, NonZeroU32},
     ops::Range,
+    path::PathBuf,
     rc::Rc,
     sync::{Arc, LazyLock, RwLock},
     time::Duration,
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    Banner, ContextMenu, Divider, DropdownMenu, DropdownStyle, IconButtonShape, KeyBinding,
+    Banner, ContextMenu, DropdownMenu, DropdownStyle, IconButtonShape, IconPosition, KeyBinding,
     KeybindingHint, PopoverMenu, Scrollbars, Switch, Tooltip, TreeViewItem, WithScrollbar,
     prelude::*,
 };
 
-use dez_actions::{OpenProjectSettings, OpenSettings, OpenSettingsAt, OpenSettingsAtTarget};
 use util::{ResultExt as _, paths::PathStyle, rel_path::RelPath};
 use workspace::{
-    AppState, MultiWorkspace, OpenOptions, OpenVisible, Workspace, WorkspaceSettings,
-    client_side_decorations,
+    AppState, DesignSystemSettings, MultiWorkspace, OpenOptions, OpenVisible, Workspace,
+    WorkspaceSettings, client_side_decorations,
+};
+use zed_actions::{
+    AGENT_SKILLS_SETTINGS_PATH, OpenProjectSettings, OpenSettings, OpenSettingsAt,
+    OpenSettingsAtTarget, OpenSettingsPage,
 };
 
 use crate::components::{
     EnumVariantDropdown, NumberField, NumberFieldMode, NumberFieldType, SettingsInputField,
-    SettingsSectionHeader, font_picker, icon_theme_picker, theme_picker,
+    SettingsSectionHeader, font_picker, icon_theme_picker, render_ollama_model_picker,
+    text_field_a11y_state, theme_picker,
+};
+use crate::pages::{
+    CustomAgentForm, LlmProviderForm, McpServerForm, render_input_audio_device_dropdown,
+    render_output_audio_device_dropdown,
 };
 
 const NAVBAR_CONTAINER_TAB_INDEX: isize = 0;
@@ -61,6 +75,218 @@ const HEADER_GROUP_TAB_INDEX: isize = 3;
 
 const CONTENT_CONTAINER_TAB_INDEX: isize = 4;
 const CONTENT_GROUP_TAB_INDEX: isize = 5;
+const WINDOW_ACTION_UNAVAILABLE_COPY: &str =
+    "Reopen Settings from a Dez window to use this action.";
+const WORKSPACE_ACTION_UNAVAILABLE_COPY: &str = "Open a Workspace to use this action.";
+
+const SIDEBAR_WIDTH: Pixels = px(226.);
+const CONTENT_MIN_WIDTH: Pixels = px(400.);
+
+fn canvas_settings_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.background,
+        settings::CanvasContrast::Standard => colors.background,
+        settings::CanvasContrast::High => colors.editor_background,
+    }
+}
+
+fn canvas_settings_nav_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.panel_background,
+        settings::CanvasContrast::Standard => colors.panel_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_settings_search_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_settings_row_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.background,
+        settings::CanvasContrast::Standard => colors.background,
+        settings::CanvasContrast::High => colors.element_background.opacity(0.66),
+    }
+}
+
+fn canvas_settings_row_hover_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.element_hover.opacity(0.55),
+        settings::CanvasContrast::Standard => colors.element_hover.opacity(0.72),
+        settings::CanvasContrast::High => colors
+            .element_hover
+            .blend(colors.border_focused.opacity(0.14)),
+    }
+}
+
+fn canvas_settings_row_border_color(
+    background: Hsla,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => background,
+        settings::CanvasContrast::Standard => colors.border.opacity(0.18),
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
+fn canvas_settings_row_hover_border_color(
+    background: Hsla,
+    contrast: settings::CanvasContrast,
+    cx: &App,
+) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => background,
+        settings::CanvasContrast::Standard => colors.border.opacity(0.32),
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn canvas_settings_sub_field_background(contrast: settings::CanvasContrast, cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match contrast {
+        settings::CanvasContrast::Low => colors.element_background.opacity(0.14),
+        settings::CanvasContrast::Standard => colors.element_background.opacity(0.24),
+        settings::CanvasContrast::High => colors.element_background.opacity(0.72),
+    }
+}
+
+fn canvas_settings_row_padding_x(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(18.),
+        settings::CanvasDensity::Balanced => px(24.),
+        settings::CanvasDensity::Spacious => px(30.),
+    }
+}
+
+fn canvas_settings_inline_padding(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(10.),
+        settings::CanvasDensity::Balanced => px(12.),
+        settings::CanvasDensity::Spacious => px(16.),
+    }
+}
+
+fn canvas_settings_item_padding_y(
+    density: settings::CanvasDensity,
+    extra_bottom_padding: bool,
+) -> (Pixels, Pixels) {
+    let top = match density {
+        settings::CanvasDensity::Compact => px(10.),
+        settings::CanvasDensity::Balanced => px(14.),
+        settings::CanvasDensity::Spacious => px(18.),
+    };
+    let bottom = if extra_bottom_padding {
+        match density {
+            settings::CanvasDensity::Compact => px(20.),
+            settings::CanvasDensity::Balanced => px(28.),
+            settings::CanvasDensity::Spacious => px(36.),
+        }
+    } else {
+        top
+    };
+
+    (top, bottom)
+}
+
+fn canvas_settings_nav_padding(density: settings::CanvasDensity) -> Pixels {
+    match density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn canvas_settings_nav_width(app_name: &str, density: settings::CanvasDensity) -> Pixels {
+    if app_name == "Zed" {
+        return SIDEBAR_WIDTH;
+    }
+
+    match density {
+        settings::CanvasDensity::Compact => px(238.),
+        settings::CanvasDensity::Balanced => px(250.),
+        settings::CanvasDensity::Spacious => px(264.),
+    }
+}
+
+fn dez_settings_nav_icon(app_name: &str, page_title: &str) -> Option<IconName> {
+    if app_name == "Zed" {
+        return None;
+    }
+
+    match page_title {
+        "Workspaces & Terminals" => Some(IconName::Screen),
+        "Agents" => Some(IconName::DezAgent),
+        "Appearance" => Some(IconName::Sparkle),
+        "Workspace & Privacy" => Some(IconName::Lock),
+        "Keyboard & Vim" => Some(IconName::Keyboard),
+        "Editor" => Some(IconName::Code),
+        "Languages & Tools" => Some(IconName::ToolHammer),
+        "Search & Files" => Some(IconName::FolderSearch),
+        "Navigation & Layout" => Some(IconName::Split),
+        "Workspace Tools" => Some(IconName::ListTree),
+        "Debugger" => Some(IconName::Debug),
+        "Version Control" => Some(IconName::GitBranch),
+        "Network" => Some(IconName::Server),
+        "Advanced" => Some(IconName::Settings),
+        _ => None,
+    }
+}
+
+fn settings_content_accessibility_label(app_name: &str, page_title: &str) -> SharedString {
+    if app_name == "Zed" {
+        return "Settings Content".into();
+    }
+
+    format!("{page_title} Settings").into()
+}
+
+fn canvas_settings_radius(element: Stateful<Div>, radius: settings::CanvasRadius) -> Stateful<Div> {
+    match radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+fn canvas_settings_div_radius(element: Div, radius: settings::CanvasRadius) -> Div {
+    match radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+fn canvas_settings_item_surface(
+    element: Div,
+    radius: settings::CanvasRadius,
+    background: Hsla,
+    border_color: Hsla,
+    hover_background: Hsla,
+    hover_border_color: Hsla,
+) -> Div {
+    canvas_settings_div_radius(
+        element
+            .border_1()
+            .border_color(border_color)
+            .bg(background)
+            .hover(move |this| this.bg(hover_background).border_color(hover_border_color)),
+        radius,
+    )
+}
 
 actions!(
     settings_editor,
@@ -101,6 +327,12 @@ struct FocusFile(pub u32);
 struct SettingField<T: 'static> {
     pick: fn(&SettingsContent) -> Option<&T>,
     write: fn(&mut SettingsContent, Option<T>, &App),
+    /// Tells us whether the setting is overridden by the currently selected
+    /// organization's settings. Takes the organization configuration and the
+    /// resolved settings value, and returns `Some(...)` if the organization
+    /// overrides the setting, otherwise `None`.
+    organization_override: Option<fn(&OrganizationConfiguration) -> Option<&T>>,
+
     /// A json-path-like string that gives a unique-ish string that identifies
     /// where in the JSON the setting is defined.
     ///
@@ -149,6 +381,7 @@ impl<T: 'static> SettingField<T> {
         SettingField {
             pick: |_| Some(&UnimplementedSettingField),
             write: |_, _, _| unreachable!(),
+            organization_override: None,
             json_path: self.json_path,
         }
     }
@@ -158,6 +391,7 @@ trait AnySettingField {
     fn as_any(&self) -> &dyn Any;
     fn type_name(&self) -> &'static str;
     fn type_id(&self) -> TypeId;
+    fn is_settings_file_only(&self) -> bool;
     // Returns the file this value was set in and true, or File::Default and false to indicate it was not found in any file (missing default)
     fn file_set_in(&self, file: SettingsUiFile, cx: &App) -> (settings::SettingsFile, bool);
     fn reset_to_default_fn(
@@ -168,6 +402,8 @@ trait AnySettingField {
     ) -> Option<Box<dyn Fn(&mut Window, &mut App)>>;
 
     fn json_path(&self) -> Option<&'static str>;
+
+    fn is_overridden_by_organization(&self, cx: &App) -> bool;
 }
 
 impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingField<T> {
@@ -181,6 +417,10 @@ impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingFi
 
     fn type_id(&self) -> TypeId {
         TypeId::of::<T>()
+    }
+
+    fn is_settings_file_only(&self) -> bool {
+        TypeId::of::<T>() == TypeId::of::<UnimplementedSettingField>()
     }
 
     fn file_set_in(&self, file: SettingsUiFile, cx: &App) -> (settings::SettingsFile, bool) {
@@ -243,6 +483,19 @@ impl<T: PartialEq + Clone + Send + Sync + 'static> AnySettingField for SettingFi
     fn json_path(&self) -> Option<&'static str> {
         self.json_path
     }
+
+    fn is_overridden_by_organization(&self, cx: &App) -> bool {
+        let Some(org_override) = self.organization_override else {
+            return false;
+        };
+
+        let user_store = AppState::global(cx).user_store.read(cx);
+        let Some(org_config) = user_store.current_organization_configuration() else {
+            return false;
+        };
+
+        (org_override)(&org_config).is_some()
+    }
 }
 
 #[derive(Default, Clone)]
@@ -270,12 +523,18 @@ struct SettingFieldRenderer {
 impl Global for SettingFieldRenderer {}
 
 impl SettingFieldRenderer {
+    fn has_registered_renderer(&self, field: &dyn AnySettingField) -> bool {
+        self.renderers.borrow().contains_key(&field.type_id())
+    }
+
     fn add_basic_renderer<T: 'static>(
         &mut self,
         render_control: impl Fn(
             SettingField<T>,
             SettingsUiFile,
             Option<&SettingsFieldMetadata>,
+            &'static str,
+            &'static str,
             &mut Window,
             &mut App,
         ) -> AnyElement
@@ -290,14 +549,16 @@ impl SettingFieldRenderer {
                   sub_field: bool,
                   window: &mut Window,
                   cx: &mut Context<SettingsWindow>| {
-                render_settings_item(
-                    settings_window,
-                    item,
+                let control = render_control(
+                    field,
                     settings_file.clone(),
-                    render_control(field, settings_file, metadata, window, cx),
-                    sub_field,
+                    metadata,
+                    item.title,
+                    item.description,
+                    window,
                     cx,
-                )
+                );
+                render_settings_item(settings_window, item, settings_file, control, sub_field, cx)
             },
         )
     }
@@ -316,33 +577,52 @@ impl SettingFieldRenderer {
         ) -> Stateful<Div>
         + 'static,
     ) -> &mut Self {
-        let key = TypeId::of::<T>();
-        let renderer = Box::new(
-            move |settings_window: &SettingsWindow,
-                  item: &SettingItem,
-                  settings_file: SettingsUiFile,
-                  metadata: Option<&SettingsFieldMetadata>,
-                  sub_field: bool,
-                  window: &mut Window,
-                  cx: &mut Context<SettingsWindow>| {
-                let field = *item
-                    .field
-                    .as_ref()
-                    .as_any()
-                    .downcast_ref::<SettingField<T>>()
-                    .unwrap();
-                renderer(
-                    settings_window,
-                    item,
-                    field,
-                    settings_file,
-                    metadata,
-                    sub_field,
-                    window,
-                    cx,
-                )
-            },
-        );
+        self.add_renderer_erased(
+            TypeId::of::<T>(),
+            Box::new(
+                move |settings_window: &SettingsWindow,
+                      item: &SettingItem,
+                      settings_file: SettingsUiFile,
+                      metadata: Option<&SettingsFieldMetadata>,
+                      sub_field: bool,
+                      window: &mut Window,
+                      cx: &mut Context<SettingsWindow>| {
+                    let field = *item
+                        .field
+                        .as_ref()
+                        .as_any()
+                        .downcast_ref::<SettingField<T>>()
+                        .unwrap();
+                    renderer(
+                        settings_window,
+                        item,
+                        field,
+                        settings_file,
+                        metadata,
+                        sub_field,
+                        window,
+                        cx,
+                    )
+                },
+            ),
+        )
+    }
+
+    fn add_renderer_erased(
+        &mut self,
+        key: TypeId,
+        renderer: Box<
+            dyn Fn(
+                &SettingsWindow,
+                &SettingItem,
+                SettingsUiFile,
+                Option<&SettingsFieldMetadata>,
+                bool,
+                &mut Window,
+                &mut Context<SettingsWindow>,
+            ) -> Stateful<Div>,
+        >,
+    ) -> &mut Self {
         self.renderers.borrow_mut().insert(key, renderer);
         self
     }
@@ -384,6 +664,10 @@ impl Focusable for NonFocusableHandle {
 struct SettingsFieldMetadata {
     placeholder: Option<&'static str>,
     should_do_titlecase: Option<bool>,
+    display_confirm_button: bool,
+    display_clear_button: bool,
+    confirm_on_focus_out: bool,
+    treat_missing_text_as_empty: bool,
 }
 
 pub fn init(cx: &mut App) {
@@ -392,7 +676,17 @@ pub fn init(cx: &mut App) {
     cx.set_global(queue);
 
     cx.on_action(|_: &OpenSettings, cx| {
-        open_settings_editor(None, None, None, cx);
+        let workspace_handle = cx
+            .active_window()
+            .and_then(|window| window.downcast::<MultiWorkspace>());
+        open_settings_editor(None, None, workspace_handle, cx);
+    });
+    cx.on_action(|_: &zed_actions::assistant::OpenSkillCreator, cx| {
+        open_skill_creator(pages::SkillCreatorOpenMode::Form, None, cx);
+    });
+    cx.on_action(|_: &zed_actions::assistant::CreateSkillFromUrl, cx| {
+        let initial_url = pages::skill_url_from_clipboard(cx);
+        open_skill_creator(pages::SkillCreatorOpenMode::Url { initial_url }, None, cx);
     });
 
     cx.observe_new(|workspace: &mut workspace::Workspace, _, _| {
@@ -401,6 +695,15 @@ pub fn init(cx: &mut App) {
                 let window_handle = window.window_handle().downcast::<MultiWorkspace>();
                 open_settings_editor_at_target(
                     Some(&action.path),
+                    action.target.as_ref().map(SettingsFileTarget::from),
+                    window_handle,
+                    cx,
+                );
+            })
+            .register_action(|_, action: &OpenSettingsPage, window, cx| {
+                let window_handle = window.window_handle().downcast::<MultiWorkspace>();
+                open_settings_editor_to_page(
+                    &action.page,
                     action.target.as_ref().map(SettingsFileTarget::from),
                     window_handle,
                     cx,
@@ -423,7 +726,24 @@ pub fn init(cx: &mut App) {
                             .then_some(tree.read(cx).id())
                     });
                 open_settings_editor(None, target_worktree_id, window_handle, cx);
-            });
+            })
+            .register_action(
+                |_, _: &zed_actions::assistant::OpenSkillCreator, window, cx| {
+                    let window_handle = window.window_handle().downcast::<MultiWorkspace>();
+                    open_skill_creator(pages::SkillCreatorOpenMode::Form, window_handle, cx);
+                },
+            )
+            .register_action(
+                |_, _: &zed_actions::assistant::CreateSkillFromUrl, window, cx| {
+                    let window_handle = window.window_handle().downcast::<MultiWorkspace>();
+                    let initial_url = pages::skill_url_from_clipboard(cx);
+                    open_skill_creator(
+                        pages::SkillCreatorOpenMode::Url { initial_url },
+                        window_handle,
+                        cx,
+                    );
+                },
+            );
     })
     .detach();
 }
@@ -436,15 +756,12 @@ fn init_renderers(cx: &mut App) {
                     settings_window,
                     item,
                     settings_file,
-                    Button::new(
-                        "open-in-settings-file",
-                        localization::text(cx, "settings-edit-json"),
-                    )
+                    Button::new("open-in-settings-file", "Edit in settings.json")
                         .style(ButtonStyle::Outlined)
                         .size(ButtonSize::Medium)
                         .tab_index(0_isize)
                         .tooltip(Tooltip::for_action_title_in(
-                            localization::text(cx, "settings-edit-json"),
+                            "Edit in settings.json",
                             &OpenCurrentFile,
                             &settings_window.focus_handle,
                         ))
@@ -460,17 +777,26 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<bool>(render_toggle_button)
         .add_basic_renderer::<String>(render_text_field)
         .add_basic_renderer::<SharedString>(render_text_field)
+        .add_basic_renderer::<settings::SaturatingBool>(render_toggle_button)
         .add_basic_renderer::<settings::CursorShape>(render_dropdown)
         .add_basic_renderer::<settings::RestoreOnStartupBehavior>(render_dropdown)
-        .add_basic_renderer::<settings::BottomDockLayout>(render_dropdown)
+        .add_basic_renderer::<settings::OnNewWindow>(render_dropdown)
         .add_basic_renderer::<settings::OnLastWindowClosed>(render_dropdown)
         .add_basic_renderer::<settings::CliDefaultOpenBehavior>(render_dropdown)
+        .add_basic_renderer::<settings::DefaultOpenBehavior>(render_dropdown)
         .add_basic_renderer::<settings::CloseWindowWhenNoItems>(render_dropdown)
         .add_basic_renderer::<settings::TextRenderingMode>(render_dropdown)
         .add_basic_renderer::<settings::FontFamilyName>(render_font_picker)
         .add_basic_renderer::<settings::BaseKeymapContent>(render_dropdown)
         .add_basic_renderer::<settings::MultiCursorModifier>(render_dropdown)
         .add_basic_renderer::<settings::HideMouseMode>(render_dropdown)
+        .add_basic_renderer::<settings::ReduceMotionMode>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasDensity>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasRadius>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasContrast>(render_dropdown)
+        .add_basic_renderer::<settings::WorkspaceStartupIntent>(
+            render_workspace_startup_intent_dropdown,
+        )
         .add_basic_renderer::<settings::CurrentLineHighlight>(render_dropdown)
         .add_basic_renderer::<settings::ShowWhitespaceSetting>(render_dropdown)
         .add_basic_renderer::<settings::SoftWrap>(render_dropdown)
@@ -479,13 +805,15 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::SnippetSortOrder>(render_dropdown)
         .add_basic_renderer::<settings::ClosePosition>(render_dropdown)
         .add_basic_renderer::<settings::DockSide>(render_dropdown)
-        .add_basic_renderer::<settings::AgentThreadReopenSessionsOnStartup>(render_dropdown)
+        .add_basic_renderer::<settings::CanvasSide>(render_dropdown)
         .add_basic_renderer::<settings::TerminalDockPosition>(render_dropdown)
         .add_basic_renderer::<settings::DockPosition>(render_dropdown)
+        .add_basic_renderer::<settings::SidebarDockPosition>(render_dropdown)
         .add_basic_renderer::<settings::GitGutterSetting>(render_dropdown)
         .add_basic_renderer::<settings::GitHunkStyleSetting>(render_dropdown)
+        .add_basic_renderer::<settings::GitDiffBaseSetting>(render_dropdown)
         .add_basic_renderer::<settings::GitPathStyle>(render_dropdown)
-        .add_basic_renderer::<settings::CommitMessageGeneratorAgent>(render_dropdown)
+        .add_basic_renderer::<settings::InlineBlameLocation>(render_dropdown)
         .add_basic_renderer::<settings::DiagnosticSeverityContent>(render_dropdown)
         .add_basic_renderer::<settings::SeedQuerySetting>(render_dropdown)
         .add_basic_renderer::<settings::DoubleClickInMultibuffer>(render_dropdown)
@@ -495,6 +823,7 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::ActivateOnClose>(render_dropdown)
         .add_basic_renderer::<settings::ShowDiagnostics>(render_dropdown)
         .add_basic_renderer::<settings::ShowCloseButton>(render_dropdown)
+        .add_basic_renderer::<settings::FolderIndicator>(render_dropdown)
         .add_basic_renderer::<settings::ProjectPanelEntrySpacing>(render_dropdown)
         .add_basic_renderer::<settings::ProjectPanelSortMode>(render_dropdown)
         .add_basic_renderer::<settings::ProjectPanelSortOrder>(render_dropdown)
@@ -503,7 +832,6 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::LineEndingSetting>(render_dropdown)
         .add_basic_renderer::<settings::IndentGuideColoring>(render_dropdown)
         .add_basic_renderer::<settings::IndentGuideBackgroundColoring>(render_dropdown)
-        .add_basic_renderer::<settings::FileFinderWidthContent>(render_dropdown)
         .add_basic_renderer::<settings::ShowDiagnostics>(render_dropdown)
         .add_basic_renderer::<settings::WordsCompletionMode>(render_dropdown)
         .add_basic_renderer::<settings::LspInsertMode>(render_dropdown)
@@ -513,7 +841,10 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::AlternateScroll>(render_dropdown)
         .add_basic_renderer::<settings::TerminalBlink>(render_dropdown)
         .add_basic_renderer::<settings::CursorShapeContent>(render_dropdown)
+        .add_basic_renderer::<settings::EditPredictionPromptFormatContent>(render_dropdown)
+        .add_basic_renderer::<settings::EditPredictionDataCollectionChoice>(render_dropdown)
         .add_basic_renderer::<f32>(render_editable_number_field)
+        .add_basic_renderer::<settings::AutoCompactThreshold>(render_text_field)
         .add_basic_renderer::<u32>(render_editable_number_field)
         .add_basic_renderer::<u64>(render_editable_number_field)
         .add_basic_renderer::<usize>(render_editable_number_field)
@@ -522,6 +853,7 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::CodeFade>(render_editable_number_field)
         .add_basic_renderer::<settings::DelayMs>(render_editable_number_field)
         .add_basic_renderer::<settings::FontWeightContent>(render_editable_number_field)
+        .add_basic_renderer::<settings::PixelSetting>(render_editable_number_field)
         .add_basic_renderer::<settings::CenteredPaddingSettings>(render_editable_number_field)
         .add_basic_renderer::<settings::InactiveOpacity>(render_editable_number_field)
         .add_basic_renderer::<settings::MinimumContrast>(render_editable_number_field)
@@ -534,8 +866,17 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::ModeContent>(render_dropdown)
         .add_basic_renderer::<settings::UseSystemClipboard>(render_dropdown)
         .add_basic_renderer::<settings::VimInsertModeCursorShape>(render_dropdown)
+        .add_basic_renderer::<settings::SteppingGranularity>(render_dropdown)
+        .add_basic_renderer::<settings::NotifyWhenAgentWaiting>(render_dropdown)
+        .add_basic_renderer::<settings::PlaySoundWhenAgentDone>(render_dropdown)
+        .add_basic_renderer::<settings::ThinkingBlockDisplay>(render_dropdown)
+        .add_basic_renderer::<settings::TerminalLauncher>(render_terminal_launcher_dropdown)
+        .add_basic_renderer::<Option<settings::LanguageModelSelection>>(
+            render_subagent_model_picker,
+        )
         .add_basic_renderer::<settings::ImageFileSizeUnit>(render_dropdown)
         .add_basic_renderer::<settings::StatusStyle>(render_dropdown)
+        .add_basic_renderer::<settings::GitPanelClickBehavior>(render_dropdown)
         .add_basic_renderer::<settings::GitPanelSortBy>(render_dropdown)
         .add_basic_renderer::<settings::GitPanelGroupBy>(render_dropdown)
         .add_basic_renderer::<settings::EncodingDisplayOptions>(render_dropdown)
@@ -550,19 +891,26 @@ fn init_renderers(cx: &mut App) {
         .add_basic_renderer::<settings::IconThemeSelectionDiscriminants>(render_dropdown)
         .add_basic_renderer::<settings::IconThemeName>(render_icon_theme_picker)
         .add_basic_renderer::<settings::BufferLineHeightDiscriminants>(render_dropdown)
+        .add_basic_renderer::<settings::GitGutterWidthDiscriminants>(render_dropdown)
+        .add_basic_renderer::<settings::ProjectPanelTitleTooltipDelayDiscriminants>(render_dropdown)
         .add_basic_renderer::<settings::AutosaveSettingDiscriminants>(render_dropdown)
         .add_basic_renderer::<settings::WorkingDirectoryDiscriminants>(render_dropdown)
         .add_basic_renderer::<settings::IncludeIgnoredContent>(render_dropdown)
         .add_basic_renderer::<settings::ShowIndentGuides>(render_dropdown)
         .add_basic_renderer::<settings::ShellDiscriminants>(render_dropdown)
+        .add_basic_renderer::<settings::EditPredictionsMode>(render_dropdown)
         .add_basic_renderer::<settings::RelativeLineNumbers>(render_dropdown)
         .add_basic_renderer::<settings::WindowDecorations>(render_dropdown)
+        .add_basic_renderer::<settings::FullscreenMode>(render_dropdown)
         .add_basic_renderer::<settings::WindowButtonLayoutContentDiscriminants>(render_dropdown)
         .add_basic_renderer::<settings::ScanSymlinksSetting>(render_dropdown)
         .add_basic_renderer::<settings::FontSize>(render_editable_number_field)
+        .add_basic_renderer::<settings::OllamaModelName>(render_ollama_model_picker)
         .add_basic_renderer::<settings::SemanticTokens>(render_dropdown)
         .add_basic_renderer::<settings::DocumentFoldingRanges>(render_dropdown)
         .add_basic_renderer::<settings::DocumentSymbols>(render_dropdown)
+        .add_basic_renderer::<settings::AudioInputDeviceName>(render_input_audio_device_dropdown)
+        .add_basic_renderer::<settings::AudioOutputDeviceName>(render_output_audio_device_dropdown)
         .add_basic_renderer::<settings::TerminalBell>(render_dropdown)
         // please semicolon stay on next line
         ;
@@ -599,30 +947,71 @@ pub fn open_settings_editor(
     );
 }
 
+fn select_settings_file_target(
+    target_file: SettingsFileTarget,
+    settings_window: &mut SettingsWindow,
+    window: &mut Window,
+    cx: &mut Context<SettingsWindow>,
+) {
+    let file_index = settings_window
+        .files
+        .iter()
+        .position(|(file, _)| match target_file {
+            SettingsFileTarget::User => matches!(file, SettingsUiFile::User),
+            SettingsFileTarget::Project(worktree_id) => file.worktree_id() == Some(worktree_id),
+        });
+    if let Some(file_index) = file_index {
+        settings_window.change_file(file_index, window, cx);
+    }
+}
+
+fn open_settings_editor_to_page(
+    page: &str,
+    target_file: Option<SettingsFileTarget>,
+    workspace_handle: Option<WindowHandle<MultiWorkspace>>,
+    cx: &mut App,
+) {
+    let page = page.to_string();
+    open_settings_editor_with(workspace_handle, cx, move |settings_window, window, cx| {
+        if let Some(target_file) = target_file {
+            select_settings_file_target(target_file, settings_window, window, cx);
+        }
+
+        settings_window.opening_link = false;
+        settings_window.search_bar.update(cx, |editor, cx| {
+            editor.set_text(String::new(), window, cx);
+        });
+        for page_filter in &mut settings_window.filter_table {
+            page_filter.fill(true);
+        }
+        settings_window.has_query = false;
+        settings_window.filter_matches_to_file();
+
+        let Some(navbar_entry_index) = settings_window
+            .navbar_entries
+            .iter()
+            .position(|entry| entry.is_root && entry.title.eq_ignore_ascii_case(&page))
+        else {
+            log::error!("settings page not found: {page}");
+            return;
+        };
+
+        settings_window.open_and_scroll_to_navbar_entry(
+            navbar_entry_index,
+            None,
+            false,
+            window,
+            cx,
+        );
+    });
+}
+
 fn open_settings_editor_at_target(
     path: Option<&str>,
     target_file: Option<SettingsFileTarget>,
     workspace_handle: Option<WindowHandle<MultiWorkspace>>,
     cx: &mut App,
 ) {
-    fn select_target_file(
-        target_file: SettingsFileTarget,
-        settings_window: &mut SettingsWindow,
-        window: &mut Window,
-        cx: &mut Context<SettingsWindow>,
-    ) {
-        let file_index = settings_window
-            .files
-            .iter()
-            .position(|(file, _)| match target_file {
-                SettingsFileTarget::User => matches!(file, SettingsUiFile::User),
-                SettingsFileTarget::Project(worktree_id) => file.worktree_id() == Some(worktree_id),
-            });
-        if let Some(file_index) = file_index {
-            settings_window.change_file(file_index, window, cx);
-        }
-    }
-
     /// Assumes a settings GUI window is already open
     fn open_path(
         path: &str,
@@ -667,6 +1056,36 @@ fn open_settings_editor_at_target(
         cx.notify();
     }
 
+    let path = path.map(ToOwned::to_owned);
+    open_settings_editor_with(workspace_handle, cx, move |settings_window, window, cx| {
+        if let Some(target_file) = target_file {
+            select_settings_file_target(target_file, settings_window, window, cx);
+        }
+        if let Some(path) = path {
+            open_path(&path, settings_window, window, cx);
+        } else if target_file.is_some() {
+            cx.notify();
+        }
+    });
+}
+
+pub fn open_skill_creator(
+    open_mode: pages::SkillCreatorOpenMode,
+    workspace_handle: Option<WindowHandle<MultiWorkspace>>,
+    cx: &mut App,
+) {
+    open_settings_editor_with(workspace_handle, cx, |settings_window, window, cx| {
+        settings_window.navigate_to_skill_creator(open_mode, window, cx);
+    });
+}
+
+fn open_settings_editor_with(
+    workspace_handle: Option<WindowHandle<MultiWorkspace>>,
+    cx: &mut App,
+    callback: impl FnOnce(&mut SettingsWindow, &mut Window, &mut Context<SettingsWindow>) + 'static,
+) {
+    telemetry::event!("Settings Viewed");
+
     let existing_window = cx
         .windows()
         .into_iter()
@@ -675,24 +1094,17 @@ fn open_settings_editor_at_target(
     if let Some(existing_window) = existing_window {
         existing_window
             .update(cx, |settings_window, window, cx| {
-                settings_window.original_window = workspace_handle;
+                settings_window.update_workspace_context(workspace_handle, cx);
+                settings_window.fetch_files(window, cx);
 
                 window.activate_window();
-                if let Some(target_file) = target_file {
-                    select_target_file(target_file, settings_window, window, cx);
-                }
-                if let Some(path) = path {
-                    open_path(path, settings_window, window, cx);
-                } else if target_file.is_some() {
-                    cx.notify();
-                }
+                callback(settings_window, window, cx);
             })
             .ok();
         return;
     }
 
     // We have to defer this to get the workspace off the stack.
-    let path = path.map(ToOwned::to_owned);
     cx.defer(move |cx| {
         let current_rem_size: f32 = theme_settings::ThemeSettings::get_global(cx)
             .ui_font_size(cx)
@@ -702,8 +1114,11 @@ fn open_settings_editor_at_target(
         let default_rem_size = 16.0;
         let scale_factor = current_rem_size / default_rem_size;
         let scaled_bounds: gpui::Size<Pixels> = default_bounds.map(|axis| axis * scale_factor);
-
         let app_id = ReleaseChannel::global(cx).app_id();
+        let nav_width = canvas_settings_nav_width(
+            paths::APP_NAME,
+            DesignSystemSettings::get_global(cx).density,
+        );
         let window_decorations = match std::env::var("ZED_WINDOW_DECORATIONS") {
             Ok(val) if val == "server" => gpui::WindowDecorations::Server,
             Ok(val) if val == "client" => gpui::WindowDecorations::Client,
@@ -716,7 +1131,9 @@ fn open_settings_editor_at_target(
         cx.open_window(
             WindowOptions {
                 titlebar: Some(TitlebarOptions {
-                    title: Some(localization::text(cx, "settings-window-title")),
+                    title: Some(
+                        format!("{} — Settings", ReleaseChannel::global(cx).display_name()).into(),
+                    ),
                     appears_transparent: true,
                     traffic_light_position: Some(point(px(12.0), px(12.0))),
                 }),
@@ -728,10 +1145,11 @@ fn open_settings_editor_at_target(
                 app_id: Some(app_id.to_owned()),
                 window_decorations: Some(window_decorations),
                 window_min_size: Some(gpui::Size {
-                    // Don't make the settings window thinner than this,
-                    // otherwise, it gets unusable. Users with smaller res monitors
-                    // can customize the height, but not the width.
-                    width: px(900.0),
+                    // Do not make the settings window thinner than this,
+                    // otherwise, the space used to display the actual content
+                    // gets so small that certain sections grow too tall due
+                    // to intense text wrapping.
+                    width: nav_width + CONTENT_MIN_WIDTH,
                     height: px(240.0),
                 }),
                 window_bounds: Some(WindowBounds::centered(scaled_bounds, cx)),
@@ -741,12 +1159,7 @@ fn open_settings_editor_at_target(
                 let settings_window =
                     cx.new(|cx| SettingsWindow::new(workspace_handle, window, cx));
                 settings_window.update(cx, |settings_window, cx| {
-                    if let Some(target_file) = target_file {
-                        select_target_file(target_file, settings_window, window, cx);
-                    }
-                    if let Some(path) = path {
-                        open_path(&path, settings_window, window, cx);
-                    }
+                    callback(settings_window, window, cx);
                 });
 
                 settings_window
@@ -779,6 +1192,7 @@ fn active_language_mut() -> Option<std::sync::RwLockWriteGuard<'static, Option<S
 pub struct SettingsWindow {
     title_bar: Option<Entity<PlatformTitleBar>>,
     original_window: Option<WindowHandle<MultiWorkspace>>,
+    workspace_context_subscription: Option<Subscription>,
     files: Vec<(SettingsUiFile, FocusHandle)>,
     worktree_root_dirs: HashMap<WorktreeId, String>,
     current_file: SettingsUiFile,
@@ -806,8 +1220,38 @@ pub struct SettingsWindow {
     files_focus_handle: FocusHandle,
     search_index: Option<Arc<SearchIndex>>,
     list_state: ListState,
+    shown_errors: HashSet<String>,
+    pub(crate) hidden_deleted_skill_directory_paths: HashSet<PathBuf>,
     pub(crate) regex_validation_error: Option<String>,
+    pub(crate) sandbox_host_validation_error: Option<String>,
     last_copied_link_path: Option<&'static str>,
+    /// Cached configuration views per provider, created lazily.
+    pub(crate) provider_configuration_views:
+        HashMap<language_model::LanguageModelProviderId, gpui::AnyView>,
+    /// The provider whose configuration sub-page is currently open, if any.
+    pub(crate) configuring_provider: Option<language_model::LanguageModelProviderId>,
+    /// Directory path of the skill whose share link was most recently copied,
+    /// used to show a transient "copied" checkmark on its share button.
+    pub(crate) last_copied_skill_directory_path: Option<PathBuf>,
+    /// State for the active "add OpenAI/Anthropic-compatible provider" form sub-page, if open.
+    pub(crate) llm_provider_form: Option<LlmProviderForm>,
+    /// Stable focus handle for the LLM "Add Provider" button, so it can show a
+    /// focus ring when the page auto-focuses it on open (which happens via mouse,
+    /// where `focus_visible` styling would otherwise be suppressed).
+    pub(crate) llm_provider_add_focus_handle: FocusHandle,
+    /// State for the active "add/edit custom MCP server" form sub-page, if open.
+    pub(crate) mcp_server_form: Option<McpServerForm>,
+    /// Stable focus handle for the MCP "Add Server" button, so it can show a
+    /// focus ring when the page auto-focuses it on open (which happens via mouse,
+    /// where `focus_visible` styling would otherwise be suppressed).
+    pub(crate) mcp_add_server_focus_handle: FocusHandle,
+    /// State for the active "add/edit custom external agent" form sub-page, if open.
+    pub(crate) custom_agent_form: Option<CustomAgentForm>,
+    /// Stable focus handle for the external agents "Add Agent" button, so it can
+    /// show a focus ring when the page auto-focuses it on open (which happens via
+    /// mouse, where `focus_visible` styling would otherwise be suppressed).
+    pub(crate) external_agent_add_focus_handle: FocusHandle,
+    skill_creator_page: Option<(Entity<pages::SkillCreatorPage>, Subscription)>,
 }
 
 struct SearchDocument {
@@ -882,7 +1326,6 @@ struct SettingsPage {
 enum SettingsPageItem {
     SectionHeader(&'static str),
     SettingItem(SettingItem),
-    UserLanguageSetting(UserLanguageSettingItem),
     SubPageLink(SubPageLink),
     DynamicItem(DynamicItem),
     ActionLink(ActionLink),
@@ -894,9 +1337,6 @@ impl std::fmt::Debug for SettingsPageItem {
             SettingsPageItem::SectionHeader(header) => write!(f, "SectionHeader({})", header),
             SettingsPageItem::SettingItem(setting_item) => {
                 write!(f, "SettingItem({})", setting_item.title)
-            }
-            SettingsPageItem::UserLanguageSetting(setting_item) => {
-                write!(f, "UserLanguageSetting({})", setting_item.title)
             }
             SettingsPageItem::SubPageLink(sub_page_link) => {
                 write!(f, "SubPageLink({})", sub_page_link.title)
@@ -929,14 +1369,28 @@ impl SettingsPageItem {
         cx: &mut Context<SettingsWindow>,
     ) -> AnyElement {
         let file = settings_window.current_file.clone();
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let row_padding_x = canvas_settings_row_padding_x(canvas_density);
+        let inline_padding = canvas_settings_inline_padding(canvas_density);
+        let row_background = canvas_settings_row_background(canvas_contrast, cx);
+        let row_hover_background = canvas_settings_row_hover_background(canvas_contrast, cx);
+        let row_border_color =
+            canvas_settings_row_border_color(row_background, canvas_contrast, cx);
+        let row_hover_border_color =
+            canvas_settings_row_hover_border_color(row_background, canvas_contrast, cx);
+        let sub_field_background = canvas_settings_sub_field_background(canvas_contrast, cx);
+        let sub_field_border_color =
+            canvas_settings_row_border_color(sub_field_background, canvas_contrast, cx);
+        let sub_field_hover_border_color =
+            canvas_settings_row_hover_border_color(sub_field_background, canvas_contrast, cx);
+        let (item_padding_top, item_padding_bottom) =
+            canvas_settings_item_padding_y(canvas_density, extra_bottom_padding);
 
         let apply_padding = |element: Stateful<Div>| -> Stateful<Div> {
-            let element = element.pt_4();
-            if extra_bottom_padding {
-                element.pb_10()
-            } else {
-                element.pb_4()
-            }
+            element.pt(item_padding_top).pb(item_padding_bottom)
         };
 
         let mut render_setting_item_inner =
@@ -972,6 +1426,26 @@ impl SettingsPageItem {
                             cx,
                         )
                     }),
+                    Err(_) if paths::APP_NAME != "Zed" => render_settings_item(
+                        settings_window,
+                        setting_item,
+                        file.clone(),
+                        Button::new("open-unsupported-setting", "Edit in settings.json")
+                            .style(ButtonStyle::Outlined)
+                            .size(ButtonSize::Medium)
+                            .tab_index(0isize)
+                            .tooltip(Tooltip::for_action_title_in(
+                                "Edit this setting in settings.json",
+                                &OpenCurrentFile,
+                                &settings_window.focus_handle,
+                            ))
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.open_current_settings_file(window, cx);
+                            }))
+                            .into_any_element(),
+                        sub_field,
+                        cx,
+                    ),
                     Err(warning) => render_settings_item(
                         settings_window,
                         setting_item,
@@ -999,7 +1473,7 @@ impl SettingsPageItem {
 
         match self {
             SettingsPageItem::SectionHeader(header) => {
-                SettingsSectionHeader::new(settings_source_text(cx, header)).into_any_element()
+                SettingsSectionHeader::new(SharedString::new_static(header)).into_any_element()
             }
             SettingsPageItem::SettingItem(setting_item) => {
                 let (field_with_padding, _) =
@@ -1007,69 +1481,36 @@ impl SettingsPageItem {
 
                 v_flex()
                     .group("setting-item")
-                    .px_8()
+                    .mx_6()
+                    .px(row_padding_x)
+                    .map(|this| {
+                        canvas_settings_item_surface(
+                            this,
+                            canvas_radius,
+                            row_background,
+                            row_border_color,
+                            row_hover_background,
+                            row_hover_border_color,
+                        )
+                    })
                     .child(field_with_padding)
-                    .when(bottom_border, |this| this.child(Divider::horizontal()))
-                    .into_any_element()
-            }
-            SettingsPageItem::UserLanguageSetting(setting_item) => {
-                const LANGUAGE_LABELS: &[&str] = &["English", "简体中文"];
-                let current_language = SettingsStore::global(cx).ui_language();
-                let control = EnumVariantDropdown::new(
-                    "ui-language-dropdown",
-                    current_language,
-                    &UiLanguage::ALL,
-                    LANGUAGE_LABELS,
-                    move |language, _, cx| {
-                        if language != current_language {
-                            SettingsStore::global(cx).update_user_settings_file(
-                                <dyn fs::Fs>::global(cx),
-                                move |settings, _| settings.ui_language = Some(language),
-                            );
-                        }
-                    },
-                )
-                .title_case(false)
-                .tab_index(0)
-                .into_any_element();
-
-                v_flex()
-                    .group("setting-item")
-                    .px_8()
-                    .child(
-                        h_flex()
-                            .id(setting_item.title.clone())
-                            .min_w_0()
-                            .justify_between()
-                            .map(apply_padding)
-                            .child(
-                                v_flex()
-                                    .relative()
-                                    .w_full()
-                                    .max_w_2_3()
-                                    .min_w_0()
-                                    .child(Label::new(setting_item.title.clone()))
-                                    .child(
-                                        Label::new(setting_item.description.clone())
-                                            .size(LabelSize::Small)
-                                            .color(Color::Muted),
-                                    )
-                                    .child(render_settings_item_link(
-                                        setting_item.description.clone(),
-                                        Some("ui_language"),
-                                        false,
-                                        settings_window,
-                                        cx,
-                                    )),
-                            )
-                            .child(control),
-                    )
-                    .when(bottom_border, |this| this.child(Divider::horizontal()))
+                    .when(bottom_border, |this| this.mb_1())
                     .into_any_element()
             }
             SettingsPageItem::SubPageLink(sub_page_link) => v_flex()
                 .group("setting-item")
-                .px_8()
+                .mx_6()
+                .px(row_padding_x)
+                .map(|this| {
+                    canvas_settings_item_surface(
+                        this,
+                        canvas_radius,
+                        row_background,
+                        row_border_color,
+                        row_hover_background,
+                        row_hover_border_color,
+                    )
+                })
                 .child(
                     h_flex()
                         .id(sub_page_link.title.clone())
@@ -1082,12 +1523,12 @@ impl SettingsPageItem {
                                 .relative()
                                 .w_full()
                                 .max_w_1_2()
-                                .child(Label::new(settings_source_text(cx, &sub_page_link.title)))
+                                .child(Label::new(sub_page_link.title.clone()))
                                 .when_some(
                                     sub_page_link.description.as_ref(),
                                     |this, description| {
                                         this.child(
-                                            Label::new(settings_source_text(cx, description))
+                                            Label::new(description.clone())
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         )
@@ -1097,8 +1538,9 @@ impl SettingsPageItem {
                         .child(
                             Button::new(
                                 ("sub-page".into(), sub_page_link.title.clone()),
-                                localization::text(cx, "settings-configure"),
+                                "Configure",
                             )
+                            .aria_label(format!("Configure {}", sub_page_link.title))
                             .tab_index(0_isize)
                             .end_icon(
                                 Icon::new(IconName::ChevronRight)
@@ -1143,7 +1585,7 @@ impl SettingsPageItem {
                             cx,
                         )),
                 )
-                .when(bottom_border, |this| this.child(Divider::horizontal()))
+                .when(bottom_border, |this| this.mb_1())
                 .into_any_element(),
             SettingsPageItem::DynamicItem(DynamicItem {
                 discriminant: discriminant_setting_item,
@@ -1166,12 +1608,21 @@ impl SettingsPageItem {
                     .child(
                         div()
                             .group("setting-item")
-                            .px_8()
+                            .mx_6()
+                            .px(row_padding_x)
+                            .map(|this| {
+                                canvas_settings_item_surface(
+                                    this,
+                                    canvas_radius,
+                                    row_background,
+                                    row_border_color,
+                                    row_hover_background,
+                                    row_hover_border_color,
+                                )
+                            })
                             .child(discriminant_element.when(has_sub_fields, |this| this.pb_4())),
                     )
-                    .when(!has_sub_fields && bottom_border, |this| {
-                        this.child(h_flex().px_8().child(Divider::horizontal()))
-                    });
+                    .when(!has_sub_fields && bottom_border, |this| this.mb_1());
 
                 if rendered_ok {
                     let discriminant =
@@ -1187,73 +1638,196 @@ impl SettingsPageItem {
                             raw_field
                                 .group("setting-sub-item")
                                 .mx_8()
-                                .p_4()
-                                .border_t_1()
-                                .when(is_last_sub_field, |this| this.border_b_1())
+                                .p(inline_padding)
+                                .border_1()
                                 .when(is_last_sub_field && extra_bottom_padding, |this| {
                                     this.mb_8()
                                 })
                                 .border_dashed()
-                                .border_color(cx.theme().colors().border_variant)
-                                .bg(cx.theme().colors().element_background.opacity(0.2)),
+                                .border_color(sub_field_border_color)
+                                .bg(sub_field_background)
+                                .hover(move |this| this.border_color(sub_field_hover_border_color))
+                                .map(|this| canvas_settings_radius(this, canvas_radius)),
                         );
                     }
                 }
 
                 return content.into_any_element();
             }
-            SettingsPageItem::ActionLink(action_link) => v_flex()
-                .group("setting-item")
-                .px_8()
-                .child(
-                    h_flex()
-                        .id(action_link.title.clone())
-                        .w_full()
-                        .min_w_0()
-                        .justify_between()
-                        .map(apply_padding)
-                        .child(
-                            v_flex()
-                                .relative()
-                                .w_full()
-                                .max_w_1_2()
-                                .child(Label::new(settings_source_text(cx, &action_link.title)))
-                                .when_some(
-                                    action_link.description.as_ref(),
-                                    |this, description| {
+            SettingsPageItem::ActionLink(action_link) => {
+                let has_window = settings_window.has_live_window_context(cx);
+                let has_workspace_root = settings_window.has_workspace_root_context(cx);
+                let action_available =
+                    action_link_available(action_link.scope, has_window, has_workspace_root);
+                let unavailable_copy = if action_available {
+                    None
+                } else {
+                    action_link_unavailable_copy(action_link.scope)
+                };
+                let action_accessibility_description = if action_available {
+                    action_link.description.clone()
+                } else {
+                    Some(match action_link.description.as_ref() {
+                        Some(description) => format!(
+                            "{description} {}",
+                            unavailable_copy.unwrap_or(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                        )
+                        .into(),
+                        None => unavailable_copy
+                            .unwrap_or(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+                            .into(),
+                    })
+                };
+
+                v_flex()
+                    .group("setting-item")
+                    .mx_6()
+                    .px(row_padding_x)
+                    .map(|this| {
+                        canvas_settings_item_surface(
+                            this,
+                            canvas_radius,
+                            row_background,
+                            row_border_color,
+                            row_hover_background,
+                            row_hover_border_color,
+                        )
+                    })
+                    .child(
+                        h_flex()
+                            .id(action_link.title.clone())
+                            .w_full()
+                            .min_w_0()
+                            .justify_between()
+                            .map(apply_padding)
+                            .child(
+                                v_flex()
+                                    .relative()
+                                    .w_full()
+                                    .max_w_1_2()
+                                    .child(Label::new(action_link.title.clone()))
+                                    .when_some(
+                                        action_link.description.as_ref(),
+                                        |this, description| {
+                                            this.child(
+                                                Label::new(description.clone())
+                                                    .size(LabelSize::Small)
+                                                    .color(Color::Muted),
+                                            )
+                                        },
+                                    )
+                                    .when_some(unavailable_copy, |this, unavailable_copy| {
                                         this.child(
-                                            Label::new(settings_source_text(cx, description))
+                                            Label::new(unavailable_copy)
                                                 .size(LabelSize::Small)
                                                 .color(Color::Muted),
                                         )
-                                    },
-                                ),
-                        )
-                        .child(
-                            Button::new(
-                                ("action-link".into(), action_link.title.clone()),
-                                settings_source_text(cx, &action_link.button_text),
+                                    }),
                             )
-                            .tab_index(0_isize)
-                            .end_icon(
-                                Icon::new(IconName::ArrowUpRight)
-                                    .size(IconSize::Small)
-                                    .color(Color::Muted),
-                            )
-                            .style(ButtonStyle::OutlinedGhost)
-                            .size(ButtonSize::Medium)
-                            .on_click({
-                                let on_click = action_link.on_click.clone();
-                                cx.listener(move |this, _, window, cx| {
-                                    on_click(this, window, cx);
+                            .child(
+                                Button::new(
+                                    ("action-link".into(), action_link.title.clone()),
+                                    action_link.button_text.clone(),
+                                )
+                                .tab_index(0_isize)
+                                .aria_label(action_link.button_text.clone())
+                                .when_some(action_accessibility_description, |this, description| {
+                                    this.aria_description(description)
                                 })
-                            }),
-                        ),
-                )
-                .when(bottom_border, |this| this.child(Divider::horizontal()))
-                .into_any_element(),
+                                .end_icon(
+                                    Icon::new(action_link.icon)
+                                        .size(IconSize::Small)
+                                        .color(Color::Muted),
+                                )
+                                .style(ButtonStyle::OutlinedGhost)
+                                .size(ButtonSize::Medium)
+                                .disabled(!action_available)
+                                .on_click({
+                                    let on_click = action_link.on_click.clone();
+                                    cx.listener(move |this, _, window, cx| {
+                                        on_click(this, window, cx);
+                                    })
+                                }),
+                            ),
+                    )
+                    .when(bottom_border, |this| this.mb_1())
+                    .into_any_element()
+            }
         }
     }
+}
+
+/// Shared layout for both JSON-backed and non-JSON-backed setting items.
+///
+/// Renders title + description on the left, control on the right, with
+/// optional reset button and copy-link icon.
+fn render_settings_item_layout(
+    settings_window: &SettingsWindow,
+    title: &'static str,
+    description: &'static str,
+    control: AnyElement,
+    reset_fn: Option<Box<dyn Fn(&mut Window, &mut App)>>,
+    modified_in: Option<String>,
+    json_path: Option<&'static str>,
+    sub_field: bool,
+    cx: &mut Context<'_, SettingsWindow>,
+) -> Stateful<Div> {
+    // Note: the row itself is intentionally not exposed as a labeled group.
+    // Each control names and describes itself (via the setting title and
+    // description), so adding a group with the same label here would make
+    // screen readers announce the setting name twice.
+    h_flex()
+        .id(title)
+        .min_w_0()
+        .justify_between()
+        .child(
+            v_flex()
+                .relative()
+                .w_full()
+                .max_w_2_3()
+                .min_w_0()
+                .child(
+                    h_flex()
+                        .w_full()
+                        .gap_1()
+                        .child(Label::new(SharedString::new_static(title)))
+                        .when_some(reset_fn, |this, reset_to_default| {
+                            this.child(
+                                IconButton::new("reset-to-default-btn", IconName::Undo)
+                                    .icon_color(Color::Muted)
+                                    .icon_size(IconSize::Small)
+                                    .aria_label("Reset to Default")
+                                    .tooltip(Tooltip::text("Reset to Default"))
+                                    .on_click(move |_, window, cx| {
+                                        reset_to_default(window, cx);
+                                    }),
+                            )
+                        })
+                        .when_some(modified_in, |this, modified_in| {
+                            this.child(
+                                Label::new(format!("\u{2014}  Modified in {modified_in}"))
+                                    .color(Color::Muted)
+                                    .size(LabelSize::Small),
+                            )
+                        }),
+                )
+                .child(
+                    Label::new(SharedString::new_static(description))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .render_code_spans(),
+                ),
+        )
+        .child(control)
+        .when(settings_window.sub_page_stack.is_empty(), |this| {
+            this.child(render_settings_item_link(
+                description,
+                json_path,
+                sub_field,
+                settings_window,
+                cx,
+            ))
+        })
 }
 
 fn render_settings_item(
@@ -1267,80 +1841,58 @@ fn render_settings_item(
     let (found_in_file, _) = setting_item.field.file_set_in(file.clone(), cx);
     let file_set_in = SettingsUiFile::from_settings(found_in_file.clone());
 
-    h_flex()
-        .id(setting_item.title)
-        .min_w_0()
-        .justify_between()
-        .child(
-            v_flex()
-                .relative()
-                .w_full()
-                .max_w_2_3()
-                .min_w_0()
-                .child(
-                    h_flex()
-                        .w_full()
-                        .gap_1()
-                        .child(Label::new(settings_source_text(cx, setting_item.title)))
-                        .when_some(
-                            if sub_field {
-                                None
-                            } else {
-                                setting_item
-                                    .field
-                                    .reset_to_default_fn(&file, &found_in_file, cx)
-                            },
-                            |this, reset_to_default| {
-                                this.child(
-                                    IconButton::new("reset-to-default-btn", IconName::Undo)
-                                        .icon_color(Color::Muted)
-                                        .icon_size(IconSize::Small)
-                                        .tooltip(Tooltip::text(localization::text(
-                                            cx,
-                                            "settings-reset-default",
-                                        )))
-                                        .on_click({
-                                            move |_, window, cx| {
-                                                reset_to_default(window, cx);
-                                            }
-                                        }),
-                                )
-                            },
+    let reset_fn = if sub_field {
+        None
+    } else {
+        setting_item
+            .field
+            .reset_to_default_fn(&file, &found_in_file, cx)
+    };
+
+    let modified_in = file_set_in
+        .filter(|f| f != &file)
+        .and_then(|f| settings_window.display_name(&f));
+
+    let control = if setting_item.field.is_overridden_by_organization(cx) {
+        h_flex()
+            .gap_2()
+            .child(
+                div()
+                    .id(format!(
+                        "{}-organization-configuration-warning",
+                        setting_item.title
+                    ))
+                    .child(
+                        Icon::new(IconName::Warning)
+                            .size(IconSize::Small)
+                            .color(Color::Warning),
+                    )
+                    .tooltip(|_, cx| {
+                        Tooltip::with_meta(
+                            "Overridden by Organization",
+                            None,
+                            "Contact your organization admins to adjust this setting.",
+                            cx,
                         )
-                        .when_some(
-                            file_set_in.filter(|file_set_in| file_set_in != &file),
-                            |this, file_set_in| {
-                                this.child(
-                                    Label::new(localization::tr!(
-                                        cx,
-                                        "settings-modified-in",
-                                        scope = settings_window
-                                            .display_name(&file_set_in)
-                                            .expect("File name should exist")
-                                    ))
-                                    .color(Color::Muted)
-                                    .size(LabelSize::Small),
-                                )
-                            },
-                        ),
-                )
-                .child(
-                    Label::new(settings_source_text(cx, setting_item.description))
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .render_code_spans(),
-                ),
-        )
-        .child(control)
-        .when(settings_window.sub_page_stack.is_empty(), |this| {
-            this.child(render_settings_item_link(
-                setting_item.description,
-                setting_item.field.json_path(),
-                sub_field,
-                settings_window,
-                cx,
-            ))
-        })
+                    }),
+            )
+            .child(control)
+            .into_any_element()
+    } else {
+        control
+    };
+
+    render_settings_item_layout(
+        settings_window,
+        setting_item.title,
+        setting_item.description,
+        control,
+        reset_fn,
+        modified_in,
+        setting_item.field.json_path(),
+        sub_field,
+        cx,
+    )
 }
 
 fn render_settings_item_link(
@@ -1361,14 +1913,14 @@ fn render_settings_item_link(
 
     div()
         .absolute()
-        .top(rems_from_px(18.))
+        .top(rems_from_px(18_f32))
         .map(|this| {
             if sub_field {
                 this.visible_on_hover("setting-sub-item")
-                    .left(rems_from_px(-8.5))
+                    .left(rems_from_px(-8.5_f32))
             } else {
                 this.visible_on_hover("setting-item")
-                    .left(rems_from_px(-22.))
+                    .left(rems_from_px(-22.0_f32))
             }
         })
         .child(
@@ -1376,10 +1928,14 @@ fn render_settings_item_link(
                 .icon_color(link_icon_color)
                 .icon_size(IconSize::Small)
                 .shape(IconButtonShape::Square)
-                .tooltip(Tooltip::text(localization::text(cx, "settings-copy-link")))
+                .aria_label("Copy Link")
+                .tooltip(Tooltip::text("Copy Link"))
                 .when_some(json_path, |this, path| {
                     this.on_click(cx.listener(move |this, _, _, cx| {
-                        let link = format!("dez://settings/{}", path);
+                        let scheme = ReleaseChannel::try_global(cx)
+                            .unwrap_or_default()
+                            .url_scheme();
+                        let link = format!("{scheme}://settings/{path}");
                         cx.write_to_clipboard(ClipboardItem::new_string(link));
                         this.last_copied_link_path = Some(path);
                         cx.notify();
@@ -1394,1691 +1950,6 @@ struct SettingItem {
     field: Box<dyn AnySettingField>,
     metadata: Option<Box<SettingsFieldMetadata>>,
     files: FileMask,
-}
-
-#[derive(PartialEq)]
-struct UserLanguageSettingItem {
-    title: SharedString,
-    description: SharedString,
-}
-
-fn user_language_setting(cx: &App) -> UserLanguageSettingItem {
-    UserLanguageSettingItem {
-        title: localization::tr!(cx, "settings-language-title"),
-        description: localization::tr!(cx, "settings-language-description"),
-    }
-}
-
-fn settings_source_text(cx: &App, source: &str) -> SharedString {
-    if let Some(identifier) = settings_item_message_id(source) {
-        return localization::text(cx, identifier);
-    }
-
-    let mut arguments = localization::FluentArgs::new();
-    arguments.set("source", source);
-    localization::text_with_args(cx, "settings-source", &arguments)
-}
-
-/// Maps setting item titles, descriptions, and section headers to their Fluent
-/// message identifiers. These can't be expressed as `settings-source` select
-/// variants because Fluent identifiers forbid spaces and punctuation, so each
-/// string gets its own message instead.
-fn settings_item_message_id(source: &str) -> Option<&'static str> {
-    Some(match source {
-        "Languages & Tools" => "settings-page-languages-and-tools",
-        "Search & Files" => "settings-page-search-and-files",
-        "Window & Layout" => "settings-page-window-and-layout",
-        "Panels" => "settings-page-panels",
-        "Version Control" => "settings-page-version-control",
-        "Network" => "settings-page-network",
-        "Developer" => "settings-page-developer",
-        "General Settings" => "settings-general-section-general",
-        "Security" => "settings-general-section-security",
-        "Workspace Restoration" => "settings-general-section-workspace-restoration",
-        "Scoped Settings" => "settings-general-section-scoped-settings",
-        "Auto Update" => "settings-general-auto-update-title",
-        "When Closing With No Tabs" => "settings-general-when-closing-with-no-tabs-title",
-        "What to do when using the 'close active item' action with no tabs." => {
-            "settings-general-when-closing-with-no-tabs-description"
-        }
-        "On Last Window Closed" => "settings-general-on-last-window-closed-title",
-        "What to do when the last window is closed." => {
-            "settings-general-on-last-window-closed-description"
-        }
-        "Use System Path Prompts" => "settings-general-use-system-path-prompts-title",
-        "Use native OS dialogs for 'Open' and 'Save As'." => {
-            "settings-general-use-system-path-prompts-description"
-        }
-        "Use System Prompts" => "settings-general-use-system-prompts-title",
-        "Use native OS dialogs for confirmations." => {
-            "settings-general-use-system-prompts-description"
-        }
-        "Redact Private Values" => "settings-general-redact-private-values-title",
-        "Hide the values of variables in private files." => {
-            "settings-general-redact-private-values-description"
-        }
-        "Private Files" => "settings-general-private-files-title",
-        "Globs to match against file paths to determine if a file is private." => {
-            "settings-general-private-files-description"
-        }
-        "CLI Default Open Behavior" => "settings-general-cli-default-open-behavior-title",
-        "How `dez <path>` opens directories when no flag is specified." => {
-            "settings-general-cli-default-open-behavior-description"
-        }
-        "Trust All Projects By Default" => "settings-general-trust-all-projects-title",
-        "When opening dez, avoid Restricted Mode by auto-trusting all projects, enabling use of all features without having to give permission to each new project." => {
-            "settings-general-trust-all-projects-description"
-        }
-        "Restore Unsaved Buffers" => "settings-general-restore-unsaved-buffers-title",
-        "Whether or not to restore unsaved buffers on restart." => {
-            "settings-general-restore-unsaved-buffers-description"
-        }
-        "Restore On Startup" => "settings-general-restore-on-startup-title",
-        "What to restore from the previous session when opening dez." => {
-            "settings-general-restore-on-startup-description"
-        }
-        "Preview Channel" => "settings-general-preview-channel-title",
-        "Which settings should be activated only in Preview build of dez." => {
-            "settings-general-preview-channel-description"
-        }
-        "Settings Profiles" => "settings-general-settings-profiles-title",
-        "Any number of settings profiles that are temporarily applied on top of your existing user settings." => {
-            "settings-general-settings-profiles-description"
-        }
-        "Feature Flags" => "settings-feature-flags",
-        "Performance Profiler" => "settings-performance-profiler",
-        "Collect timing data for foreground and background executor tasks so they can be inspected via `dez: open performance profiler`. May lead to increased memory usage." => {
-            "settings-collect-timing-data-for-foreground-and"
-        }
-        "Instrumentation" => "settings-instrumentation",
-        "Base Keymap" => "settings-base-keymap",
-        "Edit Keybindings" => "settings-edit-keybindings",
-        "Helix Mode" => "settings-helix-mode",
-        "Vim Mode" => "settings-vim-mode",
-        "Enable Helix mode and key bindings." => "settings-enable-helix-mode-and-key-bindings",
-        "Enable Vim mode and key bindings." => "settings-enable-vim-mode-and-key-bindings",
-        "The name of a base set of key bindings to use." => {
-            "settings-the-name-of-a-base-set-of-key-bindings-to-use"
-        }
-        "Customize keybindings in the keymap editor." => {
-            "settings-customize-keybindings-in-the-keymap-editor"
-        }
-        "Open Keymap" => "settings-open-keymap",
-        "Keybindings" => "settings-keybindings",
-        "Modal Editing" => "settings-modal-editing",
-        "Debounce" => "settings-debounce",
-        "Enabled" => "settings-enabled",
-        "File Type Associations" => "settings-file-type-associations",
-        "Include Warnings" => "settings-include-warnings",
-        "Max Severity" => "settings-max-severity",
-        "Minimum Column" => "settings-minimum-column",
-        "Padding" => "settings-padding",
-        "Update Debounce" => "settings-update-debounce",
-        "A mapping from languages to files and file extensions that should be treated as that language." => {
-            "settings-a-mapping-from-languages-to-files-and-file"
-        }
-        "Minimum time to wait before pulling diagnostics from the language server(s)." => {
-            "settings-minimum-time-to-wait-before-pulling-diagnostics"
-        }
-        "The amount of padding between the end of the source line and the start of the inline diagnostic." => {
-            "settings-the-amount-of-padding-between-the-end-of-the"
-        }
-        "The debounce delay before querying highlights from the language." => {
-            "settings-the-debounce-delay-before-querying-highlights"
-        }
-        "The delay in milliseconds to show inline diagnostics after the last diagnostic update." => {
-            "settings-the-delay-in-milliseconds-to-show-inline"
-        }
-        "The minimum column at which to display inline diagnostics." => {
-            "settings-the-minimum-column-at-which-to-display-inline"
-        }
-        "Whether to pull for language server-powered diagnostics or not." => {
-            "settings-whether-to-pull-for-language-server-powered"
-        }
-        "Whether to show diagnostics inline or not." => {
-            "settings-whether-to-show-diagnostics-inline-or-not"
-        }
-        "Whether to show warnings or not by default." => {
-            "settings-whether-to-show-warnings-or-not-by-default"
-        }
-        "Which level to use to filter out diagnostics displayed in the editor." => {
-            "settings-which-level-to-use-to-filter-out-diagnostics"
-        }
-        "Diagnostics" => "settings-diagnostics",
-        "File Types" => "settings-file-types",
-        "Inline Diagnostics" => "settings-inline-diagnostics",
-        "LSP Highlights" => "settings-lsp-highlights",
-        "LSP Pull Diagnostics" => "settings-lsp-pull-diagnostics",
-        "File Finder" => "settings-file-finder",
-        "File Scan" => "settings-file-scan",
-        "Case Sensitive" => "settings-case-sensitive",
-        "Center on Match" => "settings-center-on-match",
-        "Close on File Delete" => "settings-close-on-file-delete",
-        "File Icons" => "settings-file-icons",
-        "File Scan Exclusions" => "settings-file-scan-exclusions",
-        "File Scan Inclusions" => "settings-file-scan-inclusions",
-        "Include Ignored" => "settings-include-ignored",
-        "Include Ignored in Search" => "settings-include-ignored-in-search",
-        "Modal Max Width" => "settings-modal-max-width",
-        "Regex" => "settings-regex",
-        "Restore File State" => "settings-restore-file-state",
-        "Scan Symbolic Links" => "settings-scan-symbolic-links",
-        "Search Wrap" => "settings-search-wrap",
-        "Seed Search Query From Cursor" => "settings-seed-search-query-from-cursor",
-        "Skip Focus For Active In Search" => "settings-skip-focus-for-active-in-search",
-        "Use Smartcase Search" => "settings-use-smartcase-search",
-        "Whole Word" => "settings-whole-word",
-        "Automatically close files that have been deleted." => {
-            "settings-automatically-close-files-that-have-been"
-        }
-        "Determines how much space the file finder can take up in relation to the available window width." => {
-            "settings-determines-how-much-space-the-file-finder-can"
-        }
-        "Files or globs of files that will be excluded by dez entirely. They will be skipped during file scans, file searches, and not be displayed in the project file tree. Takes precedence over \"File Scan Inclusions\"" => {
-            "settings-files-or-globs-of-files-that-will-be-excluded"
-        }
-        "Files or globs of files that will be included by dez, even when ignored by git. This is useful for files that are not tracked by git, but are still important to your project. Note that globs that are overly broad can slow down dez's file scanning. \"File Scan Exclusions\" takes precedence over these inclusions" => {
-            "settings-files-or-globs-of-files-that-will-be-included"
-        }
-        "Include ignored files in search results by default." => {
-            "settings-include-ignored-files-in-search-results-by"
-        }
-        "Restore previous file state when reopening." => {
-            "settings-restore-previous-file-state-when-reopening"
-        }
-        "Search case-sensitively by default." => "settings-search-case-sensitively-by-default",
-        "Search for whole words by default." => "settings-search-for-whole-words-by-default",
-        "Show file icons in the file finder." => "settings-show-file-icons-in-the-file-finder",
-        "Use gitignored files when searching." => "settings-use-gitignored-files-when-searching",
-        "Use regex search by default." => "settings-use-regex-search-by-default",
-        "When to populate a new search's query based on the text under the cursor." => {
-            "settings-when-to-populate-a-new-searchs-query-based-on"
-        }
-        "When to scan content of linked directories" => {
-            "settings-when-to-scan-content-of-linked-directories"
-        }
-        "Whether the editor search results will loop." => {
-            "settings-whether-the-editor-search-results-will-loop"
-        }
-        "Whether the file finder should skip focus for the active file in search results." => {
-            "settings-whether-the-file-finder-should-skip-focus-for"
-        }
-        "Whether to automatically enable case-sensitive search based on the search query." => {
-            "settings-whether-to-automatically-enable-case-sensitive"
-        }
-        "Whether to center the current match in the editor" => {
-            "settings-whether-to-center-the-current-match-in-the"
-        }
-        "Branch Picker" => "settings-branch-picker",
-        "Commit Message Generator" => "settings-commit-message-generator",
-        "Git Blame View" => "settings-git-blame-view",
-        "Git Gutter" => "settings-git-gutter",
-        "Git Hunks" => "settings-git-hunks",
-        "Git Integration" => "settings-git-integration",
-        "Inline Git Blame" => "settings-inline-git-blame",
-        "Arguments" => "settings-arguments",
-        "Delay" => "settings-delay",
-        "Disable Git Integration" => "settings-disable-git-integration",
-        "Enable Git Diff" => "settings-enable-git-diff",
-        "Enable Git Status" => "settings-enable-git-status",
-        "Environment Variables" => "settings-environment-variables",
-        "Hunk Style" => "settings-hunk-style",
-        "Instructions" => "settings-instructions",
-        "Max Diff Bytes" => "settings-max-diff-bytes",
-        "Manage Skill" => "settings-manage-skill",
-        "Model" => "settings-model",
-        "Path Style" => "settings-path-style",
-        "Show Author Name" => "settings-show-author-name",
-        "Show Avatar" => "settings-show-avatar",
-        "Show Commit Summary" => "settings-show-commit-summary",
-        "Show Stage/Restore Buttons" => "settings-show-stage-restore-buttons",
-        "Timeout (Seconds)" => "settings-timeout-seconds",
-        "Visibility" => "settings-visibility",
-        "Working Directory" => "settings-working-directory",
-        "Additional user instructions for commit message generation." => {
-            "settings-additional-user-instructions-for-commit-message"
-        }
-        "Arguments passed to the generator command." => {
-            "settings-arguments-passed-to-the-generator-command"
-        }
-        "Control whether Git status is shown in the editor's gutter." => {
-            "settings-control-whether-git-status-is-shown-in-the"
-        }
-        "Debounce threshold in milliseconds after which changes are reflected in the Git gutter." => {
-            "settings-debounce-threshold-in-milliseconds-after-which"
-        }
-        "Disable all Git integration features in dez." => {
-            "settings-disable-all-git-integration-features-in-dez"
-        }
-        "Environment variables added to the generator command." => {
-            "settings-environment-variables-added-to-the-generator"
-        }
-        "How Git hunks are displayed visually in the editor." => {
-            "settings-how-git-hunks-are-displayed-visually-in-the"
-        }
-        "Maximum diff bytes included in the prompt before compression." => {
-            "settings-maximum-diff-bytes-included-in-the-prompt"
-        }
-        "Model passed to the generator: as \"--model <value>\" for the Claude and Pi agents, or \"-m <value>\" for the Codex agent. Leave blank to use the command's own default model." => {
-            "settings-model-passed-to-the-generator-as-model-value"
-        }
-        "Padding between the end of the source line and the start of the inline blame in columns." => {
-            "settings-padding-between-the-end-of-the-source-line-and"
-        }
-        "Preview, install, update, or uninstall the optional dez control skill for Codex, Pi, OpenCode, or Claude Code. dez does not add this skill to global instruction files." => {
-            "settings-preview-install-update-or-uninstall-dez-control-skill"
-        }
-        "Should the name or path be displayed first in the git view." => {
-            "settings-should-the-name-or-path-be-displayed-first-in"
-        }
-        "Show Git diff information in the editor." => {
-            "settings-show-git-diff-information-in-the-editor"
-        }
-        "Show Git status information in the editor." => {
-            "settings-show-git-status-information-in-the-editor"
-        }
-        "Show author name as part of the commit information in branch picker." => {
-            "settings-show-author-name-as-part-of-the-commit"
-        }
-        "Show commit summary as part of the inline blame." => {
-            "settings-show-commit-summary-as-part-of-the-inline-blame"
-        }
-        "Show the avatar of the author of the commit." => {
-            "settings-show-the-avatar-of-the-author-of-the-commit"
-        }
-        "The delay after which the inline blame information is shown." => {
-            "settings-the-delay-after-which-the-inline-blame"
-        }
-        "The minimum column number at which to show the inline blame information." => {
-            "settings-the-minimum-column-number-at-which-to-show-the"
-        }
-        "Timeout in seconds before the generator command is killed." => {
-            "settings-timeout-in-seconds-before-the-generator-command"
-        }
-        "Whether or not to show Git blame data inline in the currently focused line." => {
-            "settings-whether-or-not-to-show-git-blame-data-inline-in"
-        }
-        "Whether to show the stage and restore buttons on diff hunks." => {
-            "settings-whether-to-show-the-stage-and-restore-buttons"
-        }
-        "Which coding agent generates commit messages. Selecting one fills Command, Arguments, and Model with the preset tested for that agent, overwriting any custom values." => {
-            "settings-which-coding-agent-generates-commit-messages"
-        }
-        "Working directory for the generator command. Defaults to the repository root." => {
-            "settings-working-directory-for-the-generator-command"
-        }
-        "Advanced Settings" => "settings-advanced-settings",
-        "Behavior Settings" => "settings-behavior-settings",
-        "Display Settings" => "settings-display-settings",
-        "Environment" => "settings-environment",
-        "Font" => "settings-font",
-        "dez Control Skill" => "settings-dez-control-skill",
-        "Layout Settings" => "settings-layout-settings",
-        "Scrollbar" => "settings-scrollbar",
-        "Toolbar" => "settings-toolbar",
-        "Alternate Scroll" => "settings-alternate-scroll",
-        "Audible Bell" => "settings-audible-bell",
-        "Breadcrumbs" => "settings-breadcrumbs",
-        "Copy On Select" => "settings-copy-on-select",
-        "Cursor Blinking" => "settings-cursor-blinking",
-        "Cursor Shape" => "settings-cursor-shape",
-        "Dedicated SSH Connection" => "settings-dedicated-ssh-connection",
-        "Default Height" => "settings-default-height",
-        "Default Width" => "settings-default-width",
-        "Detect Virtual Environment" => "settings-detect-virtual-environment",
-        "Directory" => "settings-directory",
-        "Font Fallbacks" => "settings-font-fallbacks",
-        "Font Family" => "settings-font-family",
-        "Font Features" => "settings-font-features",
-        "Font Size" => "settings-font-size",
-        "Font Weight" => "settings-font-weight",
-        "Keep Selection On Copy" => "settings-keep-selection-on-copy",
-        "Line Height" => "settings-line-height",
-        "Max Scroll History Lines" => "settings-max-scroll-history-lines",
-        "Minimum Contrast" => "settings-minimum-contrast",
-        "Open Links In Mouse Mode" => "settings-open-links-in-mouse-mode",
-        "Option As Meta" => "settings-option-as-meta",
-        "Program" => "settings-program",
-        "Scroll Multiplier" => "settings-scroll-multiplier",
-        "Shell" => "settings-shell",
-        "Show Scrollbar" => "settings-show-scrollbar",
-        "Title Override" => "settings-title-override",
-        "Activates the Python virtual environment, if one is found, in the terminal's working directory." => {
-            "settings-activates-the-python-virtual-environment-if-one"
-        }
-        "An optional string to override the title of the terminal tab." => {
-            "settings-an-optional-string-to-override-the-title-of-the"
-        }
-        "Default cursor shape for the terminal (bar, block, underline, or hollow)." => {
-            "settings-default-cursor-shape-for-the-terminal-bar-block"
-        }
-        "Default height when the terminal is docked to the bottom (in pixels)." => {
-            "settings-default-height-when-the-terminal-is-docked-to"
-        }
-        "Default width when the terminal is docked to the left or right (in pixels)." => {
-            "settings-default-width-when-the-terminal-is-docked-to"
-        }
-        "Display the terminal title in breadcrumbs inside the terminal pane." => {
-            "settings-display-the-terminal-title-in-breadcrumbs"
-        }
-        "Font fallbacks for terminal text. If not set, defaults to buffer font fallbacks." => {
-            "settings-font-fallbacks-for-terminal-text-if-not-set"
-        }
-        "Font family for terminal text. If not set, defaults to buffer font family." => {
-            "settings-font-family-for-terminal-text-if-not-set"
-        }
-        "Font features for terminal text." => "settings-font-features-for-terminal-text",
-        "Font size for terminal text. If not set, defaults to buffer font size." => {
-            "settings-font-size-for-terminal-text-if-not-set-defaults"
-        }
-        "Font weight for terminal text in CSS weight units (100-900)." => {
-            "settings-font-weight-for-terminal-text-in-css-weight"
-        }
-        "Give terminals opened on an SSH remote their own connection instead of sharing the multiplexed connection used by file sync, language servers, and agents. Avoids typing lag from that traffic, at the cost of an extra connection (and a re-authentication if the host does not use key/agent auth). No effect on local, WSL, or Docker terminals." => {
-            "settings-give-terminals-opened-on-an-ssh-remote-their"
-        }
-        "Key-value pairs to add to the terminal's environment." => {
-            "settings-key-value-pairs-to-add-to-the-terminals"
-        }
-        "Line height for terminal text." => "settings-line-height-for-terminal-text",
-        "Maximum number of lines to keep in scrollback history (max: 100,000; 0 disables scrolling)." => {
-            "settings-maximum-number-of-lines-to-keep-in-scrollback"
-        }
-        "Sets the cursor blinking behavior in the terminal." => {
-            "settings-sets-the-cursor-blinking-behavior-in-the"
-        }
-        "The arguments to pass to the shell program." => {
-            "settings-the-arguments-to-pass-to-the-shell-program"
-        }
-        "The directory path to use (will be shell expanded)." => {
-            "settings-the-directory-path-to-use-will-be-shell"
-        }
-        "The minimum APCA perceptual contrast between foreground and background colors (0-106)." => {
-            "settings-the-minimum-apca-perceptual-contrast-between"
-        }
-        "The multiplier for scrolling in the terminal with the mouse wheel" => {
-            "settings-the-multiplier-for-scrolling-in-the-terminal"
-        }
-        "The shell program to run." => "settings-the-shell-program-to-run",
-        "The shell program to use." => "settings-the-shell-program-to-use",
-        "What shell to use when opening a terminal." => {
-            "settings-what-shell-to-use-when-opening-a-terminal"
-        }
-        "What working directory to use when launching the terminal." => {
-            "settings-what-working-directory-to-use-when-launching"
-        }
-        "When to show the scrollbar in the terminal." => {
-            "settings-when-to-show-the-scrollbar-in-the-terminal"
-        }
-        "Whether alternate scroll mode is active by default (converts mouse scroll to arrow keys in apps like Vim)." => {
-            "settings-whether-alternate-scroll-mode-is-active-by"
-        }
-        "Whether cmd-click (ctrl-click on Linux and Windows) opens hyperlinks when the terminal application has enabled mouse reporting. When disabled, these clicks are forwarded to the application." => {
-            "settings-whether-cmd-click-ctrl-click-on-linux-and"
-        }
-        "Whether selecting text in the terminal automatically copies to the system clipboard." => {
-            "settings-whether-selecting-text-in-the-terminal"
-        }
-        "Whether the option key behaves as the meta key." => {
-            "settings-whether-the-option-key-behaves-as-the-meta-key"
-        }
-        "Whether to keep the text selection after copying it to the clipboard." => {
-            "settings-whether-to-keep-the-text-selection-after"
-        }
-        "Whether to play a sound when the BEL character (`\\a`, `0x07`) is printed" => {
-            "settings-whether-to-play-a-sound-when-the-bel-character"
-        }
-        "Buffer Font" => "settings-buffer-font",
-        "Cursor" => "settings-cursor",
-        "Guides" => "settings-guides",
-        "Highlighting" => "settings-highlighting",
-        "Text Rendering" => "settings-text-rendering",
-        "Theme" => "settings-theme",
-        "UI Font" => "settings-ui-font",
-        "Current Line Highlight" => "settings-current-line-highlight",
-        "Cursor Blink" => "settings-cursor-blink",
-        "Custom Line Height" => "settings-custom-line-height",
-        "Dark Icon Theme" => "settings-dark-icon-theme",
-        "Dark Theme" => "settings-dark-theme",
-        "Hide Mouse" => "settings-hide-mouse",
-        "Icon Theme" => "settings-icon-theme",
-        "Icon Theme Name" => "settings-icon-theme-name",
-        "Light Icon Theme" => "settings-light-icon-theme",
-        "Light Theme" => "settings-light-theme",
-        "Minimum Contrast For Highlights" => "settings-minimum-contrast-for-highlights",
-        "Mode" => "settings-mode",
-        "Multi Cursor Modifier" => "settings-multi-cursor-modifier",
-        "Rounded Selection" => "settings-rounded-selection",
-        "Selection Highlight" => "settings-selection-highlight",
-        "Show Wrap Guides" => "settings-show-wrap-guides",
-        "Text Rendering Mode" => "settings-text-rendering-mode",
-        "Theme Mode" => "settings-theme-mode",
-        "Theme Name" => "settings-theme-name",
-        "Unnecessary Code Fade" => "settings-unnecessary-code-fade",
-        "Wrap Guides" => "settings-wrap-guides",
-        "Character counts at which to show wrap guides." => {
-            "settings-character-counts-at-which-to-show-wrap-guides"
-        }
-        "Choose a static, fixed theme or dynamically select themes based on appearance and light/dark modes." => {
-            "settings-choose-a-static-fixed-theme-or-dynamically"
-        }
-        "Choose whether to use the selected light or dark icon theme or to follow your OS appearance configuration." => {
-            "settings-choose-whether-to-use-the-selected-light-or"
-        }
-        "Choose whether to use the selected light or dark theme or to follow your OS appearance configuration." => {
-            "settings-choose-whether-to-use-the-selected-light-or-2"
-        }
-        "Cursor shape for the editor." => "settings-cursor-shape-for-the-editor",
-        "Custom line height value (must be at least 1.0)." => {
-            "settings-custom-line-height-value-must-be-at-least-1-0"
-        }
-        "Font family for UI elements." => "settings-font-family-for-ui-elements",
-        "Font family for editor text." => "settings-font-family-for-editor-text",
-        "Font size for UI elements." => "settings-font-size-for-ui-elements",
-        "Font size for editor text." => "settings-font-size-for-editor-text",
-        "Font weight for UI elements (100-900)." => "settings-font-weight-for-ui-elements-100-900",
-        "Font weight for editor text (100-900)." => "settings-font-weight-for-editor-text-100-900",
-        "Highlight all occurrences of selected text." => {
-            "settings-highlight-all-occurrences-of-selected-text"
-        }
-        "How much to fade out unused code (0.0 - 0.9)." => {
-            "settings-how-much-to-fade-out-unused-code-0-0-0-9"
-        }
-        "How to highlight the current line." => "settings-how-to-highlight-the-current-line",
-        "Line height for editor text." => "settings-line-height-for-editor-text",
-        "Modifier key for adding multiple cursors." => {
-            "settings-modifier-key-for-adding-multiple-cursors"
-        }
-        "Show wrap guides (vertical rulers)." => "settings-show-wrap-guides-vertical-rulers",
-        "The OpenType features to enable for rendering in UI elements." => {
-            "settings-the-opentype-features-to-enable-for-rendering"
-        }
-        "The OpenType features to enable for rendering in text buffers." => {
-            "settings-the-opentype-features-to-enable-for-rendering-2"
-        }
-        "The custom set of icons dez will associate with files and directories." => {
-            "settings-the-custom-set-of-icons-dez-will-associate"
-        }
-        "The font fallbacks to use for rendering in text buffers." => {
-            "settings-the-font-fallbacks-to-use-for-rendering-in-text"
-        }
-        "The font fallbacks to use for rendering in the UI." => {
-            "settings-the-font-fallbacks-to-use-for-rendering-in-the"
-        }
-        "The icon theme to use when mode is set to dark, or when mode is set to system and it is in dark mode." => {
-            "settings-the-icon-theme-to-use-when-mode-is-set-to-dark"
-        }
-        "The icon theme to use when mode is set to light, or when mode is set to system and it is in light mode." => {
-            "settings-the-icon-theme-to-use-when-mode-is-set-to-light"
-        }
-        "The minimum APCA perceptual contrast to maintain when rendering text over highlight backgrounds." => {
-            "settings-the-minimum-apca-perceptual-contrast-to"
-        }
-        "The name of your selected icon theme." => "settings-the-name-of-your-selected-icon-theme",
-        "The name of your selected theme." => "settings-the-name-of-your-selected-theme",
-        "The text rendering mode to use." => "settings-the-text-rendering-mode-to-use",
-        "The theme to use when mode is set to dark, or when mode is set to system and it is in dark mode." => {
-            "settings-the-theme-to-use-when-mode-is-set-to-dark-or"
-        }
-        "The theme to use when mode is set to light, or when mode is set to system and it is in light mode." => {
-            "settings-the-theme-to-use-when-mode-is-set-to-light-or"
-        }
-        "When to hide the mouse cursor." => "settings-when-to-hide-the-mouse-cursor",
-        "Whether the cursor blinks in the editor." => {
-            "settings-whether-the-cursor-blinks-in-the-editor"
-        }
-        "Whether the text selection should have rounded corners." => {
-            "settings-whether-the-text-selection-should-have-rounded"
-        }
-        "Layout" => "settings-layout",
-        "Pane Modifiers" => "settings-pane-modifiers",
-        "Pane Split Direction" => "settings-pane-split-direction",
-        "Preview Tabs" => "settings-preview-tabs",
-        "Status Bar" => "settings-status-bar",
-        "Tab Bar" => "settings-tab-bar",
-        "Tab Settings" => "settings-tab-settings",
-        "Title Bar" => "settings-title-bar",
-        "Window" => "settings-window",
-        "Activate On Close" => "settings-activate-on-close",
-        "Active Encoding Button" => "settings-active-encoding-button",
-        "Active File Name" => "settings-active-file-name",
-        "Active Language Button" => "settings-active-language-button",
-        "Border Size" => "settings-border-size",
-        "Bottom Dock Layout" => "settings-bottom-dock-layout",
-        "Button Layout" => "settings-button-layout",
-        "Centered Layout Left Padding" => "settings-centered-layout-left-padding",
-        "Centered Layout Right Padding" => "settings-centered-layout-right-padding",
-        "Cursor Position Button" => "settings-cursor-position-button",
-        "Custom Button Layout" => "settings-custom-button-layout",
-        "Diagnostics Button" => "settings-diagnostics-button",
-        "Enable Keep Preview On Code Navigation" => {
-            "settings-enable-keep-preview-on-code-navigation"
-        }
-        "Enable Preview File From Code Navigation" => {
-            "settings-enable-preview-file-from-code-navigation"
-        }
-        "Enable Preview From File Finder" => "settings-enable-preview-from-file-finder",
-        "Enable Preview From Multibuffer" => "settings-enable-preview-from-multibuffer",
-        "Enable Preview From Project Panel" => "settings-enable-preview-from-project-panel",
-        "Enable Preview Multibuffer From Code Navigation" => {
-            "settings-enable-preview-multibuffer-from-code-navigation"
-        }
-        "Focus Follows Mouse" => "settings-focus-follows-mouse",
-        "Focus Follows Mouse Debounce ms" => "settings-focus-follows-mouse-debounce-ms",
-        "Horizontal Split Direction" => "settings-horizontal-split-direction",
-        "Inactive Opacity" => "settings-inactive-opacity",
-        "Line Endings Button" => "settings-line-endings-button",
-        "Maximum Tabs" => "settings-maximum-tabs",
-        "Pinned Tabs Layout" => "settings-pinned-tabs-layout",
-        "Preview Tabs Enabled" => "settings-preview-tabs-enabled",
-        "Project Panel Button" => "settings-project-panel-button",
-        "Project Search Button" => "settings-project-search-button",
-        "Show Branch Name" => "settings-show-branch-name",
-        "Show Branch Status Icon" => "settings-show-branch-status-icon",
-        "Show Close Button" => "settings-show-close-button",
-        "Show File Icons In Tabs" => "settings-show-file-icons-in-tabs",
-        "Show Git Status In Tabs" => "settings-show-git-status-in-tabs",
-        "Show Menus" => "settings-show-menus",
-        "Show Navigation History Buttons" => "settings-show-navigation-history-buttons",
-        "Show Onboarding Banner" => "settings-show-onboarding-banner",
-        "Show Project Items" => "settings-show-project-items",
-        "Show Tab Bar" => "settings-show-tab-bar",
-        "Show Tab Bar Buttons" => "settings-show-tab-bar-buttons",
-        "Tab Close Position" => "settings-tab-close-position",
-        "Tab Show Diagnostics" => "settings-tab-show-diagnostics",
-        "Terminal Button" => "settings-terminal-button",
-        "Use System Window Tabs" => "settings-use-system-window-tabs",
-        "Vertical Split Direction" => "settings-vertical-split-direction",
-        "Window Decorations" => "settings-window-decorations",
-        "Zoomed Padding" => "settings-zoomed-padding",
-        "(Linux only) choose how window control buttons are laid out in the titlebar." => {
-            "settings-linux-only-choose-how-window-control-buttons"
-        }
-        "(Linux only) whether dez or your compositor should draw window decorations." => {
-            "settings-linux-only-whether-dez-or-your-compositor"
-        }
-        "(macOS only) whether to allow Windows to tab together." => {
-            "settings-macos-only-whether-to-allow-windows-to-tab"
-        }
-        "Amount of time to wait before changing focus." => {
-            "settings-amount-of-time-to-wait-before-changing-focus"
-        }
-        "Control when to show the active encoding in the status bar." => {
-            "settings-control-when-to-show-the-active-encoding-in-the"
-        }
-        "Controls the appearance behavior of the tab's close button." => {
-            "settings-controls-the-appearance-behavior-of-the-tabs"
-        }
-        "Direction to split horizontally." => "settings-direction-to-split-horizontally",
-        "Direction to split vertically." => "settings-direction-to-split-vertically",
-        "GNOME-style layout string such as \"close:minimize,maximize\"." => {
-            "settings-gnome-style-layout-string-such-as-close"
-        }
-        "Layout mode for the bottom dock." => "settings-layout-mode-for-the-bottom-dock",
-        "Left padding for centered layout." => "settings-left-padding-for-centered-layout",
-        "Maximum open tabs in a pane. Will not close an unsaved tab." => {
-            "settings-maximum-open-tabs-in-a-pane-will-not-close-an"
-        }
-        "Opacity of inactive panels (0.0 - 1.0)." => "settings-opacity-of-inactive-panels-0-0-1-0",
-        "Position of the close button in a tab." => {
-            "settings-position-of-the-close-button-in-a-tab"
-        }
-        "Right padding for centered layout." => "settings-right-padding-for-centered-layout",
-        "Show banners announcing new features in the titlebar." => {
-            "settings-show-banners-announcing-new-features-in-the"
-        }
-        "Show git status indicators on the branch icon in the titlebar." => {
-            "settings-show-git-status-indicators-on-the-branch-icon"
-        }
-        "Show opened editors as preview tabs." => "settings-show-opened-editors-as-preview-tabs",
-        "Show padding for zoomed panes." => "settings-show-padding-for-zoomed-panes",
-        "Show pinned tabs in a separate row above unpinned tabs." => {
-            "settings-show-pinned-tabs-in-a-separate-row-above"
-        }
-        "Show the Git file status on a tab item." => {
-            "settings-show-the-git-file-status-on-a-tab-item"
-        }
-        "Show the active language button in the status bar." => {
-            "settings-show-the-active-language-button-in-the-status"
-        }
-        "Show the active line endings button in the status bar." => {
-            "settings-show-the-active-line-endings-button-in-the"
-        }
-        "Show the branch name button in the titlebar." => {
-            "settings-show-the-branch-name-button-in-the-titlebar"
-        }
-        "Show the cursor position button in the status bar." => {
-            "settings-show-the-cursor-position-button-in-the-status"
-        }
-        "Show the file icon for a tab." => "settings-show-the-file-icon-for-a-tab",
-        "Show the menus in the titlebar." => "settings-show-the-menus-in-the-titlebar",
-        "Show the name of the active file in the status bar." => {
-            "settings-show-the-name-of-the-active-file-in-the-status"
-        }
-        "Show the navigation history buttons in the tab bar." => {
-            "settings-show-the-navigation-history-buttons-in-the-tab"
-        }
-        "Show the project diagnostics button in the status bar." => {
-            "settings-show-the-project-diagnostics-button-in-the"
-        }
-        "Show the project host and name in the titlebar." => {
-            "settings-show-the-project-host-and-name-in-the-titlebar"
-        }
-        "Show the project panel button in the status bar." => {
-            "settings-show-the-project-panel-button-in-the-status-bar"
-        }
-        "Show the project search button in the status bar." => {
-            "settings-show-the-project-search-button-in-the-status"
-        }
-        "Show the tab bar buttons (New, Split Pane, Zoom)." => {
-            "settings-show-the-tab-bar-buttons-new-split-pane-zoom"
-        }
-        "Show the tab bar in the editor." => "settings-show-the-tab-bar-in-the-editor",
-        "Show the terminal button in the status bar." => {
-            "settings-show-the-terminal-button-in-the-status-bar"
-        }
-        "Size of the border surrounding the active pane." => {
-            "settings-size-of-the-border-surrounding-the-active-pane"
-        }
-        "What to do after closing the current tab." => {
-            "settings-what-to-do-after-closing-the-current-tab"
-        }
-        "Whether to change focus to a pane when the mouse hovers over it." => {
-            "settings-whether-to-change-focus-to-a-pane-when-the"
-        }
-        "Whether to keep tabs in preview mode when code navigation is used to navigate away from them. If `enable_preview_file_from_code_navigation` or `enable_preview_multibuffer_from_code_navigation` is also true, the new tab may replace the existing one." => {
-            "settings-whether-to-keep-tabs-in-preview-mode-when-code"
-        }
-        "Whether to open tabs in preview mode when code navigation is used to open a multibuffer." => {
-            "settings-whether-to-open-tabs-in-preview-mode-when-code"
-        }
-        "Whether to open tabs in preview mode when code navigation is used to open a single file." => {
-            "settings-whether-to-open-tabs-in-preview-mode-when-code-2"
-        }
-        "Whether to open tabs in preview mode when opened from a multibuffer." => {
-            "settings-whether-to-open-tabs-in-preview-mode-when"
-        }
-        "Whether to open tabs in preview mode when opened from the project panel with a single click." => {
-            "settings-whether-to-open-tabs-in-preview-mode-when-2"
-        }
-        "Whether to open tabs in preview mode when selected from the file finder." => {
-            "settings-whether-to-open-tabs-in-preview-mode-when-3"
-        }
-        "Which files containing diagnostic errors/warnings to mark in the tabs." => {
-            "settings-which-files-containing-diagnostic-errors"
-        }
-        "Agent Threads Panel" => "settings-agent-threads-panel",
-        "Git Panel" => "settings-git-panel",
-        "Outline Panel" => "settings-outline-panel",
-        "Project Panel" => "settings-project-panel",
-        "Terminal Panel" => "settings-terminal-panel",
-        "Agent Control" => "settings-agent-control",
-        "Agent Threads Panel Dock" => "settings-agent-threads-panel-dock",
-        "Auto Fold Directories" => "settings-auto-fold-directories",
-        "Auto Open Files On Create" => "settings-auto-open-files-on-create",
-        "Auto Open Files On Drop" => "settings-auto-open-files-on-drop",
-        "Auto Open Files On Paste" => "settings-auto-open-files-on-paste",
-        "Auto Reveal Entries" => "settings-auto-reveal-entries",
-        "Bold Folder Labels" => "settings-bold-folder-labels",
-        "Claude Initialization Command" => "settings-claude-initialization-command",
-        "Codex Initialization Command" => "settings-codex-initialization-command",
-        "Collapse Untracked Diff" => "settings-collapse-untracked-diff",
-        "Commit Title Max Length" => "settings-commit-title-max-length",
-        "Diagnostic Badges" => "settings-diagnostic-badges",
-        "Diff Stats" => "settings-diff-stats",
-        "Drag and Drop" => "settings-drag-and-drop",
-        "Entry Spacing" => "settings-entry-spacing",
-        "Fallback Branch Name" => "settings-fallback-branch-name",
-        "Folder Icons" => "settings-folder-icons",
-        "Git Panel Button" => "settings-git-panel-button",
-        "Git Panel Default Width" => "settings-git-panel-default-width",
-        "Git Panel Dock" => "settings-git-panel-dock",
-        "Git Panel Group By" => "settings-git-panel-group-by",
-        "Git Panel Sort By" => "settings-git-panel-sort-by",
-        "Git Panel Status Style" => "settings-git-panel-status-style",
-        "Git Status" => "settings-git-status",
-        "Git Status Indicator" => "settings-git-status-indicator",
-        "Hidden Files" => "settings-hidden-files",
-        "Hide .gitignore" => "settings-hide-gitignore",
-        "Hide Claude" => "settings-hide-claude",
-        "Hide Codex" => "settings-hide-codex",
-        "Hide Hidden" => "settings-hide-hidden",
-        "Hide OpenCode" => "settings-hide-opencode",
-        "Hide Pi" => "settings-hide-pi",
-        "Hide Root" => "settings-hide-root",
-        "Horizontal Scroll" => "settings-horizontal-scroll",
-        "Indent Size" => "settings-indent-size",
-        "Max Visible Threads Per Agent" => "settings-max-visible-threads-per-agent",
-        "Notify When Finished" => "settings-notify-when-finished",
-        "OpenCode Initialization Command" => "settings-opencode-initialization-command",
-        "Outline Panel Button" => "settings-outline-panel-button",
-        "Outline Panel Default Width" => "settings-outline-panel-default-width",
-        "Outline Panel Dock" => "settings-outline-panel-dock",
-        "Pi Initialization Command" => "settings-pi-initialization-command",
-        "Project Panel Default Width" => "settings-project-panel-default-width",
-        "Project Panel Dock" => "settings-project-panel-dock",
-        "Reopen Sessions" => "settings-reopen-sessions",
-        "Scroll Bar" => "settings-scroll-bar",
-        "Show Count Badge" => "settings-show-count-badge",
-        "Show Diagnostics" => "settings-show-diagnostics",
-        "Show Indent Guides" => "settings-show-indent-guides",
-        "Show Plan Usage" => "settings-show-plan-usage",
-        "Sort Mode" => "settings-sort-mode",
-        "Sort Order" => "settings-sort-order",
-        "Starts Open" => "settings-starts-open",
-        "Sticky Scroll" => "settings-sticky-scroll",
-        "Terminal Location" => "settings-terminal-location",
-        "Terminal Panel Flexible Sizing" => "settings-terminal-panel-flexible-sizing",
-        "Tree View" => "settings-tree-view",
-        "Amount of indentation for nested items." => {
-            "settings-amount-of-indentation-for-nested-items"
-        }
-        "Default branch name will be when init.defaultbranch is not set in Git." => {
-            "settings-default-branch-name-will-be-when-init"
-        }
-        "Default width of the Git panel in pixels." => {
-            "settings-default-width-of-the-git-panel-in-pixels"
-        }
-        "Default width of the outline panel in pixels." => {
-            "settings-default-width-of-the-outline-panel-in-pixels"
-        }
-        "Default width of the project panel in pixels." => {
-            "settings-default-width-of-the-project-panel-in-pixels"
-        }
-        "Enable to show entries in tree view list, disable to show in flat view list." => {
-            "settings-enable-to-show-entries-in-tree-view-list"
-        }
-        "Globs to match files that will be considered \"hidden\" and can be hidden from the project panel." => {
-            "settings-globs-to-match-files-that-will-be-considered"
-        }
-        "Hide the Claude section from the Agent Threads panel." => {
-            "settings-hide-the-claude-section-from-the-agent-threads"
-        }
-        "Hide the Codex section from the Agent Threads panel." => {
-            "settings-hide-the-codex-section-from-the-agent-threads"
-        }
-        "Hide the OpenCode section from the Agent Threads panel." => {
-            "settings-hide-the-opencode-section-from-the-agent"
-        }
-        "Hide the Pi section from the Agent Threads panel." => {
-            "settings-hide-the-pi-section-from-the-agent-threads"
-        }
-        "How and when the scrollbar should be displayed." => {
-            "settings-how-and-when-the-scrollbar-should-be-displayed"
-        }
-        "How changed files are grouped in the Git panel." => {
-            "settings-how-changed-files-are-grouped-in-the-git-panel"
-        }
-        "How entries are sorted within each Git panel group." => {
-            "settings-how-entries-are-sorted-within-each-git-panel"
-        }
-        "How entry statuses are displayed." => "settings-how-entry-statuses-are-displayed",
-        "How many threads each agent section shows before a \"Show more\" control is offered." => {
-            "settings-how-many-threads-each-agent-section-shows"
-        }
-        "Maximum length of the commit message title before a warning is shown. Set to 0 to disable." => {
-            "settings-maximum-length-of-the-commit-message-title"
-        }
-        "Shell command to run before Claude starts. Claude starts only when the command succeeds." => {
-            "settings-shell-command-to-run-before-claude-starts"
-        }
-        "Shell command to run before Codex starts. Codex starts only when the command succeeds." => {
-            "settings-shell-command-to-run-before-codex-starts-codex"
-        }
-        "Shell command to run before OpenCode starts. OpenCode starts only when the command succeeds." => {
-            "settings-shell-command-to-run-before-opencode-starts"
-        }
-        "Shell command to run before Pi starts. Pi starts only when the command succeeds." => {
-            "settings-shell-command-to-run-before-pi-starts-pi-starts"
-        }
-        "Show a badge on the terminal panel icon with the count of open terminals." => {
-            "settings-show-a-badge-on-the-terminal-panel-icon-with"
-        }
-        "Show a desktop notification when an agent thread finishes a turn or needs input." => {
-            "settings-show-a-desktop-notification-when-an-agent"
-        }
-        "Show a git status indicator next to file names in the project panel." => {
-            "settings-show-a-git-status-indicator-next-to-file-names"
-        }
-        "Show error and warning count badges next to file names in the project panel." => {
-            "settings-show-error-and-warning-count-badges-next-to"
-        }
-        "Show file icons in the outline panel." => "settings-show-file-icons-in-the-outline-panel",
-        "Show file icons in the project panel." => "settings-show-file-icons-in-the-project-panel",
-        "Show file icons next to the Git status icon." => {
-            "settings-show-file-icons-next-to-the-git-status-icon"
-        }
-        "Show five-hour and weekly plan usage beside Codex and Claude headings." => {
-            "settings-show-five-hour-and-weekly-plan-usage-beside"
-        }
-        "Show indent guides in the project panel." => {
-            "settings-show-indent-guides-in-the-project-panel"
-        }
-        "Show the Git panel button in the status bar." => {
-            "settings-show-the-git-panel-button-in-the-status-bar"
-        }
-        "Show the Git status in the outline panel." => {
-            "settings-show-the-git-status-in-the-outline-panel"
-        }
-        "Show the Git status in the project panel." => {
-            "settings-show-the-git-status-in-the-project-panel"
-        }
-        "Show the outline panel button in the status bar." => {
-            "settings-show-the-outline-panel-button-in-the-status-bar"
-        }
-        "Show the scrollbar in the project panel." => {
-            "settings-show-the-scrollbar-in-the-project-panel"
-        }
-        "Sort order for entries in the project panel." => {
-            "settings-sort-order-for-entries-in-the-project-panel"
-        }
-        "Spacing between worktree entries in the project panel." => {
-            "settings-spacing-between-worktree-entries-in-the-project"
-        }
-        "When to reopen live resumed agent sessions from the previous app session." => {
-            "settings-when-to-reopen-live-resumed-agent-sessions-from"
-        }
-        "When to show indent guides in the outline panel." => {
-            "settings-when-to-show-indent-guides-in-the-outline-panel"
-        }
-        "Where new terminals open. Center opens them as a tab next to your editor; left/right/bottom docks them in a side panel." => {
-            "settings-where-new-terminals-open-center-opens-them-as-a"
-        }
-        "Where to dock the Agent Threads panel." => {
-            "settings-where-to-dock-the-agent-threads-panel"
-        }
-        "Where to dock the Git panel." => "settings-where-to-dock-the-git-panel",
-        "Where to dock the outline panel." => "settings-where-to-dock-the-outline-panel",
-        "Where to dock the project panel." => "settings-where-to-dock-the-project-panel",
-        "Whether the project panel should open on startup." => {
-            "settings-whether-the-project-panel-should-open-on"
-        }
-        "Whether the terminal panel should use flexible (proportional) sizing when docked to the left or right." => {
-            "settings-whether-the-terminal-panel-should-use-flexible"
-        }
-        "Whether to allow horizontal scrolling in the project panel. When disabled, the view is always locked to the leftmost position and long file names are clipped." => {
-            "settings-whether-to-allow-horizontal-scrolling-in-the"
-        }
-        "Whether to automatically open files after pasting or duplicating them." => {
-            "settings-whether-to-automatically-open-files-after"
-        }
-        "Whether to automatically open files dropped from external sources." => {
-            "settings-whether-to-automatically-open-files-dropped"
-        }
-        "Whether to automatically open newly created files in the editor." => {
-            "settings-whether-to-automatically-open-newly-created"
-        }
-        "Whether to collapse untracked files in the diff panel." => {
-            "settings-whether-to-collapse-untracked-files-in-the-diff"
-        }
-        "Whether to enable drag-and-drop operations in the project panel." => {
-            "settings-whether-to-enable-drag-and-drop-operations-in"
-        }
-        "Whether to fold directories automatically and show compact folders when a directory has only one subdirectory inside." => {
-            "settings-whether-to-fold-directories-automatically-and"
-        }
-        "Whether to fold directories automatically when a directory contains only one subdirectory." => {
-            "settings-whether-to-fold-directories-automatically-when"
-        }
-        "Whether to hide the gitignore entries in the project panel." => {
-            "settings-whether-to-hide-the-gitignore-entries-in-the"
-        }
-        "Whether to hide the hidden entries in the project panel." => {
-            "settings-whether-to-hide-the-hidden-entries-in-the"
-        }
-        "Whether to hide the root entry when only one folder is open in the window." => {
-            "settings-whether-to-hide-the-root-entry-when-only-one"
-        }
-        "Whether to reveal entries in the project panel automatically when a corresponding project entry becomes active." => {
-            "settings-whether-to-reveal-entries-in-the-project-panel"
-        }
-        "Whether to reveal when a corresponding outline entry becomes active." => {
-            "settings-whether-to-reveal-when-a-corresponding-outline"
-        }
-        "Whether to show a badge on the git panel icon with the count of uncommitted changes." => {
-            "settings-whether-to-show-a-badge-on-the-git-panel-icon"
-        }
-        "Whether to show folder icons or chevrons for directories in the git panel." => {
-            "settings-whether-to-show-folder-icons-or-chevrons-for"
-        }
-        "Whether to show folder icons or chevrons for directories in the outline panel." => {
-            "settings-whether-to-show-folder-icons-or-chevrons-for-2"
-        }
-        "Whether to show folder icons or chevrons for directories in the project panel." => {
-            "settings-whether-to-show-folder-icons-or-chevrons-for-3"
-        }
-        "Whether to show folder names with bold text in the project panel." => {
-            "settings-whether-to-show-folder-names-with-bold-text-in"
-        }
-        "Whether to show the addition/deletion change count next to each file in the Git panel." => {
-            "settings-whether-to-show-the-addition-deletion-change"
-        }
-        "Whether to sort file and folder names case-sensitively in the project panel." => {
-            "settings-whether-to-sort-file-and-folder-names-case"
-        }
-        "Whether to stick parent directories at top of the project panel." => {
-            "settings-whether-to-stick-parent-directories-at-top-of"
-        }
-        "Which files containing diagnostic errors/warnings to mark in the project panel." => {
-            "settings-which-files-containing-diagnostic-errors-2"
-        }
-        "Auto Save" => "settings-auto-save",
-        "Drag And Drop Selection" => "settings-drag-and-drop-selection",
-        "Gutter" => "settings-gutter",
-        "Hover Popover" => "settings-hover-popover",
-        "Minimap" => "settings-minimap",
-        "Multibuffer" => "settings-multibuffer",
-        "Scrolling" => "settings-scrolling",
-        "Signature Help" => "settings-signature-help",
-        "Vim" => "settings-vim",
-        "Which-key Menu" => "settings-which-key-menu",
-        "Auto Save Mode" => "settings-auto-save-mode",
-        "Auto Signature Help" => "settings-auto-signature-help",
-        "Autoscroll On Clicks" => "settings-autoscroll-on-clicks",
-        "Code Actions" => "settings-code-actions",
-        "Cursor Shape - Insert Mode" => "settings-cursor-shape-insert-mode",
-        "Cursor Shape - Normal Mode" => "settings-cursor-shape-normal-mode",
-        "Cursor Shape - Replace Mode" => "settings-cursor-shape-replace-mode",
-        "Cursor Shape - Visual Mode" => "settings-cursor-shape-visual-mode",
-        "Cursors" => "settings-cursors",
-        "Custom Digraphs" => "settings-custom-digraphs",
-        "Default Mode" => "settings-default-mode",
-        "Delay (milliseconds)" => "settings-delay-milliseconds",
-        "Diff View Style" => "settings-diff-view-style",
-        "Display In" => "settings-display-in",
-        "Double Click In Multibuffer" => "settings-double-click-in-multibuffer",
-        "Excerpt Context Lines" => "settings-excerpt-context-lines",
-        "Expand Excerpt Lines" => "settings-expand-excerpt-lines",
-        "Expand Outlines With Depth" => "settings-expand-outlines-with-depth",
-        "Fast Scroll Sensitivity" => "settings-fast-scroll-sensitivity",
-        "Git Diff" => "settings-git-diff",
-        "Global Substitution Default" => "settings-global-substitution-default",
-        "Hiding Delay" => "settings-hiding-delay",
-        "Highlight on Yank Duration" => "settings-highlight-on-yank-duration",
-        "Horizontal Scroll Margin" => "settings-horizontal-scroll-margin",
-        "Horizontal Scrollbar" => "settings-horizontal-scrollbar",
-        "Inline Code Actions" => "settings-inline-code-actions",
-        "Max Width Columns" => "settings-max-width-columns",
-        "Menu Delay" => "settings-menu-delay",
-        "Min Line Number Digits" => "settings-min-line-number-digits",
-        "Minimum Split Diff Width" => "settings-minimum-split-diff-width",
-        "Mouse Wheel Zoom" => "settings-mouse-wheel-zoom",
-        "Quick Actions" => "settings-quick-actions",
-        "Regex Search" => "settings-regex-search",
-        "Relative Line Numbers" => "settings-relative-line-numbers",
-        "Scroll Beyond Last Line" => "settings-scroll-beyond-last-line",
-        "Scroll Sensitivity" => "settings-scroll-sensitivity",
-        "Search Results" => "settings-search-results",
-        "Selected Symbol" => "settings-selected-symbol",
-        "Selected Text" => "settings-selected-text",
-        "Selections Menu" => "settings-selections-menu",
-        "Show" => "settings-show",
-        "Show Bookmarks" => "settings-show-bookmarks",
-        "Show Breakpoints" => "settings-show-breakpoints",
-        "Show Folds" => "settings-show-folds",
-        "Show Line Numbers" => "settings-show-line-numbers",
-        "Show Runnables" => "settings-show-runnables",
-        "Show Signature Help After Edits" => "settings-show-signature-help-after-edits",
-        "Show Which-key Menu" => "settings-show-which-key-menu",
-        "Snippet Sort Order" => "settings-snippet-sort-order",
-        "Sticky" => "settings-sticky",
-        "Thumb" => "settings-thumb",
-        "Thumb Border" => "settings-thumb-border",
-        "Toggle Relative Line Numbers" => "settings-toggle-relative-line-numbers",
-        "Use Smartcase Find" => "settings-use-smartcase-find",
-        "Use System Clipboard" => "settings-use-system-clipboard",
-        "Vertical Scroll Margin" => "settings-vertical-scroll-margin",
-        "Vertical Scrollbar" => "settings-vertical-scrollbar",
-        "Automatically show a signature help pop-up." => {
-            "settings-automatically-show-a-signature-help-pop-up"
-        }
-        "Border style for the minimap's scrollbar thumb." => {
-            "settings-border-style-for-the-minimaps-scrollbar-thumb"
-        }
-        "Controls line number display in the editor's gutter. \"disabled\" shows absolute line numbers, \"enabled\" shows relative line numbers for each absolute line, and \"wrapped\" shows relative line numbers for every line, absolute or wrapped." => {
-            "settings-controls-line-number-display-in-the-editors"
-        }
-        "Controls when to use system clipboard in Vim mode." => {
-            "settings-controls-when-to-use-system-clipboard-in-vim"
-        }
-        "Cursor shape for insert mode. Inherit uses the editor's cursor shape." => {
-            "settings-cursor-shape-for-insert-mode-inherit-uses-the"
-        }
-        "Cursor shape for normal mode." => "settings-cursor-shape-for-normal-mode",
-        "Cursor shape for replace mode." => "settings-cursor-shape-for-replace-mode",
-        "Cursor shape for visual mode." => "settings-cursor-shape-for-visual-mode",
-        "Custom digraph mappings for Vim mode." => "settings-custom-digraph-mappings-for-vim-mode",
-        "Default depth to expand outline items in the current file." => {
-            "settings-default-depth-to-expand-outline-items-in-the"
-        }
-        "Delay in milliseconds before drag and drop selection starts." => {
-            "settings-delay-in-milliseconds-before-drag-and-drop"
-        }
-        "Delay in milliseconds before the which-key menu appears." => {
-            "settings-delay-in-milliseconds-before-the-which-key-menu"
-        }
-        "Determines how snippets are sorted relative to other completion items." => {
-            "settings-determines-how-snippets-are-sorted-relative-to"
-        }
-        "Display the which-key menu with matching bindings while a multi-stroke binding is pending." => {
-            "settings-display-the-which-key-menu-with-matching"
-        }
-        "Duration in milliseconds to highlight yanked text in Vim mode." => {
-            "settings-duration-in-milliseconds-to-highlight-yanked"
-        }
-        "Enable drag and drop selection." => "settings-enable-drag-and-drop-selection",
-        "Enable smartcase searching in Vim mode." => {
-            "settings-enable-smartcase-searching-in-vim-mode"
-        }
-        "Fast scroll sensitivity multiplier for both horizontal and vertical scrolling." => {
-            "settings-fast-scroll-sensitivity-multiplier-for-both"
-        }
-        "How many lines of context to provide in multibuffer excerpts by default." => {
-            "settings-how-many-lines-of-context-to-provide-in"
-        }
-        "How many lines to expand the multibuffer excerpts by default." => {
-            "settings-how-many-lines-to-expand-the-multibuffer"
-        }
-        "How to display diffs in the editor." => "settings-how-to-display-diffs-in-the-editor",
-        "How to highlight the current line in the minimap." => {
-            "settings-how-to-highlight-the-current-line-in-the"
-        }
-        "Maximum number of columns to display in the minimap." => {
-            "settings-maximum-number-of-columns-to-display-in-the"
-        }
-        "Minimum number of characters to reserve space for in the gutter." => {
-            "settings-minimum-number-of-characters-to-reserve-space"
-        }
-        "Save after inactivity period (in milliseconds)." => {
-            "settings-save-after-inactivity-period-in-milliseconds"
-        }
-        "Scroll sensitivity multiplier for both horizontal and vertical scrolling." => {
-            "settings-scroll-sensitivity-multiplier-for-both"
-        }
-        "Show Git diff indicators in the scrollbar." => {
-            "settings-show-git-diff-indicators-in-the-scrollbar"
-        }
-        "Show bookmarks in the gutter." => "settings-show-bookmarks-in-the-gutter",
-        "Show breadcrumbs." => "settings-show-breadcrumbs",
-        "Show breakpoints in the gutter." => "settings-show-breakpoints-in-the-gutter",
-        "Show buffer search result indicators in the scrollbar." => {
-            "settings-show-buffer-search-result-indicators-in-the"
-        }
-        "Show code action button at start of buffer line." => {
-            "settings-show-code-action-button-at-start-of-buffer-line"
-        }
-        "Show code action buttons in the editor toolbar." => {
-            "settings-show-code-action-buttons-in-the-editor-toolbar"
-        }
-        "Show code folding controls in the gutter." => {
-            "settings-show-code-folding-controls-in-the-gutter"
-        }
-        "Show cursor positions in the scrollbar." => {
-            "settings-show-cursor-positions-in-the-scrollbar"
-        }
-        "Show line numbers in the gutter." => "settings-show-line-numbers-in-the-gutter",
-        "Show quick action buttons (e.g., search, selection, editor controls, etc.)." => {
-            "settings-show-quick-action-buttons-e-g-search-selection"
-        }
-        "Show runnable buttons in the gutter." => "settings-show-runnable-buttons-in-the-gutter",
-        "Show selected symbol occurrences in the scrollbar." => {
-            "settings-show-selected-symbol-occurrences-in-the"
-        }
-        "Show selected text occurrences in the scrollbar." => {
-            "settings-show-selected-text-occurrences-in-the-scrollbar"
-        }
-        "Show the informational hover box when moving the mouse over symbols in the editor." => {
-            "settings-show-the-informational-hover-box-when-moving"
-        }
-        "Show the selections menu in the editor toolbar." => {
-            "settings-show-the-selections-menu-in-the-editor-toolbar"
-        }
-        "Show the signature help pop-up after completions or bracket pairs are inserted." => {
-            "settings-show-the-signature-help-pop-up-after"
-        }
-        "The default mode when Vim starts." => "settings-the-default-mode-when-vim-starts",
-        "The minimum width (in columns) at which the split diff view is used. When the editor is narrower, the diff view automatically switches to unified mode. Set to 0 to disable." => {
-            "settings-the-minimum-width-in-columns-at-which-the-split"
-        }
-        "The number of characters to keep on either side when scrolling with the mouse." => {
-            "settings-the-number-of-characters-to-keep-on-either-side"
-        }
-        "The number of lines to keep above/below the cursor when auto-scrolling." => {
-            "settings-the-number-of-lines-to-keep-above-below-the"
-        }
-        "Time to wait in milliseconds before hiding the hover popover after the mouse moves away." => {
-            "settings-time-to-wait-in-milliseconds-before-hiding-the"
-        }
-        "Time to wait in milliseconds before showing the informational hover box." => {
-            "settings-time-to-wait-in-milliseconds-before-showing-the"
-        }
-        "Toggle relative line numbers in Vim mode." => {
-            "settings-toggle-relative-line-numbers-in-vim-mode"
-        }
-        "Use regex search by default in Vim search." => {
-            "settings-use-regex-search-by-default-in-vim-search"
-        }
-        "What to do when multibuffer is double-clicked in some of its excerpts." => {
-            "settings-what-to-do-when-multibuffer-is-double-clicked"
-        }
-        "When enabled, the :substitute command replaces all matches in a line by default. The 'g' flag then toggles this behavior." => {
-            "settings-when-enabled-the-substitute-command-replaces"
-        }
-        "When false, forcefully disables the horizontal scrollbar." => {
-            "settings-when-false-forcefully-disables-the-horizontal"
-        }
-        "When false, forcefully disables the vertical scrollbar." => {
-            "settings-when-false-forcefully-disables-the-vertical"
-        }
-        "When to auto save buffer changes." => "settings-when-to-auto-save-buffer-changes",
-        "When to show the minimap in the editor." => {
-            "settings-when-to-show-the-minimap-in-the-editor"
-        }
-        "When to show the minimap thumb." => "settings-when-to-show-the-minimap-thumb",
-        "When to show the scrollbar in the editor." => {
-            "settings-when-to-show-the-scrollbar-in-the-editor"
-        }
-        "Where to show the minimap in the editor." => {
-            "settings-where-to-show-the-minimap-in-the-editor"
-        }
-        "Whether the editor will scroll beyond the last line." => {
-            "settings-whether-the-editor-will-scroll-beyond-the-last"
-        }
-        "Whether the hover popover sticks when the mouse moves toward it, allowing interaction with its contents." => {
-            "settings-whether-the-hover-popover-sticks-when-the-mouse"
-        }
-        "Whether to scroll when clicking near the edge of the visible text area." => {
-            "settings-whether-to-scroll-when-clicking-near-the-edge"
-        }
-        "Whether to stick scopes to the top of the editor" => {
-            "settings-whether-to-stick-scopes-to-the-top-of-the"
-        }
-        "Whether to zoom the editor font size with the mouse wheel while holding the primary modifier key." => {
-            "settings-whether-to-zoom-the-editor-font-size-with-the"
-        }
-        "Which diagnostic indicators to show in the scrollbar." => {
-            "settings-which-diagnostic-indicators-to-show-in-the"
-        }
-        "Autoclose" => "settings-autoclose",
-        "Completions" => "settings-completions",
-        "Formatting" => "settings-formatting",
-        "Indent Guides" => "settings-indent-guides",
-        "Indentation" => "settings-indentation",
-        "Inlay Hints" => "settings-inlay-hints",
-        "LSP" => "settings-lsp",
-        "LSP Completions" => "settings-lsp-completions",
-        "Miscellaneous" => "settings-miscellaneous",
-        "Prettier" => "settings-prettier",
-        "Tasks" => "settings-tasks",
-        "Whitespace" => "settings-whitespace",
-        "Wrapping" => "settings-wrapping",
-        "Active Line Width" => "settings-active-line-width",
-        "Allow Rewrap" => "settings-allow-rewrap",
-        "Allowed" => "settings-allowed",
-        "Always Treat Brackets As Autoclosed" => "settings-always-treat-brackets-as-autoclosed",
-        "Auto Indent" => "settings-auto-indent",
-        "Auto Indent On Paste" => "settings-auto-indent-on-paste",
-        "Auto Replace Emoji Shortcode" => "settings-auto-replace-emoji-shortcode",
-        "Background Coloring" => "settings-background-coloring",
-        "Code Actions On Format" => "settings-code-actions-on-format",
-        "Code Lens" => "settings-code-lens",
-        "Coloring" => "settings-coloring",
-        "Colorize Brackets" => "settings-colorize-brackets",
-        "Completion Detail Alignment" => "settings-completion-detail-alignment",
-        "Completion Menu Item Kind" => "settings-completion-menu-item-kind",
-        "Completion Menu Scrollbar" => "settings-completion-menu-scrollbar",
-        "Debuggers" => "settings-debuggers",
-        "Drop Size Target" => "settings-drop-size-target",
-        "Edit Debounce Ms" => "settings-edit-debounce-ms",
-        "Enable Language Server" => "settings-enable-language-server",
-        "Ensure Final Newline On Save" => "settings-ensure-final-newline-on-save",
-        "Extend Comment On Newline" => "settings-extend-comment-on-newline",
-        "Fetch Timeout (milliseconds)" => "settings-fetch-timeout-milliseconds",
-        "Format On Save" => "settings-format-on-save",
-        "Formatter" => "settings-formatter",
-        "Go To Definition Fallback" => "settings-go-to-definition-fallback",
-        "Go To Definition Scroll Strategy" => "settings-go-to-definition-scroll-strategy",
-        "Hard Tabs" => "settings-hard-tabs",
-        "Image Viewer" => "settings-image-viewer",
-        "Insert Mode" => "settings-insert-mode",
-        "JSX Tag Auto Close" => "settings-jsx-tag-auto-close",
-        "LSP Document Colors" => "settings-lsp-document-colors",
-        "LSP Document Symbols" => "settings-lsp-document-symbols",
-        "LSP Folding Ranges" => "settings-lsp-folding-ranges",
-        "LSP Results Location" => "settings-lsp-results-location",
-        "Language Servers" => "settings-language-servers",
-        "Line Ending" => "settings-line-ending",
-        "Line Width" => "settings-line-width",
-        "Linked Edits" => "settings-linked-edits",
-        "Middle Click Paste" => "settings-middle-click-paste",
-        "Options" => "settings-options",
-        "Parser" => "settings-parser",
-        "Plugins" => "settings-plugins",
-        "Prefer LSP" => "settings-prefer-lsp",
-        "Preferred Line Length" => "settings-preferred-line-length",
-        "Proxy" => "settings-proxy",
-        "Remove Trailing Whitespace On Save" => "settings-remove-trailing-whitespace-on-save",
-        "Scroll Debounce Ms" => "settings-scroll-debounce-ms",
-        "Semantic Tokens" => "settings-semantic-tokens",
-        "Show Background" => "settings-show-background",
-        "Show Completion Documentation" => "settings-show-completion-documentation",
-        "Show Completions On Input" => "settings-show-completions-on-input",
-        "Show Other Hints" => "settings-show-other-hints",
-        "Show Parameter Hints" => "settings-show-parameter-hints",
-        "Show Type Hints" => "settings-show-type-hints",
-        "Show Value Hints" => "settings-show-value-hints",
-        "Show Whitespaces" => "settings-show-whitespaces",
-        "Soft Wrap" => "settings-soft-wrap",
-        "Space Whitespace Indicator" => "settings-space-whitespace-indicator",
-        "Tab Size" => "settings-tab-size",
-        "Tab Whitespace Indicator" => "settings-tab-whitespace-indicator",
-        "Toggle On Modifiers Press" => "settings-toggle-on-modifiers-press",
-        "Use Auto Surround" => "settings-use-auto-surround",
-        "Use Autoclose" => "settings-use-autoclose",
-        "Use On Type Format" => "settings-use-on-type-format",
-        "Variables" => "settings-variables",
-        "Vim/Emacs Modeline Support" => "settings-vim-emacs-modeline-support",
-        "Word Diff Enabled" => "settings-word-diff-enabled",
-        "Words" => "settings-words",
-        "Words Min Length" => "settings-words-min-length",
-        "Additional code actions to run when formatting." => {
-            "settings-additional-code-actions-to-run-when-formatting"
-        }
-        "Character counts at which to show wrap guides in the editor." => {
-            "settings-character-counts-at-which-to-show-wrap-guides-2"
-        }
-        "Controls automatic indentation behavior when typing." => {
-            "settings-controls-automatic-indentation-behavior-when"
-        }
-        "Controls how LSP completions are inserted." => {
-            "settings-controls-how-lsp-completions-are-inserted"
-        }
-        "Controls how words are completed." => "settings-controls-how-words-are-completed",
-        "Controls where the `editor::rewrap` action is allowed for this language." => {
-            "settings-controls-where-the-editor-rewrap-action-is"
-        }
-        "Controls whether the closing characters are always skipped over and auto-removed no matter how they were inserted." => {
-            "settings-controls-whether-the-closing-characters-are"
-        }
-        "Default Prettier options, in the format as in package.json section for Prettier." => {
-            "settings-default-prettier-options-in-the-format-as-in"
-        }
-        "Determines how indent guide backgrounds are colored." => {
-            "settings-determines-how-indent-guide-backgrounds-are"
-        }
-        "Determines how indent guides are colored." => {
-            "settings-determines-how-indent-guides-are-colored"
-        }
-        "Display indent guides in the editor." => "settings-display-indent-guides-in-the-editor",
-        "Enable middle-click paste on Linux." => "settings-enable-middle-click-paste-on-linux",
-        "Enables or disables formatting with Prettier for a given language." => {
-            "settings-enables-or-disables-formatting-with-prettier"
-        }
-        "Extra task variables to set for a particular language." => {
-            "settings-extra-task-variables-to-set-for-a-particular"
-        }
-        "Forces Prettier integration to use a specific parser name when formatting files with the language." => {
-            "settings-forces-prettier-integration-to-use-a-specific"
-        }
-        "Forces Prettier integration to use specific plugins when formatting files with the language." => {
-            "settings-forces-prettier-integration-to-use-specific"
-        }
-        "Global switch to toggle hints on and off." => {
-            "settings-global-switch-to-toggle-hints-on-and-off"
-        }
-        "Global switch to toggle inline values on and off when debugging." => {
-            "settings-global-switch-to-toggle-inline-values-on-and"
-        }
-        "How line endings should be handled for new files and during format and save operations." => {
-            "settings-how-line-endings-should-be-handled-for-new"
-        }
-        "How many characters has to be in the completions query to automatically show the words-based completions." => {
-            "settings-how-many-characters-has-to-be-in-the"
-        }
-        "How many columns a tab should occupy." => "settings-how-many-columns-a-tab-should-occupy",
-        "How to display the LSP item kind (function, method, variable, etc.) of each entry in the completions menu." => {
-            "settings-how-to-display-the-lsp-item-kind-function"
-        }
-        "How to perform a buffer format." => "settings-how-to-perform-a-buffer-format",
-        "How to render LSP color previews in the editor." => {
-            "settings-how-to-render-lsp-color-previews-in-the-editor"
-        }
-        "How to scroll the target into view when navigating to a definition or reference." => {
-            "settings-how-to-scroll-the-target-into-view-when"
-        }
-        "How to soft-wrap long lines of text." => "settings-how-to-soft-wrap-long-lines-of-text",
-        "Number of lines to search for modelines (set to 0 to disable)." => {
-            "settings-number-of-lines-to-search-for-modelines-set-to"
-        }
-        "Preferred debuggers for this language." => {
-            "settings-preferred-debuggers-for-this-language"
-        }
-        "Relative size of the drop target in the editor that will open dropped file as a split pane." => {
-            "settings-relative-size-of-the-drop-target-in-the-editor"
-        }
-        "Show a background for inlay hints." => "settings-show-a-background-for-inlay-hints",
-        "Show wrap guides in the editor." => "settings-show-wrap-guides-in-the-editor",
-        "The column at which to soft-wrap lines, for buffers where soft-wrap is enabled." => {
-            "settings-the-column-at-which-to-soft-wrap-lines-for"
-        }
-        "The list of language servers to use (or disable) for this language." => {
-            "settings-the-list-of-language-servers-to-use-or-disable"
-        }
-        "The proxy to use for network requests." => {
-            "settings-the-proxy-to-use-for-network-requests"
-        }
-        "The unit for image file sizes." => "settings-the-unit-for-image-file-sizes",
-        "The width of the active indent guide in pixels, between 1 and 10." => {
-            "settings-the-width-of-the-active-indent-guide-in-pixels"
-        }
-        "The width of the indent guides in pixels, between 1 and 10." => {
-            "settings-the-width-of-the-indent-guides-in-pixels"
-        }
-        "Toggles inlay hints (hides or shows) when the user presses the modifiers specified." => {
-            "settings-toggles-inlay-hints-hides-or-shows-when-the"
-        }
-        "Use LSP tasks over dez language extension tasks." => {
-            "settings-use-lsp-tasks-over-dez-language-extension"
-        }
-        "Visible character used to render space characters when show_whitespaces is enabled (default: \"•\")" => {
-            "settings-visible-character-used-to-render-space"
-        }
-        "Visible character used to render tab characters when show_whitespaces is enabled (default: \"→\")" => {
-            "settings-visible-character-used-to-render-tab-characters"
-        }
-        "When enabled, use folding ranges from the language server instead of indent-based folding." => {
-            "settings-when-enabled-use-folding-ranges-from-the"
-        }
-        "When enabled, use the language server's document symbols for outlines and breadcrumbs instead of tree-sitter." => {
-            "settings-when-enabled-use-the-language-servers-document"
-        }
-        "When fetching LSP completions, determines how long to wait for a response of a particular server (set to 0 to wait indefinitely)." => {
-            "settings-when-fetching-lsp-completions-determines-how"
-        }
-        "When to show the scrollbar in the completion menu." => {
-            "settings-when-to-show-the-scrollbar-in-the-completion"
-        }
-        "Where to show LSP results that can contain multiple locations (Go to Definition, Go to Implementation, Find All References)." => {
-            "settings-where-to-show-lsp-results-that-can-contain"
-        }
-        "Whether and how to display code lenses from language servers." => {
-            "settings-whether-and-how-to-display-code-lenses-from"
-        }
-        "Whether indentation of pasted content should be adjusted based on the context." => {
-            "settings-whether-indentation-of-pasted-content-should-be"
-        }
-        "Whether or not to debounce inlay hints updates after buffer edits (set to 0 to disable debouncing)." => {
-            "settings-whether-or-not-to-debounce-inlay-hints-updates"
-        }
-        "Whether or not to debounce inlay hints updates after buffer scrolls (set to 0 to disable debouncing)." => {
-            "settings-whether-or-not-to-debounce-inlay-hints-updates-2"
-        }
-        "Whether or not to ensure there's a single newline at the end of a buffer when saving it." => {
-            "settings-whether-or-not-to-ensure-theres-a-single"
-        }
-        "Whether or not to perform a buffer format before saving." => {
-            "settings-whether-or-not-to-perform-a-buffer-format"
-        }
-        "Whether or not to remove any trailing whitespace from lines of a buffer before saving it." => {
-            "settings-whether-or-not-to-remove-any-trailing"
-        }
-        "Whether other hints should be shown." => "settings-whether-other-hints-should-be-shown",
-        "Whether parameter hints should be shown." => {
-            "settings-whether-parameter-hints-should-be-shown"
-        }
-        "Whether tasks are enabled for this language." => {
-            "settings-whether-tasks-are-enabled-for-this-language"
-        }
-        "Whether to align detail text in code completions context menus left or right." => {
-            "settings-whether-to-align-detail-text-in-code"
-        }
-        "Whether to automatically close JSX tags." => {
-            "settings-whether-to-automatically-close-jsx-tags"
-        }
-        "Whether to automatically replace emoji shortcodes with emoji characters." => {
-            "settings-whether-to-automatically-replace-emoji"
-        }
-        "Whether to automatically surround text with characters for you. For example, when you select text and type '(', dez will automatically surround text with ()." => {
-            "settings-whether-to-automatically-surround-text-with"
-        }
-        "Whether to automatically type closing characters for you. For example, when you type '(', dez will automatically add a closing ')' at the correct position." => {
-            "settings-whether-to-automatically-type-closing"
-        }
-        "Whether to colorize brackets in the editor." => {
-            "settings-whether-to-colorize-brackets-in-the-editor"
-        }
-        "Whether to display inline and alongside documentation for items in the completions menu." => {
-            "settings-whether-to-display-inline-and-alongside"
-        }
-        "Whether to enable word diff highlighting in the editor. When enabled, changed words within modified lines are highlighted to show exactly what changed." => {
-            "settings-whether-to-enable-word-diff-highlighting-in-the"
-        }
-        "Whether to fetch LSP completions or not." => {
-            "settings-whether-to-fetch-lsp-completions-or-not"
-        }
-        "Whether to follow-up empty Go to definition responses from the language server." => {
-            "settings-whether-to-follow-up-empty-go-to-definition"
-        }
-        "Whether to indent lines using tab characters, as opposed to multiple spaces." => {
-            "settings-whether-to-indent-lines-using-tab-characters-as"
-        }
-        "Whether to perform linked edits of associated ranges, if the LS supports it. For example, when editing opening <html> tag, the contents of the closing </html> tag will be edited as well." => {
-            "settings-whether-to-perform-linked-edits-of-associated"
-        }
-        "Whether to pop the completions menu while typing in an editor without explicitly requesting it." => {
-            "settings-whether-to-pop-the-completions-menu-while"
-        }
-        "Whether to show tabs and spaces in the editor." => {
-            "settings-whether-to-show-tabs-and-spaces-in-the-editor"
-        }
-        "Whether to start a new line with a comment when a previous line is a comment as well." => {
-            "settings-whether-to-start-a-new-line-with-a-comment-when"
-        }
-        "Whether to use additional LSP queries to format (and amend) the code after every \"trigger\" symbol input, defined by LSP server capabilities" => {
-            "settings-whether-to-use-additional-lsp-queries-to-format"
-        }
-        "Whether to use language servers to provide code intelligence." => {
-            "settings-whether-to-use-language-servers-to-provide-code"
-        }
-        "Whether type hints should be shown." => "settings-whether-type-hints-should-be-shown",
-        "Whether or not to automatically check for updates." => {
-            "settings-general-auto-update-description"
-        }
-        "Active Editor" => "settings-dd-active-editor",
-        "ActiveEditor" => "settings-dd-activeeditor",
-        "Add To Existing Window" => "settings-dd-add-to-existing-window",
-        "Add to Existing Window" => "settings-dd-add-to-existing-window-2",
-        "All" => "settings-dd-all",
-        "All Editors" => "settings-dd-all-editors",
-        "AllEditors" => "settings-dd-alleditors",
-        "Alt" => "settings-dd-alt",
-        "Always" => "settings-dd-always",
-        "Anywhere" => "settings-dd-anywhere",
-        "Auto" => "settings-dd-auto",
-        "Background" => "settings-dd-background",
-        "Bar" => "settings-dd-bar",
-        "Binary" => "settings-dd-binary",
-        "Block" => "settings-dd-block",
-        "Bold" => "settings-dd-bold",
-        "Border" => "settings-dd-border",
-        "Bottom" => "settings-dd-bottom",
-        "Boundary" => "settings-dd-boundary",
-        "Bounded" => "settings-dd-bounded",
-        "Center" => "settings-dd-center",
-        "Claude" => "settings-dd-claude",
-        "Client" => "settings-dd-client",
-        "Close Window" => "settings-dd-close-window",
-        "CloseWindow" => "settings-dd-closewindow",
-        "Cmd Or Ctrl" => "settings-dd-cmd-or-ctrl",
-        "CmdOrCtrl" => "settings-dd-cmdorctrl",
-        "Codex" => "settings-dd-codex",
-        "Combined" => "settings-dd-combined",
-        "Comfortable" => "settings-dd-comfortable",
-        "Contained" => "settings-dd-contained",
-        "Dark" => "settings-dd-dark",
-        "Decimal" => "settings-dd-decimal",
-        "Default" => "settings-dd-default",
-        "Detect" => "settings-dd-detect",
-        "Directories First" => "settings-dd-directories-first",
-        "DirectoriesFirst" => "settings-dd-directoriesfirst",
-        "Disabled" => "settings-dd-disabled",
-        "Down" => "settings-dd-down",
-        "Editor Width" => "settings-dd-editor-width",
-        "EditorWidth" => "settings-dd-editorwidth",
-        "Empty Tab" => "settings-dd-empty-tab",
-        "EmptyTab" => "settings-dd-emptytab",
-        "Enforce CRLF" => "settings-dd-enforce-crlf",
-        "Enforce Crlf" => "settings-dd-enforce-crlf-2",
-        "Enforce LF" => "settings-dd-enforce-lf",
-        "Enforce Lf" => "settings-dd-enforce-lf-2",
-        "Error" => "settings-dd-error",
-        "Errors" => "settings-dd-errors",
-        "Expanded" => "settings-dd-expanded",
-        "Fallback" => "settings-dd-fallback",
-        "File Name First" => "settings-dd-file-name-first",
-        "File Path First" => "settings-dd-file-path-first",
-        "FileNameFirst" => "settings-dd-filenamefirst",
-        "FilePathFirst" => "settings-dd-filepathfirst",
-        "Files First" => "settings-dd-files-first",
-        "FilesFirst" => "settings-dd-filesfirst",
-        "Find All References" => "settings-dd-find-all-references",
-        "FindAllReferences" => "settings-dd-findallreferences",
-        "Fixed" => "settings-dd-fixed",
-        "Full" => "settings-dd-full",
-        "Grayscale" => "settings-dd-grayscale",
-        "Hidden" => "settings-dd-hidden",
-        "Hide" => "settings-dd-hide",
-        "Hint" => "settings-dd-hint",
-        "History" => "settings-dd-history",
-        "Hollow" => "settings-dd-hollow",
-        "Hover" => "settings-dd-hover",
-        "Icon" => "settings-dd-icon",
-        "In Comments" => "settings-dd-in-comments",
-        "In Selections" => "settings-dd-in-selections",
-        "InComments" => "settings-dd-incomments",
-        "InSelections" => "settings-dd-inselections",
-        "Indent Aware" => "settings-dd-indent-aware",
-        "IndentAware" => "settings-dd-indentaware",
-        "Indexed" => "settings-dd-indexed",
-        "Info" => "settings-dd-info",
-        "Information" => "settings-dd-information",
-        "Inherit" => "settings-dd-inherit",
-        "Inlay" => "settings-dd-inlay",
-        "Inline" => "settings-dd-inline",
-        "Insert" => "settings-dd-insert",
-        "Italic" => "settings-dd-italic",
-        "Keep Window Open" => "settings-dd-keep-window-open",
-        "KeepWindowOpen" => "settings-dd-keepwindowopen",
-        "Label Color" => "settings-dd-label-color",
-        "LabelColor" => "settings-dd-labelcolor",
-        "Large" => "settings-dd-large",
-        "Last Session" => "settings-dd-last-session",
-        "Last Workspace" => "settings-dd-last-workspace",
-        "LastSession" => "settings-dd-lastsession",
-        "LastWorkspace" => "settings-dd-lastworkspace",
-        "Launchpad" => "settings-dd-launchpad",
-        "Left" => "settings-dd-left",
-        "Left Aligned" => "settings-dd-left-aligned",
-        "Left Neighbour" => "settings-dd-left-neighbour",
-        "Left Only" => "settings-dd-left-only",
-        "Left Open" => "settings-dd-left-open",
-        "LeftAligned" => "settings-dd-leftaligned",
-        "LeftNeighbour" => "settings-dd-leftneighbour",
-        "LeftOnly" => "settings-dd-leftonly",
-        "LeftOpen" => "settings-dd-leftopen",
-        "Light" => "settings-dd-light",
-        "Line" => "settings-dd-line",
-        "Lower" => "settings-dd-lower",
-        "Matching Workspace" => "settings-dd-matching-workspace",
-        "MatchingWorkspace" => "settings-dd-matchingworkspace",
-        "Medium" => "settings-dd-medium",
-        "Menu" => "settings-dd-menu",
-        "Minimum" => "settings-dd-minimum",
-        "Mixed" => "settings-dd-mixed",
-        "Multi Buffer" => "settings-dd-multi-buffer",
-        "MultiBuffer" => "settings-dd-multibuffer",
-        "Name" => "settings-dd-name",
-        "Neighbour" => "settings-dd-neighbour",
-        "Never" => "settings-dd-never",
-        "Non Utf8" => "settings-dd-non-utf8",
-        "NonUtf8" => "settings-dd-nonutf8",
-        "None" => "settings-dd-none",
-        "Normal" => "settings-dd-normal",
-        "Off" => "settings-dd-off",
-        "On" => "settings-dd-on",
-        "On Typing" => "settings-dd-on-typing",
-        "On Typing And Action" => "settings-dd-on-typing-and-action",
-        "On Yank" => "settings-dd-on-yank",
-        "OnTyping" => "settings-dd-ontyping",
-        "OnTypingAndAction" => "settings-dd-ontypingandaction",
-        "OnYank" => "settings-dd-onyank",
-        "One Page" => "settings-dd-one-page",
-        "OnePage" => "settings-dd-onepage",
-        "Open" => "settings-dd-open",
-        "Open A New Window" => "settings-dd-open-a-new-window",
-        "Open a New Window" => "settings-dd-open-a-new-window-2",
-        "Path" => "settings-dd-path",
-        "Pi" => "settings-dd-pi",
-        "Picker" => "settings-dd-picker",
-        "Platform Default" => "settings-dd-platform-default",
-        "PlatformDefault" => "settings-dd-platformdefault",
-        "Prefer CRLF" => "settings-dd-prefer-crlf",
-        "Prefer Crlf" => "settings-dd-prefer-crlf-2",
-        "Prefer LF" => "settings-dd-prefer-lf",
-        "Prefer Lf" => "settings-dd-prefer-lf-2",
-        "Prefer Line" => "settings-dd-prefer-line",
-        "PreferLine" => "settings-dd-preferline",
-        "Preserve" => "settings-dd-preserve",
-        "Preserve Indent" => "settings-dd-preserve-indent",
-        "PreserveIndent" => "settings-dd-preserveindent",
-        "Quit App" => "settings-dd-quit-app",
-        "QuitApp" => "settings-dd-quitapp",
-        "Replace" => "settings-dd-replace",
-        "Replace Subsequence" => "settings-dd-replace-subsequence",
-        "Replace Suffix" => "settings-dd-replace-suffix",
-        "ReplaceSubsequence" => "settings-dd-replacesubsequence",
-        "ReplaceSuffix" => "settings-dd-replacesuffix",
-        "Right" => "settings-dd-right",
-        "Right Aligned" => "settings-dd-right-aligned",
-        "Right Open" => "settings-dd-right-open",
-        "RightAligned" => "settings-dd-rightaligned",
-        "RightOpen" => "settings-dd-rightopen",
-        "Select" => "settings-dd-select",
-        "Selection" => "settings-dd-selection",
-        "Server" => "settings-dd-server",
-        "Small" => "settings-dd-small",
-        "Smart" => "settings-dd-smart",
-        "Split" => "settings-dd-split",
-        "Staged Hollow" => "settings-dd-staged-hollow",
-        "StagedHollow" => "settings-dd-stagedhollow",
-        "Staging" => "settings-dd-staging",
-        "Standard" => "settings-dd-standard",
-        "Status" => "settings-dd-status",
-        "Subpixel" => "settings-dd-subpixel",
-        "Symbol" => "settings-dd-symbol",
-        "Syntax Aware" => "settings-dd-syntax-aware",
-        "SyntaxAware" => "settings-dd-syntaxaware",
-        "System" => "settings-dd-system",
-        "Terminal Controlled" => "settings-dd-terminal-controlled",
-        "TerminalControlled" => "settings-dd-terminalcontrolled",
-        "Top" => "settings-dd-top",
-        "Tracked Files" => "settings-dd-tracked-files",
-        "TrackedFiles" => "settings-dd-trackedfiles",
-        "Trailing" => "settings-dd-trailing",
-        "Underline" => "settings-dd-underline",
-        "Unicode" => "settings-dd-unicode",
-        "Unified" => "settings-dd-unified",
-        "Unstaged Hollow" => "settings-dd-unstaged-hollow",
-        "UnstagedHollow" => "settings-dd-unstagedhollow",
-        "Up" => "settings-dd-up",
-        "Upper" => "settings-dd-upper",
-        "VerticalScrollMargin" => "settings-dd-verticalscrollmargin",
-        "Warning" => "settings-dd-warning",
-        "Wrapped" => "settings-dd-wrapped",
-        "X Large" => "settings-dd-x-large",
-        "XLarge" => "settings-dd-xlarge",
-        _ => return None,
-    })
 }
 
 struct DynamicItem {
@@ -3156,6 +2027,7 @@ impl PartialEq for SettingItem {
 #[derive(Clone, PartialEq, Default)]
 enum SubPageType {
     Language,
+    SkillCreator,
     #[default]
     Other,
 }
@@ -3165,6 +2037,7 @@ struct SubPageLink {
     title: SharedString,
     r#type: SubPageType,
     description: Option<SharedString>,
+    search_aliases: &'static [&'static str],
     /// See [`SettingField.json_path`]
     json_path: Option<&'static str>,
     /// Whether or not the settings in this sub page are configurable in settings.json
@@ -3186,8 +2059,37 @@ struct ActionLink {
     title: SharedString,
     description: Option<SharedString>,
     button_text: SharedString,
+    icon: IconName,
+    scope: ActionLinkScope,
     on_click: Arc<dyn Fn(&mut SettingsWindow, &mut Window, &mut App) + Send + Sync>,
     files: FileMask,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ActionLinkScope {
+    App,
+    Window,
+    WorkspaceRoot,
+}
+
+fn action_link_available(
+    scope: ActionLinkScope,
+    has_window: bool,
+    has_workspace_root: bool,
+) -> bool {
+    match scope {
+        ActionLinkScope::App => true,
+        ActionLinkScope::Window => has_window,
+        ActionLinkScope::WorkspaceRoot => has_workspace_root,
+    }
+}
+
+fn action_link_unavailable_copy(scope: ActionLinkScope) -> Option<&'static str> {
+    match scope {
+        ActionLinkScope::App => None,
+        ActionLinkScope::Window => Some(WINDOW_ACTION_UNAVAILABLE_COPY),
+        ActionLinkScope::WorkspaceRoot => Some(WORKSPACE_ACTION_UNAVAILABLE_COPY),
+    }
 }
 
 impl PartialEq for ActionLink {
@@ -3202,7 +2104,7 @@ fn all_language_names(cx: &App) -> Vec<SharedString> {
         .languages
         .language_names()
         .into_iter()
-        .filter(|name| name.as_ref() != "dez Keybind Context")
+        .filter(|name| name.as_ref() != "Zed Keybind Context")
         .map(Into::into)
         .collect()
 }
@@ -3219,7 +2121,8 @@ impl SettingsUiFile {
     fn setting_type(&self) -> &'static str {
         match self {
             SettingsUiFile::User => "User",
-            SettingsUiFile::Project(_) => "Project",
+            SettingsUiFile::Project(_) if paths::APP_NAME == "Zed" => "Project",
+            SettingsUiFile::Project(_) => "Workspace",
             SettingsUiFile::Server(_) => "Server",
         }
     }
@@ -3264,6 +2167,47 @@ impl SettingsUiFile {
 }
 
 impl SettingsWindow {
+    fn has_live_window_context(&self, cx: &App) -> bool {
+        self.original_window
+            .as_ref()
+            .is_some_and(|workspace_handle| workspace_handle.read(cx).is_ok())
+    }
+
+    fn has_workspace_root_context(&self, cx: &App) -> bool {
+        let Some(workspace_handle) = self.original_window.as_ref() else {
+            return false;
+        };
+        let Ok(multi_workspace) = workspace_handle.read(cx) else {
+            return false;
+        };
+        let workspace = multi_workspace.workspace().clone();
+        let project = workspace.read(cx).project().clone();
+        let project = project.read(cx);
+        project.worktrees(cx).next().is_some()
+    }
+
+    fn update_workspace_context(
+        &mut self,
+        workspace_handle: Option<WindowHandle<MultiWorkspace>>,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(workspace_handle) = workspace_handle else {
+            return;
+        };
+        if self.original_window == Some(workspace_handle)
+            && self.workspace_context_subscription.is_some()
+        {
+            return;
+        }
+
+        self.original_window = Some(workspace_handle);
+        self.workspace_context_subscription = workspace_handle
+            .entity(cx)
+            .ok()
+            .map(|multi_workspace| cx.observe(&multi_workspace, |_, _, cx| cx.notify()));
+        cx.notify();
+    }
+
     fn new(
         original_window: Option<WindowHandle<MultiWorkspace>>,
         window: &mut Window,
@@ -3282,8 +2226,7 @@ impl SettingsWindow {
         let current_file = SettingsUiFile::User;
         let search_bar = cx.new(|cx| {
             let mut editor = Editor::single_line(window, cx);
-            let placeholder = localization::text(cx, "settings-search-placeholder");
-            editor.set_placeholder_text(&placeholder, window, cx);
+            editor.set_placeholder_text("Search settings…", window, cx);
             editor
         });
         cx.subscribe(&search_bar, |this, _, event: &EditorEvent, cx| {
@@ -3300,15 +2243,8 @@ impl SettingsWindow {
         .detach();
 
         let mut ui_font_size = ThemeSettings::get_global(cx).ui_font_size(cx);
-        let mut ui_language = SettingsStore::global(cx).ui_language();
         cx.observe_global_in::<SettingsStore>(window, move |this, window, cx| {
             this.fetch_files(window, cx);
-
-            let new_ui_language = SettingsStore::global(cx).ui_language();
-            if new_ui_language != ui_language {
-                ui_language = new_ui_language;
-                this.rebuild_pages(window, cx);
-            }
 
             // Whenever settings are changed, it's possible that the changed
             // settings affects the rendering of the `SettingsWindow`, like is
@@ -3337,6 +2273,34 @@ impl SettingsWindow {
         })
         .detach();
 
+        cx.observe_global_in::<SkillIndex>(window, |this, _window, cx| {
+            if let Some(skill_index) = cx.try_global::<SkillIndex>() {
+                this.hidden_deleted_skill_directory_paths
+                    .retain(|directory_path| {
+                        skill_index
+                            .global_skills
+                            .iter()
+                            .chain(
+                                skill_index
+                                    .project_skills
+                                    .iter()
+                                    .flat_map(|group| group.skills.iter()),
+                            )
+                            .any(|skill| skill.directory_path.as_path() == directory_path.as_path())
+                    });
+            } else {
+                this.hidden_deleted_skill_directory_paths.clear();
+            }
+            cx.notify();
+        })
+        .detach();
+
+        let language_model_registry = language_model::LanguageModelRegistry::global(cx);
+        cx.subscribe(&language_model_registry, |_, _, _event, cx| {
+            cx.notify();
+        })
+        .detach();
+
         cx.on_window_closed(|cx, _window_id| {
             if let Some(existing_window) = cx
                 .windows()
@@ -3348,6 +2312,8 @@ impl SettingsWindow {
                     window.remove_window();
                 })
                 .ok();
+
+                telemetry::event!("Settings Closed")
             }
         })
         .detach();
@@ -3434,7 +2400,9 @@ impl SettingsWindow {
         .detach();
 
         let title_bar = if !cfg!(target_os = "macos") {
-            Some(cx.new(|cx| PlatformTitleBar::new("settings-title-bar", cx)))
+            Some(cx.new(|cx| {
+                PlatformTitleBar::new("settings-title-bar", cx).with_app_name(paths::APP_NAME)
+            }))
         } else {
             None
         };
@@ -3444,7 +2412,8 @@ impl SettingsWindow {
 
         let mut this = Self {
             title_bar,
-            original_window,
+            original_window: None,
+            workspace_context_subscription: None,
 
             worktree_root_dirs: HashMap::default(),
             files: vec![],
@@ -3481,20 +2450,42 @@ impl SettingsWindow {
                 .tab_index(HEADER_CONTAINER_TAB_INDEX)
                 .tab_stop(false),
             search_index: None,
+            shown_errors: HashSet::default(),
+            hidden_deleted_skill_directory_paths: HashSet::default(),
             regex_validation_error: None,
+            sandbox_host_validation_error: None,
             list_state,
             last_copied_link_path: None,
+            provider_configuration_views: HashMap::default(),
+            configuring_provider: None,
+            last_copied_skill_directory_path: None,
+            llm_provider_form: None,
+            llm_provider_add_focus_handle: cx.focus_handle(),
+            mcp_server_form: None,
+            mcp_add_server_focus_handle: cx.focus_handle(),
+            custom_agent_form: None,
+            external_agent_add_focus_handle: cx.focus_handle(),
+            skill_creator_page: None,
         };
 
+        this.update_workspace_context(original_window, cx);
         this.fetch_files(window, cx);
         this.build_ui(window, cx);
-        this.build_search_index(cx);
+        this.build_search_index();
 
         this.search_bar.update(cx, |editor, cx| {
             editor.focus_handle(cx).focus(window, cx);
         });
 
         this
+    }
+
+    fn clear_search(&mut self, window: &mut Window, cx: &mut Context<SettingsWindow>) {
+        if !self.search_bar.read(cx).is_empty(cx) {
+            self.search_bar.update(cx, |editor, cx| {
+                editor.set_text("", window, cx);
+            });
+        }
     }
 
     fn handle_project_event(
@@ -3602,7 +2593,9 @@ impl SettingsWindow {
                 move |this: &mut SettingsWindow,
                       window: &mut Window,
                       cx: &mut Context<SettingsWindow>| {
-                    this.open_and_scroll_to_navbar_entry(entry_index, None, false, window, cx);
+                    if this.sub_page_stack.is_empty() {
+                        this.open_and_scroll_to_navbar_entry(entry_index, None, false, window, cx);
+                    }
                 },
             );
             focus_subscriptions.push(subscription);
@@ -3671,13 +2664,6 @@ impl SettingsWindow {
                         ..
                     }) => {
                         if !files.contains(current_file) {
-                            page_filter[index] = false;
-                        } else {
-                            any_found_since_last_header = true;
-                        }
-                    }
-                    SettingsPageItem::UserLanguageSetting(_) => {
-                        if !USER.contains(current_file) {
                             page_filter[index] = false;
                         } else {
                             any_found_since_last_header = true;
@@ -3830,6 +2816,7 @@ impl SettingsWindow {
             .ok();
 
             cx.background_executor().timer(Duration::from_secs(1)).await;
+            telemetry::event!("Settings Searched", query = query)
         }));
     }
 
@@ -3841,7 +2828,7 @@ impl SettingsWindow {
             .collect::<Vec<_>>();
     }
 
-    fn build_search_index(&mut self, cx: &App) {
+    fn build_search_index(&mut self) {
         fn split_into_words(parts: &[&str]) -> Vec<String> {
             parts
                 .iter()
@@ -3871,20 +2858,16 @@ impl SettingsWindow {
         // where many settings are filtered out, using the logic in filter_matches_to_file
         // we could only search relevant items based on the current file
         for (page_index, page) in self.pages.iter().enumerate() {
-            let localized_page_title = settings_source_text(cx, page.title);
             let mut header_index = 0;
             let mut header_str = "";
             for (item_index, item) in page.items.iter().enumerate() {
                 let key_index = key_lut.len();
                 let mut json_path = None;
-                let localized_header = settings_source_text(cx, header_str);
                 match item {
                     SettingsPageItem::DynamicItem(DynamicItem {
                         discriminant: item, ..
                     })
                     | SettingsPageItem::SettingItem(item) => {
-                        let localized_title = settings_source_text(cx, item.title);
-                        let localized_description = settings_source_text(cx, item.description);
                         json_path = item
                             .field
                             .json_path()
@@ -3896,80 +2879,36 @@ impl SettingsWindow {
                                 header_str,
                                 item.title,
                                 item.description,
-                                localized_page_title.as_ref(),
-                                localized_header.as_ref(),
-                                localized_title.as_ref(),
-                                localized_description.as_ref(),
                             ]),
                         });
                         push_candidates(&mut fuzzy_match_candidates, key_index, item.title);
                         push_candidates(&mut fuzzy_match_candidates, key_index, item.description);
-                        push_candidates(
-                            &mut fuzzy_match_candidates,
-                            key_index,
-                            localized_title.as_ref(),
-                        );
-                        push_candidates(
-                            &mut fuzzy_match_candidates,
-                            key_index,
-                            localized_description.as_ref(),
-                        );
-                    }
-                    SettingsPageItem::UserLanguageSetting(setting_item) => {
-                        json_path = Some("ui_language");
-                        documents.push(SearchDocument {
-                            id: key_index,
-                            words: split_into_words(&[
-                                page.title,
-                                header_str,
-                                setting_item.title.as_ref(),
-                                setting_item.description.as_ref(),
-                                "Language",
-                                "Select the language that dez uses for its interface.",
-                            ]),
-                        });
-                        push_candidates(
-                            &mut fuzzy_match_candidates,
-                            key_index,
-                            setting_item.title.as_ref(),
-                        );
-                        push_candidates(
-                            &mut fuzzy_match_candidates,
-                            key_index,
-                            setting_item.description.as_ref(),
-                        );
-                        push_candidates(&mut fuzzy_match_candidates, key_index, "Language");
                     }
                     SettingsPageItem::SectionHeader(header) => {
-                        let localized_header = settings_source_text(cx, header);
                         documents.push(SearchDocument {
                             id: key_index,
-                            words: split_into_words(&[header, localized_header.as_ref()]),
+                            words: split_into_words(&[header]),
                         });
                         push_candidates(&mut fuzzy_match_candidates, key_index, header);
-                        push_candidates(
-                            &mut fuzzy_match_candidates,
-                            key_index,
-                            localized_header.as_ref(),
-                        );
                         header_index = item_index;
                         header_str = *header;
                     }
                     SettingsPageItem::SubPageLink(sub_page_link) => {
                         json_path = sub_page_link.json_path;
+                        let mut parts = vec![page.title, header_str, sub_page_link.title.as_ref()];
+                        parts.extend(sub_page_link.search_aliases);
                         documents.push(SearchDocument {
                             id: key_index,
-                            words: split_into_words(&[
-                                page.title,
-                                header_str,
-                                sub_page_link.title.as_ref(),
-                            ]),
+                            words: split_into_words(&parts),
                         });
                         push_candidates(
                             &mut fuzzy_match_candidates,
                             key_index,
                             sub_page_link.title.as_ref(),
                         );
+                        for alias in sub_page_link.search_aliases {
+                            push_candidates(&mut fuzzy_match_candidates, key_index, alias);
+                        }
                     }
                     SettingsPageItem::ActionLink(action_link) => {
                         documents.push(SearchDocument {
@@ -3987,19 +2926,8 @@ impl SettingsWindow {
                         );
                     }
                 }
-                let current_localized_header = settings_source_text(cx, header_str);
                 push_candidates(&mut fuzzy_match_candidates, key_index, page.title);
                 push_candidates(&mut fuzzy_match_candidates, key_index, header_str);
-                push_candidates(
-                    &mut fuzzy_match_candidates,
-                    key_index,
-                    localized_page_title.as_ref(),
-                );
-                push_candidates(
-                    &mut fuzzy_match_candidates,
-                    key_index,
-                    current_localized_header.as_ref(),
-                );
 
                 key_lut.push(SearchKeyLUTEntry {
                     page_index,
@@ -4061,7 +2989,7 @@ impl SettingsWindow {
         self.navbar_focus_subscriptions.clear();
         self.content_handles.clear();
         self.build_ui(window, cx);
-        self.build_search_index(cx);
+        self.build_search_index();
     }
 
     #[track_caller]
@@ -4157,6 +3085,7 @@ impl SettingsWindow {
     fn open_navbar_entry_page(&mut self, navbar_entry: usize) {
         // Navigating to another page dismisses the transient "copied share
         // link" checkmark shown on a Skills page row.
+        self.last_copied_skill_directory_path = None;
 
         if !self.is_nav_entry_visible(navbar_entry) {
             self.open_first_nav_page();
@@ -4164,6 +3093,7 @@ impl SettingsWindow {
 
         let is_new_page = self.navbar_entries[self.navbar_entry].page_index
             != self.navbar_entries[navbar_entry].page_index;
+
         self.navbar_entry = navbar_entry;
 
         // We only need to reset visible items when updating matches
@@ -4247,7 +3177,9 @@ impl SettingsWindow {
         }
         self.current_file = self.files[ix].0.clone();
 
-        if let SettingsUiFile::Project((_, _)) = &self.current_file {}
+        if let SettingsUiFile::Project((_, _)) = &self.current_file {
+            telemetry::event!("Setting Project Clicked");
+        }
 
         self.build_ui(window, cx);
 
@@ -4276,7 +3208,11 @@ impl SettingsWindow {
         }
         self.current_file = self.files[ix].0.clone();
 
-        if let SettingsUiFile::Project((_, _)) = &self.current_file {}
+        if let SettingsUiFile::Project((_, _)) = &self.current_file {
+            telemetry::event!("Setting Project Clicked");
+        }
+
+        self.last_copied_skill_directory_path = None;
 
         let sub_page_stack = std::mem::take(&mut self.sub_page_stack);
         self.build_ui(window, cx);
@@ -4367,8 +3303,16 @@ impl SettingsWindow {
             })
             .unwrap_or(OVERFLOW_LIMIT);
         let edit_in_json_id = SharedString::new(format!("edit-in-json-{}", selected_file_ix));
+        let scope_overflow_handle = persistent_settings_popover_handle::<ContextMenu>(
+            "settings.scope.overflow",
+            window,
+            cx,
+        );
 
         h_flex()
+            .id("settings-ui-files-header")
+            .role(Role::Group)
+            .aria_label("Settings File")
             .w_full()
             .gap_1()
             .justify_between()
@@ -4433,10 +3377,13 @@ impl SettingsWindow {
                                         }),
                                     )
                                     .style(DropdownStyle::Subtle)
-                                    .trigger_tooltip(Tooltip::text(localization::text(
-                                        cx,
-                                        "settings-view-other-projects",
-                                    )))
+                                    .handle(scope_overflow_handle)
+                                    .aria_label("More Settings scopes")
+                                    .trigger_tooltip(Tooltip::text(if paths::APP_NAME == "Zed" {
+                                        "View Other Projects"
+                                    } else {
+                                        "View Other Workspaces"
+                                    }))
                                     .trigger_icon(IconName::ChevronDown)
                                     .attach(gpui::Anchor::BottomLeft)
                                     .offset(gpui::Point {
@@ -4449,20 +3396,17 @@ impl SettingsWindow {
                     }),
             )
             .child(
-                Button::new(
-                    edit_in_json_id,
-                    localization::text(cx, "settings-edit-json"),
-                )
-                .tab_index(0_isize)
-                .style(ButtonStyle::OutlinedGhost)
-                .tooltip(Tooltip::for_action_title_in(
-                    localization::text(cx, "settings-edit-json"),
-                    &OpenCurrentFile,
-                    &self.focus_handle,
-                ))
-                .on_click(cx.listener(|this, _, window, cx| {
-                    this.open_current_settings_file(window, cx);
-                })),
+                Button::new(edit_in_json_id, "Edit in settings.json")
+                    .tab_index(0_isize)
+                    .style(ButtonStyle::OutlinedGhost)
+                    .tooltip(Tooltip::for_action_title_in(
+                        "Edit in settings.json",
+                        &OpenCurrentFile,
+                        &self.focus_handle,
+                    ))
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.open_current_settings_file(window, cx);
+                    })),
             )
     }
 
@@ -4512,18 +3456,68 @@ impl SettingsWindow {
     //     }
     // }
 
-    fn render_search(&self, _window: &mut Window, cx: &mut App) -> Div {
+    fn render_search(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<SettingsWindow>,
+    ) -> Stateful<Div> {
+        let has_query = !self.search_bar.read(cx).is_empty(cx);
+        let (a11y_value, a11y_text_runs) =
+            text_field_a11y_state("settings-ui-search", &self.search_bar, window, cx);
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_radius = design_system.radius;
+        let canvas_contrast = design_system.contrast;
+        let search_background = canvas_settings_search_background(canvas_contrast, cx);
+        let search_border_color =
+            canvas_settings_row_border_color(search_background, canvas_contrast, cx);
+        let search_focus_border_color =
+            canvas_settings_row_hover_border_color(search_background, canvas_contrast, cx);
+        let search_padding_x = match canvas_density {
+            settings::CanvasDensity::Compact => px(6.),
+            settings::CanvasDensity::Balanced => px(8.),
+            settings::CanvasDensity::Spacious => px(10.),
+        };
+        let search_padding_y = match canvas_density {
+            settings::CanvasDensity::Compact => px(4.),
+            settings::CanvasDensity::Balanced => px(6.),
+            settings::CanvasDensity::Spacious => px(8.),
+        };
+        let search_margin_bottom = match canvas_density {
+            settings::CanvasDensity::Compact => px(8.),
+            settings::CanvasDensity::Balanced => px(12.),
+            settings::CanvasDensity::Spacious => px(16.),
+        };
+
         h_flex()
-            .py_1()
-            .px_1p5()
-            .mb_3()
+            .id("settings-ui-search")
+            .role(Role::SearchInput)
+            .aria_label("Search Settings")
+            .aria_value(a11y_value)
+            .track_focus(&self.search_bar.focus_handle(cx))
+            .a11y_synthetic_children(a11y_text_runs)
+            .py(search_padding_y)
+            .px(search_padding_x)
+            .mb(search_margin_bottom)
             .gap_1p5()
-            .rounded_sm()
-            .bg(cx.theme().colors().editor_background)
             .border_1()
-            .border_color(cx.theme().colors().border)
+            .border_color(search_border_color)
+            .bg(search_background)
+            .focus(move |this| this.border_color(search_focus_border_color))
+            .map(|this| canvas_settings_radius(this, canvas_radius))
             .child(Icon::new(IconName::MagnifyingGlass).color(Color::Muted))
             .child(self.search_bar.clone())
+            .when(has_query, |this| {
+                this.child(
+                    IconButton::new("clear-btn", IconName::Close)
+                        .icon_color(Color::Muted)
+                        .icon_size(IconSize::Small)
+                        .tooltip(Tooltip::text("Clear"))
+                        .on_click(cx.listener(|settings_window, _, window, cx| {
+                            settings_window.clear_search(window, cx);
+                        })),
+                )
+            })
     }
 
     fn render_nav(
@@ -4542,9 +3536,9 @@ impl SettingsWindow {
                 .visible_navbar_entries()
                 .any(|(_, entry)| entry.focus_handle.is_focused(window))
         {
-            localization::text(cx, "settings-focus-content")
+            "Focus Content"
         } else {
-            localization::text(cx, "settings-focus-navbar")
+            "Focus Navbar"
         };
 
         let mut key_context = KeyContext::new_with_defaults();
@@ -4553,6 +3547,12 @@ impl SettingsWindow {
         if self.search_bar.focus_handle(cx).is_focused(window) {
             key_context.add("search");
         }
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_contrast = design_system.contrast;
+        let nav_background = canvas_settings_nav_background(canvas_contrast, cx);
+        let nav_border_color =
+            canvas_settings_row_border_color(nav_background, canvas_contrast, cx);
 
         v_flex()
             .key_context(key_context)
@@ -4672,17 +3672,20 @@ impl SettingsWindow {
                     cx,
                 );
             }))
-            .w_56()
+            .w(canvas_settings_nav_width(paths::APP_NAME, canvas_density))
             .h_full()
-            .p_2p5()
+            .p(canvas_settings_nav_padding(canvas_density))
             .when(cfg!(target_os = "macos"), |this| this.pt_10())
             .flex_none()
             .border_r_1()
-            .border_color(cx.theme().colors().border)
-            .bg(cx.theme().colors().panel_background)
+            .border_color(nav_border_color)
+            .bg(nav_background)
             .child(self.render_search(window, cx))
             .child(
                 v_flex()
+                    .id("settings-ui-nav")
+                    .role(Role::Tree)
+                    .aria_label("Settings Navigation")
                     .flex_1()
                     .overflow_hidden()
                     .track_focus(&self.navbar_focus_handle.focus_handle(cx))
@@ -4699,7 +3702,19 @@ impl SettingsWindow {
                                     .map(|(entry_index, entry)| {
                                         TreeViewItem::new(
                                             ("settings-ui-navbar-entry", entry_index),
-                                            settings_source_text(cx, entry.title),
+                                            entry.title,
+                                        )
+                                        .when_some(
+                                            entry
+                                                .is_root
+                                                .then(|| {
+                                                    dez_settings_nav_icon(
+                                                        paths::APP_NAME,
+                                                        entry.title,
+                                                    )
+                                                })
+                                                .flatten(),
+                                            |item, icon| item.start_icon(icon),
                                         )
                                         .track_focus(&entry.focus_handle)
                                         .root_item(entry.is_root)
@@ -4717,6 +3732,10 @@ impl SettingsWindow {
                                                 ))
                                         })
                                         .on_click({
+                                            let category = this.pages[entry.page_index].title;
+                                            let subcategory =
+                                                (!entry.is_root).then_some(entry.title);
+
                                             cx.listener(move |this, event: &gpui::ClickEvent, window, cx| {
                                                 if this.toggle_navbar_entry_on_double_click(
                                                         entry_index,
@@ -4728,6 +3747,11 @@ impl SettingsWindow {
                                                     return;
                                                 }
 
+                                                telemetry::event!(
+                                                    "Settings Navigation Clicked",
+                                                    category = category,
+                                                    subcategory = subcategory
+                                                );
 
                                                 this.open_and_scroll_to_navbar_entry(
                                                     entry_index,
@@ -4751,11 +3775,11 @@ impl SettingsWindow {
                 h_flex()
                     .w_full()
                     .h_8()
-                    .p_2()
-                    .pb_0p5()
+                    .px(canvas_settings_nav_padding(canvas_density))
+                    .py_1p5()
                     .flex_shrink_0()
                     .border_t_1()
-                    .border_color(cx.theme().colors().border_variant)
+                    .border_color(nav_border_color)
                     .child(
                         KeybindingHint::new(
                             KeyBinding::for_action_in(
@@ -4949,15 +3973,16 @@ impl SettingsWindow {
             .filter(|(_, (file, _))| allowed_mask.contains(file.mask()))
             .map(|(ix, _)| ix)
             .collect();
+        let scope_picker_handle =
+            persistent_settings_popover_handle::<ContextMenu>("settings.subpage.scope", window, cx);
 
         let scope_element = if allowed_file_indices.len() > 1 {
             let this = cx.entity();
-            let scope_label = localization::text(cx, "settings-scope");
             DropdownMenu::new(
                 "sub-page-scope-picker",
-                scope_name,
+                scope_name.clone(),
                 ContextMenu::build(window, cx, move |mut menu, _, _| {
-                    menu = menu.header(scope_label.clone());
+                    menu = menu.header("Scope");
 
                     for ix in allowed_file_indices {
                         let (file, focus_handle) = &self.files[ix];
@@ -4987,10 +4012,10 @@ impl SettingsWindow {
                 }),
             )
             .style(DropdownStyle::Subtle)
-            .trigger_tooltip(Tooltip::text(localization::text(
-                cx,
-                "settings-change-scope",
-            )))
+            .handle(scope_picker_handle)
+            .aria_label("Settings scope")
+            .aria_value(scope_name)
+            .trigger_tooltip(Tooltip::text("Change Scope"))
             .attach(gpui::Anchor::BottomLeft)
             .offset(gpui::Point {
                 x: px(0.0),
@@ -5033,19 +4058,18 @@ impl SettingsWindow {
         let search_query = self.search_bar.read(cx).text(cx);
 
         v_flex()
+            .id("no-results")
             .size_full()
             .items_center()
             .justify_center()
             .gap_1()
-            .child(Label::new(localization::text(cx, "settings-no-results")))
+            .role(Role::Status)
+            .aria_label(format!("No settings match \"{search_query}\""))
+            .child(Label::new("No Results"))
             .child(
-                Label::new(localization::tr!(
-                    cx,
-                    "settings-no-results-detail",
-                    query = search_query
-                ))
-                .size(LabelSize::Small)
-                .color(Color::Muted),
+                Label::new(format!("No settings match \"{}\"", search_query))
+                    .size(LabelSize::Small)
+                    .color(Color::Muted),
             )
     }
 
@@ -5055,7 +4079,15 @@ impl SettingsWindow {
         cx: &mut Context<SettingsWindow>,
     ) -> impl IntoElement {
         let current_page_index = self.current_page_index();
-        let mut page_content = v_flex().id("settings-ui-page").size_full();
+        let current_page_title = self.current_page().title;
+        let mut page_content = v_flex()
+            .id("settings-ui-page")
+            .role(Role::Group)
+            .aria_label(settings_content_accessibility_label(
+                paths::APP_NAME,
+                current_page_title,
+            ))
+            .size_full();
 
         let has_active_search = !self.search_bar.read(cx).is_empty(cx);
         let has_no_results = self.visible_page_items().next().is_none() && has_active_search;
@@ -5085,10 +4117,14 @@ impl SettingsWindow {
                             .when(this.sub_page_stack.is_empty(), |this| {
                                 this.when_some(root_nav_label, |this, title| {
                                     this.child(
-                                        Label::new(settings_source_text(cx, title))
-                                            .size(LabelSize::Large)
+                                        div()
+                                            .id(("settings-page-heading", current_page_index))
+                                            .role(Role::Heading)
+                                            .aria_level(1)
+                                            .aria_label(title)
                                             .mt_2()
-                                            .mb_3(),
+                                            .mb_3()
+                                            .child(Label::new(title).size(LabelSize::Large)),
                                     )
                                 })
                             })
@@ -5155,6 +4191,20 @@ impl SettingsWindow {
         self.render_sub_page_items_in(page_content, items, false, window, cx)
     }
 
+    fn render_sub_page_items_section<'a, Items>(
+        &self,
+        items: Items,
+        is_inline_section: bool,
+        window: &mut Window,
+        cx: &mut Context<SettingsWindow>,
+    ) -> impl IntoElement
+    where
+        Items: Iterator<Item = (usize, &'a SettingsPageItem)>,
+    {
+        let page_content = v_flex().id("settings-ui-sub-page-section").size_full();
+        self.render_sub_page_items_in(page_content, items, is_inline_section, window, cx)
+    }
+
     fn render_sub_page_items_in<'a, Items>(
         &self,
         page_content: Stateful<Div>,
@@ -5192,10 +4242,14 @@ impl SettingsWindow {
                 .when(self.sub_page_stack.is_empty(), |this| {
                     this.when_some(root_nav_label, |this, title| {
                         this.child(
-                            Label::new(settings_source_text(cx, title))
-                                .size(LabelSize::Large)
+                            div()
+                                .id("settings-page-heading")
+                                .role(Role::Heading)
+                                .aria_level(1)
+                                .aria_label(title)
                                 .mt_2()
-                                .mb_3(),
+                                .mb_3()
+                                .child(Label::new(title).size(LabelSize::Large)),
                         )
                     })
                 })
@@ -5236,6 +4290,13 @@ impl SettingsWindow {
         let page_content;
 
         if let Some(current_sub_page) = self.sub_page_stack.last() {
+            let is_skills_page =
+                current_sub_page.link.json_path == Some(AGENT_SKILLS_SETTINGS_PATH);
+            let is_llm_providers_page = current_sub_page.link.json_path == Some("llm_providers")
+                && current_sub_page.link.title.as_ref() == "LLM Providers";
+            let is_external_agents_page = current_sub_page.link.json_path == Some("agent_servers");
+            let is_mcp_servers_page = current_sub_page.link.json_path == Some("context_servers");
+
             page_header = h_flex()
                 .w_full()
                 .min_w_0()
@@ -5249,34 +4310,57 @@ impl SettingsWindow {
                             IconButton::new("back-btn", IconName::ArrowLeft)
                                 .icon_size(IconSize::Small)
                                 .shape(IconButtonShape::Square)
+                                .tab_index(0isize)
+                                .aria_label("Back")
+                                .tooltip(Tooltip::text("Back"))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.pop_sub_page(window, cx);
                                 })),
                         )
                         .child(self.render_sub_page_breadcrumbs(window, cx)),
                 )
-                .when(current_sub_page.link.in_json, |this| {
-                    this.child(
-                        div().flex_shrink_0().child(
-                            Button::new(
-                                "open-in-settings-file",
-                                localization::text(cx, "settings-edit-json"),
+                .child(
+                    div()
+                        .flex_shrink_0()
+                        .when(current_sub_page.link.in_json, |this| {
+                            this.child(
+                                Button::new("open-in-settings-file", "Edit in settings.json")
+                                    .tab_index(0_isize)
+                                    .style(ButtonStyle::OutlinedGhost)
+                                    .tooltip(Tooltip::for_action_title_in(
+                                        "Edit in settings.json",
+                                        &OpenCurrentFile,
+                                        &self.focus_handle,
+                                    ))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.open_current_settings_file(window, cx);
+                                    })),
                             )
-                            .tab_index(0_isize)
-                            .style(ButtonStyle::OutlinedGhost)
-                            .tooltip(Tooltip::for_action_title_in(
-                                localization::text(cx, "settings-edit-json"),
-                                &OpenCurrentFile,
-                                &self.focus_handle,
-                            ))
-                            .on_click(cx.listener(
-                                |this, _, window, cx| {
-                                    this.open_current_settings_file(window, cx);
-                                },
-                            )),
-                        ),
-                    )
-                })
+                        })
+                        .when(is_llm_providers_page, |this| {
+                            this.child(pages::render_add_llm_provider_popover(self, window, cx))
+                        })
+                        .when(is_skills_page, |this| {
+                            this.child(
+                                Button::new("open-skill-creator", "Create Skill")
+                                    .tab_index(0_isize)
+                                    .style(ButtonStyle::OutlinedGhost)
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.open_skill_creator_sub_page(
+                                            pages::SkillCreatorOpenMode::Form,
+                                            window,
+                                            cx,
+                                        );
+                                    })),
+                            )
+                        })
+                        .when(is_external_agents_page, |this| {
+                            this.child(pages::render_add_agent_popover(self, window, cx))
+                        })
+                        .when(is_mcp_servers_page, |this| {
+                            this.child(pages::render_add_server_popover(self, window, cx))
+                        }),
+                )
                 .into_any_element();
 
             let active_page_render_fn = &current_sub_page.link.render;
@@ -5297,10 +4381,14 @@ impl SettingsWindow {
             SettingsStore::global(cx).error_for_file(self.current_file.to_settings())
         {
             fn banner(
-                label: SharedString,
+                label: &'static str,
                 error: String,
+                shown_errors: &mut HashSet<String>,
                 cx: &mut Context<SettingsWindow>,
             ) -> impl IntoElement {
+                if shown_errors.insert(error.clone()) {
+                    telemetry::event!("Settings Error Shown", label = label, error = &error);
+                }
                 Banner::new()
                     .severity(Severity::Warning)
                     .child(
@@ -5312,7 +4400,7 @@ impl SettingsWindow {
                     )
                     .action_slot(
                         div().pr_1().pb_1().child(
-                            Button::new("fix-in-json", localization::text(cx, "settings-fix-json"))
+                            Button::new("fix-in-json", "Fix in settings.json")
                                 .tab_index(0_isize)
                                 .style(ButtonStyle::Tinted(ui::TintColor::Warning))
                                 .on_click(cx.listener(|this, _, window, cx| {
@@ -5329,29 +4417,27 @@ impl SettingsWindow {
                 .gap_2()
                 .when_some(parse_error, |this, err| {
                     this.child(banner(
-                        localization::text(cx, "settings-load-failed"),
+                        "Failed to load your settings. Some values may be incorrect and changes may be lost.",
                         err,
+                        &mut self.shown_errors,
                         cx,
                     ))
                 })
                 .map(|this| match &error.migration_status {
                     settings::MigrationStatus::Succeeded => this.child(banner(
-                        localization::text(cx, "settings-outdated"),
+                        "Your settings are out of date, and need to be updated.",
                         match &self.current_file {
-                            SettingsUiFile::User => {
-                                localization::text(cx, "settings-migrate-automatic")
-                            }
-                            SettingsUiFile::Server(_) | SettingsUiFile::Project(_) => {
-                                localization::text(cx, "settings-migrate-manual")
-                            }
-                        }
-                        .to_string(),
+                            SettingsUiFile::User => "They can be automatically migrated to the latest version.",
+                            SettingsUiFile::Server(_) | SettingsUiFile::Project(_)  => "They must be manually migrated to the latest version."
+                        }.to_string(),
+                        &mut self.shown_errors,
                         cx,
                     )),
                     settings::MigrationStatus::Failed { error: err } if !parse_failed => this
                         .child(banner(
-                            localization::text(cx, "settings-migration-failed"),
+                            "Your settings file is out of date, automatic migration failed",
                             err.clone(),
+                            &mut self.shown_errors,
                             cx,
                         )),
                     _ => this,
@@ -5381,55 +4467,81 @@ impl SettingsWindow {
                         v_flex()
                             .my_0p5()
                             .gap_0p5()
-                            .child(Label::new(localization::text(
-                                cx,
-                                "settings-restricted-mode",
-                            )))
+                            .child(Label::new("Restricted Mode"))
                             .child(
-                                Label::new(localization::text(cx, "settings-restricted-detail"))
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
+                                Label::new(
+                                    if paths::APP_NAME == "Zed" {
+                                        "This project is in restricted mode. Some project settings may not apply."
+                                    } else {
+                                        "This workspace is in Restricted Mode. Some workspace settings may not apply."
+                                    },
+                                )
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
                             ),
                     )
                     .action_slot(
                         div().pr_2().pb_1().child(
-                            Button::new(
-                                "manage-trust",
-                                localization::text(cx, "settings-manage-trust"),
-                            )
-                            .style(ButtonStyle::Tinted(ui::TintColor::Warning))
-                            .on_click(cx.listener(
-                                move |_this, _, window, cx| {
+                            Button::new("manage-trust", "Manage Trust")
+                                .style(ButtonStyle::Tinted(ui::TintColor::Warning))
+                                .on_click(cx.listener(move |_this, _, window, cx| {
                                     if let Some(original_window) = original_window {
                                         original_window
                                             .update(cx, |multi_workspace, window, cx| {
-                                                multi_workspace.workspace().update(
-                                                    cx,
-                                                    |workspace, cx| {
+                                                multi_workspace
+                                                    .workspace()
+                                                    .update(cx, |workspace, cx| {
                                                         workspace
                                                             .show_worktree_trust_security_modal(
                                                                 true, window, cx,
                                                             );
-                                                    },
-                                                );
+                                                    });
                                             })
                                             .log_err();
                                     }
                                     // Close the settings window
                                     window.remove_window();
-                                },
-                            )),
+                                })),
                         ),
                     )
                     .into_any_element();
             }
         }
 
+        let design_system = DesignSystemSettings::get_global(cx);
+        let canvas_density = design_system.density;
+        let canvas_contrast = design_system.contrast;
+        let content_background = canvas_settings_search_background(canvas_contrast, cx);
+        let content_padding_top = match canvas_density {
+            settings::CanvasDensity::Compact => px(16.),
+            settings::CanvasDensity::Balanced => px(24.),
+            settings::CanvasDensity::Spacious => px(32.),
+        };
+        let content_gap = match canvas_density {
+            settings::CanvasDensity::Compact => px(12.),
+            settings::CanvasDensity::Balanced => px(16.),
+            settings::CanvasDensity::Spacious => px(22.),
+        };
+        let header_gap = match canvas_density {
+            settings::CanvasDensity::Compact => px(6.),
+            settings::CanvasDensity::Balanced => px(8.),
+            settings::CanvasDensity::Spacious => px(11.),
+        };
+
         v_flex()
             .id("settings-ui-page")
             .on_action(cx.listener(|this, _: &menu::SelectNext, window, cx| {
                 if !this.sub_page_stack.is_empty() {
+                    // Keep Tab navigation within the sub-page content. Global
+                    // `focus_next` would otherwise wrap past the last control to
+                    // the navbar; instead, when focus leaves the content region we
+                    // wrap back to the first content tab stop.
+                    let content_handle = this.content_focus_handle.focus_handle(cx);
                     window.focus_next(cx);
+                    if !content_handle.contains_focused(window, cx) {
+                        content_handle.focus(window, cx);
+                        window.focus_next(cx);
+                    }
                     return;
                 }
                 for (logical_index, (actual_index, _)) in this.visible_page_items().enumerate() {
@@ -5505,15 +4617,15 @@ impl SettingsWindow {
                 )
             })
             .track_focus(&self.content_focus_handle.focus_handle(cx))
-            .pt_6()
-            .gap_4()
+            .pt(content_padding_top)
+            .gap(content_gap)
             .flex_1()
             .min_w_0()
-            .bg(cx.theme().colors().editor_background)
+            .bg(content_background)
             .child(
                 v_flex()
-                    .px_8()
-                    .gap_2()
+                    .px(canvas_settings_row_padding_x(canvas_density))
+                    .gap(header_gap)
                     .child(page_header)
                     .child(warning_banner)
                     .child(restricted_banner),
@@ -5532,7 +4644,11 @@ impl SettingsWindow {
     /// This function will create a new settings file if one doesn't exist
     /// if the current file is a project settings with a valid worktree id
     /// We do this because the settings ui allows initializing project settings
-    fn open_current_settings_file(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(crate) fn open_current_settings_file(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         match &self.current_file {
             SettingsUiFile::User => {
                 let Some(original_window) = self.original_window else {
@@ -5592,7 +4708,7 @@ impl SettingsWindow {
                 } else {
                     Some(worktree.update(cx, |tree, cx| {
                         tree.create_entry(
-                            settings_path.clone(),
+                            settings_path.clone().into(),
                             false,
                             Some(initial_project_settings_content().as_bytes().to_vec()),
                             cx,
@@ -5602,7 +4718,7 @@ impl SettingsWindow {
 
                 let worktree_id = *worktree_id;
 
-                // TODO: move dez::open_local_file() APIs to this crate, and
+                // TODO: move zed::open_local_file() APIs to this crate, and
                 // re-implement the "initial_contents" behavior
                 let workspace_weak = corresponding_workspace.downgrade();
                 workspace_window
@@ -5671,6 +4787,7 @@ impl SettingsWindow {
         window: &mut Window,
         cx: &mut Context<SettingsWindow>,
     ) {
+        self.sandbox_host_validation_error = None;
         self.sub_page_stack
             .push(SubPage::new(sub_page_link, section_header));
         self.content_focus_handle.focus_handle(cx).focus(window, cx);
@@ -5684,6 +4801,7 @@ impl SettingsWindow {
         title: impl Into<SharedString>,
         section_header: impl Into<SharedString>,
         json_path: Option<&'static str>,
+        in_json: bool,
         render: fn(
             &SettingsWindow,
             &ScrollHandle,
@@ -5698,12 +4816,109 @@ impl SettingsWindow {
             title: title.into(),
             r#type: SubPageType::default(),
             description: None,
+            search_aliases: &[],
             json_path,
-            in_json: true,
+            in_json,
             files: USER,
             render,
         };
         self.push_sub_page(sub_page_link, section_header.into(), window, cx);
+    }
+
+    pub(crate) fn skill_creator_page(&self) -> Option<Entity<pages::SkillCreatorPage>> {
+        self.skill_creator_page
+            .as_ref()
+            .map(|(page, _)| page.clone())
+    }
+
+    /// If the creator is already the active sub-page, the open mode is applied
+    /// to the existing form instead
+    pub fn open_skill_creator_sub_page(
+        &mut self,
+        open_mode: pages::SkillCreatorOpenMode,
+        window: &mut Window,
+        cx: &mut Context<SettingsWindow>,
+    ) {
+        let creator_is_active_sub_page = self
+            .sub_page_stack
+            .last()
+            .is_some_and(|sub_page| sub_page.link.r#type == SubPageType::SkillCreator);
+
+        if creator_is_active_sub_page && let Some((page, _)) = &self.skill_creator_page {
+            let page = page.clone();
+            page.update(cx, |page, cx| page.apply_open_mode(open_mode, window, cx));
+            return;
+        }
+
+        let settings_window = cx.weak_entity();
+        let page = cx.new(|cx| pages::SkillCreatorPage::new(settings_window, window, cx));
+
+        let subscription =
+            cx.subscribe_in(
+                &page,
+                window,
+                |this, _page, event: &pages::SkillCreatorEvent, window, cx| match event {
+                    pages::SkillCreatorEvent::Dismissed | pages::SkillCreatorEvent::Saved => {
+                        if this.sub_page_stack.last().is_some_and(|sub_page| {
+                            sub_page.link.r#type == SubPageType::SkillCreator
+                        }) {
+                            this.pop_sub_page(window, cx);
+                        }
+                    }
+                },
+            );
+
+        self.skill_creator_page = Some((page.clone(), subscription));
+
+        let sub_page_link = SubPageLink {
+            title: "Create Skill".into(),
+            r#type: SubPageType::SkillCreator,
+            description: None,
+            search_aliases: &[],
+            json_path: None,
+            in_json: false,
+            files: USER | PROJECT,
+            render: pages::render_skill_creator_page,
+        };
+
+        self.push_sub_page(sub_page_link, "Agent".into(), window, cx);
+
+        let creating_from_url = !matches!(open_mode, pages::SkillCreatorOpenMode::Url { .. });
+        page.update(cx, |page, cx| {
+            page.apply_open_mode(open_mode, window, cx);
+        });
+        if creating_from_url {
+            let name_editor_focus_handle = page.read(cx).name_editor_focus_handle(cx);
+            window.focus(&name_editor_focus_handle, cx);
+        }
+    }
+
+    pub fn navigate_to_skill_creator(
+        &mut self,
+        open_mode: pages::SkillCreatorOpenMode,
+        window: &mut Window,
+        cx: &mut Context<SettingsWindow>,
+    ) {
+        self.sub_page_stack.clear();
+        let skills_page_index = self.pages.iter().position(|page| {
+            page.items.iter().any(|item| {
+                matches!(
+                    item,
+                    SettingsPageItem::SubPageLink(link)
+                        if link.json_path == Some(AGENT_SKILLS_SETTINGS_PATH)
+                )
+            })
+        });
+        if let Some(page_index) = skills_page_index
+            && let Some(navbar_entry_index) = self
+                .navbar_entries
+                .iter()
+                .position(|entry| entry.page_index == page_index && entry.is_root)
+        {
+            self.open_navbar_entry_page(navbar_entry_index);
+        }
+        self.navigate_to_sub_page(AGENT_SKILLS_SETTINGS_PATH, window, cx);
+        self.open_skill_creator_sub_page(open_mode, window, cx);
     }
 
     /// Navigate to a sub-page by its json_path.
@@ -5724,7 +4939,7 @@ impl SettingsWindow {
                             .take(item_index)
                             .rev()
                             .find_map(|item| item.header_text().map(SharedString::new_static))
-                            .unwrap_or_else(|| localization::text(cx, "settings-default-section"));
+                            .unwrap_or_else(|| "Settings".into());
 
                         self.push_sub_page(sub_page_link.clone(), section_header, window, cx);
                         return true;
@@ -5750,7 +4965,6 @@ impl SettingsWindow {
             for (item_index, item) in page.items.iter().enumerate() {
                 let item_json_path = match item {
                     SettingsPageItem::SettingItem(setting_item) => setting_item.field.json_path(),
-                    SettingsPageItem::UserLanguageSetting(_) => Some("ui_language"),
                     SettingsPageItem::DynamicItem(dynamic_item) => {
                         dynamic_item.discriminant.field.json_path()
                     }
@@ -5778,11 +4992,22 @@ impl SettingsWindow {
         false
     }
 
-    fn pop_sub_page(&mut self, window: &mut Window, cx: &mut Context<SettingsWindow>) {
+    pub(crate) fn pop_sub_page(&mut self, window: &mut Window, cx: &mut Context<SettingsWindow>) {
         self.regex_validation_error = None;
-        self.sub_page_stack.pop();
+        self.sandbox_host_validation_error = None;
+        if let Some(popped) = self.sub_page_stack.pop()
+            && popped.link.r#type == SubPageType::SkillCreator
+        {
+            self.skill_creator_page = None;
+        }
         self.content_focus_handle.focus_handle(cx).focus(window, cx);
         cx.notify();
+    }
+
+    pub(crate) fn active_project(&self, cx: &App) -> Option<Entity<Project>> {
+        let original_window = self.original_window.as_ref()?;
+        let multi_workspace = original_window.read(cx).ok()?;
+        Some(multi_workspace.workspace().read(cx).project().clone())
     }
 
     fn focus_file_at_index(&mut self, index: usize, window: &mut Window, cx: &mut App) {
@@ -5849,6 +5074,8 @@ impl SettingsWindow {
 impl Render for SettingsWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui_font = theme_settings::setup_ui_font(window, cx);
+        let canvas_contrast = DesignSystemSettings::get_global(cx).contrast;
+        let settings_background = canvas_settings_background(canvas_contrast, cx);
 
         client_side_decorations(
             v_flex()
@@ -5921,7 +5148,7 @@ impl Render for SettingsWindow {
                         .flex_1()
                         .min_h_0()
                         .font(ui_font)
-                        .bg(cx.theme().colors().background)
+                        .bg(settings_background)
                         .text_color(cx.theme().colors().text)
                         .when(!cfg!(target_os = "macos"), |this| {
                             this.border_t_1().border_color(cx.theme().colors().border)
@@ -5931,34 +5158,38 @@ impl Render for SettingsWindow {
                 ),
             window,
             cx,
-            Tiling::default(),
         )
     }
 }
 
-fn all_projects(
+pub(crate) fn all_projects(
     window: Option<&WindowHandle<MultiWorkspace>>,
     cx: &App,
 ) -> impl Iterator<Item = Entity<Project>> {
     let mut seen_project_ids = std::collections::HashSet::new();
-    let app_state = workspace::AppState::global(cx);
-    app_state
-        .workspace_store
-        .read(cx)
-        .workspaces()
-        .filter_map(|weak| weak.upgrade())
-        .map(|workspace: Entity<Workspace>| workspace.read(cx).project().clone())
-        .chain(
-            window
-                .and_then(|handle| handle.read(cx).ok())
-                .into_iter()
-                .flat_map(|multi_workspace| {
-                    multi_workspace
-                        .workspaces()
-                        .map(|workspace| workspace.read(cx).project().clone())
-                        .collect::<Vec<_>>()
-                }),
-        )
+    let projects = if let Some(handle) = window {
+        handle
+            .read(cx)
+            .ok()
+            .map(|multi_workspace| {
+                multi_workspace
+                    .workspaces()
+                    .map(|workspace| workspace.read(cx).project().clone())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    } else {
+        workspace::AppState::global(cx)
+            .workspace_store
+            .read(cx)
+            .workspaces()
+            .filter_map(|weak| weak.upgrade())
+            .map(|workspace: Entity<Workspace>| workspace.read(cx).project().clone())
+            .collect()
+    };
+
+    projects
+        .into_iter()
         .filter(move |project| seen_project_ids.insert(project.entity_id()))
 }
 
@@ -6009,11 +5240,13 @@ fn open_user_settings_in_workspace(
 
 fn update_settings_file(
     file: SettingsUiFile,
-    _file_name: Option<&'static str>,
+    file_name: Option<&'static str>,
     window: &mut Window,
     cx: &mut App,
     update: impl 'static + Send + FnOnce(&mut SettingsContent, &App),
 ) -> Result<()> {
+    telemetry::event!("Settings Change", setting = file_name, type = file.setting_type());
+
     match file {
         SettingsUiFile::Project((worktree_id, rel_path)) => {
             let rel_path = rel_path.join(paths::local_settings_file_relative_path());
@@ -6021,7 +5254,7 @@ fn update_settings_file(
                 anyhow::bail!("No settings window found");
             };
 
-            update_project_setting_file(worktree_id, rel_path, update, settings_window, cx)
+            update_project_setting_file(worktree_id, rel_path.into(), update, settings_window, cx)
         }
         SettingsUiFile::User => {
             // todo(settings_ui) error?
@@ -6182,6 +5415,8 @@ fn update_project_setting_file(
     Ok(())
 }
 
+/// Derives a human-readable label for assistive technology from a setting's
+/// JSON path, e.g. `"buffer_font_size"` becomes `"Buffer Font Size"`.
 struct CurrentSettingsValue<'a, T> {
     value: &'a T,
     disabled: bool,
@@ -6191,14 +5426,21 @@ fn get_current_value<'a, T>(
     settings_store: &'a SettingsStore,
     file: &SettingsUiFile,
     field: &'a SettingField<T>,
-    _cx: &'a App,
+    cx: &'a App,
 ) -> Option<CurrentSettingsValue<'a, T>> {
+    let user_store = AppState::global(cx).user_store.read(cx);
+    let org_config = user_store.current_organization_configuration();
+
     let (_file, value) = settings_store.get_value_from_file(file.to_settings(), field.pick);
     let value = value?;
 
+    let org_value = org_config
+        .zip(field.organization_override)
+        .and_then(|(org_config, org_override)| (org_override)(org_config));
+
     Some(CurrentSettingsValue {
-        disabled: false,
-        value,
+        disabled: org_value.is_some(),
+        value: org_value.unwrap_or(&value),
     })
 }
 
@@ -6206,21 +5448,49 @@ fn render_text_field<T: From<String> + Into<String> + AsRef<str> + Clone>(
     field: SettingField<T>,
     file: SettingsUiFile,
     metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
     _window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, initial_text) =
         SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
-    let initial_text = initial_text.filter(|s| !s.as_ref().is_empty());
+    let initial_text = if metadata.is_some_and(|metadata| metadata.treat_missing_text_as_empty) {
+        Some(
+            initial_text
+                .map(|text| text.as_ref().to_string())
+                .unwrap_or_default(),
+        )
+    } else {
+        initial_text
+            .filter(|text| !text.as_ref().is_empty())
+            .map(|text| text.as_ref().to_string())
+    };
 
-    SettingsInputField::new()
+    // The JSON path uniquely identifies the setting this field edits, making
+    // it a stable, collision-free element ID within the page.
+    SettingsInputField::new(field.json_path.unwrap_or("settings-text-field"))
         .tab_index(0)
-        .when_some(initial_text, |editor, text| {
-            editor.with_initial_text(text.as_ref().to_string())
+        .aria_label(title)
+        .when(!description.is_empty(), |editor| {
+            editor.aria_description(description)
         })
+        .when_some(initial_text, |editor, text| editor.with_initial_text(text))
         .when_some(
             metadata.and_then(|metadata| metadata.placeholder),
             |editor, placeholder| editor.with_placeholder(placeholder),
+        )
+        .when(
+            metadata.is_some_and(|metadata| metadata.display_confirm_button),
+            |editor| editor.display_confirm_button(),
+        )
+        .when(
+            metadata.is_some_and(|metadata| metadata.display_clear_button),
+            |editor| editor.display_clear_button(),
+        )
+        .when(
+            metadata.is_some_and(|metadata| metadata.confirm_on_focus_out),
+            |editor| editor.confirm_on_focus_out(),
         )
         .on_confirm({
             move |new_text, window, cx| {
@@ -6243,6 +5513,8 @@ fn render_toggle_button<B: Into<bool> + From<bool> + Copy>(
     field: SettingField<B>,
     file: SettingsUiFile,
     _metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
     _window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
@@ -6259,19 +5531,19 @@ fn render_toggle_button<B: Into<bool> + From<bool> + Copy>(
 
     Switch::new("toggle_button", toggle_state)
         .tab_index(0_isize)
+        .aria_label(title)
+        .when(!description.is_empty(), |this| {
+            this.aria_description(description)
+        })
         .disabled(disabled)
         .on_click({
             move |state, window, cx| {
+                telemetry::event!("Settings Change", setting = field.json_path, type = file.setting_type());
+
                 let state = *state == ui::ToggleState::Selected;
-                update_settings_file(
-                    file.clone(),
-                    field.json_path,
-                    window,
-                    cx,
-                    move |settings, app| {
-                        (field.write)(settings, Some(state.into()), app);
-                    },
-                )
+                update_settings_file(file.clone(), field.json_path, window, cx, move |settings, app| {
+                    (field.write)(settings, Some(state.into()), app);
+                })
                 .log_err(); // todo(settings_ui) don't log err
             }
         })
@@ -6282,6 +5554,8 @@ fn render_editable_number_field<T: NumberFieldType + Send + Sync>(
     field: SettingField<T>,
     file: SettingsUiFile,
     _metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
     window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
@@ -6296,6 +5570,10 @@ fn render_editable_number_field<T: NumberFieldType + Send + Sync>(
     NumberField::new(id, value, window, cx)
         .mode(NumberFieldMode::Edit, cx)
         .tab_index(0_isize)
+        .aria_label(title)
+        .when(!description.is_empty(), |this| {
+            this.aria_description(description)
+        })
         .on_change({
             move |value, window, cx| {
                 let value = *value;
@@ -6318,7 +5596,80 @@ fn render_dropdown<T>(
     field: SettingField<T>,
     file: SettingsUiFile,
     metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
     _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement
+where
+    T: strum::VariantArray + strum::VariantNames + Copy + PartialEq + Send + Sync + 'static,
+{
+    render_dropdown_with_optional_icons(field, file, metadata, title, description, None, cx)
+}
+
+fn render_terminal_launcher_dropdown(
+    field: SettingField<settings::TerminalLauncher>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    render_dropdown_with_optional_icons(
+        field,
+        file,
+        metadata,
+        title,
+        description,
+        Some(Rc::new(terminal_launcher_icon)),
+        cx,
+    )
+}
+
+fn workspace_startup_intent_icon(
+    intent: settings::WorkspaceStartupIntent,
+    terminal_launcher: settings::TerminalLauncher,
+) -> IconName {
+    match intent {
+        settings::WorkspaceStartupIntent::Focus => IconName::Maximize,
+        settings::WorkspaceStartupIntent::Direct => IconName::FolderOpen,
+        settings::WorkspaceStartupIntent::Agentic => terminal_launcher_icon(terminal_launcher),
+        settings::WorkspaceStartupIntent::Review => IconName::GitBranch,
+        settings::WorkspaceStartupIntent::Debug => IconName::Debug,
+    }
+}
+
+fn render_workspace_startup_intent_dropdown(
+    field: SettingField<settings::WorkspaceStartupIntent>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    _window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    let terminal_launcher = AgentSettings::get_global(cx).terminal_launcher;
+    let icon_for_value: Rc<dyn Fn(settings::WorkspaceStartupIntent) -> IconName> =
+        Rc::new(move |intent| workspace_startup_intent_icon(intent, terminal_launcher));
+    render_dropdown_with_optional_icons(
+        field,
+        file,
+        metadata,
+        title,
+        description,
+        Some(icon_for_value),
+        cx,
+    )
+}
+
+fn render_dropdown_with_optional_icons<T>(
+    field: SettingField<T>,
+    file: SettingsUiFile,
+    metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    icon_for_value: Option<Rc<dyn Fn(T) -> IconName>>,
     cx: &mut App,
 ) -> AnyElement
 where
@@ -6352,6 +5703,13 @@ where
             .log_err(); // todo(settings_ui) don't log err
         }
     })
+    .aria_label(title)
+    .when_some(icon_for_value, |this, icon_for_value| {
+        this.icon_for_value(move |value| icon_for_value(value))
+    })
+    .when(!description.is_empty(), |this| {
+        this.aria_description(description)
+    })
     .disabled(disabled)
     .tab_index(0)
     .title_case(should_do_titlecase)
@@ -6360,6 +5718,7 @@ where
 
 fn render_picker_trigger_button(id: SharedString, label: SharedString) -> Button {
     Button::new(id, label)
+        .aria_role(Role::ComboBox)
         .tab_index(0_isize)
         .style(ButtonStyle::Outlined)
         .size(ButtonSize::Medium)
@@ -6370,11 +5729,230 @@ fn render_picker_trigger_button(id: SharedString, label: SharedString) -> Button
         )
 }
 
+/// Wires the Expand/Collapse accessibility actions on a popover trigger button to
+/// the popover handle, so assistive technology can open and close the popover
+/// (used by UIA on Windows and AX on macOS; Linux/AT-SPI uses the click action).
+pub(crate) fn wire_settings_popover_trigger_a11y<M: gpui::ManagedView>(
+    button: Button,
+    handle: ui::PopoverMenuHandle<M>,
+) -> Button {
+    let expanded = handle.is_deployed();
+    let show_handle = handle.clone();
+    let hide_handle = handle;
+    button
+        .aria_expanded(expanded)
+        .on_a11y_action(gpui::accesskit::Action::Expand, move |_, window, cx| {
+            show_handle.show(window, cx);
+        })
+        .on_a11y_action(gpui::accesskit::Action::Collapse, move |_, _window, cx| {
+            hide_handle.hide(cx);
+        })
+}
+
+pub(crate) fn persistent_settings_popover_handle<M: gpui::ManagedView>(
+    owner_id: impl Into<gpui::ElementId>,
+    window: &mut Window,
+    cx: &mut App,
+) -> ui::PopoverMenuHandle<M> {
+    let owner_id = owner_id.into();
+    window
+        .use_keyed_state((owner_id, "settings-popover-handle"), cx, |_, _| {
+            ui::PopoverMenuHandle::default()
+        })
+        .read(cx)
+        .clone()
+}
+
+fn resolve_language_model_selection(
+    selection: &settings::LanguageModelSelection,
+    cx: &App,
+) -> Option<ConfiguredModel> {
+    let provider_id = LanguageModelProviderId::from(selection.provider.0.clone());
+    let model_id = LanguageModelId::from(selection.model.clone());
+    let provider = LanguageModelRegistry::read_global(cx).provider(&provider_id)?;
+    let model = provider
+        .provided_models(cx)
+        .into_iter()
+        .find(|model| model.id() == model_id)?;
+    Some(ConfiguredModel { provider, model })
+}
+
+fn render_subagent_model_picker(
+    field: SettingField<Option<settings::LanguageModelSelection>>,
+    file: SettingsUiFile,
+    _metadata: Option<&SettingsFieldMetadata>,
+    title: &'static str,
+    description: &'static str,
+    window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    let default_option_label = SharedString::from("Same as parent");
+    let current_selection = SettingsStore::global(cx)
+        .get_value_from_file(file.to_settings(), field.pick)
+        .1
+        .and_then(|selection| selection.as_ref())
+        .cloned();
+    let current_model = current_selection
+        .as_ref()
+        .and_then(|selection| resolve_language_model_selection(selection, cx));
+    let current_label = match (&current_selection, &current_model) {
+        (_, Some(model)) => model.model.name().0,
+        (Some(selection), None) => {
+            format!("Unavailable: {}/{}", selection.provider.0, selection.model).into()
+        }
+        (None, None) => default_option_label,
+    };
+
+    let handle = persistent_settings_popover_handle::<LanguageModelSelector>(
+        field.json_path.unwrap_or("agent.default_model"),
+        window,
+        cx,
+    );
+    let model_picker = PopoverMenu::new("language-model-picker")
+        .trigger(wire_settings_popover_trigger_a11y(
+            render_picker_trigger_button(
+                "language_model_picker_trigger".into(),
+                current_label.clone(),
+            )
+            .aria_label(format!("{}: {}", title, current_label))
+            .when(!description.is_empty(), |this| {
+                this.aria_description(description)
+            }),
+            handle.clone(),
+        ))
+        .menu(move |window, cx| {
+            Some(cx.new(move |cx| {
+                language_model_selector(
+                    |cx| {
+                        AgentSettings::get_global(cx)
+                            .subagent_model
+                            .as_ref()
+                            .and_then(|selection| resolve_language_model_selection(selection, cx))
+                    },
+                    move |model, cx| {
+                        let current_selection = AgentSettings::get_global(cx)
+                            .subagent_model
+                            .as_ref()
+                            .filter(|selection| {
+                                selection.provider.0 == model.provider_id().0.as_ref()
+                                    && selection.model == model.id().0.as_ref()
+                            });
+                        let selection = language_model_to_selection(&model, current_selection);
+                        let fs = <dyn fs::Fs>::global(cx);
+                        settings::update_settings_file(fs, cx, move |settings, app| {
+                            (field.write)(settings, Some(Some(selection)), app);
+                        });
+                    },
+                    move |model, should_be_favorite, cx| {
+                        let fs = <dyn fs::Fs>::global(cx);
+                        agent_ui::toggle_favorite_model(model, should_be_favorite, fs, cx);
+                    },
+                    true,
+                    cx.focus_handle(),
+                    window,
+                    cx,
+                )
+            }))
+        })
+        .anchor(gpui::Anchor::TopLeft)
+        .offset(gpui::Point {
+            x: px(0.0),
+            y: px(2.0),
+        })
+        .with_handle(handle)
+        .into_any_element();
+
+    let Some(model) = current_model else {
+        return model_picker;
+    };
+    let effort_levels = model.model.supported_effort_levels();
+    if effort_levels.len() < 2 {
+        return model_picker;
+    }
+    let Some(selection) = current_selection else {
+        return model_picker;
+    };
+    let selected_effort = selection
+        .effort
+        .as_ref()
+        .and_then(|effort| {
+            effort_levels
+                .iter()
+                .find(|level| level.value.as_ref() == effort)
+        })
+        .cloned()
+        .or_else(|| model.model.default_effort_level());
+    let Some(selected_effort) = selected_effort else {
+        return model_picker;
+    };
+
+    let selected_effort_label = selected_effort.name.clone();
+    let selected_effort_value = selected_effort.value;
+    let effort_menu = ContextMenu::build(window, cx, move |mut menu, _window, _cx| {
+        for effort_level in effort_levels {
+            let is_selected = effort_level.value == selected_effort_value;
+            let effort_value = effort_level.value.clone();
+            let selection = selection.clone();
+            let file = file.clone();
+            menu.push_item(
+                ui::ContextMenuEntry::new(effort_level.name)
+                    .toggleable(IconPosition::End, is_selected)
+                    .handler(move |window, cx| {
+                        let mut selection = selection.clone();
+                        selection.effort = Some(effort_value.to_string());
+                        update_settings_file(
+                            file.clone(),
+                            field.json_path,
+                            window,
+                            cx,
+                            move |settings, app| {
+                                (field.write)(settings, Some(Some(selection)), app);
+                            },
+                        )
+                        .log_err();
+                    }),
+            );
+        }
+        menu
+    });
+    let effort_handle = persistent_settings_popover_handle::<ContextMenu>(
+        "agent.subagent_model.reasoning_effort",
+        window,
+        cx,
+    );
+
+    v_flex()
+        .gap_1()
+        .items_end()
+        .child(model_picker)
+        .child(
+            h_flex()
+                .gap_2()
+                .items_center()
+                .child(Label::new("Reasoning effort").size(LabelSize::Small))
+                .child(
+                    DropdownMenu::new(
+                        "subagent-model-effort-picker",
+                        selected_effort_label.clone(),
+                        effort_menu,
+                    )
+                    .style(DropdownStyle::Outlined)
+                    .trigger_size(ButtonSize::Compact)
+                    .aria_label("Default subagent reasoning effort")
+                    .aria_value(selected_effort_label)
+                    .handle(effort_handle),
+                ),
+        )
+        .into_any_element()
+}
+
 fn render_font_picker(
     field: SettingField<settings::FontFamilyName>,
     file: SettingsUiFile,
     _metadata: Option<&SettingsFieldMetadata>,
-    _window: &mut Window,
+    title: &'static str,
+    description: &'static str,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let current_value = SettingsStore::global(cx)
@@ -6383,10 +5961,22 @@ fn render_font_picker(
         .cloned()
         .map_or_else(|| SharedString::default(), |value| value.into_gpui());
 
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.font_family"),
+        window,
+        cx,
+    );
     PopoverMenu::new("font-picker")
-        .trigger(render_picker_trigger_button(
-            "font_family_picker_trigger".into(),
-            current_value.clone(),
+        .trigger(wire_settings_popover_trigger_a11y(
+            render_picker_trigger_button(
+                "font_family_picker_trigger".into(),
+                current_value.clone(),
+            )
+            .aria_label(title)
+            .when(!description.is_empty(), |this| {
+                this.aria_description(description)
+            }),
+            handle.clone(),
         ))
         .menu(move |window, cx| {
             let file = file.clone();
@@ -6417,7 +6007,7 @@ fn render_font_picker(
             x: px(0.0),
             y: px(2.0),
         })
-        .with_handle(ui::PopoverMenuHandle::default())
+        .with_handle(handle)
         .into_any_element()
 }
 
@@ -6425,7 +6015,9 @@ fn render_theme_picker(
     field: SettingField<settings::ThemeName>,
     file: SettingsUiFile,
     _metadata: Option<&SettingsFieldMetadata>,
-    _window: &mut Window,
+    title: &'static str,
+    description: &'static str,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -6434,10 +6026,19 @@ fn render_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.theme"),
+        window,
+        cx,
+    );
     PopoverMenu::new("theme-picker")
-        .trigger(render_picker_trigger_button(
-            "theme_picker_trigger".into(),
-            current_value.clone(),
+        .trigger(wire_settings_popover_trigger_a11y(
+            render_picker_trigger_button("theme_picker_trigger".into(), current_value.clone())
+                .aria_label(title)
+                .when(!description.is_empty(), |this| {
+                    this.aria_description(description)
+                }),
+            handle.clone(),
         ))
         .menu(move |window, cx| {
             Some(cx.new(|cx| {
@@ -6471,7 +6072,7 @@ fn render_theme_picker(
             x: px(0.0),
             y: px(2.0),
         })
-        .with_handle(ui::PopoverMenuHandle::default())
+        .with_handle(handle)
         .into_any_element()
 }
 
@@ -6479,7 +6080,9 @@ fn render_icon_theme_picker(
     field: SettingField<settings::IconThemeName>,
     file: SettingsUiFile,
     _metadata: Option<&SettingsFieldMetadata>,
-    _window: &mut Window,
+    title: &'static str,
+    description: &'static str,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     let (_, value) = SettingsStore::global(cx).get_value_from_file(file.to_settings(), field.pick);
@@ -6488,10 +6091,19 @@ fn render_icon_theme_picker(
         .map(|theme_name| theme_name.0.into())
         .unwrap_or_else(|| cx.theme().name.clone());
 
+    let handle = persistent_settings_popover_handle(
+        field.json_path.unwrap_or("appearance.icon_theme"),
+        window,
+        cx,
+    );
     PopoverMenu::new("icon-theme-picker")
-        .trigger(render_picker_trigger_button(
-            "icon_theme_picker_trigger".into(),
-            current_value.clone(),
+        .trigger(wire_settings_popover_trigger_a11y(
+            render_picker_trigger_button("icon_theme_picker_trigger".into(), current_value.clone())
+                .aria_label(title)
+                .when(!description.is_empty(), |this| {
+                    this.aria_description(description)
+                }),
+            handle.clone(),
         ))
         .menu(move |window, cx| {
             Some(cx.new(|cx| {
@@ -6525,7 +6137,7 @@ fn render_icon_theme_picker(
             x: px(0.0),
             y: px(2.0),
         })
-        .with_handle(ui::PopoverMenuHandle::default())
+        .with_handle(handle)
         .into_any_element()
 }
 
@@ -6533,6 +6145,116 @@ fn render_icon_theme_picker(
 pub mod test {
 
     use super::*;
+
+    #[test]
+    fn dez_settings_roots_use_semantic_native_icons() {
+        let expected = [
+            ("Workspaces & Terminals", IconName::Screen),
+            ("Agents", IconName::DezAgent),
+            ("Appearance", IconName::Sparkle),
+            ("Workspace & Privacy", IconName::Lock),
+            ("Keyboard & Vim", IconName::Keyboard),
+            ("Editor", IconName::Code),
+            ("Languages & Tools", IconName::ToolHammer),
+            ("Search & Files", IconName::FolderSearch),
+            ("Navigation & Layout", IconName::Split),
+            ("Workspace Tools", IconName::ListTree),
+            ("Debugger", IconName::Debug),
+            ("Version Control", IconName::GitBranch),
+            ("Network", IconName::Server),
+            ("Advanced", IconName::Settings),
+        ];
+
+        for (page_title, icon) in expected {
+            assert_eq!(dez_settings_nav_icon("Dez", page_title), Some(icon));
+            assert_eq!(dez_settings_nav_icon("Zed", page_title), None);
+        }
+        assert_eq!(dez_settings_nav_icon("Dez", "Unknown"), None);
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Compact),
+            px(238.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Balanced),
+            px(250.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Dez", settings::CanvasDensity::Spacious),
+            px(264.)
+        );
+        assert_eq!(
+            canvas_settings_nav_width("Zed", settings::CanvasDensity::Spacious),
+            SIDEBAR_WIDTH
+        );
+        assert_eq!(
+            settings_content_accessibility_label("Dez", "Workspaces & Terminals"),
+            "Workspaces & Terminals Settings"
+        );
+        assert_eq!(
+            settings_content_accessibility_label("Zed", "Workspaces & Terminals"),
+            "Settings Content"
+        );
+    }
+
+    #[test]
+    fn workspace_startup_intents_use_native_destination_icons() {
+        use settings::WorkspaceStartupIntent::{Agentic, Debug, Direct, Focus, Review};
+
+        assert_eq!(
+            workspace_startup_intent_icon(Focus, settings::TerminalLauncher::NativeShell),
+            IconName::Maximize
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Direct, settings::TerminalLauncher::NativeShell),
+            IconName::FolderOpen
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Agentic, settings::TerminalLauncher::Codex),
+            IconName::AiOpenAi
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Agentic, settings::TerminalLauncher::Tmux),
+            IconName::SplitAlt
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Review, settings::TerminalLauncher::NativeShell),
+            IconName::GitBranch
+        );
+        assert_eq!(
+            workspace_startup_intent_icon(Debug, settings::TerminalLauncher::NativeShell),
+            IconName::Debug
+        );
+    }
+
+    #[test]
+    fn workspace_settings_actions_are_not_exposed_as_inert_controls() {
+        assert!(action_link_available(ActionLinkScope::App, false, false));
+        assert!(action_link_available(ActionLinkScope::App, true, false));
+        assert!(!action_link_available(
+            ActionLinkScope::Window,
+            false,
+            false
+        ));
+        assert!(action_link_available(ActionLinkScope::Window, true, false));
+        assert!(!action_link_available(
+            ActionLinkScope::WorkspaceRoot,
+            true,
+            false
+        ));
+        assert!(action_link_available(
+            ActionLinkScope::WorkspaceRoot,
+            true,
+            true
+        ));
+        assert_eq!(
+            action_link_unavailable_copy(ActionLinkScope::Window),
+            Some(WINDOW_ACTION_UNAVAILABLE_COPY)
+        );
+        assert_eq!(
+            action_link_unavailable_copy(ActionLinkScope::WorkspaceRoot),
+            Some(WORKSPACE_ACTION_UNAVAILABLE_COPY)
+        );
+    }
 
     impl SettingsWindow {
         fn navbar_entry(&self) -> usize {
@@ -6549,6 +6271,7 @@ pub mod test {
             Self {
                 title_bar: None,
                 original_window: None,
+                workspace_context_subscription: None,
                 worktree_root_dirs: HashMap::default(),
                 files: Vec::default(),
                 current_file: SettingsUiFile::User,
@@ -6581,8 +6304,21 @@ pub mod test {
                 files_focus_handle: cx.focus_handle(),
                 search_index: None,
                 list_state: ListState::new(0, gpui::ListAlignment::Top, px(0.0)),
+                shown_errors: HashSet::default(),
+                hidden_deleted_skill_directory_paths: HashSet::default(),
                 regex_validation_error: None,
+                sandbox_host_validation_error: None,
                 last_copied_link_path: None,
+                provider_configuration_views: HashMap::default(),
+                configuring_provider: None,
+                last_copied_skill_directory_path: None,
+                llm_provider_form: None,
+                llm_provider_add_focus_handle: cx.focus_handle(),
+                mcp_server_form: None,
+                mcp_add_server_focus_handle: cx.focus_handle(),
+                custom_agent_form: None,
+                external_agent_add_focus_handle: cx.focus_handle(),
+                skill_creator_page: None,
             }
         }
     }
@@ -6599,12 +6335,11 @@ pub mod test {
     }
 
     pub fn register_settings(cx: &mut App) {
-        localization::init(localization::UiLanguage::English, cx)
-            .expect("test localization must load");
         settings::init(cx);
         theme_settings::init(theme::LoadThemes::JustBase, cx);
         editor::init(cx);
         menu::init();
+        language_model::init(cx);
     }
 
     fn parse(input: &'static str, window: &mut Window, cx: &mut App) -> SettingsWindow {
@@ -6676,6 +6411,7 @@ pub mod test {
         let mut settings_window = SettingsWindow {
             title_bar: None,
             original_window: None,
+            workspace_context_subscription: None,
             worktree_root_dirs: HashMap::default(),
             files: Vec::default(),
             current_file: crate::SettingsUiFile::User,
@@ -6708,8 +6444,21 @@ pub mod test {
             files_focus_handle: cx.focus_handle(),
             search_index: None,
             list_state: ListState::new(0, gpui::ListAlignment::Top, px(0.0)),
+            shown_errors: HashSet::default(),
+            hidden_deleted_skill_directory_paths: HashSet::default(),
             regex_validation_error: None,
+            sandbox_host_validation_error: None,
             last_copied_link_path: None,
+            provider_configuration_views: HashMap::default(),
+            configuring_provider: None,
+            last_copied_skill_directory_path: None,
+            llm_provider_form: None,
+            llm_provider_add_focus_handle: cx.focus_handle(),
+            mcp_server_form: None,
+            mcp_add_server_focus_handle: cx.focus_handle(),
+            custom_agent_form: None,
+            external_agent_add_focus_handle: cx.focus_handle(),
+            skill_creator_page: None,
         };
 
         settings_window.build_filter_table();
@@ -6986,7 +6735,7 @@ pub mod test {
     }
 
     #[gpui::test]
-    async fn test_settings_window_shows_worktrees_from_multiple_workspaces(
+    async fn test_settings_window_is_scoped_to_its_originating_window(
         cx: &mut gpui::TestAppContext,
     ) {
         use project::Project;
@@ -7031,8 +6780,9 @@ pub mod test {
 
         let project1 = cx.update(|cx| {
             Project::local(
-                app_state.http_client.clone(),
+                app_state.client.clone(),
                 app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
                 app_state.languages.clone(),
                 app_state.fs.clone(),
                 None,
@@ -7056,8 +6806,9 @@ pub mod test {
 
         let project2 = cx.update(|cx| {
             Project::local(
-                app_state.http_client.clone(),
+                app_state.client.clone(),
                 app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
                 app_state.languages.clone(),
                 app_state.fs.clone(),
                 None,
@@ -7085,6 +6836,7 @@ pub mod test {
             });
             MultiWorkspace::new(workspace, window, cx)
         });
+        let workspace1_handle = cx.window_handle().downcast::<MultiWorkspace>().unwrap();
 
         let (_multi_workspace2, cx) = cx.add_window_view(|window, cx| {
             let workspace = cx.new(|cx| {
@@ -7115,16 +6867,8 @@ pub mod test {
                 .cloned()
                 .collect();
 
-            assert!(
-                worktree_names.iter().any(|name| name == "worktree_a"),
-                "Should contain worktree_a from workspace1, but found: {:?}",
-                worktree_names
-            );
-            assert!(
-                worktree_names.iter().any(|name| name == "worktree_b"),
-                "Should contain worktree_b from workspace1, but found: {:?}",
-                worktree_names
-            );
+            assert!(!worktree_names.iter().any(|name| name == "worktree_a"));
+            assert!(!worktree_names.iter().any(|name| name == "worktree_b"));
             assert!(
                 worktree_names.iter().any(|name| name == "worktree_c"),
                 "Should contain worktree_c from workspace2, but found: {:?}",
@@ -7133,8 +6877,8 @@ pub mod test {
 
             assert_eq!(
                 worktree_names.len(),
-                3,
-                "Should have exactly 3 worktrees from both workspaces, but found: {:?}",
+                1,
+                "Should include only the originating window's worktree, but found: {:?}",
                 worktree_names
             );
 
@@ -7155,10 +6899,88 @@ pub mod test {
                 project_files
             );
         });
+
+        settings_window.update(cx, |settings_window, cx| {
+            settings_window.update_workspace_context(None, cx);
+            assert_eq!(
+                settings_window.original_window,
+                Some(workspace2_handle),
+                "reopening Settings without a new Workspace owner must preserve its current action target"
+            );
+        });
+        settings_window.read_with(cx, |settings_window, cx| {
+            assert!(settings_window.has_live_window_context(cx));
+            assert!(settings_window.has_workspace_root_context(cx));
+        });
+
+        settings_window.update_in(cx, |settings_window, window, cx| {
+            settings_window.update_workspace_context(Some(workspace1_handle), cx);
+            settings_window.fetch_files(window, cx);
+        });
+
+        settings_window.read_with(cx, |settings_window, _| {
+            let worktree_names: Vec<_> = settings_window
+                .worktree_root_dirs
+                .values()
+                .cloned()
+                .collect();
+
+            assert!(worktree_names.iter().any(|name| name == "worktree_a"));
+            assert!(worktree_names.iter().any(|name| name == "worktree_b"));
+            assert!(!worktree_names.iter().any(|name| name == "worktree_c"));
+            assert_eq!(
+                worktree_names.len(),
+                2,
+                "reusing Settings from another window must replace, not merge, project scope"
+            );
+        });
+
+        let notify_count = Rc::new(RefCell::new(0usize));
+        let notify_counter = notify_count.clone();
+        let _notify_subscription = settings_window.update(cx, |_settings_window, cx| {
+            cx.observe_self(move |_, _| {
+                *notify_counter.borrow_mut() += 1;
+            })
+        });
+        cx.run_until_parked();
+
+        workspace1_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("originating Workspace window should remain available");
+        cx.run_until_parked();
+        assert!(
+            *notify_count.borrow() > 0,
+            "Settings must invalidate when its originating MultiWorkspace changes"
+        );
+
+        settings_window.update(cx, |settings_window, cx| {
+            settings_window.update_workspace_context(Some(workspace2_handle), cx);
+        });
+        cx.run_until_parked();
+        let notify_count_after_retarget = *notify_count.borrow();
+
+        workspace1_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("previous Workspace window should remain available");
+        cx.run_until_parked();
+        assert_eq!(
+            *notify_count.borrow(),
+            notify_count_after_retarget,
+            "Settings must stop observing a previous Workspace owner"
+        );
+
+        workspace2_handle
+            .update(cx, |_, _, cx| cx.notify())
+            .expect("new Workspace window should remain available");
+        cx.run_until_parked();
+        assert!(
+            *notify_count.borrow() > notify_count_after_retarget,
+            "Settings must observe its replacement Workspace owner"
+        );
     }
 
     #[gpui::test]
-    async fn test_settings_window_updates_when_new_workspace_created(
+    async fn test_settings_window_ignores_workspaces_created_in_other_windows(
         cx: &mut gpui::TestAppContext,
     ) {
         use project::Project;
@@ -7200,8 +7022,9 @@ pub mod test {
 
         let project1 = cx.update(|cx| {
             Project::local(
-                app_state.http_client.clone(),
+                app_state.client.clone(),
                 app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
                 app_state.languages.clone(),
                 app_state.fs.clone(),
                 None,
@@ -7249,8 +7072,9 @@ pub mod test {
 
         let project2 = cx.update(|_, cx| {
             Project::local(
-                app_state.http_client.clone(),
+                app_state.client.clone(),
                 app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
                 app_state.languages.clone(),
                 app_state.fs.clone(),
                 None,
@@ -7293,16 +7117,12 @@ pub mod test {
                 "Should contain worktree_a, but found: {:?}",
                 worktree_names
             );
-            assert!(
-                worktree_names.iter().any(|name| name == "worktree_b"),
-                "Should contain worktree_b from newly created workspace, but found: {:?}",
-                worktree_names
-            );
+            assert!(!worktree_names.iter().any(|name| name == "worktree_b"));
 
             assert_eq!(
                 worktree_names.len(),
-                2,
-                "Should have 2 worktrees after new workspace created, but found: {:?}",
+                1,
+                "Should remain scoped after another window creates a Workspace, but found: {:?}",
                 worktree_names
             );
 
@@ -7326,28 +7146,356 @@ pub mod test {
     }
 
     #[gpui::test]
-    fn settings_search_index_contains_english_and_chinese_terms(cx: &mut gpui::TestAppContext) {
-        let window = cx.add_empty_window();
-        window.update(|window, cx| {
-            register_settings(cx);
-            localization::set_language(localization::UiLanguage::SimplifiedChinese, cx);
-            let mut settings_window = parse("> General*", window, cx);
-            settings_window.pages[0].items = vec![SettingsPageItem::UserLanguageSetting(
-                user_language_setting(cx),
-            )]
-            .into_boxed_slice();
-            settings_window.build_filter_table();
-            settings_window.build_search_index(cx);
+    async fn test_skills_page_scope_switch_updates_displayed_skills(cx: &mut gpui::TestAppContext) {
+        use agent_skills::{
+            ProjectSkillGroup, Skill, SkillScopeId, SkillSource, load_skills_from_directory,
+        };
+        use project::Project;
+        use serde_json::json;
+        use std::path::Path;
 
-            let words = &settings_window
-                .search_index
-                .as_ref()
-                .expect("settings search index should be built")
-                .documents[0]
-                .words;
-            assert!(words.iter().any(|word| word == "language"));
-            assert!(words.iter().any(|word| word == "语言"));
+        cx.update(|cx| {
+            register_settings(cx);
         });
+
+        let app_state = cx.update(|cx| {
+            let app_state = AppState::test(cx);
+            AppState::set_global(app_state.clone(), cx);
+            app_state
+        });
+
+        let fake_fs = app_state.fs.as_fake();
+
+        fake_fs
+            .insert_tree(
+                "/global-skills",
+                json!({
+                    "global-skill": {
+                        "SKILL.md": "---\nname: global-skill\ndescription: A user level skill\n---\n\nGlobal instructions."
+                    }
+                }),
+            )
+            .await;
+
+        fake_fs
+            .insert_tree(
+                "/project",
+                json!({
+                    ".agents": {
+                        "skills": {
+                            "project-skill": {
+                                "SKILL.md": "---\nname: project-skill\ndescription: A project level skill\n---\n\nProject instructions."
+                            }
+                        }
+                    },
+                    "main.rs": "fn main() {}"
+                }),
+            )
+            .await;
+
+        let project = cx.update(|cx| {
+            Project::local(
+                app_state.client.clone(),
+                app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
+                app_state.languages.clone(),
+                app_state.fs.clone(),
+                None,
+                project::LocalProjectFlags::default(),
+                cx,
+            )
+        });
+
+        let (worktree, _) = project
+            .update(cx, |project, cx| {
+                project.find_or_create_worktree("/project", true, cx)
+            })
+            .await
+            .expect("Failed to create worktree");
+        let worktree_id = worktree.read_with(cx, |worktree, _| worktree.id());
+
+        // Load both skills from the fake filesystem the same way the agent
+        // does, then publish them as the global skill index.
+        let fs = app_state.fs.clone();
+        let global_skills: Vec<Skill> =
+            load_skills_from_directory(&fs, Path::new("/global-skills"), SkillSource::Global)
+                .await
+                .into_iter()
+                .map(|result| result.expect("global skill should load"))
+                .collect();
+        let project_skills: Vec<Skill> = load_skills_from_directory(
+            &fs,
+            Path::new("/project/.agents/skills"),
+            SkillSource::ProjectLocal {
+                worktree_id: SkillScopeId(worktree_id.to_usize()),
+                worktree_root_name: "project".into(),
+            },
+        )
+        .await
+        .into_iter()
+        .map(|result| result.expect("project skill should load"))
+        .collect();
+        assert_eq!(global_skills.len(), 1);
+        assert_eq!(project_skills.len(), 1);
+
+        cx.update(|cx| {
+            cx.set_global(SkillIndex {
+                global_skills,
+                project_skills: vec![ProjectSkillGroup {
+                    worktree_id: SkillScopeId(worktree_id.to_usize()),
+                    worktree_root_name: "project".into(),
+                    skills: project_skills,
+                }],
+            });
+        });
+
+        let (_multi_workspace, cx) = cx.add_window_view(|window, cx| {
+            let workspace = cx.new(|cx| {
+                Workspace::new(
+                    Default::default(),
+                    project.clone(),
+                    app_state.clone(),
+                    window,
+                    cx,
+                )
+            });
+            MultiWorkspace::new(workspace, window, cx)
+        });
+        let workspace_handle = cx.window_handle().downcast::<MultiWorkspace>().unwrap();
+
+        cx.run_until_parked();
+
+        let (settings_window, cx) = cx
+            .add_window_view(|window, cx| SettingsWindow::new(Some(workspace_handle), window, cx));
+
+        cx.run_until_parked();
+
+        settings_window.update_in(cx, |settings_window, window, cx| {
+            fn displayed_skill_names(settings_window: &SettingsWindow, cx: &App) -> Vec<String> {
+                crate::pages::displayed_skills(settings_window, cx)
+                    .iter()
+                    .map(|skill| skill.name.to_string())
+                    .collect()
+            }
+
+            assert_eq!(settings_window.current_file, SettingsUiFile::User);
+            assert!(
+                settings_window.navigate_to_sub_page(AGENT_SKILLS_SETTINGS_PATH, window, cx),
+                "Skills sub-page should exist"
+            );
+            assert_eq!(displayed_skill_names(settings_window, cx), ["global-skill"]);
+
+            let project_file_index = settings_window
+                .files
+                .iter()
+                .position(|(file, _)| file.worktree_id() == Some(worktree_id))
+                .expect("project settings file should be listed");
+            settings_window.change_file_in_sub_page(project_file_index, window, cx);
+
+            assert_eq!(
+                settings_window.current_file.worktree_id(),
+                Some(worktree_id)
+            );
+            assert_eq!(
+                settings_window.sub_page_stack.len(),
+                1,
+                "Skills sub-page should stay open when switching scope"
+            );
+            assert_eq!(settings_window.sub_page_stack[0].link.title, "Skills");
+            assert_eq!(
+                displayed_skill_names(settings_window, cx),
+                ["project-skill"]
+            );
+
+            let user_file_index = settings_window
+                .files
+                .iter()
+                .position(|(file, _)| file == &SettingsUiFile::User)
+                .expect("user settings file should be listed");
+            settings_window.change_file_in_sub_page(user_file_index, window, cx);
+
+            assert_eq!(settings_window.current_file, SettingsUiFile::User);
+            assert_eq!(settings_window.sub_page_stack.len(), 1);
+            assert_eq!(displayed_skill_names(settings_window, cx), ["global-skill"]);
+        });
+    }
+
+    #[gpui::test]
+    async fn test_open_skill_creator_navigates_to_sub_page(cx: &mut gpui::TestAppContext) {
+        use project::Project;
+
+        cx.update(|cx| {
+            register_settings(cx);
+        });
+
+        let app_state = cx.update(|cx| {
+            let app_state = AppState::test(cx);
+            AppState::set_global(app_state.clone(), cx);
+            app_state
+        });
+
+        app_state
+            .fs
+            .as_fake()
+            .insert_tree("/project", serde_json::json!({ "main.rs": "fn main() {}" }))
+            .await;
+
+        let project = cx.update(|cx| {
+            Project::local(
+                app_state.client.clone(),
+                app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
+                app_state.languages.clone(),
+                app_state.fs.clone(),
+                None,
+                project::LocalProjectFlags::default(),
+                cx,
+            )
+        });
+        project
+            .update(cx, |project, cx| {
+                project.find_or_create_worktree("/project", true, cx)
+            })
+            .await
+            .expect("Failed to create worktree");
+
+        let (_multi_workspace, cx) = cx.add_window_view(|window, cx| {
+            let workspace = cx.new(|cx| {
+                Workspace::new(
+                    Default::default(),
+                    project.clone(),
+                    app_state.clone(),
+                    window,
+                    cx,
+                )
+            });
+            MultiWorkspace::new(workspace, window, cx)
+        });
+        let workspace_handle = cx.window_handle().downcast::<MultiWorkspace>().unwrap();
+
+        cx.run_until_parked();
+
+        let (settings_window, cx) = cx
+            .add_window_view(|window, cx| SettingsWindow::new(Some(workspace_handle), window, cx));
+
+        cx.run_until_parked();
+
+        settings_window.update_in(cx, |settings_window, window, cx| {
+            settings_window.navigate_to_skill_creator(
+                pages::SkillCreatorOpenMode::Form,
+                window,
+                cx,
+            );
+        });
+
+        cx.run_until_parked();
+
+        settings_window.read_with(cx, |settings_window, _| {
+            let titles: Vec<_> = settings_window
+                .sub_page_stack
+                .iter()
+                .map(|sub_page| sub_page.link.title.to_string())
+                .collect();
+            assert_eq!(
+                titles,
+                ["Skills", "Create Skill"],
+                "skill creator should be pushed on top of the skills page"
+            );
+            assert!(
+                settings_window.skill_creator_page().is_some(),
+                "skill creator page state should exist"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_open_skill_creator_action_opens_settings_window_at_sub_page(
+        cx: &mut gpui::TestAppContext,
+    ) {
+        use project::Project;
+
+        cx.update(|cx| {
+            register_settings(cx);
+            release_channel::init("0.0.0".parse().unwrap(), cx);
+            crate::init(cx);
+        });
+
+        let app_state = cx.update(|cx| {
+            let app_state = AppState::test(cx);
+            AppState::set_global(app_state.clone(), cx);
+            app_state
+        });
+
+        app_state
+            .fs
+            .as_fake()
+            .insert_tree("/project", serde_json::json!({ "main.rs": "fn main() {}" }))
+            .await;
+
+        let project = cx.update(|cx| {
+            Project::local(
+                app_state.client.clone(),
+                app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
+                app_state.languages.clone(),
+                app_state.fs.clone(),
+                None,
+                project::LocalProjectFlags::default(),
+                cx,
+            )
+        });
+        project
+            .update(cx, |project, cx| {
+                project.find_or_create_worktree("/project", true, cx)
+            })
+            .await
+            .expect("Failed to create worktree");
+
+        let (multi_workspace, cx) = cx.add_window_view(|window, cx| {
+            let workspace = cx.new(|cx| {
+                Workspace::new(
+                    Default::default(),
+                    project.clone(),
+                    app_state.clone(),
+                    window,
+                    cx,
+                )
+            });
+            MultiWorkspace::new(workspace, window, cx)
+        });
+
+        cx.run_until_parked();
+
+        // Dispatch the action the way the command palette does: on the
+        // workspace window.
+        multi_workspace.update_in(cx, |_multi_workspace, window, cx| {
+            window.dispatch_action(Box::new(zed_actions::assistant::OpenSkillCreator), cx);
+        });
+
+        cx.run_until_parked();
+
+        let settings_window = cx
+            .update(|_, cx| {
+                cx.windows()
+                    .into_iter()
+                    .find_map(|window| window.downcast::<SettingsWindow>())
+            })
+            .expect("dispatching agent::OpenSkillCreator should open the settings window");
+
+        settings_window
+            .read_with(cx, |settings_window, _| {
+                let titles: Vec<_> = settings_window
+                    .sub_page_stack
+                    .iter()
+                    .map(|sub_page| sub_page.link.title.to_string())
+                    .collect();
+                assert_eq!(
+                    titles,
+                    ["Skills", "Create Skill"],
+                    "skill creator should be pushed on top of the skills page"
+                );
+            })
+            .unwrap();
     }
 }
 
@@ -7373,8 +7521,6 @@ mod project_settings_update_tests {
         cx.update(|cx| {
             let store = settings::SettingsStore::test(cx);
             cx.set_global(store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
             editor::init(cx);
             menu::init();
@@ -7385,7 +7531,7 @@ mod project_settings_update_tests {
         let fs = FakeFs::new(cx.executor());
         let tree = if let Some(settings_content) = initial_settings {
             json!({
-                ".dez": {
+                ".zed": {
                     "settings.json": settings_content
                 },
                 "src": { "main.rs": "" }
@@ -7402,7 +7548,7 @@ mod project_settings_update_tests {
             (worktree.read(cx).id(), worktree.downgrade())
         });
 
-        let rel_path: Arc<RelPath> = RelPath::unix(".dez/settings.json")
+        let rel_path: Arc<RelPath> = RelPath::from_unix_str(".zed/settings.json")
             .expect("valid path")
             .into_arc();
         let project_path = ProjectPath {
@@ -7632,7 +7778,7 @@ mod project_settings_update_tests {
 
         let file_content = setup
             .fs
-            .load("/project/.dez/settings.json".as_ref())
+            .load("/project/.zed/settings.json".as_ref())
             .await
             .unwrap();
         assert_eq!(
@@ -7665,7 +7811,7 @@ mod project_settings_update_tests {
         setup
             .fs
             .save(
-                "/project/.dez/settings.json".as_ref(),
+                "/project/.zed/settings.json".as_ref(),
                 &r#"{ "tab_size": 99 }"#.into(),
                 Default::default(),
             )

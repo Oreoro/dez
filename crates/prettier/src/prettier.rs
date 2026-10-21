@@ -714,7 +714,7 @@ mod tests {
             "/root",
             json!({
                 ".config": {
-                    "dez": {
+                    "zed": {
                         "settings.json": r#"{ "formatter": "auto" }"#,
                     },
                 },
@@ -749,7 +749,7 @@ mod tests {
             Prettier::locate_prettier_installation(
                 fs.as_ref(),
                 &HashSet::default(),
-                Path::new("/root/.config/dez/settings.json"),
+                Path::new("/root/.config/zed/settings.json"),
             )
             .await
             .unwrap(),

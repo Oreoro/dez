@@ -633,11 +633,7 @@ impl Render for DapLogToolbarItemView {
             .child(
                 div()
                     .child(
-                        Button::new(
-                            "clear_log_button",
-                            localization::text(cx, "debugger-clear-log"),
-                        )
-                        .on_click(cx.listener(
+                        Button::new("clear_log_button", "Clear").on_click(cx.listener(
                             |this, _, window, cx| {
                                 if let Some(log_view) = this.log_view.as_ref() {
                                     log_view.update(cx, |log_view, cx| {
@@ -998,6 +994,10 @@ impl Item for DapLogView {
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
         "DAP Logs".into()
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
     }
 
     fn as_searchable(

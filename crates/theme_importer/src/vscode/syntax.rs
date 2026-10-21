@@ -25,7 +25,7 @@ pub struct VsCodeTokenColorSettings {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone, EnumIter)]
-pub enum DezSyntaxToken {
+pub enum ZedSyntaxToken {
     Attribute,
     Boolean,
     Comment,
@@ -67,57 +67,57 @@ pub enum DezSyntaxToken {
     Variant,
 }
 
-impl std::fmt::Display for DezSyntaxToken {
+impl std::fmt::Display for ZedSyntaxToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                DezSyntaxToken::Attribute => "attribute",
-                DezSyntaxToken::Boolean => "boolean",
-                DezSyntaxToken::Comment => "comment",
-                DezSyntaxToken::CommentDoc => "comment.doc",
-                DezSyntaxToken::Constant => "constant",
-                DezSyntaxToken::Constructor => "constructor",
-                DezSyntaxToken::Embedded => "embedded",
-                DezSyntaxToken::Emphasis => "emphasis",
-                DezSyntaxToken::EmphasisStrong => "emphasis.strong",
-                DezSyntaxToken::Enum => "enum",
-                DezSyntaxToken::Function => "function",
-                DezSyntaxToken::Hint => "hint",
-                DezSyntaxToken::Keyword => "keyword",
-                DezSyntaxToken::Label => "label",
-                DezSyntaxToken::LinkText => "link_text",
-                DezSyntaxToken::LinkUri => "link_uri",
-                DezSyntaxToken::Number => "number",
-                DezSyntaxToken::Operator => "operator",
-                DezSyntaxToken::Predictive => "predictive",
-                DezSyntaxToken::Preproc => "preproc",
-                DezSyntaxToken::Primary => "primary",
-                DezSyntaxToken::Property => "property",
-                DezSyntaxToken::Punctuation => "punctuation",
-                DezSyntaxToken::PunctuationBracket => "punctuation.bracket",
-                DezSyntaxToken::PunctuationDelimiter => "punctuation.delimiter",
-                DezSyntaxToken::PunctuationListMarker => "punctuation.list_marker",
-                DezSyntaxToken::PunctuationSpecial => "punctuation.special",
-                DezSyntaxToken::String => "string",
-                DezSyntaxToken::StringEscape => "string.escape",
-                DezSyntaxToken::StringRegex => "string.regex",
-                DezSyntaxToken::StringSpecial => "string.special",
-                DezSyntaxToken::StringSpecialSymbol => "string.special.symbol",
-                DezSyntaxToken::Tag => "tag",
-                DezSyntaxToken::TextLiteral => "text.literal",
-                DezSyntaxToken::Title => "title",
-                DezSyntaxToken::Type => "type",
-                DezSyntaxToken::Variable => "variable",
-                DezSyntaxToken::VariableSpecial => "variable.special",
-                DezSyntaxToken::Variant => "variant",
+                ZedSyntaxToken::Attribute => "attribute",
+                ZedSyntaxToken::Boolean => "boolean",
+                ZedSyntaxToken::Comment => "comment",
+                ZedSyntaxToken::CommentDoc => "comment.doc",
+                ZedSyntaxToken::Constant => "constant",
+                ZedSyntaxToken::Constructor => "constructor",
+                ZedSyntaxToken::Embedded => "embedded",
+                ZedSyntaxToken::Emphasis => "emphasis",
+                ZedSyntaxToken::EmphasisStrong => "emphasis.strong",
+                ZedSyntaxToken::Enum => "enum",
+                ZedSyntaxToken::Function => "function",
+                ZedSyntaxToken::Hint => "hint",
+                ZedSyntaxToken::Keyword => "keyword",
+                ZedSyntaxToken::Label => "label",
+                ZedSyntaxToken::LinkText => "link_text",
+                ZedSyntaxToken::LinkUri => "link_uri",
+                ZedSyntaxToken::Number => "number",
+                ZedSyntaxToken::Operator => "operator",
+                ZedSyntaxToken::Predictive => "predictive",
+                ZedSyntaxToken::Preproc => "preproc",
+                ZedSyntaxToken::Primary => "primary",
+                ZedSyntaxToken::Property => "property",
+                ZedSyntaxToken::Punctuation => "punctuation",
+                ZedSyntaxToken::PunctuationBracket => "punctuation.bracket",
+                ZedSyntaxToken::PunctuationDelimiter => "punctuation.delimiter",
+                ZedSyntaxToken::PunctuationListMarker => "punctuation.list_marker",
+                ZedSyntaxToken::PunctuationSpecial => "punctuation.special",
+                ZedSyntaxToken::String => "string",
+                ZedSyntaxToken::StringEscape => "string.escape",
+                ZedSyntaxToken::StringRegex => "string.regex",
+                ZedSyntaxToken::StringSpecial => "string.special",
+                ZedSyntaxToken::StringSpecialSymbol => "string.special.symbol",
+                ZedSyntaxToken::Tag => "tag",
+                ZedSyntaxToken::TextLiteral => "text.literal",
+                ZedSyntaxToken::Title => "title",
+                ZedSyntaxToken::Type => "type",
+                ZedSyntaxToken::Variable => "variable",
+                ZedSyntaxToken::VariableSpecial => "variable.special",
+                ZedSyntaxToken::Variant => "variant",
             }
         )
     }
 }
 
-impl DezSyntaxToken {
+impl ZedSyntaxToken {
     pub fn find_best_token_color_match<'a>(
         &self,
         token_colors: &'a [VsCodeTokenColor],
@@ -175,51 +175,49 @@ impl DezSyntaxToken {
 
     pub fn fallbacks(&self) -> &[Self] {
         match self {
-            DezSyntaxToken::CommentDoc => &[DezSyntaxToken::Comment],
-            DezSyntaxToken::Number => &[DezSyntaxToken::Constant],
-            DezSyntaxToken::VariableSpecial => &[DezSyntaxToken::Variable],
-            DezSyntaxToken::PunctuationBracket
-            | DezSyntaxToken::PunctuationDelimiter
-            | DezSyntaxToken::PunctuationListMarker
-            | DezSyntaxToken::PunctuationSpecial => &[DezSyntaxToken::Punctuation],
-            DezSyntaxToken::StringEscape
-            | DezSyntaxToken::StringRegex
-            | DezSyntaxToken::StringSpecial
-            | DezSyntaxToken::StringSpecialSymbol => &[DezSyntaxToken::String],
+            ZedSyntaxToken::CommentDoc => &[ZedSyntaxToken::Comment],
+            ZedSyntaxToken::Number => &[ZedSyntaxToken::Constant],
+            ZedSyntaxToken::VariableSpecial => &[ZedSyntaxToken::Variable],
+            ZedSyntaxToken::PunctuationBracket
+            | ZedSyntaxToken::PunctuationDelimiter
+            | ZedSyntaxToken::PunctuationListMarker
+            | ZedSyntaxToken::PunctuationSpecial => &[ZedSyntaxToken::Punctuation],
+            ZedSyntaxToken::StringEscape
+            | ZedSyntaxToken::StringRegex
+            | ZedSyntaxToken::StringSpecial
+            | ZedSyntaxToken::StringSpecialSymbol => &[ZedSyntaxToken::String],
             _ => &[],
         }
     }
 
     fn to_vscode(self) -> Vec<&'static str> {
         match self {
-            DezSyntaxToken::Attribute => vec!["entity.other.attribute-name"],
-            DezSyntaxToken::Boolean => vec!["constant.language"],
-            DezSyntaxToken::Comment => vec!["comment"],
-            DezSyntaxToken::CommentDoc => vec!["comment.block.documentation"],
-            DezSyntaxToken::Constant => {
-                vec!["constant", "constant.language", "constant.character"]
-            }
-            DezSyntaxToken::Constructor => {
+            ZedSyntaxToken::Attribute => vec!["entity.other.attribute-name"],
+            ZedSyntaxToken::Boolean => vec!["constant.language"],
+            ZedSyntaxToken::Comment => vec!["comment"],
+            ZedSyntaxToken::CommentDoc => vec!["comment.block.documentation"],
+            ZedSyntaxToken::Constant => vec!["constant", "constant.language", "constant.character"],
+            ZedSyntaxToken::Constructor => {
                 vec![
                     "entity.name.tag",
                     "entity.name.function.definition.special.constructor",
                 ]
             }
-            DezSyntaxToken::Embedded => vec!["meta.embedded"],
-            DezSyntaxToken::Emphasis => vec!["markup.italic"],
-            DezSyntaxToken::EmphasisStrong => vec![
+            ZedSyntaxToken::Embedded => vec!["meta.embedded"],
+            ZedSyntaxToken::Emphasis => vec!["markup.italic"],
+            ZedSyntaxToken::EmphasisStrong => vec![
                 "markup.bold",
                 "markup.italic markup.bold",
                 "markup.bold markup.italic",
             ],
-            DezSyntaxToken::Enum => vec!["support.type.enum"],
-            DezSyntaxToken::Function => vec![
+            ZedSyntaxToken::Enum => vec!["support.type.enum"],
+            ZedSyntaxToken::Function => vec![
                 "entity.function",
                 "entity.name.function",
                 "variable.function",
             ],
-            DezSyntaxToken::Hint => vec![],
-            DezSyntaxToken::Keyword => vec![
+            ZedSyntaxToken::Hint => vec![],
+            ZedSyntaxToken::Keyword => vec![
                 "keyword",
                 "keyword.other.fn.rust",
                 "keyword.control",
@@ -228,63 +226,63 @@ impl DezSyntaxToken {
                 "punctuation.accessor",
                 "entity.name.tag",
             ],
-            DezSyntaxToken::Label => vec![
+            ZedSyntaxToken::Label => vec![
                 "label",
                 "entity.name",
                 "entity.name.import",
                 "entity.name.package",
             ],
-            DezSyntaxToken::LinkText => vec!["markup.underline.link", "string.other.link"],
-            DezSyntaxToken::LinkUri => vec!["markup.underline.link", "string.other.link"],
-            DezSyntaxToken::Number => vec!["constant.numeric", "number"],
-            DezSyntaxToken::Operator => vec!["operator", "keyword.operator"],
-            DezSyntaxToken::Predictive => vec![],
-            DezSyntaxToken::Preproc => vec![
+            ZedSyntaxToken::LinkText => vec!["markup.underline.link", "string.other.link"],
+            ZedSyntaxToken::LinkUri => vec!["markup.underline.link", "string.other.link"],
+            ZedSyntaxToken::Number => vec!["constant.numeric", "number"],
+            ZedSyntaxToken::Operator => vec!["operator", "keyword.operator"],
+            ZedSyntaxToken::Predictive => vec![],
+            ZedSyntaxToken::Preproc => vec![
                 "preproc",
                 "meta.preprocessor",
                 "punctuation.definition.preprocessor",
             ],
-            DezSyntaxToken::Primary => vec![],
-            DezSyntaxToken::Property => vec![
+            ZedSyntaxToken::Primary => vec![],
+            ZedSyntaxToken::Property => vec![
                 "variable.member",
                 "support.type.property-name",
                 "variable.object.property",
                 "variable.other.field",
             ],
-            DezSyntaxToken::Punctuation => vec![
+            ZedSyntaxToken::Punctuation => vec![
                 "punctuation",
                 "punctuation.section",
                 "punctuation.accessor",
                 "punctuation.separator",
                 "punctuation.definition.tag",
             ],
-            DezSyntaxToken::PunctuationBracket => vec![
+            ZedSyntaxToken::PunctuationBracket => vec![
                 "punctuation.bracket",
                 "punctuation.definition.tag.begin",
                 "punctuation.definition.tag.end",
             ],
-            DezSyntaxToken::PunctuationDelimiter => vec![
+            ZedSyntaxToken::PunctuationDelimiter => vec![
                 "punctuation.delimiter",
                 "punctuation.separator",
                 "punctuation.terminator",
             ],
-            DezSyntaxToken::PunctuationListMarker => {
+            ZedSyntaxToken::PunctuationListMarker => {
                 vec!["markup.list punctuation.definition.list.begin"]
             }
-            DezSyntaxToken::PunctuationSpecial => vec!["punctuation.special"],
-            DezSyntaxToken::String => vec!["string"],
-            DezSyntaxToken::StringEscape => {
+            ZedSyntaxToken::PunctuationSpecial => vec!["punctuation.special"],
+            ZedSyntaxToken::String => vec!["string"],
+            ZedSyntaxToken::StringEscape => {
                 vec!["string.escape", "constant.character", "constant.other"]
             }
-            DezSyntaxToken::StringRegex => vec!["string.regex"],
-            DezSyntaxToken::StringSpecial => vec!["string.special", "constant.other.symbol"],
-            DezSyntaxToken::StringSpecialSymbol => {
+            ZedSyntaxToken::StringRegex => vec!["string.regex"],
+            ZedSyntaxToken::StringSpecial => vec!["string.special", "constant.other.symbol"],
+            ZedSyntaxToken::StringSpecialSymbol => {
                 vec!["string.special.symbol", "constant.other.symbol"]
             }
-            DezSyntaxToken::Tag => vec!["tag", "entity.name.tag", "meta.tag.sgml"],
-            DezSyntaxToken::TextLiteral => vec!["text.literal", "string"],
-            DezSyntaxToken::Title => vec!["title", "entity.name"],
-            DezSyntaxToken::Type => vec![
+            ZedSyntaxToken::Tag => vec!["tag", "entity.name.tag", "meta.tag.sgml"],
+            ZedSyntaxToken::TextLiteral => vec!["text.literal", "string"],
+            ZedSyntaxToken::Title => vec!["title", "entity.name"],
+            ZedSyntaxToken::Type => vec![
                 "entity.name.type",
                 "entity.name.type.primitive",
                 "entity.name.type.numeric",
@@ -293,20 +291,20 @@ impl DezSyntaxToken {
                 "support.type.primitive",
                 "support.class",
             ],
-            DezSyntaxToken::Variable => vec![
+            ZedSyntaxToken::Variable => vec![
                 "variable",
                 "variable.language",
                 "variable.member",
                 "variable.parameter",
                 "variable.parameter.function-call",
             ],
-            DezSyntaxToken::VariableSpecial => vec![
+            ZedSyntaxToken::VariableSpecial => vec![
                 "variable.special",
                 "variable.member",
                 "variable.annotation",
                 "variable.language",
             ],
-            DezSyntaxToken::Variant => vec!["variant"],
+            ZedSyntaxToken::Variant => vec!["variant"],
         }
     }
 }

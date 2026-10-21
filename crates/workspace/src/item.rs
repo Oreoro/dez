@@ -1,17 +1,19 @@
 use crate::{
-    DelayedDebouncedEditAction, ItemNavHistory, SerializableItemRegistry, ToolbarItemLocation,
-    Workspace, WorkspaceId,
+    CollaboratorId, DelayedDebouncedEditAction, FollowableViewRegistry, ItemNavHistory,
+    SerializableItemRegistry, ToolbarItemLocation, ViewId, Workspace, WorkspaceId,
     invalid_item_view::InvalidItemView,
-    pane::{self, Pane},
+    pane::{self, Pane, SaveIntent},
     persistence::model::ItemId,
     searchable::SearchableItemHandle,
     workspace_settings::{AutosaveSetting, WorkspaceSettings},
 };
 use anyhow::Result;
+use client::{Client, proto};
+use futures::channel::mpsc;
 use gpui::{
     Action, AnyElement, AnyEntity, AnyView, App, AppContext, Context, Entity, EntityId,
-    EventEmitter, FocusHandle, Focusable, Font, Pixels, Point, Render, SharedString, Task, TaskExt,
-    WeakEntity, Window,
+    EventEmitter, FocusHandle, Focusable, Font, ParentElement, Pixels, Point, Render, SharedString,
+    Styled, Task, TaskExt, WeakEntity, Window,
 };
 use language::Capability;
 pub use language::HighlightedText;
@@ -23,12 +25,16 @@ pub use settings::{
 use smallvec::SmallVec;
 use std::{
     any::{Any, TypeId},
+    cell::RefCell,
     path::Path,
+    rc::Rc,
     sync::Arc,
     time::Duration,
 };
-use ui::{Color, Icon, IntoElement, Label, LabelCommon};
+use ui::{Color, FluentBuilder, Icon, IconName, IntoElement, Label, LabelCommon, div, h_flex};
 use util::ResultExt;
+
+pub const LEADER_UPDATE_THROTTLE: Duration = Duration::from_millis(200);
 
 #[derive(Clone, Copy, Debug)]
 pub struct SaveOptions {
@@ -129,6 +135,7 @@ pub struct TabContentParams {
     pub deemphasized: bool,
     /// Maximum character length for the title. None = use the item's own default (typically MAX_TAB_TITLE_LEN).
     pub max_title_len: Option<usize>,
+    pub truncate_title_middle: bool,
 }
 
 impl TabContentParams {
@@ -148,6 +155,14 @@ impl TabContentParams {
     }
 }
 
+pub fn tab_label_color(selected: bool) -> Color {
+    if selected {
+        Color::Default
+    } else {
+        Color::Muted
+    }
+}
+
 pub enum TabTooltipContent {
     Text(SharedString),
     Custom(Box<dyn Fn(&mut Window, &mut App) -> AnyView>),
@@ -160,6 +175,13 @@ pub enum ItemBufferKind {
     None,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ItemCloseConfirmation {
+    pub message: &'static str,
+    pub detail: Option<&'static str>,
+    pub confirm_label: &'static str,
+}
+
 pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
     type Event;
 
@@ -167,16 +189,31 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
     ///
     /// By default this returns a [`Label`] that displays that text from
     /// `tab_content_text`.
-    fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
+    fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
         let text = self.tab_content_text(params.detail.unwrap_or_default(), cx);
+        let overlay = self.tab_content_overlay(window, cx);
+        let label = Label::new(text)
+            .color(tab_label_color(params.selected))
+            .when(overlay.is_some(), |this| this.alpha(0.));
 
-        Label::new(text)
-            .color(params.text_color())
-            .into_any_element()
+        if let Some(overlay) = overlay {
+            h_flex()
+                .relative()
+                .min_w_0()
+                .child(label)
+                .child(div().absolute().top_0().left_0().size_full().child(overlay))
+                .into_any_element()
+        } else {
+            label.into_any_element()
+        }
     }
 
     /// Returns the textual contents of the tab.
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString;
+
+    fn tab_content_overlay(&self, _window: &Window, _cx: &App) -> Option<AnyElement> {
+        None
+    }
 
     /// Returns the suggested filename for saving this item.
     /// By default, returns the tab content text.
@@ -186,6 +223,29 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
 
     fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
         None
+    }
+
+    fn tab_icon_element(&self, _window: &Window, _cx: &App) -> Option<AnyElement> {
+        None
+    }
+
+    fn tab_close_icon(&self, _cx: &App) -> IconName {
+        IconName::Close
+    }
+
+    fn tab_close_tooltip_text(&self) -> &'static str {
+        "Close Tab"
+    }
+
+    fn close_confirmation(&self, _cx: &App) -> Option<ItemCloseConfirmation> {
+        None
+    }
+
+    /// Keep the pane tab bar visible even when the user's general preference
+    /// hides single-tab bars. Use this for session-oriented surfaces whose
+    /// title and pane actions are part of the primary workflow.
+    fn force_show_tab_bar(&self) -> bool {
+        false
     }
 
     /// Returns the tab tooltip text.
@@ -205,9 +265,17 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
 
     fn to_item_events(_event: &Self::Event, _f: &mut dyn FnMut(ItemEvent)) {}
 
+    fn activated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn deactivated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn discarded(&self, _project: Entity<Project>, _window: &mut Window, _cx: &mut Context<Self>) {}
     fn on_removed(&self, _cx: &mut Context<Self>) {}
+    fn on_close(
+        &mut self,
+        _save_intent: SaveIntent,
+        _cx: &mut Context<Self>,
+    ) -> Task<Result<bool>> {
+        Task::ready(Ok(true))
+    }
     fn workspace_deactivated(&mut self, _window: &mut Window, _: &mut Context<Self>) {}
     fn pane_changed(&mut self, _new_pane_id: EntityId, _cx: &mut Context<Self>) {}
     fn navigate(
@@ -217,6 +285,10 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
         _: &mut Context<Self>,
     ) -> bool {
         false
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
     }
 
     /// (model id, Item)
@@ -285,6 +357,7 @@ pub trait Item: Focusable + EventEmitter<Self::Event> + Render + Sized {
     fn can_save_as(&self, _: &App) -> bool {
         false
     }
+
     fn save(
         &mut self,
         _options: SaveOptions,
@@ -417,21 +490,43 @@ pub trait SerializableItem: Item {
         workspace: &mut Workspace,
         item_id: ItemId,
         closing: bool,
-        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Task<Result<()>>>;
 
     fn should_serialize(&self, event: &Self::Event) -> bool;
+}
 
-    /// Whether this item should be recorded in its pane's serialized layout.
-    /// Items backed by transient state that isn't restored through this path
-    /// (e.g. task-backed terminals, which are re-launched by their own
-    /// restore mechanism) return `false` so they aren't resurrected as
-    /// generic items on the next startup.
-    fn should_serialize_in_pane(&self, _cx: &App) -> bool {
-        true
+/// Signals that a saved tab references item metadata that no longer exists.
+///
+/// Restore callers treat this as recoverable stale state: omit the tab, explain
+/// the recovery path to the user, and allow the next Workspace serialization to
+/// heal the saved layout.
+#[derive(Debug)]
+pub struct SerializableItemUnavailable {
+    item_kind: &'static str,
+}
+
+impl SerializableItemUnavailable {
+    pub fn new(item_kind: &'static str) -> Self {
+        Self { item_kind }
+    }
+
+    pub fn item_kind(&self) -> &'static str {
+        self.item_kind
     }
 }
+
+impl std::fmt::Display for SerializableItemUnavailable {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "saved {} metadata is unavailable",
+            self.item_kind
+        )
+    }
+}
+
+impl std::error::Error for SerializableItemUnavailable {}
 
 pub trait SerializableItemHandle: ItemHandle {
     fn serialized_item_kind(&self) -> &'static str;
@@ -439,11 +534,9 @@ pub trait SerializableItemHandle: ItemHandle {
         &self,
         workspace: &mut Workspace,
         closing: bool,
-        window: &mut Window,
         cx: &mut App,
     ) -> Option<Task<Result<()>>>;
     fn should_serialize(&self, event: &dyn Any, cx: &App) -> bool;
-    fn should_serialize_in_pane(&self, cx: &App) -> bool;
 }
 
 impl<T> SerializableItemHandle for Entity<T>
@@ -458,11 +551,10 @@ where
         &self,
         workspace: &mut Workspace,
         closing: bool,
-        window: &mut Window,
         cx: &mut App,
     ) -> Option<Task<Result<()>>> {
         self.update(cx, |this, cx| {
-            this.serialize(workspace, cx.entity_id().as_u64(), closing, window, cx)
+            this.serialize(workspace, cx.entity_id().as_u64(), closing, cx)
         })
     }
 
@@ -470,10 +562,6 @@ where
         event
             .downcast_ref::<T::Event>()
             .is_some_and(|event| self.read(cx).should_serialize(event))
-    }
-
-    fn should_serialize_in_pane(&self, cx: &App) -> bool {
-        self.read(cx).should_serialize_in_pane(cx)
     }
 }
 
@@ -489,8 +577,14 @@ pub trait ItemHandle: 'static + Send {
     fn tab_content_text(&self, detail: usize, cx: &App) -> SharedString;
     fn suggested_filename(&self, cx: &App) -> SharedString;
     fn tab_icon(&self, window: &Window, cx: &App) -> Option<Icon>;
+    fn tab_icon_element(&self, window: &Window, cx: &App) -> Option<AnyElement>;
+    fn tab_close_icon(&self, cx: &App) -> IconName;
+    fn tab_close_tooltip_text(&self, cx: &App) -> &'static str;
+    fn close_confirmation(&self, cx: &App) -> Option<ItemCloseConfirmation>;
+    fn force_show_tab_bar(&self, cx: &App) -> bool;
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString>;
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent>;
+    fn telemetry_event_text(&self, cx: &App) -> Option<&'static str>;
     fn dragged_tab_content(
         &self,
         params: TabContentParams,
@@ -522,8 +616,10 @@ pub trait ItemHandle: 'static + Send {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     );
+    fn activated(&self, window: &mut Window, cx: &mut App);
     fn deactivated(&self, window: &mut Window, cx: &mut App);
     fn on_removed(&self, cx: &mut App);
+    fn on_close(&self, save_intent: SaveIntent, cx: &mut App) -> Task<Result<bool>>;
     fn workspace_deactivated(&self, window: &mut Window, cx: &mut App);
     fn navigate(&self, data: Arc<dyn Any + Send>, window: &mut Window, cx: &mut App) -> bool;
     fn item_id(&self) -> EntityId;
@@ -556,6 +652,7 @@ pub trait ItemHandle: 'static + Send {
         cx: &mut App,
     ) -> Task<Result<()>>;
     fn act_as_type(&self, type_id: TypeId, cx: &App) -> Option<AnyEntity>;
+    fn to_followable_item_handle(&self, cx: &App) -> Option<Box<dyn FollowableItemHandle>>;
     fn to_serializable_item_handle(&self, cx: &App) -> Option<Box<dyn SerializableItemHandle>>;
     fn on_release(
         &self,
@@ -624,6 +721,10 @@ impl<T: Item> ItemHandle for Entity<T> {
         self.read(cx).focus_handle(cx)
     }
 
+    fn telemetry_event_text(&self, cx: &App) -> Option<&'static str> {
+        self.read(cx).telemetry_event_text()
+    }
+
     fn tab_content(&self, params: TabContentParams, window: &Window, cx: &App) -> AnyElement {
         self.read(cx).tab_content(params, window, cx)
     }
@@ -637,6 +738,26 @@ impl<T: Item> ItemHandle for Entity<T> {
 
     fn tab_icon(&self, window: &Window, cx: &App) -> Option<Icon> {
         self.read(cx).tab_icon(window, cx)
+    }
+
+    fn tab_icon_element(&self, window: &Window, cx: &App) -> Option<AnyElement> {
+        self.read(cx).tab_icon_element(window, cx)
+    }
+
+    fn tab_close_icon(&self, cx: &App) -> IconName {
+        self.read(cx).tab_close_icon(cx)
+    }
+
+    fn tab_close_tooltip_text(&self, cx: &App) -> &'static str {
+        self.read(cx).tab_close_tooltip_text()
+    }
+
+    fn close_confirmation(&self, cx: &App) -> Option<ItemCloseConfirmation> {
+        self.read(cx).close_confirmation(cx)
+    }
+
+    fn force_show_tab_bar(&self, cx: &App) -> bool {
+        self.read(cx).force_show_tab_bar()
     }
 
     fn tab_tooltip_content(&self, cx: &App) -> Option<TabTooltipContent> {
@@ -779,6 +900,46 @@ impl<T: Item> ItemHandle for Entity<T> {
 
         if old_item_pane.is_none() {
             let mut pending_autosave = DelayedDebouncedEditAction::new();
+            let (pending_update_tx, mut pending_update_rx) = mpsc::unbounded();
+            let pending_update = Rc::new(RefCell::new(None));
+
+            let mut send_follower_updates = None;
+            if let Some(item) = self.to_followable_item_handle(cx) {
+                let is_project_item = item.is_project_item(window, cx);
+                let item = item.downgrade();
+
+                send_follower_updates = Some(cx.spawn_in(window, {
+                    let pending_update = pending_update.clone();
+                    async move |workspace, cx| {
+                        while let Ok(mut leader_id) = pending_update_rx.recv().await {
+                            while let Ok(id) = pending_update_rx.try_recv() {
+                                leader_id = id;
+                            }
+
+                            workspace.update_in(cx, |workspace, window, cx| {
+                                let Some(item) = item.upgrade() else { return };
+                                workspace.update_followers(
+                                    is_project_item,
+                                    proto::update_followers::Variant::UpdateView(
+                                        proto::UpdateView {
+                                            id: item
+                                                .remote_id(workspace.client(), window, cx)
+                                                .and_then(|id| id.to_proto()),
+                                            variant: pending_update.borrow_mut().take(),
+                                            leader_id,
+                                        },
+                                    ),
+                                    window,
+                                    cx,
+                                );
+                            })?;
+                            cx.background_executor().timer(LEADER_UPDATE_THROTTLE).await;
+                        }
+                        anyhow::Ok(())
+                    }
+                }));
+            }
+
             let mut event_subscription = Some(cx.subscribe_in(
                 self,
                 window,
@@ -792,6 +953,40 @@ impl<T: Item> ItemHandle for Entity<T> {
                     } else {
                         return;
                     };
+
+                    if let Some(item) = item.to_followable_item_handle(cx) {
+                        let leader_id = workspace.leader_for_pane(&pane);
+
+                        if let Some(leader_id) = leader_id
+                            && let Some(FollowEvent::Unfollow) = item.to_follow_event(event)
+                        {
+                            workspace.unfollow(leader_id, window, cx);
+                        }
+
+                        if item.item_focus_handle(cx).contains_focused(window, cx) {
+                            match leader_id {
+                                Some(CollaboratorId::Agent) => {}
+                                Some(CollaboratorId::PeerId(leader_peer_id)) => {
+                                    item.add_event_to_update_proto(
+                                        event,
+                                        &mut pending_update.borrow_mut(),
+                                        window,
+                                        cx,
+                                    );
+                                    pending_update_tx.unbounded_send(Some(leader_peer_id)).ok();
+                                }
+                                None => {
+                                    item.add_event_to_update_proto(
+                                        event,
+                                        &mut pending_update.borrow_mut(),
+                                        window,
+                                        cx,
+                                    );
+                                    pending_update_tx.unbounded_send(None).ok();
+                                }
+                            }
+                        }
+                    }
 
                     if let Some(item) = item.to_serializable_item_handle(cx)
                         && item.should_serialize(event, cx)
@@ -925,6 +1120,7 @@ impl<T: Item> ItemHandle for Entity<T> {
             cx.observe_release_in(self, window, move |workspace, _, _, _| {
                 workspace.panes_by_item.remove(&item_id);
                 event_subscription.take();
+                send_follower_updates.take();
             })
             .detach();
         }
@@ -934,12 +1130,20 @@ impl<T: Item> ItemHandle for Entity<T> {
         });
     }
 
+    fn activated(&self, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| this.activated(window, cx));
+    }
+
     fn deactivated(&self, window: &mut Window, cx: &mut App) {
         self.update(cx, |this, cx| this.deactivated(window, cx));
     }
 
     fn on_removed(&self, cx: &mut App) {
         self.update(cx, |item, cx| item.on_removed(cx));
+    }
+
+    fn on_close(&self, save_intent: SaveIntent, cx: &mut App) -> Task<Result<bool>> {
+        self.update(cx, |item, cx| item.on_close(save_intent, cx))
     }
 
     fn workspace_deactivated(&self, window: &mut Window, cx: &mut App) {
@@ -1019,6 +1223,10 @@ impl<T: Item> ItemHandle for Entity<T> {
 
     fn act_as_type<'a>(&'a self, type_id: TypeId, cx: &'a App) -> Option<AnyEntity> {
         self.read(cx).act_as_type(type_id, self, cx)
+    }
+
+    fn to_followable_item_handle(&self, cx: &App) -> Option<Box<dyn FollowableItemHandle>> {
+        FollowableViewRegistry::to_followable_view(self.clone(), cx)
     }
 
     fn on_release(
@@ -1170,6 +1378,178 @@ pub trait ProjectItem: Item {
     }
 }
 
+#[derive(Debug)]
+pub enum FollowEvent {
+    Unfollow,
+}
+
+pub enum Dedup {
+    KeepExisting,
+    ReplaceExisting,
+}
+
+pub trait FollowableItem: Item {
+    fn remote_id(&self) -> Option<ViewId>;
+    fn to_state_proto(&self, window: &mut Window, cx: &mut App) -> Option<proto::view::Variant>;
+    fn from_state_proto(
+        project: Entity<Workspace>,
+        id: ViewId,
+        state: &mut Option<proto::view::Variant>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<Task<Result<Entity<Self>>>>;
+    fn to_follow_event(event: &Self::Event) -> Option<FollowEvent>;
+    fn add_event_to_update_proto(
+        &self,
+        event: &Self::Event,
+        update: &mut Option<proto::update_view::Variant>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> bool;
+    fn apply_update_proto(
+        &mut self,
+        project: &Entity<Project>,
+        message: proto::update_view::Variant,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Task<Result<()>>;
+    fn is_project_item(&self, window: &Window, cx: &App) -> bool;
+    fn set_leader_id(
+        &mut self,
+        leader_peer_id: Option<CollaboratorId>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    );
+    fn dedup(&self, existing: &Self, window: &Window, cx: &App) -> Option<Dedup>;
+    fn update_agent_location(
+        &mut self,
+        _location: language::Anchor,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) {
+    }
+}
+
+pub trait FollowableItemHandle: ItemHandle {
+    fn remote_id(&self, client: &Arc<Client>, window: &mut Window, cx: &mut App) -> Option<ViewId>;
+    fn downgrade(&self) -> Box<dyn WeakFollowableItemHandle>;
+    fn set_leader_id(
+        &self,
+        leader_peer_id: Option<CollaboratorId>,
+        window: &mut Window,
+        cx: &mut App,
+    );
+    fn to_state_proto(&self, window: &mut Window, cx: &mut App) -> Option<proto::view::Variant>;
+    fn add_event_to_update_proto(
+        &self,
+        event: &dyn Any,
+        update: &mut Option<proto::update_view::Variant>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> bool;
+    fn to_follow_event(&self, event: &dyn Any) -> Option<FollowEvent>;
+    fn apply_update_proto(
+        &self,
+        project: &Entity<Project>,
+        message: proto::update_view::Variant,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Task<Result<()>>;
+    fn is_project_item(&self, window: &mut Window, cx: &mut App) -> bool;
+    fn dedup(
+        &self,
+        existing: &dyn FollowableItemHandle,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<Dedup>;
+    fn update_agent_location(&self, location: language::Anchor, window: &mut Window, cx: &mut App);
+}
+
+impl<T: FollowableItem> FollowableItemHandle for Entity<T> {
+    fn remote_id(&self, client: &Arc<Client>, _: &mut Window, cx: &mut App) -> Option<ViewId> {
+        self.read(cx).remote_id().or_else(|| {
+            client.peer_id().map(|creator| ViewId {
+                creator: CollaboratorId::PeerId(creator),
+                id: self.item_id().as_u64(),
+            })
+        })
+    }
+
+    fn downgrade(&self) -> Box<dyn WeakFollowableItemHandle> {
+        Box::new(self.downgrade())
+    }
+
+    fn set_leader_id(&self, leader_id: Option<CollaboratorId>, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| this.set_leader_id(leader_id, window, cx))
+    }
+
+    fn to_state_proto(&self, window: &mut Window, cx: &mut App) -> Option<proto::view::Variant> {
+        self.update(cx, |this, cx| this.to_state_proto(window, cx))
+    }
+
+    fn add_event_to_update_proto(
+        &self,
+        event: &dyn Any,
+        update: &mut Option<proto::update_view::Variant>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> bool {
+        if let Some(event) = event.downcast_ref() {
+            self.update(cx, |this, cx| {
+                this.add_event_to_update_proto(event, update, window, cx)
+            })
+        } else {
+            false
+        }
+    }
+
+    fn to_follow_event(&self, event: &dyn Any) -> Option<FollowEvent> {
+        T::to_follow_event(event.downcast_ref()?)
+    }
+
+    fn apply_update_proto(
+        &self,
+        project: &Entity<Project>,
+        message: proto::update_view::Variant,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Task<Result<()>> {
+        self.update(cx, |this, cx| {
+            this.apply_update_proto(project, message, window, cx)
+        })
+    }
+
+    fn is_project_item(&self, window: &mut Window, cx: &mut App) -> bool {
+        self.read(cx).is_project_item(window, cx)
+    }
+
+    fn dedup(
+        &self,
+        existing: &dyn FollowableItemHandle,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<Dedup> {
+        let existing = existing.to_any_view().downcast::<T>().ok()?;
+        self.read(cx).dedup(existing.read(cx), window, cx)
+    }
+
+    fn update_agent_location(&self, location: language::Anchor, window: &mut Window, cx: &mut App) {
+        self.update(cx, |this, cx| {
+            this.update_agent_location(location, window, cx)
+        })
+    }
+}
+
+pub trait WeakFollowableItemHandle: Send + Sync {
+    fn upgrade(&self) -> Option<Box<dyn FollowableItemHandle>>;
+}
+
+impl<T: FollowableItem> WeakFollowableItemHandle for WeakEntity<T> {
+    fn upgrade(&self) -> Option<Box<dyn FollowableItemHandle>> {
+        Some(Box::new(self.upgrade()?))
+    }
+}
+
 #[cfg(any(test, feature = "test-support"))]
 pub mod test {
     use super::{Item, ItemEvent, SerializableItem, TabContentParams};
@@ -1182,6 +1562,7 @@ pub mod test {
         InteractiveElement, IntoElement, ParentElement, Render, SharedString, Task, WeakEntity,
         Window,
     };
+    use language::Capability;
     use project::{Project, ProjectEntryId, ProjectPath, WorktreeId};
     use std::{any::Any, cell::Cell, sync::Arc};
     use util::rel_path::rel_path;
@@ -1200,9 +1581,11 @@ pub mod test {
         pub save_as_count: usize,
         pub reload_count: usize,
         pub is_dirty: bool,
+        pub save_error: Option<String>,
         pub buffer_kind: ItemBufferKind,
         pub has_conflict: bool,
         pub has_deleted_file: bool,
+        pub capability: Capability,
         pub project_items: Vec<Entity<TestProjectItem>>,
         pub nav_history: Option<ItemNavHistory>,
         pub tab_descriptions: Option<Vec<&'static str>>,
@@ -1291,8 +1674,10 @@ pub mod test {
                 save_as_count: 0,
                 reload_count: 0,
                 is_dirty: false,
+                save_error: None,
                 has_conflict: false,
                 has_deleted_file: false,
+                capability: Capability::ReadWrite,
                 project_items: Vec::new(),
                 buffer_kind: ItemBufferKind::Singleton,
                 nav_history: None,
@@ -1330,8 +1715,18 @@ pub mod test {
             self
         }
 
+        pub fn with_save_error(mut self, message: impl Into<String>) -> Self {
+            self.save_error = Some(message.into());
+            self
+        }
+
         pub fn with_conflict(mut self, has_conflict: bool) -> Self {
             self.has_conflict = has_conflict;
+            self
+        }
+
+        pub fn with_capability(mut self, capability: Capability) -> Self {
+            self.capability = capability;
             self
         }
 
@@ -1401,6 +1796,10 @@ pub mod test {
                 })
                 .unwrap_or_default()
                 .into()
+        }
+
+        fn telemetry_event_text(&self) -> Option<&'static str> {
+            None
         }
 
         fn tab_content(&self, params: TabContentParams, _window: &Window, _cx: &App) -> AnyElement {
@@ -1475,9 +1874,11 @@ pub mod test {
                     save_as_count: self.save_as_count,
                     reload_count: self.reload_count,
                     is_dirty: self.is_dirty,
+                    save_error: self.save_error.clone(),
                     buffer_kind: self.buffer_kind,
                     has_conflict: self.has_conflict,
                     has_deleted_file: self.has_deleted_file,
+                    capability: self.capability,
                     project_items: self.project_items.clone(),
                     nav_history: None,
                     tab_descriptions: None,
@@ -1518,6 +1919,10 @@ pub mod test {
             self.buffer_kind == ItemBufferKind::Singleton
         }
 
+        fn capability(&self, _: &App) -> Capability {
+            self.capability
+        }
+
         fn save(
             &mut self,
             _: SaveOptions,
@@ -1525,6 +1930,9 @@ pub mod test {
             _window: &mut Window,
             cx: &mut Context<Self>,
         ) -> Task<anyhow::Result<()>> {
+            if let Some(error) = &self.save_error {
+                return Task::ready(Err(anyhow::anyhow!("{error}")));
+            }
             self.save_count += 1;
             self.is_dirty = false;
             for item in &self.project_items {
@@ -1592,7 +2000,6 @@ pub mod test {
             _workspace: &mut Workspace,
             _item_id: ItemId,
             _closing: bool,
-            _window: &mut Window,
             _cx: &mut Context<Self>,
         ) -> Option<Task<anyhow::Result<()>>> {
             if let Some(serialize) = self.serialize.take() {

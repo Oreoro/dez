@@ -8,16 +8,15 @@ use askpass::EncryptedPassword;
 use editor::Editor;
 use extension_host::ExtensionStore;
 use futures::{FutureExt as _, channel::oneshot, select};
-use gpui::{AppContext, AsyncApp, PromptButton, PromptLevel, WindowHandle};
+use gpui::{AppContext, AsyncApp, PromptLevel, WindowHandle};
 
 use project::trusted_worktrees;
 use remote::{
-    ConnectionSharing, DockerConnectionOptions, Interactive, RemoteConnection,
-    RemoteConnectionIdentity, RemoteConnectionOptions, SshConnectionOptions,
-    remote_connection_identity,
+    DockerConnectionOptions, Interactive, RemoteConnection, RemoteConnectionOptions,
+    SshConnectionOptions,
 };
+pub use settings::SshConnection;
 use settings::{DevContainerConnection, ExtendingVec, RegisterSetting, Settings, WslConnection};
-pub use settings::{RemoteAgentRoute, SshConnection};
 use util::paths::PathWithPosition;
 use workspace::{
     AppState, MultiWorkspace, OpenOptions, SerializedWorkspaceLocation, Workspace,
@@ -76,33 +75,6 @@ impl RemoteSettings {
         self.fill_connection_options_from_settings(&mut options);
         options
     }
-
-    pub fn agent_route_for(
-        &self,
-        connection_options: &RemoteConnectionOptions,
-    ) -> Option<RemoteAgentRoute> {
-        let RemoteConnectionIdentity::Ssh {
-            host,
-            username,
-            port,
-        } = remote_connection_identity(connection_options)
-        else {
-            return None;
-        };
-
-        Some(
-            self.ssh_connections
-                .0
-                .iter()
-                .find(|connection| {
-                    connection.host == host
-                        && connection.username == username
-                        && connection.port == port
-                })
-                .map(|connection| connection.effective_agent_route())
-                .unwrap_or_default(),
-        )
-    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -151,71 +123,6 @@ impl Settings for RemoteSettings {
             wsl_connections: remote.wsl_connections.clone().unwrap_or_default().into(),
             read_ssh_config: remote.read_ssh_config.unwrap(),
         }
-    }
-}
-
-#[cfg(test)]
-mod remote_agent_route_tests {
-    use super::*;
-    use remote::WslConnectionOptions;
-
-    fn ssh_connection(host: &str, username: Option<&str>, port: Option<u16>) -> SshConnection {
-        SshConnection {
-            host: host.to_string(),
-            username: username.map(str::to_string),
-            port,
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn route_lookup_uses_only_normalized_ssh_identity() {
-        let mut stored = ssh_connection("build.example.com", Some("dev"), Some(2222));
-        stored.nickname = Some("Build machine".to_string());
-        stored.args = vec!["-v".to_string()];
-        stored.agent_route = Some(RemoteAgentRoute::Tunneled);
-        let settings = RemoteSettings {
-            ssh_connections: ExtendingVec(vec![stored]),
-            wsl_connections: ExtendingVec::default(),
-            read_ssh_config: true,
-        };
-        let options = RemoteConnectionOptions::Ssh(SshConnectionOptions {
-            host: "build.example.com".into(),
-            username: Some("dev".to_string()),
-            port: Some(2222),
-            nickname: Some("Different nickname".to_string()),
-            args: Some(vec!["-q".to_string()]),
-            ..Default::default()
-        });
-
-        assert_eq!(
-            settings.agent_route_for(&options),
-            Some(RemoteAgentRoute::Tunneled)
-        );
-    }
-
-    #[test]
-    fn route_lookup_defaults_unknown_ssh_but_ignores_non_ssh_connections() {
-        let settings = RemoteSettings {
-            ssh_connections: ExtendingVec::default(),
-            wsl_connections: ExtendingVec::default(),
-            read_ssh_config: true,
-        };
-
-        assert_eq!(
-            settings.agent_route_for(&RemoteConnectionOptions::Ssh(SshConnectionOptions {
-                host: "new.example.com".into(),
-                ..Default::default()
-            })),
-            Some(RemoteAgentRoute::Direct)
-        );
-        assert_eq!(
-            settings.agent_route_for(&RemoteConnectionOptions::Wsl(WslConnectionOptions {
-                distro_name: "Ubuntu".to_string(),
-                user: None,
-            })),
-            None
-        );
     }
 }
 
@@ -274,7 +181,7 @@ pub async fn open_remote_project(
                 workspace.update(cx, |workspace, cx| {
                     for item in open_results.iter().flatten() {
                         if let Err(e) = item {
-                            workspace.show_error(&e, cx);
+                            workspace.show_error(format!("{e}"), cx);
                         }
                     }
                 });
@@ -314,8 +221,9 @@ pub async fn open_remote_project(
 
         let window = cx.open_window(options, |window, cx| {
             let project = project::Project::local(
-                app_state.http_client.clone(),
+                app_state.client.clone(),
                 app_state.node_runtime.clone(),
+                app_state.user_store.clone(),
                 app_state.languages.clone(),
                 app_state.fs.clone(),
                 None,
@@ -338,6 +246,7 @@ pub async fn open_remote_project(
         (window, workspace)
     };
 
+    let mut remote_workspace = None;
     loop {
         let (cancel_tx, mut cancel_rx) = oneshot::channel();
         let delegate = window.update(cx, {
@@ -404,29 +313,21 @@ pub async fn open_remote_project(
                 log::error!("Failed to open project: {e:#}");
                 let response = window
                     .update(cx, |_, window, cx| {
-                        let title = match connection_options {
-                            RemoteConnectionOptions::Ssh(_) => {
-                                localization::text(cx, "recent-connect-ssh-failed")
-                            }
-                            RemoteConnectionOptions::Wsl(_) => {
-                                localization::text(cx, "recent-connect-wsl-failed")
-                            }
-                            RemoteConnectionOptions::Docker(_) => {
-                                localization::text(cx, "recent-connect-container-failed")
-                            }
-                            #[cfg(any(test, feature = "test-support"))]
-                            RemoteConnectionOptions::Mock(_) => {
-                                localization::text(cx, "recent-connect-mock-failed")
-                            }
-                        };
                         window.prompt(
                             PromptLevel::Critical,
-                            &title,
+                            match connection_options {
+                                RemoteConnectionOptions::Ssh(_) => "Failed to connect over SSH",
+                                RemoteConnectionOptions::Wsl(_) => "Failed to connect to WSL",
+                                RemoteConnectionOptions::Docker(_) => {
+                                    "Failed to connect to Dev Container"
+                                }
+                                #[cfg(any(test, feature = "test-support"))]
+                                RemoteConnectionOptions::Mock(_) => {
+                                    "Failed to connect to mock server"
+                                }
+                            },
                             Some(&format!("{e:#}")),
-                            &[
-                                PromptButton::new(localization::text(cx, "recent-retry")),
-                                PromptButton::cancel(localization::text(cx, "common-cancel")),
-                            ],
+                            &["Retry", "Cancel"],
                             cx,
                         )
                     })?
@@ -448,7 +349,7 @@ pub async fn open_remote_project(
         let (paths, paths_with_positions) =
             determine_paths_with_positions(&remote_connection, paths.clone()).await;
 
-        let opened_items = cx
+        let opened = cx
             .update(|cx| {
                 workspace::open_remote_project_with_new_connection(
                     window,
@@ -468,34 +369,26 @@ pub async fn open_remote_project(
             }
         });
 
-        match opened_items {
+        match opened {
             Err(e) => {
                 log::error!("Failed to open project: {e:#}");
                 let response = window
                     .update(cx, |_, window, cx| {
-                        let title = match connection_options {
-                            RemoteConnectionOptions::Ssh(_) => {
-                                localization::text(cx, "recent-connect-ssh-failed")
-                            }
-                            RemoteConnectionOptions::Wsl(_) => {
-                                localization::text(cx, "recent-connect-wsl-failed")
-                            }
-                            RemoteConnectionOptions::Docker(_) => {
-                                localization::text(cx, "recent-connect-container-failed")
-                            }
-                            #[cfg(any(test, feature = "test-support"))]
-                            RemoteConnectionOptions::Mock(_) => {
-                                localization::text(cx, "recent-connect-mock-failed")
-                            }
-                        };
                         window.prompt(
                             PromptLevel::Critical,
-                            &title,
+                            match connection_options {
+                                RemoteConnectionOptions::Ssh(_) => "Failed to connect over SSH",
+                                RemoteConnectionOptions::Wsl(_) => "Failed to connect to WSL",
+                                RemoteConnectionOptions::Docker(_) => {
+                                    "Failed to connect to Dev Container"
+                                }
+                                #[cfg(any(test, feature = "test-support"))]
+                                RemoteConnectionOptions::Mock(_) => {
+                                    "Failed to connect to mock server"
+                                }
+                            },
                             Some(&format!("{e:#}")),
-                            &[
-                                PromptButton::new(localization::text(cx, "recent-retry")),
-                                PromptButton::cancel(localization::text(cx, "common-cancel")),
-                            ],
+                            &["Retry", "Cancel"],
                             cx,
                         )
                     })?
@@ -520,7 +413,8 @@ pub async fn open_remote_project(
                 });
             }
 
-            Ok(items) => {
+            Ok((workspace, items)) => {
+                remote_workspace = workspace;
                 navigate_to_positions(&window, items, &paths_with_positions, cx);
             }
         }
@@ -528,22 +422,15 @@ pub async fn open_remote_project(
         break;
     }
 
-    // Register the remote client with extensions. We use `multi_workspace.workspace()` here
-    // (not `initial_workspace`) because `open_remote_project_inner` activated the new remote
-    // workspace, so the active workspace is now the one with the remote project.
-    window
-        .update(cx, |multi_workspace: &mut MultiWorkspace, _, cx| {
-            let workspace = multi_workspace.workspace().clone();
-            workspace.update(cx, |workspace, cx| {
-                if let Some(client) = workspace.project().read(cx).remote_client() {
-                    if let Some(extension_store) = ExtensionStore::try_global(cx) {
-                        extension_store
-                            .update(cx, |store, cx| store.register_remote_client(client, cx));
-                    }
-                }
-            });
-        })
-        .ok();
+    if let Some(remote_workspace) = remote_workspace {
+        remote_workspace.update(cx, |workspace, cx| {
+            if let Some(client) = workspace.project().read(cx).remote_client()
+                && let Some(extension_store) = ExtensionStore::try_global(cx)
+            {
+                extension_store.update(cx, |store, cx| store.register_remote_client(client, cx));
+            }
+        });
+    }
     Ok(window)
 }
 
@@ -608,7 +495,6 @@ async fn path_exists(connection: &Arc<dyn RemoteConnection>, path: &Path) -> boo
         None,
         None,
         Interactive::No,
-        ConnectionSharing::Shared,
     ) else {
         return false;
     };

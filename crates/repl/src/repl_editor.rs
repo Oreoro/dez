@@ -99,12 +99,7 @@ pub fn install_ipykernel_and_assign(
             workspace.show_toast(
                 workspace::Toast::new(
                     notification_id.clone(),
-                    localization::tr!(
-                        cx,
-                        "repl-installing-ipykernel",
-                        environment = env_name.as_str()
-                    )
-                    .to_string(),
+                    format!("Installing ipykernel in {}...", env_name),
                 ),
                 cx,
             );
@@ -155,12 +150,7 @@ pub fn install_ipykernel_and_assign(
                             workspace.show_toast(
                                 workspace::Toast::new(
                                     notification_id.clone(),
-                                    localization::tr!(
-                                        cx,
-                                        "repl-ipykernel-installed",
-                                        environment = env_name.as_str()
-                                    )
-                                    .to_string(),
+                                    format!("ipykernel installed in {}", env_name),
                                 )
                                 .autohide(),
                                 cx,
@@ -193,13 +183,10 @@ pub fn install_ipykernel_and_assign(
                             workspace.show_toast(
                                 workspace::Toast::new(
                                     notification_id.clone(),
-                                    localization::tr!(
-                                        cx,
-                                        "repl-ipykernel-install-failed",
-                                        environment = env_name.as_str(),
-                                        error = error.to_string()
-                                    )
-                                    .to_string(),
+                                    format!(
+                                        "Failed to install ipykernel in {}: {}",
+                                        env_name, error
+                                    ),
                                 ),
                                 cx,
                             );

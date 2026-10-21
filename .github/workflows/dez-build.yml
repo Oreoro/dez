@@ -1,50 +1,369 @@
-name: Dez build
+name: Build Dez for macOS
 
-# Artifacts are built on demand only. Merging to `main` no longer starts a
-# build; dispatch this workflow when you actually want binaries.
 on:
   workflow_dispatch:
+    inputs:
+      release_kind:
+        description: Artifact release policy
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - stable
+      skip_tests:
+        description: Skip focused regression tests for a faster artifact
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: dez-macos-build-${{ github.ref }}-${{ inputs.skip_tests }}
   cancel-in-progress: true
 
 env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_RELEASE_DEBUG: "0"
+  CARGO_PROFILE_RELEASE_STRIP: symbols
+  CARGO_PROFILE_RELEASE_PACKAGE_ZED_CODEGEN_UNITS: "1"
   CARGO_TERM_COLOR: always
+  DEZ_RELEASE_KIND: ${{ inputs.release_kind }}
+  DEZ_BUNDLE_CHANNEL: ${{ inputs.release_kind }}
+  DEZ_BUNDLE_SKIP_REMOTE_SERVER: "true"
+  MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+  MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+  MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+  APPLE_NOTARIZATION_KEY: ${{ secrets.APPLE_NOTARIZATION_KEY }}
+  APPLE_NOTARIZATION_KEY_ID: ${{ secrets.APPLE_NOTARIZATION_KEY_ID }}
+  APPLE_NOTARIZATION_ISSUER_ID: ${{ secrets.APPLE_NOTARIZATION_ISSUER_ID }}
+  RUST_BACKTRACE: "1"
+  RUSTFLAGS: "-C symbol-mangling-version=v0 --cfg tokio_unstable -C target-cpu=apple-m2"
 
 jobs:
-  identity:
-    name: Dez identity checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
-      - name: Run identity checks
-        run: ./script/dez-identity-check
+  build_macos_arm64:
+    name: macOS Apple M2 app
+    runs-on: macos-15
+    timeout-minutes: 360
 
-  check:
-    name: Cargo check (${{ matrix.os }})
-    needs: identity
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-          - os: ubuntu-latest
-    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Check out Dez
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
         with:
-          toolchain: 1.95.0
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: ./script/linux
-      - name: Download WASI SDK
-        if: runner.os == 'Linux'
-        run: ./script/download-wasi-sdk
-      - name: Cargo check dez
-        run: cargo check -p dez
+          node-version: "24"
+          check-latest: true
+          package-manager-cache: false
+
+      - name: Install guard prerequisites
+        run: command -v rg >/dev/null || brew install ripgrep
+
+      - name: Install the pinned Rust toolchain
+        run: |
+          set -euo pipefail
+          toolchain=$(
+            sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml
+          )
+          test -n "$toolchain"
+          rustup set profile minimal
+          rustup toolchain install "$toolchain" --profile minimal --no-self-update
+          rustup override set "$toolchain"
+          rustc --version --verbose
+          cargo --version
+
+      - name: Restore Cargo downloads
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.cargo/bin/cargo-bundle
+            ~/.cargo/git
+            ~/.cargo/registry
+          key: dez-cargo-macos-arm64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            dez-cargo-macos-arm64-
+
+      - name: Restore Rust release intermediates
+        id: rust-release-cache
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-apple-darwin/release/.fingerprint
+            target/aarch64-apple-darwin/release/build
+            target/aarch64-apple-darwin/release/deps
+          key: dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+            dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-
+
+      - name: Verify the Apple M2 build target
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "arm64"
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "aarch64-apple-darwin"
+          mkdir -p target
+          printf 'fn main() {}\n' |
+            rustc \
+              --target aarch64-apple-darwin \
+              -C target-cpu=apple-m2 \
+              --emit=metadata \
+              -o target/apple-m2-target-check.rmeta \
+              -
+          echo "Runner CPU: $(sysctl -n machdep.cpu.brand_string)"
+          echo "Dez target CPU: apple-m2"
+
+      - name: Verify Dez source and bundle guards
+        run: |
+          set -euo pipefail
+          bash -n script/bundle-mac
+          ./script/dez-identity-check
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            for credential in \
+              MACOS_SIGNING_IDENTITY \
+              MACOS_CERTIFICATE \
+              MACOS_CERTIFICATE_PASSWORD \
+              APPLE_NOTARIZATION_KEY \
+              APPLE_NOTARIZATION_KEY_ID \
+              APPLE_NOTARIZATION_ISSUER_ID
+            do
+              if [[ -z "${!credential:-}" ]]; then
+                echo "::error::Stable Dez builds require $credential"
+                exit 1
+              fi
+            done
+          fi
+
+      - name: Run focused Workspace, terminal, and integration regressions
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          set -euo pipefail
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package workspace \
+            test_remove_project_group_prefers_already_loaded_neighboring_workspace \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package terminal_view \
+            test_inline_terminal_displays_all_of_its_lines \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package terminal_view \
+            startup_command_tests \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package sidebar \
+            test_find_or_create_workspace_returns_the_created_remote_workspace \
+            -- \
+            --nocapture
+          cargo test \
+            --release \
+            --target aarch64-apple-darwin \
+            --package agent_ui \
+            multiplexer_session_store::tests \
+            -- \
+            --nocapture
+
+      - name: Build the optimized Dez application bundle
+        id: build-dez
+        run: |
+          set -euo pipefail
+          ./script/bundle-mac aarch64-apple-darwin
+
+      - name: Save Rust release intermediates
+        if: ${{ !cancelled() && (steps.build-dez.outcome == 'success' || steps.build-dez.outcome == 'failure') && steps.rust-release-cache.outputs.cache-hit != 'true' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            target/aarch64-apple-darwin/release/.fingerprint
+            target/aarch64-apple-darwin/release/build
+            target/aarch64-apple-darwin/release/deps
+          key: dez-rust-release-macos-arm64-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Verify and package the launchable application
+        run: |
+          set -euo pipefail
+          dmg=target/aarch64-apple-darwin/release/Dez-aarch64.dmg
+          test -f "$dmg"
+          hdiutil verify "$dmg"
+
+          mount_dir="${RUNNER_TEMP}/dez-m2-dmg"
+          mkdir -p "$mount_dir"
+          hdiutil attach \
+            -readonly \
+            -nobrowse \
+            -mountpoint "$mount_dir" \
+            "$dmg" \
+            >target/dez-dmg-attach.txt
+          trap 'hdiutil detach "$mount_dir" >/dev/null' EXIT
+
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            expected_name=Dez
+            expected_bundle_id=dev.dez.Dez
+            artifact_label=Dez
+          else
+            expected_name="Dez Preview"
+            expected_bundle_id=dev.dez.Dez-Preview
+            artifact_label=Dez-Preview
+          fi
+          expected_version="$(
+            sed -n 's/^version = "\([^"]*\)"/\1/p' crates/zed/Cargo.toml |
+              head -n 1
+          )"
+          test -n "$expected_version"
+          app="$mount_dir/${expected_name}.app"
+          plist="$app/Contents/Info.plist"
+          main="$app/Contents/MacOS/dez"
+          cli="$app/Contents/MacOS/cli"
+          terminal_host="$app/Contents/MacOS/dez-terminal-host"
+          git_binary="$app/Contents/MacOS/git"
+
+          test -d "$app"
+          test -f "$plist"
+          plutil -lint "$plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")" = "$expected_name"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")" = "$expected_bundle_id"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$plist")" = "dez"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")" = "$expected_version"
+
+          for binary in "$main" "$cli" "$terminal_host" "$git_binary"; do
+            test -x "$binary"
+            test "$(lipo -archs "$binary")" = "arm64"
+          done
+
+          codesign --verify --deep --strict --verbose=2 "$app"
+          signature_details="$(codesign -dv --verbose=4 "$app" 2>&1)"
+          if grep -q '^Authority=Developer ID Application:' <<<"$signature_details"; then
+            release_signed=true
+            spctl --assess --type execute --verbose=2 "$app"
+          else
+            release_signed=false
+          fi
+          if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+            if [[ "$release_signed" != true ]]; then
+              echo "::error::Stable Dez artifacts require a Developer ID Application signature"
+              exit 1
+            fi
+            if ! grep -Eq '^TeamIdentifier=[A-Z0-9]+$' <<<"$signature_details"; then
+              echo "::error::Stable Dez artifacts require a stable signing TeamIdentifier"
+              exit 1
+            fi
+            xcrun stapler validate "$dmg"
+          fi
+
+          artifact_dir="target/dez-macos-m2-${DEZ_RELEASE_KIND}"
+          mkdir -p "$artifact_dir"
+          artifact_dmg="${artifact_label}-macOS-M2.dmg"
+          cp "$dmg" "$artifact_dir/$artifact_dmg"
+
+          system_specs="$("$main" --system-specs)"
+          if ! grep -F "(${expected_name})" <<<"$system_specs"; then
+            echo "::error::Packaged binary release channel does not match $expected_name"
+            printf '%s\n' "$system_specs"
+            exit 1
+          fi
+
+          {
+            echo "Packaged entry-point smoke test"
+            echo "================================"
+            echo
+            printf '%s\n' "$system_specs"
+            echo
+            "$cli" --dez "$app" --version
+            echo
+            "$terminal_host" --help
+          } >"$artifact_dir/runtime-smoke.txt"
+          grep -F "$expected_name" "$artifact_dir/runtime-smoke.txt"
+          grep -F "$expected_version" "$artifact_dir/runtime-smoke.txt"
+          grep -F "Usage: dez-terminal-host" "$artifact_dir/runtime-smoke.txt"
+
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "release_kind=$DEZ_RELEASE_KIND"
+            echo "runner=${RUNNER_OS}-${RUNNER_ARCH}"
+            echo "target=aarch64-apple-darwin"
+            echo "target_cpu=apple-m2"
+            echo "optimization=release thin-LTO single-codegen-unit stripped"
+            echo "bundle_name=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleName' "$plist")"
+            echo "bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist")"
+            echo "bundle_version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            echo "binary_channel=$expected_name"
+            if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+              echo "signature=Developer ID (notarized)"
+            elif [[ "$release_signed" = true ]]; then
+              echo "signature=Developer ID Preview (not a stable release)"
+            else
+              echo "signature=ad-hoc Preview (not notarized; not a stable release)"
+            fi
+            rustc --version
+            cargo --version
+            file "$main" "$cli" "$terminal_host" "$git_binary"
+            codesign -dv --verbose=4 "$app" 2>&1
+            shasum -a 256 "$main" "$cli" "$terminal_host" "$git_binary"
+          } >"$artifact_dir/build-manifest.txt"
+
+          {
+            echo "$expected_name for Apple M2"
+            echo "================================"
+            echo
+            echo "1. Open $artifact_dmg."
+            echo "2. Drag ${expected_name}.app to Applications."
+            echo
+            if [[ "$DEZ_RELEASE_KIND" = stable ]]; then
+              echo "3. Open Dez from Applications."
+              echo
+              echo "This Dez $expected_version stable release has a Developer ID signature and notarization."
+              echo "macOS can therefore retain protected-folder decisions across"
+              echo "upgrades that keep the same Dez signing identity."
+            else
+              echo "3. Control-click ${expected_name} in Applications, choose Open, then Open."
+              echo
+              echo "This is a Dez $expected_version Preview artifact, not a stable release."
+              echo "It may be ad-hoc signed and not notarized."
+              echo "Because rebuilt ad-hoc apps do not have a stable Apple signing"
+              echo "identity, macOS can ask again before accessing protected folders"
+              echo "such as Documents. Keep active code under ~/Developer to avoid"
+              echo "that protected-folder prompt, or use a Developer ID signed build."
+              echo
+              echo "If Finder reports that this exact trusted build is damaged, run:"
+              echo
+              echo "    xattr -dr com.apple.quarantine \"/Applications/${expected_name}.app\""
+            fi
+            echo
+            echo "The application, CLI, terminal host, Git helper, resources, bundle"
+            echo "identifier, arm64 architecture, deep signature, and packaged"
+            echo "entry points were verified in GitHub Actions before upload."
+          } >"$artifact_dir/INSTALL.txt"
+
+          (
+            cd "$artifact_dir"
+            shasum -a 256 "$artifact_dmg" >SHA256SUMS.txt
+            shasum -a 256 -c SHA256SUMS.txt
+          )
+
+          hdiutil detach "$mount_dir"
+          trap - EXIT
+
+      - name: Upload the launchable Dez application
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Dez-${{ inputs.release_kind }}-macOS-M2-${{ github.sha }}
+          path: target/dez-macos-m2-${{ inputs.release_kind }}/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

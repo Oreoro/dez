@@ -13,9 +13,9 @@ use tasks_ui::{Spawn, TaskOverrides};
 use ui::{FluentBuilder, InteractiveElement};
 use util::maybe;
 use workspace::{ShutdownDebugAdapters, Workspace};
-use dez_actions::debug_panel::{Toggle, ToggleFocus};
 
 pub mod attach_modal;
+pub(crate) mod canvas;
 pub mod debugger_panel;
 mod dropdown_menus;
 mod new_process_modal;
@@ -31,8 +31,10 @@ actions!(
     [
         /// Starts a new debugging session.
         Start,
-        /// Continues execution until the next breakpoint.
+        /// Continues all threads until the next breakpoint.
         Continue,
+        /// Continues the selected thread until the next breakpoint.
+        ContinueThread,
         /// Detaches the debugger from the running process.
         Detach,
         /// Pauses the currently running program.
@@ -107,29 +109,11 @@ actions!(
 );
 
 pub fn init(cx: &mut App) {
+    workspace::FollowableViewRegistry::register::<DebugSession>(cx);
+
     cx.observe_new(|workspace: &mut Workspace, _, _| {
         workspace
             .register_action(spawn_task_or_modal)
-            .register_action(|workspace, _: &ToggleFocus, window, cx| {
-                workspace.toggle_panel_focus::<DebugPanel>(window, cx);
-            })
-            .register_action(|workspace, _: &Toggle, window, cx| {
-                if !workspace.toggle_panel_focus::<DebugPanel>(window, cx) {
-                    workspace.close_panel::<DebugPanel>(window, cx);
-                }
-            })
-            .register_action(|workspace: &mut Workspace, _: &Start, window, cx| {
-                NewProcessModal::show(workspace, window, NewProcessMode::Debug, None, cx);
-            })
-            .register_action(|workspace: &mut Workspace, _: &Rerun, window, cx| {
-                let Some(debug_panel) = workspace.panel::<DebugPanel>(cx) else {
-                    return;
-                };
-
-                debug_panel.update(cx, |debug_panel, cx| {
-                    debug_panel.rerun_last_session(workspace, window, cx);
-                })
-            })
             .register_action(
                 |workspace: &mut Workspace, _: &ShutdownDebugAdapters, _window, cx| {
                     workspace.project().update(cx, |project, cx| {
@@ -140,7 +124,10 @@ pub fn init(cx: &mut App) {
                 },
             )
             .register_action_renderer(|div, workspace, _, cx| {
-                let Some(debug_panel) = workspace.panel::<DebugPanel>(cx) else {
+                let Some(debug_panel) = workspace
+                    .item_of_type::<DebugPanel>(cx)
+                    .or_else(|| workspace.panel::<DebugPanel>(cx))
+                else {
                     return div;
                 };
                 let Some(active_item) = debug_panel
@@ -157,6 +144,9 @@ pub fn init(cx: &mut App) {
 
                 let caps = running_state.capabilities(cx);
                 let supports_step_back = caps.supports_step_back.unwrap_or_default();
+                let supports_single_thread_execution_requests = caps
+                    .supports_single_thread_execution_requests
+                    .unwrap_or_default();
                 let supports_detach = running_state.session().read(cx).is_attached();
                 let status = running_state.thread_status(cx);
 
@@ -198,9 +188,17 @@ pub fn init(cx: &mut App) {
                         let active_item = active_item.clone();
                         move |_: &Continue, _, cx| {
                             active_item
-                                .update(cx, |item, cx| item.continue_thread(cx))
+                                .update(cx, |item, cx| item.continue_program(cx))
                                 .ok();
                         }
+                    })
+                    .when(supports_single_thread_execution_requests, |div| {
+                        let active_item = active_item.clone();
+                        div.on_action(move |_: &ContinueThread, _, cx| {
+                            active_item
+                                .update(cx, |item, cx| item.continue_thread(cx))
+                                .ok();
+                        })
                     })
                 })
                 .when(supports_detach, |div| {
@@ -264,7 +262,11 @@ pub fn init(cx: &mut App) {
                     let Some(workspace) = editor.workspace() else {
                         return;
                     };
-                    let Some(debug_panel) = workspace.read(cx).panel::<DebugPanel>(cx) else {
+                    let Some(debug_panel) = workspace
+                        .read(cx)
+                        .item_of_type::<DebugPanel>(cx)
+                        .or_else(|| workspace.read(cx).panel::<DebugPanel>(cx))
+                    else {
                         return;
                     };
                     let Some(active_session) =

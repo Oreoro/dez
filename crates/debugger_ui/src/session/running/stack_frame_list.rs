@@ -16,6 +16,11 @@ use util::{
 };
 
 use crate::ToggleUserFrames;
+use crate::canvas::{
+    debugger_panel_background, debugger_panel_padding, debugger_row_border_color,
+    debugger_row_hover_background, debugger_row_hover_border_color, debugger_row_padding,
+    debugger_row_surface,
+};
 use language::PointUtf16;
 use project::debugger::breakpoint_store::ActiveStackFrame;
 use project::debugger::session::{Session, SessionEvent, StackFrame, ThreadStatus};
@@ -48,6 +53,18 @@ impl StackFrameFilter {
             _ => StackFrameFilter::All,
         }
     }
+}
+
+fn stack_frame_filter_action_label(app_name: &str, filter: StackFrameFilter) -> &'static str {
+    match filter {
+        StackFrameFilter::All if app_name == "Zed" => "Show stack frames from your project",
+        StackFrameFilter::All => "Show stack frames from this Workspace",
+        StackFrameFilter::OnlyUserFrames => "Show all stack frames",
+    }
+}
+
+fn stack_frame_restart_is_persistently_visible(app_name: &str, selected: bool) -> bool {
+    app_name != "Zed" && selected
 }
 
 impl From<StackFrameFilter> for String {
@@ -395,7 +412,10 @@ impl StackFrameList {
         let stack_frame_id = stack_frame.id;
         self.opened_stack_frame_id = Some(stack_frame_id);
         let Some(abs_path) = Self::abs_path_from_stack_frame(&stack_frame) else {
-            return Task::ready(Err(anyhow!("Project path not found")));
+            return Task::ready(Err(anyhow!(
+                "no absolute source path in stack frame {stack_frame_id}, source: {:?}",
+                stack_frame.source
+            )));
         };
         let row = stack_frame.line.saturating_sub(1) as u32;
         cx.emit(StackFrameListEvent::SelectedStackFrameChanged(
@@ -463,7 +483,7 @@ impl StackFrameList {
                             pane_with_active_file.map(|pane| pane.downgrade())
                         };
 
-                        anyhow::Ok(workspace.open_path_preview(
+                        anyhow::Ok(workspace.open_path_preview_in_tabbed_pane(
                             project_path,
                             debug_pane,
                             true,
@@ -521,7 +541,7 @@ impl StackFrameList {
                 .filter(|path| {
                     // Since we do not know if we are debugging on the host or (a remote/WSL) target,
                     // we need to check if either the path is absolute as Posix or Windows.
-                    is_absolute(path, PathStyle::Posix) || is_absolute(path, PathStyle::Windows)
+                    is_absolute(path, PathStyle::Unix) || is_absolute(path, PathStyle::Windows)
                 })
                 .map(|path| Arc::<Path>::from(Path::new(path)))
         })
@@ -536,15 +556,12 @@ impl StackFrameList {
     fn render_label_entry(
         &self,
         stack_frame: &dap::StackFrame,
-        _cx: &mut Context<Self>,
+        cx: &mut Context<Self>,
     ) -> AnyElement {
-        h_flex()
-            .rounded_md()
-            .justify_between()
-            .w_full()
+        debugger_row_surface(h_flex().justify_between().w_full(), false, cx)
             .group("")
             .id(("label-stack-frame", stack_frame.id))
-            .p_1()
+            .p(debugger_row_padding(cx))
             .on_any_mouse_down(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -593,16 +610,19 @@ impl StackFrameList {
                     | dap::StackFramePresentationHint::Deemphasize
             )
         );
-        h_flex()
-            .rounded_md()
-            .justify_between()
-            .w_full()
+        let restart_background = debugger_panel_background(cx);
+        let restart_border_color = debugger_row_border_color(restart_background, false, cx);
+        let restart_hover_background = debugger_row_hover_background(cx);
+        let restart_hover_border_color =
+            debugger_row_hover_border_color(restart_background, false, cx);
+        let restart_is_persistently_visible =
+            stack_frame_restart_is_persistently_visible(paths::APP_NAME, is_selected_frame);
+
+        debugger_row_surface(h_flex().justify_between().w_full(), is_selected_frame, cx)
             .group("")
             .id(("stack-frame", stack_frame.id))
-            .p_1()
-            .when(is_selected_frame, |this| {
-                this.bg(cx.theme().colors().element_hover)
-            })
+            .p(debugger_row_padding(cx))
+            .cursor_pointer()
             .on_any_mouse_down(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -610,7 +630,6 @@ impl StackFrameList {
                 this.selected_ix = Some(ix);
                 this.activate_selected_entry(window, cx);
             }))
-            .hover(|style| style.bg(cx.theme().colors().element_hover).cursor_pointer())
             .overflow_x_scroll()
             .child(
                 v_flex()
@@ -629,25 +648,32 @@ impl StackFrameList {
                     this.child(
                         h_flex()
                             .id(("restart-stack-frame", stack_frame.id))
-                            .visible_on_hover("")
+                            .when(!restart_is_persistently_visible, |this| {
+                                this.visible_on_hover("")
+                            })
                             .absolute()
                             .right_2()
                             .overflow_hidden()
-                            .rounded_md()
                             .border_1()
-                            .border_color(cx.theme().colors().element_selected)
-                            .bg(cx.theme().colors().element_background)
+                            .border_color(restart_border_color)
+                            .bg(restart_background)
                             .hover(|style| {
                                 style
-                                    .bg(cx.theme().colors().ghost_element_hover)
+                                    .bg(restart_hover_background)
+                                    .border_color(restart_hover_border_color)
                                     .cursor_pointer()
                             })
+                            .map(|this| crate::canvas::debugger_stateful_radius(this, cx))
                             .child(
                                 IconButton::new(
                                     ("restart-stack-frame", stack_frame.id),
                                     IconName::RotateCcw,
                                 )
                                 .icon_size(IconSize::Small)
+                                .aria_label("Restart Stack Frame")
+                                .when(restart_is_persistently_visible, |button| {
+                                    button.tab_index(0isize)
+                                })
                                 .on_click(cx.listener({
                                     let stack_frame_id = stack_frame.id;
                                     move |this, _, _window, cx| {
@@ -655,9 +681,7 @@ impl StackFrameList {
                                     }
                                 }))
                                 .tooltip(move |window, cx| {
-                                    Tooltip::text(localization::text(cx, "debugger-restart-frame"))(
-                                        window, cx,
-                                    )
+                                    Tooltip::text("Restart Stack Frame")(window, cx)
                                 }),
                             ),
                     )
@@ -697,32 +721,12 @@ impl StackFrameList {
     ) -> AnyElement {
         let first_stack_frame = &stack_frames[0];
         let is_selected = Some(ix) == self.selected_ix;
-        let more_frames = first_stack_frame
-            .source
-            .as_ref()
-            .and_then(|source| source.origin.as_ref())
-            .map_or_else(
-                || localization::tr!(cx, "debugger-show-more-frames", count = stack_frames.len(),),
-                |origin| {
-                    localization::tr!(
-                        cx,
-                        "debugger-show-more-frames-from-origin",
-                        count = stack_frames.len(),
-                        origin = origin,
-                    )
-                },
-            );
 
-        h_flex()
-            .rounded_md()
-            .justify_between()
-            .w_full()
+        debugger_row_surface(h_flex().justify_between().w_full(), is_selected, cx)
             .group("")
             .id(("stack-frame", first_stack_frame.id))
-            .p_1()
-            .when(is_selected, |this| {
-                this.bg(cx.theme().colors().element_hover)
-            })
+            .p(debugger_row_padding(cx))
+            .cursor_pointer()
             .on_any_mouse_down(|_, _, cx| {
                 cx.stop_propagation();
             })
@@ -730,13 +734,20 @@ impl StackFrameList {
                 this.selected_ix = Some(ix);
                 this.activate_selected_entry(window, cx);
             }))
-            .hover(|style| style.bg(cx.theme().colors().element_hover).cursor_pointer())
             .child(
                 v_flex()
                     .text_ui_sm(cx)
                     .truncate()
                     .text_color(cx.theme().colors().text_muted)
-                    .child(more_frames),
+                    .child(format!(
+                        "Show {} more{}",
+                        stack_frames.len(),
+                        first_stack_frame
+                            .source
+                            .as_ref()
+                            .and_then(|source| source.origin.as_ref())
+                            .map_or(String::new(), |origin| format!(": {}", origin))
+                    )),
             )
             .into_any()
     }
@@ -901,7 +912,7 @@ impl StackFrameList {
     }
 
     fn render_list(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        div().p_1().size_full().child(
+        div().p(debugger_panel_padding(cx)).size_full().child(
             list(
                 self.list_state.clone(),
                 cx.processor(|this, ix, _window, cx| this.render_entry(ix, cx)),
@@ -911,19 +922,18 @@ impl StackFrameList {
     }
 
     pub(crate) fn render_control_strip(&self) -> AnyElement {
-        let tooltip_title = match self.list_filter {
-            StackFrameFilter::All => "Show stack frames from your project",
-            StackFrameFilter::OnlyUserFrames => "Show all stack frames",
-        };
+        let action_label = stack_frame_filter_action_label(paths::APP_NAME, self.list_filter);
 
         h_flex()
             .child(
                 IconButton::new(
                     "filter-by-visible-worktree-stack-frame-list",
-                    IconName::ListFilter,
+                    IconName::Filter,
                 )
+                .tab_index(0isize)
+                .aria_label(action_label)
                 .tooltip(move |_window, cx| {
-                    Tooltip::for_action(tooltip_title, &ToggleUserFrames, cx)
+                    Tooltip::for_action(action_label, &ToggleUserFrames, cx)
                 })
                 .toggle_state(self.list_filter == StackFrameFilter::OnlyUserFrames)
                 .icon_size(IconSize::Small)
@@ -940,6 +950,7 @@ impl Render for StackFrameList {
         div()
             .track_focus(&self.focus_handle)
             .size_full()
+            .bg(debugger_panel_background(cx))
             .on_action(cx.listener(Self::select_next))
             .on_action(cx.listener(Self::select_previous))
             .on_action(cx.listener(Self::select_first))
@@ -973,3 +984,34 @@ impl Focusable for StackFrameList {
 }
 
 impl EventEmitter<StackFrameListEvent> for StackFrameList {}
+
+#[cfg(test)]
+mod product_copy_tests {
+    use super::{
+        StackFrameFilter, stack_frame_filter_action_label,
+        stack_frame_restart_is_persistently_visible,
+    };
+
+    #[test]
+    fn dez_names_and_reverses_the_workspace_stack_frame_filter() {
+        assert_eq!(
+            stack_frame_filter_action_label("Dez", StackFrameFilter::All),
+            "Show stack frames from this Workspace"
+        );
+        assert_eq!(
+            stack_frame_filter_action_label("Dez", StackFrameFilter::OnlyUserFrames),
+            "Show all stack frames"
+        );
+        assert_eq!(
+            stack_frame_filter_action_label("Zed", StackFrameFilter::All),
+            "Show stack frames from your project"
+        );
+    }
+
+    #[test]
+    fn dez_keeps_restart_visible_on_the_selected_stack_frame() {
+        assert!(stack_frame_restart_is_persistently_visible("Dez", true));
+        assert!(!stack_frame_restart_is_persistently_visible("Dez", false));
+        assert!(!stack_frame_restart_is_persistently_visible("Zed", true));
+    }
+}

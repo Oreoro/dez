@@ -1,6 +1,6 @@
 ---
-title: Project Panel - dez
-description: Navigate workspace files and directories with dez's project panel. Create, rename, trash and delete files and directories.
+title: Project Panel - Zed
+description: Navigate workspace files and directories with Zed's project panel. Create, rename, trash and delete files and directories.
 ---
 
 # Project Panel
@@ -10,20 +10,23 @@ Toggle it with {#action project_panel::ToggleFocus} ({#kb
 project_panel::ToggleFocus}), or click the **Project Panel** button in the
 status bar.
 
-![Project Panel](https://images.dez.dev/docs/project-panel/panel.png)
+![Project Panel](https://images.zed.dev/docs/project-panel/panel.png)
 
 ## Navigating
 
 Use the arrow keys to move through entries. {#kb
 project_panel::ExpandSelectedEntry} expands a directory and {#kb
 project_panel::CollapseSelectedEntry} collapses it. {#kb
-project_panel::CollapseAllEntries} collapses every directory at once. Press {#kb
+project_panel::CollapseAllEntries} collapses every directory at once. {#kb
+project_panel::ExpandAllEntries} expands every directory at once. Press {#kb
 project_panel::Open} or click to preview a selected file, without giving it a
 permanent tab. Editing the file or double-clicking it promotes it to a permanent tab.
+Middle-clicking a file skips the preview and opens it in a permanent, focused tab
+right away.
 
 ### Auto-reveal
 
-By default, switching files in the editor will automatically highlight it in the
+By default, switching to a file in the editor will automatically highlight it in the
 project panel and scroll it into view. This can be disabled with the
 `project_panel.auto_reveal_entries` setting.
 
@@ -32,21 +35,21 @@ project panel and scroll it into view. This can be disabled with the
 When `project_panel.sticky_scroll` is enabled (the default), ancestor directories pin themselves to the top
 of the panel as you scroll, so you always know which directory you're on.
 
-![Project Panel: Sticky Scroll Enabled](https://images.dez.dev/docs/project-panel/sticky-scroll-true.png)
+![Project Panel: Sticky Scroll Enabled](https://images.zed.dev/docs/project-panel/sticky-scroll-true.png)
 
-![Project Panel: Sticky Scroll Disabled](https://images.dez.dev/docs/project-panel/sticky-scroll-false.png)
+![Project Panel: Sticky Scroll Disabled](https://images.zed.dev/docs/project-panel/sticky-scroll-false.png)
 
 ### Directory Folding
 
-When `project_panel.auto_fold_dirs` is enabled (the default), chains of directories that each contain a
+When `project_panel.auto_fold_dirs` is enabled, chains of directories that each contain a
 single child directory are collapsed into one row (for example,
 `src/utils/helpers` instead of three separate levels). Right-click a folded
 directory and choose **Unfold Directory** to expand the chain, or **Fold
 Directory** to collapse it again.
 
-![Project Panel: Auto Fold Directories Enabled](https://images.dez.dev/docs/project-panel/auto-fold-dirs-true.png)
+![Project Panel: Auto Fold Directories Enabled](https://images.zed.dev/docs/project-panel/auto-fold-dirs-true.png)
 
-![Project Panel: Auto Fold Directories Disabled](https://images.dez.dev/docs/project-panel/auto-fold-dirs-false.png)
+![Project Panel: Auto Fold Directories Disabled](https://images.zed.dev/docs/project-panel/auto-fold-dirs-false.png)
 
 ## Selecting Multiple Entries
 
@@ -57,7 +60,7 @@ set of marked entries.
 When exactly two files are marked, {#action project_panel::CompareMarkedFiles}
 ({#kb project_panel::CompareMarkedFiles}) opens a diff view comparing them.
 
-![Project Panel: Compare Marked Files](https://images.dez.dev/docs/project-panel/compare-marked-files.png)
+![Project Panel: Compare Marked Files](https://images.zed.dev/docs/project-panel/compare-marked-files.png)
 
 ## File Operations
 
@@ -90,7 +93,7 @@ cancel.
 - {#action project_panel::Paste} ({#kb project_panel::Paste}) places them in the
   selected directory.
 
-When pasting would create a name conflict, dez appends a "copy" suffix (e.g.,
+When pasting would create a name conflict, Zed appends a "copy" suffix (e.g.,
 `file copy.txt`, `file copy 2.txt`). If a single file is pasted with a generated
 suffix, the rename editor opens automatically so you can adjust the name.
 
@@ -120,12 +123,14 @@ be disabled with the `project_panel.drag_and_drop` setting.
 
 When `project_panel.git_status` is enabled (the default), file and directory names are tinted
 to reflect their git status—modified, added, deleted, untracked, or conflicting.
+In projects that are not rooted at a git repository, status is shown only for
+[active repositories](./git.md#repository-activation).
 
 Setting `project_panel.git_status_indicator` to `true` (disabled by default) adds a letter badge next
 to each name: **M** (modified), **A** (added), **D** (deleted), **U**
 (untracked) or **!** (conflict).
 
-![Project Panel: Git Integration](https://images.dez.dev/docs/project-panel/git-status.png)
+![Project Panel: Git Integration](https://images.zed.dev/docs/project-panel/git-status.png)
 
 Use {#action project_panel::SelectNextGitEntry} and {#action
 project_panel::SelectPrevGitEntry} to jump between tracked files with
@@ -182,3 +187,63 @@ The `project_panel.sort_order` setting controls name comparison:
   selected directory.
 - {#action project_panel::RemoveFromProject} removes a workspace root folder
   from the project.
+
+## Undo and Redo
+
+The Project Panel keeps a history of the file operations you perform through it,
+letting you undo ({#action project_panel::Undo} / {#kb project_panel::Undo}) and
+redo ({#action project_panel::Redo} / {#kb project_panel::Redo}) these
+operations, with support for local and remote projects.
+
+The following operations are tracked:
+
+- {#action project_panel::NewFile}
+- {#action project_panel::NewDirectory}
+- {#action project_panel::Rename}
+- {#action project_panel::Trash}
+- {#action project_panel::Paste}
+- {#action project_panel::Duplicate}
+
+Besides these actions, moving items within the panel using drag and drop, as
+well as dragging files into the panel from outside Zed, are also tracked.
+
+Undoing a move or rename (for example {#action project_panel::Rename}, a
+{#action project_panel::Cut} followed by paste, or a drag within the panel)
+returns the item to its original name or location.
+
+Undoing an operation that creates a file or directory (for example
+{#action project_panel::NewFile}, {#action project_panel::NewDirectory},
+{#action project_panel::Duplicate}, a {#action project_panel::Copy} followed by
+paste, or a drag from outside Zed) moves the new item to your system trash
+rather than deleting it. This keeps it recoverable and lets redo restore it, but
+it also means you may notice these items appear in your trash.
+
+When you batch several of these together, for example, selecting multiple files
+and moving them to another folder, the whole batch is undone or redone as a
+single step, and a failure in one of the operations does not block the rest.
+
+### Limitations
+
+- Undo and redo are not available when collaborating in a project shared by
+  someone else. The same applies to {#action project_panel::Trash}, so when
+  working as a guest in a shared project, files can only be permanently
+  deleted, and file operations cannot be undone.
+- Operations whose result is a path excluded from the project via the
+  `file_scan_exclusions` setting are not recorded. For example, with
+  `**/*.secret` excluded, creating a file named `token.secret`, or renaming an
+  existing file to `token.secret`, succeeds on disk, but the operation cannot
+  be undone from the panel.
+- Permanently deleting an item ({#action project_panel::Delete}) is not tracked
+  and cannot be undone.
+- Undoing a {#action project_panel::Trash} restores the item from your system's
+  trash. If you empty the trash, the item can no longer be restored.
+- Undo and redo act on the current state of the filesystem. If something changed
+  outside Zed, for example, a conflicting file now exists at the destination, or
+  the item was moved or deleted by another program, the operation may no longer
+  be undoable, and Zed will show a notification accordingly.
+- On remote hosts without system trash support, {#action project_panel::Trash}
+  will fail when used, along with anything that relies on it, such as undoing a
+  trash or undoing an operation that creates a file or directory. At the time of
+  writing, Zed does not reliably detect trash support ahead of time, so the
+  action is always available but may report an error.
+- The undo history is not persisted across sessions, so quitting Zed clears it.

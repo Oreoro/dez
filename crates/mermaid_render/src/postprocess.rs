@@ -1,4 +1,4 @@
-//! dez-specific post-processing of [`merman`]-produced SVGs.
+//! Zed-specific post-processing of [`merman`]-produced SVGs.
 //!
 //! Each submodule is a specific pass that tweaks the SVG event iterator in a particular way.
 //!
@@ -18,14 +18,14 @@ mod strip_foreignobject;
 pub(crate) mod util;
 
 use anyhow::{Context as _, Result};
-use quick_xml::Reader;
 use quick_xml::events::Event;
+use quick_xml::{Reader, XmlVersion};
 
 use crate::MermaidTheme;
 
 pub(super) fn postprocess(svg: &str, theme: &MermaidTheme) -> Result<String> {
     // merman 0.6 already applies the generic resvg-safe cleanup before this point.
-    // The remaining passes are dez-specific theme and accent adjustments.
+    // The remaining passes are Zed-specific theme and accent adjustments.
     let svg_id = extract_svg_id(svg);
 
     let mut reader = Reader::from_str(svg);
@@ -60,7 +60,7 @@ fn extract_svg_id(svg: &str) -> String {
                 .try_get_attribute("id")
                 .ok()
                 .flatten()
-                .and_then(|a| a.unescape_value().ok())
+                .and_then(|a| a.normalized_value(XmlVersion::Implicit1_0).ok())
                 .map(|v| v.into_owned())
                 .unwrap_or_default();
         }

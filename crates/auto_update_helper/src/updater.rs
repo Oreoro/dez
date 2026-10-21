@@ -1,5 +1,5 @@
 use std::{
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     os::windows::ffi::OsStrExt,
     path::Path,
     sync::LazyLock,
@@ -164,7 +164,7 @@ impl Job {
 }
 
 #[cfg(not(test))]
-pub(crate) static JOBS: LazyLock<[Job; 24]> = LazyLock::new(|| {
+pub(crate) static JOBS: LazyLock<[Job; 22]> = LazyLock::new(|| {
     fn p(value: &str) -> &Path {
         Path::new(value)
     }
@@ -172,14 +172,10 @@ pub(crate) static JOBS: LazyLock<[Job; 24]> = LazyLock::new(|| {
         // Move old files
         // Not deleting because installing new files can fail
         Job::mkdir(p("old")),
-        Job::move_file(p("dez.exe"), p("old\\dez.exe")),
-        // Existing installs from before agent control was introduced do not
-        // have this companion yet, so the first update must tolerate its
-        // absence while still preserving it for rollback on later updates.
-        Job::move_if_exists(p("dez-agent-control.exe"), p("old\\dez-agent-control.exe")),
+        Job::move_file(p("Zed.exe"), p("old\\Zed.exe")),
         Job::mkdir(p("old\\bin")),
-        Job::move_file(p("bin\\dez.exe"), p("old\\bin\\dez.exe")),
-        Job::move_file(p("bin\\dez"), p("old\\bin\\dez")),
+        Job::move_file(p("bin\\Zed.exe"), p("old\\bin\\Zed.exe")),
+        Job::move_file(p("bin\\zed"), p("old\\bin\\zed")),
         //
         // TODO: remove after a few weeks once everyone is on the new version and this file never exists
         Job::move_if_exists(p("OpenConsole.exe"), p("old\\OpenConsole.exe")),
@@ -193,10 +189,9 @@ pub(crate) static JOBS: LazyLock<[Job; 24]> = LazyLock::new(|| {
         //
         Job::move_file(p("conpty.dll"), p("old\\conpty.dll")),
         // Copy new files
-        Job::move_file(p("install\\dez.exe"), p("dez.exe")),
-        Job::move_file(p("install\\dezctl.exe"), p("dezctl.exe")),
-        Job::move_file(p("install\\bin\\dez.exe"), p("bin\\dez.exe")),
-        Job::move_file(p("install\\bin\\dez"), p("bin\\dez")),
+        Job::move_file(p("install\\Zed.exe"), p("Zed.exe")),
+        Job::move_file(p("install\\bin\\Zed.exe"), p("bin\\Zed.exe")),
+        Job::move_file(p("install\\bin\\zed"), p("bin\\zed")),
         //
         Job::mkdir_if_exists(p("x64"), p("install\\x64")),
         Job::mkdir_if_exists(p("arm64"), p("install\\arm64")),
@@ -284,11 +279,9 @@ pub(crate) static JOBS: LazyLock<[Job; 9]> = LazyLock::new(|| {
 fn release_file_handles(app_dir: &Path) -> Result<()> {
     // Files that commonly get locked by Explorer or other processes
     let files_to_release = [
-        app_dir.join("dez.exe"),
-        app_dir.join("dez-agent-control.exe"),
-        app_dir.join("dezctl.exe"),
-        app_dir.join("bin\\dez.exe"),
-        app_dir.join("bin\\dez"),
+        app_dir.join("Zed.exe"),
+        app_dir.join("bin\\Zed.exe"),
+        app_dir.join("bin\\zed"),
         app_dir.join("conpty.dll"),
     ];
 
@@ -370,7 +363,19 @@ fn release_file_handles(app_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn perform_update(app_dir: &Path, hwnd: Option<isize>, launch: bool) -> Result<()> {
+#[allow(clippy::disallowed_methods, reason = "doesn't run in the main binary")]
+fn zed_launch_command(app_dir: &Path, launch_arguments: &[OsString]) -> std::process::Command {
+    let mut command = std::process::Command::new(app_dir.join("Zed.exe"));
+    command.args(launch_arguments);
+    command
+}
+
+pub(crate) fn perform_update(
+    app_dir: &Path,
+    hwnd: Option<isize>,
+    launch: bool,
+    launch_arguments: &[OsString],
+) -> Result<()> {
     let hwnd = hwnd.map(|ptr| HWND(ptr as _));
 
     // Try to release file handles before starting the update
@@ -435,7 +440,9 @@ pub(crate) fn perform_update(app_dir: &Path, hwnd: Option<isize>, launch: bool) 
 
     if launch {
         #[allow(clippy::disallowed_methods, reason = "doesn't run in the main binary")]
-        let _ = std::process::Command::new(app_dir.join("dez.exe")).spawn();
+        let _child = zed_launch_command(app_dir, launch_arguments)
+            .spawn()
+            .context("Failed to launch Zed after update")?;
     }
     log::info!("Update completed successfully");
     Ok(())
@@ -443,76 +450,42 @@ pub(crate) fn perform_update(app_dir: &Path, hwnd: Option<isize>, launch: bool) 
 
 #[cfg(test)]
 mod test {
-    use std::path::Path;
+    use std::{ffi::OsString, path::Path};
 
-    use super::{Job, perform_update};
-
-    #[test]
-    fn dezctl_replaces_old_control_helper_and_rollback_restores_it() {
-        let app_dir = tempfile::tempdir().expect("create app directory");
-        let app_dir = app_dir.path();
-        std::fs::create_dir_all(app_dir.join("old")).expect("create old directory");
-        std::fs::create_dir_all(app_dir.join("install")).expect("create install directory");
-        std::fs::write(app_dir.join("dez-agent-control.exe"), "old").expect("write old helper");
-        std::fs::write(app_dir.join("install\\dezctl.exe"), "new").expect("write new helper");
-
-        let move_old = Job::move_if_exists(
-            Path::new("dez-agent-control.exe"),
-            Path::new("old\\dez-agent-control.exe"),
-        );
-        let install_new = Job::move_file(Path::new("install\\dezctl.exe"), Path::new("dezctl.exe"));
-        (move_old.apply)(app_dir).expect("move old helper");
-        (install_new.apply)(app_dir).expect("install new helper");
-        assert_eq!(
-            std::fs::read_to_string(app_dir.join("dezctl.exe")).expect("read installed helper"),
-            "new"
-        );
-
-        (install_new.rollback)(app_dir).expect("remove replacement helper");
-        (move_old.rollback)(app_dir).expect("restore old helper");
-        assert_eq!(
-            std::fs::read_to_string(app_dir.join("dez-agent-control.exe"))
-                .expect("read restored helper"),
-            "old"
-        );
-    }
+    use super::{perform_update, zed_launch_command};
 
     #[test]
-    fn dezctl_can_be_installed_when_the_old_control_helper_is_absent() {
-        let app_dir = tempfile::tempdir().expect("create app directory");
-        let app_dir = app_dir.path();
-        std::fs::create_dir_all(app_dir.join("old")).expect("create old directory");
-        std::fs::create_dir_all(app_dir.join("install")).expect("create install directory");
-        std::fs::write(app_dir.join("install\\dezctl.exe"), "new").expect("write new helper");
+    fn test_zed_launch_command_preserves_arguments() {
+        let arguments = vec![
+            OsString::from("--user-data-dir"),
+            OsString::from(r"C:\Zed Data"),
+        ];
+        let command = zed_launch_command(Path::new(r"C:\Program Files\Zed"), &arguments);
 
-        let move_old = Job::move_if_exists(
-            Path::new("dez-agent-control.exe"),
-            Path::new("old\\dez-agent-control.exe"),
-        );
-        let install_new = Job::move_file(Path::new("install\\dezctl.exe"), Path::new("dezctl.exe"));
-        (move_old.apply)(app_dir).expect("skip absent old helper");
-        (install_new.apply)(app_dir).expect("install new helper");
         assert_eq!(
-            std::fs::read_to_string(app_dir.join("dezctl.exe")).expect("read installed helper"),
-            "new"
+            command.get_program(),
+            Path::new(r"C:\Program Files\Zed\Zed.exe").as_os_str()
         );
-
-        (install_new.rollback)(app_dir).expect("remove replacement helper");
-        (move_old.rollback)(app_dir).expect("keep old helper absent");
-        assert!(!app_dir.join("dezctl.exe").exists());
+        assert_eq!(
+            command.get_args().collect::<Vec<_>>(),
+            arguments
+                .iter()
+                .map(OsString::as_os_str)
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn test_perform_update() {
         let app_dir = tempfile::tempdir().unwrap();
         let app_dir = app_dir.path();
-        assert!(perform_update(app_dir, None, false).is_ok());
+        assert!(perform_update(app_dir, None, false, &[]).is_ok());
 
         let app_dir = tempfile::tempdir().unwrap();
         let app_dir = app_dir.path();
         // Simulate a timeout
         unsafe { std::env::set_var("ZED_AUTO_UPDATE", "err1") };
-        let ret = perform_update(app_dir, None, false);
+        let ret = perform_update(app_dir, None, false, &[]);
         assert!(
             ret.is_err_and(|e| e.to_string().as_str() == "Autoupdate failed, nothing to rollback")
         );
@@ -521,7 +494,7 @@ mod test {
         let app_dir = app_dir.path();
         // Simulate a timeout
         unsafe { std::env::set_var("ZED_AUTO_UPDATE", "err2") };
-        let ret = perform_update(app_dir, None, false);
+        let ret = perform_update(app_dir, None, false, &[]);
         assert!(
             ret.is_err_and(|e| e.to_string().as_str() == "Autoupdate failed, rollback successful")
         );

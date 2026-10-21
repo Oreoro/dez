@@ -13,11 +13,11 @@ use crate::{
     VariableName, ZED_VARIABLE_NAME_PREFIX, serde_helpers::non_empty_string_vec,
 };
 
-/// A template definition of a dez task to run.
+/// A template definition of a Zed task to run.
 /// May use the [`VariableName`] to get the corresponding substitutions into its fields.
 ///
 /// Template itself is not ready to spawn a task, it needs to be resolved with a [`TaskContext`] first, that
-/// contains all relevant dez state in task variables.
+/// contains all relevant Zed state in task variables.
 /// A single template may produce different tasks (or none) for different contexts.
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -452,7 +452,10 @@ fn substitute_all_template_variables_in_vec(
             variable_names,
             substituted_variables,
         )?;
-        expanded.push(new_value);
+
+        if !new_value.is_empty() || variable.is_empty() {
+            expanded.push(new_value);
+        }
     }
 
     Some(expanded)
@@ -783,7 +786,7 @@ mod tests {
             );
             assert!(
                 matches!(resolved_task_attempt, None),
-                "If any of the dez task variables is not substituted, the task should not be resolved, but got some resolution without the variable {removed_variable:?} (index {i})"
+                "If any of the Zed task variables is not substituted, the task should not be resolved, but got some resolution without the variable {removed_variable:?} (index {i})"
             );
         }
     }
@@ -807,7 +810,7 @@ mod tests {
     }
 
     #[test]
-    fn test_errors_on_missing_dez_variable() {
+    fn test_errors_on_missing_zed_variable() {
         let task = TaskTemplate {
             label: "My task".into(),
             command: "echo".into(),
@@ -1118,7 +1121,7 @@ mod tests {
         };
         let sha = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string();
         let sha_short = "0123456".to_string();
-        let repo_name = "dez".to_string();
+        let repo_name = "zed".to_string();
         let repo_path = format!("/Users/example/{repo_name}");
 
         let context = TaskContext {
@@ -1149,6 +1152,48 @@ mod tests {
                 VariableName::GitRepositoryName,
                 VariableName::GitRepositoryPath,
             ],
+        );
+    }
+
+    #[test]
+    fn test_args_produced_by_empty_variables_are_omitted() {
+        let features_flag = VariableName::Custom(Cow::Borrowed("features_flag"));
+        let features = VariableName::Custom(Cow::Borrowed("features"));
+        let bin_name = VariableName::Custom(Cow::Borrowed("bin_name"));
+
+        let task = TaskTemplate {
+            label: "cargo run".to_string(),
+            command: "cargo".to_string(),
+            args: vec![
+                "run".to_string(),
+                "--bin".to_string(),
+                bin_name.template_value(),
+                features_flag.template_value(),
+                features.template_value(),
+                String::new(),
+                format!("--config={}", features.template_value()),
+            ],
+            ..TaskTemplate::default()
+        };
+
+        let context = TaskContext {
+            task_variables: TaskVariables::from_iter([
+                (features_flag, String::new()),
+                (features, String::new()),
+                (bin_name, "test_bin".to_string()),
+            ]),
+            ..TaskContext::default()
+        };
+
+        let resolved = task
+            .resolve_task(TEST_ID_BASE, &context)
+            .unwrap_or_else(|| panic!("failed to resolve task {task:?}"))
+            .resolved;
+        assert_eq!(
+            resolved.args,
+            vec!["run", "--bin", "test_bin", "", "--config="],
+            "args that consist entirely of variables resolved to empty strings should be omitted, \
+            while literal empty args and partially substituted args should be preserved"
         );
     }
 }

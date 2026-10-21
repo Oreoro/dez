@@ -14,12 +14,13 @@ use crate::traits::transformable::Transformable;
 #[strum(serialize_all = "snake_case")]
 pub enum VectorName {
     BusinessStamp,
+    VipStamp,
     Grid,
     ProTrialStamp,
     ProUserStamp,
     StudentStamp,
-    DezLogo,
-    DezXCopilot,
+    ZedLogo,
+    ZedXCopilot,
 }
 
 impl VectorName {
@@ -111,7 +112,7 @@ impl Component for Vector {
     }
 
     fn preview(_window: &mut Window, _cx: &mut App) -> AnyElement {
-        let size = rems_from_px(60.);
+        let size = rems_from_px(60_f32);
 
         v_flex()
             .gap_6()
@@ -121,17 +122,17 @@ impl Component for Vector {
                     vec![
                         single_example(
                             "Default",
-                            Vector::square(VectorName::DezLogo, size).into_any_element(),
+                            Vector::square(VectorName::ZedLogo, size).into_any_element(),
                         ),
                         single_example(
                             "Custom Size",
                             h_flex()
-                                .h(rems_from_px(120.))
+                                .h(rems_from_px(120_f32))
                                 .justify_center()
                                 .child(Vector::new(
-                                    VectorName::DezLogo,
-                                    rems_from_px(120.),
-                                    rems_from_px(200.),
+                                    VectorName::ZedLogo,
+                                    rems_from_px(120_f32),
+                                    rems_from_px(200_f32),
                                 ))
                                 .into_any_element(),
                         ),
@@ -142,13 +143,13 @@ impl Component for Vector {
                     vec![
                         single_example(
                             "Accent Color",
-                            Vector::square(VectorName::DezLogo, size)
+                            Vector::square(VectorName::ZedLogo, size)
                                 .color(Color::Accent)
                                 .into_any_element(),
                         ),
                         single_example(
                             "Error Color",
-                            Vector::square(VectorName::DezLogo, size)
+                            Vector::square(VectorName::ZedLogo, size)
                                 .color(Color::Error)
                                 .into_any_element(),
                         ),
@@ -157,8 +158,8 @@ impl Component for Vector {
                 example_group_with_title(
                     "Different Vectors",
                     vec![single_example(
-                        "dez X Copilot",
-                        Vector::square(VectorName::DezXCopilot, rems_from_px(100.))
+                        "Zed X Copilot",
+                        Vector::square(VectorName::ZedXCopilot, rems_from_px(100_f32))
                             .into_any_element(),
                     )],
                 ),
@@ -173,6 +174,6 @@ mod tests {
 
     #[test]
     fn vector_path() {
-        assert_eq!(VectorName::DezLogo.path().as_ref(), "images/dez_logo.svg");
+        assert_eq!(VectorName::ZedLogo.path().as_ref(), "images/zed_logo.svg");
     }
 }

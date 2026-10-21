@@ -65,7 +65,7 @@
     },
   },
   {
-    "context": "Editor",
+    "context": "Editor && !agent_diff",
     "bindings": {
       "ctrl-k ctrl-z": "git::Restore",
     },
@@ -89,7 +89,7 @@
   {
     "context": "Workspace",
     "bindings": {
-      "ctrl-k ctrl-b": "workspace::ToggleLeftDock",
+      "ctrl-k ctrl-b": "sidebar::ToggleSidebar",
       // "ctrl-0": "project_panel::ToggleFocus", // normally resets zoom
       "shift-ctrl-r": "project_symbols::Toggle",
     },

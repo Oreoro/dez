@@ -468,7 +468,7 @@ impl Render for KeystrokeInput {
         let is_focused = self.outer_focus_handle.contains_focused(window, cx);
         let is_recording = self.is_recording(window);
 
-        let width = rems_from_px(64.);
+        let width = rems_from_px(64_f32);
 
         let recording_bg_color = colors
             .editor_background
@@ -502,7 +502,7 @@ impl Render for KeystrokeInput {
             .rounded_sm()
             .child(recording_pulse(Color::Error))
             .child(
-                Label::new(localization::text(cx, "keymap-recording"))
+                Label::new("REC")
                     .size(LabelSize::XSmall)
                     .weight(FontWeight::SEMIBOLD)
                     .color(Color::Error),
@@ -520,7 +520,7 @@ impl Render for KeystrokeInput {
             .rounded_sm()
             .child(recording_pulse(Color::Accent))
             .child(
-                Label::new(localization::text(cx, "keymap-searching"))
+                Label::new("SEARCH")
                     .size(LabelSize::XSmall)
                     .weight(FontWeight::SEMIBOLD)
                     .color(Color::Accent),
@@ -610,9 +610,9 @@ impl Render for KeystrokeInput {
                                     .map(|this| {
                                         this.tooltip(Tooltip::for_action_title(
                                             if self.search {
-                                                localization::text(cx, "keymap-stop-searching")
+                                                "Stop Searching"
                                             } else {
-                                                localization::text(cx, "keymap-stop-recording")
+                                                "Stop Recording"
                                             },
                                             &StopRecording,
                                         ))
@@ -629,9 +629,9 @@ impl Render for KeystrokeInput {
                                     .map(|this| {
                                         this.tooltip(Tooltip::for_action_title(
                                             if self.search {
-                                                localization::text(cx, "keymap-start-searching")
+                                                "Start Searching"
                                             } else {
-                                                localization::text(cx, "keymap-start-recording")
+                                                "Start Recording"
                                             },
                                             &StartRecording,
                                         ))
@@ -650,9 +650,9 @@ impl Render for KeystrokeInput {
                                 .shape(IconButtonShape::Square)
                                 .tooltip(move |_, cx| {
                                     Tooltip::with_meta(
-                                        localization::text(cx, "keymap-clear-keystrokes"),
+                                        "Clear Keystrokes",
                                         Some(&ClearKeystrokes),
-                                        localization::text(cx, "keymap-clear-keystrokes-meta"),
+                                        "Hit it three times to execute",
                                         cx,
                                     )
                                 })
@@ -1115,8 +1115,6 @@ mod tests {
         cx.update(|cx| {
             let settings_store = SettingsStore::test(cx);
             cx.set_global(settings_store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
         });
 

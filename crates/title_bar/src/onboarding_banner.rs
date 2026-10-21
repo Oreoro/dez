@@ -7,7 +7,7 @@ use gpui::{Action, Entity, Global, Render, SharedString, TaskExt};
 use ui::{ButtonLike, Tooltip, prelude::*};
 use util::ResultExt;
 
-/// Prompts the user to try newly released dez's features
+/// Prompts the user to try newly released Zed's features
 pub struct OnboardingBanner {
     dismissed: bool,
     source: String,
@@ -46,8 +46,7 @@ impl OnboardingBanner {
                 action,
                 icon_name,
                 label: label.into(),
-                subtitle: subtitle
-                    .or_else(|| Some(localization::text(cx, "title-bar-introducing"))),
+                subtitle: subtitle.or(Some(SharedString::from("Introducing:"))),
             },
             visible_when: None,
             dismissed: get_dismissed(source, cx),
@@ -72,7 +71,7 @@ impl OnboardingBanner {
 
 fn dismissed_at_key(source: &str) -> String {
     if source == "Git Onboarding" {
-        "dez_git_banner_dismissed_at".to_string()
+        "zed_git_banner_dismissed_at".to_string()
     } else {
         format!(
             "{}_banner_dismissed_at",
@@ -150,6 +149,7 @@ impl Render for OnboardingBanner {
                             ),
                     )
                     .on_click(cx.listener(|this, _, window, cx| {
+                        telemetry::event!("Banner Clicked", source = this.source);
                         this.dismiss(cx);
                         window.dispatch_action(this.details.action.boxed_clone(), cx)
                     })),
@@ -158,12 +158,17 @@ impl Render for OnboardingBanner {
                 div().border_l_1().border_color(border_color).child(
                     IconButton::new("close", IconName::Close)
                         .icon_size(IconSize::Indicator)
-                        .on_click(cx.listener(|this, _, _window, cx| this.dismiss(cx)))
+                        .tab_index(0isize)
+                        .aria_label("Close Announcement Banner")
+                        .on_click(cx.listener(|this, _, _window, cx| {
+                            telemetry::event!("Banner Dismissed", source = this.source);
+                            this.dismiss(cx)
+                        }))
                         .tooltip(|_window, cx| {
                             Tooltip::with_meta(
-                                localization::text(cx, "title-bar-close-announcement"),
+                                "Close Announcement Banner",
                                 None,
-                                localization::text(cx, "title-bar-announcement-wont-show"),
+                                "It won't show again for this feature",
                                 cx,
                             )
                         }),

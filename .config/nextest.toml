@@ -13,7 +13,10 @@ test-group = 'sequential-db-tests'
 [[profile.default.overrides]]
 filter = 'package(worktree) and test(test_random_worktree_changes)'
 priority = 100
-slow-timeout = { period = "300s", terminate-after = 1 }
+
+[[profile.default.overrides]]
+filter = 'package(collab) and (test(random_project_collaboration_tests) or test(random_channel_buffer_tests) or test(test_contact_requests) or test(test_basic_following))'
+priority = 99
 
 [[profile.default.overrides]]
 filter = 'package(extension_host) and test(test_extension_store_with_test_extension)'
@@ -21,24 +24,16 @@ priority = 99
 
 # Extended timeouts for tests that were timing out at 60s
 [[profile.default.overrides]]
-filter = 'test(test_rainbow_bracket_highlights) or test(test_wrapped_invisibles_drawing) or test(test_basic_following) or test(test_random_diagnostics_blocks) or test(test_random_multibuffer)'
+filter = 'test(test_rainbow_bracket_highlights) or test(test_wrapped_invisibles_drawing) or test(test_basic_following) or test(test_random_diagnostics_blocks)'
 slow-timeout = { period = "300s", terminate-after = 1 }
 
 [[profile.default.overrides]]
 filter = 'package(extension_host) and test(test_extension_store_with_test_extension)'
-slow-timeout = { period = "600s", terminate-after = 1 }
+slow-timeout = { period = "300s", terminate-after = 1 }
 
 [[profile.default.overrides]]
-filter = 'package(terminal) and test(test_terminal_no_exit_on_spawn_failure)'
-slow-timeout = { period = "120s", terminate-after = 1 }
-
-# This test polls a terminal Wakeup debounce with a 500-iteration real-timer
-# retry loop, which can outrun the default 60s slow-timeout under CI
-# contention -- see `wait_for_thread_attention` in agent_threads' panel.rs
-# tests.
-[[profile.default.overrides]]
-filter = 'package(agent_threads) and test(reclassifying_to_working_silently_clears_an_existing_blocked_flag)'
-slow-timeout = { period = "120s", terminate-after = 1 }
+filter = 'package(language_model) and test(test_from_image_downscales_to_default_5mb_limit)'
+slow-timeout = { period = "300s", terminate-after = 1 }
 
 [[profile.default.overrides]]
 filter = 'package(vim) and (test(test_command_read) or test(test_capital_f_and_capital_t) or test(test_f_and_t) or test(test_change_paragraph_object) or test(test_change_surrounding_character_objects) or test(test_change_word_object) or test(test_delete_paragraph_object) or test(test_delete_surrounding_character_objects) or test(test_delete_word_object))'
@@ -46,12 +41,8 @@ slow-timeout = { period = "300s", terminate-after = 1 }
 
 [[profile.default.overrides]]
 filter =  'package(editor) and test(test_random_split_editor)'
-slow-timeout = { period = "600s", terminate-after = 1 }
-
-[[profile.default.overrides]]
-filter =  'package(editor) and test(test_random_blocks)'
 slow-timeout = { period = "300s", terminate-after = 1 }
 
 [[profile.default.overrides]]
-filter = 'package(workspace) and test(single_pane_navigation)'
+filter =  'package(editor) and test(test_random_blocks)'
 slow-timeout = { period = "300s", terminate-after = 1 }

@@ -15,14 +15,14 @@
 
 ---
 
-title: AI Agent Tools - dez
-description: Built-in tools for dez's AI agent including file editing, code search, terminal commands, web search, and diagnostics.
+title: AI Agent Tools - Zed
+description: Built-in tools for Zed's AI agent including file editing, code search, terminal commands, web search, and diagnostics.
 
 ---
 
 # Tools
 
-dez's built-in agent has access to these tools for reading, searching, and editing your codebase. These tools are used in the [Agent Panel](./agent-panel.md) during conversations with AI agents.
+Zed's built-in agent has access to these tools for reading, searching, and editing your codebase. These tools are used in the [Agent Panel](./agent-panel.md) during conversations with AI agents.
 
 You can configure permissions for tool actions, including situations where they are automatically approved, automatically denied, or require your confirmation on a case-by-case basis. See [Tool Permissions](./tool-permissions.md) for the list of permission-gated tools and details.
 
@@ -39,6 +39,8 @@ When no path is provided, shows a summary of error and warning counts for all fi
 ### `fetch` {#fetch}
 
 Fetches a URL and returns the content as Markdown. Useful for providing docs as context.
+
+`fetch` is governed by tool permissions, agent profiles, and project trust. It is not run inside the terminal OS sandbox, so terminal sandbox network grants such as `allow_hosts` and `allow_all_hosts` do not apply to it.
 
 ### `find_path` {#find-path}
 

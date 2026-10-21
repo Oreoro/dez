@@ -1,5 +1,7 @@
+use std::borrow::Cow;
 use std::ops::Range;
 
+use crate::utils::replace_control_characters;
 use crate::{LabelLike, prelude::*};
 use gpui::{HighlightStyle, StyleRefinement, StyledText};
 
@@ -71,6 +73,19 @@ impl Label {
     /// Truncates the label from the start, keeping the end visible.
     pub fn truncate_start(mut self) -> Self {
         self.base = self.base.truncate_start();
+        self
+    }
+
+    /// Truncates overflowing text with an ellipsis (`…`) in the middle if needed.
+    pub fn truncate_middle(mut self) -> Self {
+        self.base = self.base.truncate_middle();
+        self
+    }
+
+    /// Wraps the text and truncates it with an ellipsis (`…`) at the end of
+    /// the last visible line if it exceeds the given number of lines.
+    pub fn line_clamp(mut self, lines: usize) -> Self {
+        self.base = self.base.line_clamp(lines);
         self
     }
 }
@@ -226,7 +241,9 @@ impl LabelCommon for Label {
     }
 
     fn single_line(mut self) -> Self {
-        self.label = SharedString::from(self.label.replace('\n', "⏎"));
+        if let Cow::Owned(replaced) = replace_control_characters(&self.label) {
+            self.label = SharedString::from(replaced);
+        }
         self.base = self.base.single_line();
         self
     }
@@ -315,14 +332,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_single_line_replaces_control_characters() {
+        // File names are allowed to contain these, and rendering them verbatim
+        // breaks the layout of tabs and project panel entries.
+        let label = Label::new("a\nb\rc\td").single_line();
+        assert_eq!(label.label, "a⏎b␍c␉d");
+    }
+
+    #[test]
+    fn test_single_line_leaves_printable_text_alone() {
+        let label = Label::new("main.rs").single_line();
+        assert_eq!(label.label, "main.rs");
+    }
+
+    #[test]
     fn test_parse_backtick_spans_no_backticks() {
         assert_eq!(parse_backtick_spans("plain text"), None);
     }
 
     #[test]
     fn test_parse_backtick_spans_single_span() {
-        let (text, ranges) = parse_backtick_spans("use `dez` to open").unwrap();
-        assert_eq!(text.as_ref(), "use dez to open");
+        let (text, ranges) = parse_backtick_spans("use `zed` to open").unwrap();
+        assert_eq!(text.as_ref(), "use zed to open");
         assert_eq!(ranges, vec![4..7]);
     }
 
@@ -366,7 +397,7 @@ impl Component for Label {
                         vec![
                             single_example("Default", Label::new("Project Explorer").into_any_element()),
                             single_example("Small", Label::new("File: main.rs").size(LabelSize::Small).into_any_element()),
-                            single_example("Large", Label::new("Welcome to dez").size(LabelSize::Large).into_any_element()),
+                            single_example("Large", Label::new("Welcome to Zed").size(LabelSize::Large).into_any_element()),
                         ],
                     ),
                     example_group_with_title(
@@ -400,7 +431,7 @@ impl Component for Label {
                         vec![
                             single_example("Single Line", Label::new("Line 1\nLine 2\nLine 3").single_line().into_any_element()),
                             single_example("Regular Truncation", div().max_w_24().child(Label::new("This is a very long file name that should be truncated: very_long_file_name_with_many_words.rs").truncate()).into_any_element()),
-                            single_example("Start Truncation", div().max_w_24().child(Label::new("dez/crates/ui/src/components/label/truncate/label/label.rs").truncate_start()).into_any_element()),
+                            single_example("Start Truncation", div().max_w_24().child(Label::new("zed/crates/ui/src/components/label/truncate/label/label.rs").truncate_start()).into_any_element()),
                         ],
                     ),
                 ])

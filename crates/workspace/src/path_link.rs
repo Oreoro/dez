@@ -22,6 +22,15 @@ pub enum BackgroundPathChecks {
     ProjectPathResolution,
 }
 
+/// How a path-like string gets matched against files by [`resolve_open_target`].
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum PathMatching {
+    /// Only exact matches (absolute, `cwd`-relative, or worktree-root-relative), so broken document links resolve to `None`.
+    Exact,
+    /// Additionally guess terminal-output paths: strip git diff `a/`/`b/` prefixes and scan worktrees for trailing path matches.
+    Heuristic,
+}
+
 #[derive(Debug, Clone)]
 pub enum OpenTarget {
     Worktree(
@@ -126,28 +135,38 @@ pub fn first_unbalanced_open_paren(text: &str) -> Option<usize> {
     first_unmatched.filter(|_| balance > 0)
 }
 
-pub fn possible_open_target(
+pub fn resolve_open_target(
     workspace: &WeakEntity<Workspace>,
+    matching: PathMatching,
     maybe_path: &str,
     cwd: Option<&Path>,
     cx: &App,
 ) -> Task<Option<OpenTarget>> {
-    possible_open_target_internal(workspace, maybe_path, cwd, cx, None)
+    resolve_open_target_internal(workspace, matching, maybe_path, cwd, cx, None)
 }
 
 #[cfg(any(test, feature = "test-support"))]
-pub fn possible_open_target_with_fs_checks(
+pub fn resolve_open_target_with_fs_checks(
     workspace: &WeakEntity<Workspace>,
+    matching: PathMatching,
     maybe_path: &str,
     cwd: Option<&Path>,
     cx: &App,
     background_path_checks: BackgroundPathChecks,
 ) -> Task<Option<OpenTarget>> {
-    possible_open_target_internal(workspace, maybe_path, cwd, cx, Some(background_path_checks))
+    resolve_open_target_internal(
+        workspace,
+        matching,
+        maybe_path,
+        cwd,
+        cx,
+        Some(background_path_checks),
+    )
 }
 
-fn possible_open_target_internal(
+fn resolve_open_target_internal(
     workspace: &WeakEntity<Workspace>,
+    matching: PathMatching,
     maybe_path: &str,
     cwd: Option<&Path>,
     cx: &App,
@@ -172,8 +191,11 @@ fn possible_open_target_internal(
         })
         .collect::<Vec<_>>();
 
-    const GIT_DIFF_PATH_PREFIXES: &[&str] = &["a", "b"];
-    for prefix_str in GIT_DIFF_PATH_PREFIXES.iter().chain(std::iter::once(&".")) {
+    let prefixes_to_strip: &[&str] = match matching {
+        PathMatching::Heuristic => &["a", "b", "."],
+        PathMatching::Exact => &["."],
+    };
+    for prefix_str in prefixes_to_strip {
         if let Some(stripped) = original_path.path.strip_prefix(prefix_str).ok() {
             potential_paths.push(PathWithPosition {
                 path: stripped.to_owned(),
@@ -305,22 +327,23 @@ fn possible_open_target_internal(
             BackgroundPathChecks::ProjectPathResolution
         }
     });
+
     let background_resolution_task = match background_path_checks {
         BackgroundPathChecks::LocalFileSystem => {
-            let paths_to_check =
-                local_paths_to_check(&potential_paths, cwd, &worktree_candidates, cx);
+            let fs_paths_to_check =
+                local_paths_to_check(&potential_paths, matching, cwd, &worktree_candidates, cx);
             let fs = project.read(cx).fs().clone();
             cx.background_spawn(async move {
-                for mut path_to_check in paths_to_check {
-                    if let Some(resolved_path) = fs.canonicalize(&path_to_check.path).await.ok()
-                        && let Some(metadata) = fs.metadata(&resolved_path).await.ok().flatten()
+                for mut path_to_check in fs_paths_to_check {
+                    if let Some(fs_path_to_check) = fs.canonicalize(&path_to_check.path).await.ok()
+                        && let Some(metadata) = fs.metadata(&fs_path_to_check).await.ok().flatten()
                     {
                         if open_target
                             .as_ref()
-                            .map(|target| target.path().path != resolved_path)
+                            .map(|open_target| open_target.path().path != fs_path_to_check)
                             .unwrap_or(true)
                         {
-                            path_to_check.path = resolved_path;
+                            path_to_check.path = fs_path_to_check;
                             return Some(OpenTarget::Path(
                                 path_to_check,
                                 metadata.is_dir,
@@ -328,9 +351,11 @@ fn possible_open_target_internal(
                                 OpenTargetFoundBy::BackgroundPathResolution,
                             ));
                         }
+
                         break;
                     }
                 }
+
                 open_target
             })
         }
@@ -339,76 +364,104 @@ fn possible_open_target_internal(
             cx.spawn(async move |cx| {
                 for mut path_to_check in paths_to_check {
                     let path = path_to_check.path.to_string_lossy();
-                    let resolved_path = project
-                        .update(cx, |project, cx| {
-                            project.resolve_abs_path(path.as_ref(), cx)
-                        })
-                        .await;
-                    if let Some(resolved_path) = resolved_path {
-                        let is_dir = resolved_path.is_dir();
-                        if let Some(resolved_path) = resolved_path.into_abs_path() {
-                            let resolved_path = PathBuf::from(resolved_path);
-                            if open_target
-                                .as_ref()
-                                .map(|target| target.path().path != resolved_path)
-                                .unwrap_or(true)
-                            {
-                                path_to_check.path = resolved_path;
-                                return Some(OpenTarget::Path(
-                                    path_to_check,
-                                    is_dir,
-                                    #[cfg(any(test, feature = "test-support"))]
-                                    OpenTargetFoundBy::BackgroundPathResolution,
-                                ));
-                            }
+                    let resolve_task = project.update(cx, |project, cx| {
+                        project.resolve_abs_path(path.as_ref(), cx)
+                    });
+
+                    if let Some(resolved_path) = resolve_task.await
+                        && let Some(resolved_abs_path) = {
+                            let is_dir = resolved_path.is_dir();
+                            resolved_path
+                                .into_abs_path()
+                                .map(|resolved_abs_path| (resolved_abs_path, is_dir))
                         }
+                    {
+                        let (resolved_abs_path, is_dir) = resolved_abs_path;
+                        let resolved_abs_path = PathBuf::from(resolved_abs_path);
+                        if open_target
+                            .as_ref()
+                            .map(|open_target| open_target.path().path != resolved_abs_path)
+                            .unwrap_or(true)
+                        {
+                            path_to_check.path = resolved_abs_path;
+                            return Some(OpenTarget::Path(
+                                path_to_check,
+                                is_dir,
+                                #[cfg(any(test, feature = "test-support"))]
+                                OpenTargetFoundBy::BackgroundPathResolution,
+                            ));
+                        }
+
                         break;
                     }
                 }
+
                 open_target
             })
         }
     };
 
     cx.spawn(async move |cx| {
-        background_resolution_task.await.or_else(|| {
-            for (worktree, worktree_paths_to_check) in worktree_paths_to_check {
-                if let Some(found_entry) =
-                    worktree.update(cx, |worktree, _| -> Option<OpenTarget> {
-                        let traversal =
-                            worktree.traverse_from_path(true, true, false, RelPath::empty());
-                        for entry in traversal {
-                            if let Some(path_in_worktree) =
-                                worktree_paths_to_check.iter().find(|path_to_check| {
-                                    RelPath::new(&path_to_check.path, PathStyle::local())
-                                        .is_ok_and(|path| entry.path.ends_with(&path))
-                                })
-                            {
-                                return Some(OpenTarget::Worktree(
-                                    PathWithPosition {
-                                        path: worktree.absolutize(&entry.path),
-                                        row: path_in_worktree.row,
-                                        column: path_in_worktree.column,
-                                    },
-                                    entry.clone(),
-                                    #[cfg(any(test, feature = "test-support"))]
-                                    OpenTargetFoundBy::WorktreeScan,
-                                ));
-                            }
-                        }
-                        None
+        if let Some(open_target) = background_resolution_task.await {
+            return Some(open_target);
+        }
+
+        // An inexact path must not resolve to an unrelated file sharing its trailing components.
+        if matching == PathMatching::Exact {
+            return None;
+        }
+
+        let worktree_paths_to_check = worktree_paths_to_check
+            .into_iter()
+            .map(|(worktree, paths_to_check)| {
+                let paths_to_check = paths_to_check
+                    .into_iter()
+                    .filter_map(|path_with_position| {
+                        let path = RelPath::new(&path_with_position.path, PathStyle::local())
+                            .ok()?
+                            .into_owned();
+                        Some((path_with_position, path))
                     })
-                {
-                    return Some(found_entry);
+                    .collect::<Vec<_>>();
+                (
+                    worktree.read_with(cx, |worktree, _| worktree.snapshot()),
+                    paths_to_check,
+                )
+            })
+            .collect::<Vec<_>>();
+        cx.background_spawn(async move {
+            for (snapshot, paths_to_check) in worktree_paths_to_check {
+                let traversal = snapshot.traverse_from_path(true, true, false, RelPath::empty());
+                for entry in traversal {
+                    if let Some(path_with_position) =
+                        paths_to_check
+                            .iter()
+                            .find_map(|(path_with_position, path)| {
+                                entry.path.ends_with(path).then_some(path_with_position)
+                            })
+                    {
+                        return Some(OpenTarget::Worktree(
+                            PathWithPosition {
+                                path: snapshot.absolutize(&entry.path),
+                                row: path_with_position.row,
+                                column: path_with_position.column,
+                            },
+                            entry.clone(),
+                            #[cfg(any(test, feature = "test-support"))]
+                            OpenTargetFoundBy::WorktreeScan,
+                        ));
+                    }
                 }
             }
             None
         })
+        .await
     })
 }
 
 fn local_paths_to_check(
     potential_paths: &[PathWithPosition],
+    matching: PathMatching,
     cwd: Option<&Path>,
     worktree_candidates: &[Entity<Worktree>],
     cx: &App,
@@ -427,10 +480,13 @@ fn local_paths_to_check(
             let mut paths_to_check = Vec::new();
             let maybe_path = &path_to_check.path;
             if maybe_path.starts_with("~") {
-                if let Some(home_path) = maybe_path
-                    .strip_prefix("~")
-                    .ok()
-                    .and_then(|stripped_path| Some(dirs::home_dir()?.join(stripped_path)))
+                if let Some(home_path) =
+                    maybe_path
+                        .strip_prefix("~")
+                        .ok()
+                        .and_then(|stripped_maybe_path| {
+                            Some(dirs::home_dir()?.join(stripped_maybe_path))
+                        })
                 {
                     paths_to_check.push(PathWithPosition {
                         path: home_path,
@@ -439,7 +495,13 @@ fn local_paths_to_check(
                     });
                 }
             } else {
-                paths_to_check.push(path_to_check.clone());
+                if maybe_path.is_absolute() || matching == PathMatching::Heuristic {
+                    paths_to_check.push(PathWithPosition {
+                        path: maybe_path.clone(),
+                        row: path_to_check.row,
+                        column: path_to_check.column,
+                    });
+                }
                 if maybe_path.is_relative() {
                     for worktree in worktree_candidates {
                         if !worktree.read(cx).is_single_file() {
@@ -468,8 +530,8 @@ fn project_paths_to_check(
                 .filter_map(|path_to_check| normalize_absolute_candidate(cwd, path_to_check))
         })
         .chain(potential_paths.iter().filter_map(|path_to_check| {
-            (path_to_check.path.starts_with("~") || is_path_like_absolute(&path_to_check.path))
-                .then(|| path_to_check.clone())
+            let maybe_path = &path_to_check.path;
+            (maybe_path.starts_with("~") || maybe_path.is_absolute()).then(|| path_to_check.clone())
         }))
         .collect()
 }
@@ -478,23 +540,13 @@ fn normalize_absolute_candidate(
     cwd: &Path,
     path_to_check: &PathWithPosition,
 ) -> Option<PathWithPosition> {
-    if is_path_like_absolute(&path_to_check.path) {
-        return None;
-    }
-    let path = normalize_lexically(&cwd.join(&path_to_check.path)).ok()?;
-    Some(PathWithPosition {
-        path,
-        row: path_to_check.row,
-        column: path_to_check.column,
-    })
-}
-
-// `Path::is_absolute` only recognizes the host OS's own convention (e.g. it
-// requires a drive prefix on Windows), but paths surfaced from terminal
-// output frequently name a remote (often POSIX) filesystem regardless of the
-// local host OS. A leading `/` is never a valid relative-path component on
-// any platform, so treat it as absolute unconditionally rather than joining
-// it onto a local, differently-styled `cwd`.
-fn is_path_like_absolute(path: &Path) -> bool {
-    path.is_absolute() || path.to_string_lossy().starts_with('/')
+    path_to_check.path.is_relative().then(|| {
+        normalize_lexically(&cwd.join(&path_to_check.path))
+            .ok()
+            .map(|path| PathWithPosition {
+                path,
+                row: path_to_check.row,
+                column: path_to_check.column,
+            })
+    })?
 }

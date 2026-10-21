@@ -1,6 +1,7 @@
 use crate::{
     DIAGNOSTICS_UPDATE_DEBOUNCE, IncludeWarnings, ToggleWarnings, context_range_for_entry,
     diagnostic_renderer::{DiagnosticBlock, DiagnosticRenderer},
+    diagnostics_background,
     toolbar_controls::DiagnosticsToolbarEditor,
 };
 use anyhow::Result;
@@ -615,10 +616,13 @@ impl BufferDiagnosticsEditor {
             .iter()
             .zip(diagnostics.iter())
             .all(|(existing, new)| {
-                existing.diagnostic.message == new.diagnostic.message
-                    && existing.diagnostic.severity == new.diagnostic.severity
+                existing.diagnostic.severity == new.diagnostic.severity
                     && existing.diagnostic.is_primary == new.diagnostic.is_primary
                     && existing.range.to_offset(snapshot) == new.range.to_offset(snapshot)
+                    && existing
+                        .diagnostic
+                        .message
+                        .rendered_eq(&new.diagnostic.message)
             })
     }
 
@@ -861,17 +865,23 @@ impl Item for BufferDiagnosticsEditor {
             .into_any_element()
     }
 
-    fn tab_content_text(&self, _detail: usize, app: &App) -> SharedString {
-        localization::text(app, "diagnostics-buffer")
+    fn tab_content_text(&self, _detail: usize, _app: &App) -> SharedString {
+        "Buffer Diagnostics".into()
     }
 
     fn tab_tooltip_text(&self, cx: &App) -> Option<SharedString> {
         let path_style = self.project.read(cx).path_style(cx);
-        Some(localization::tr!(
-            cx,
-            "diagnostics-buffer-path",
-            path = self.project_path.path.display(path_style).to_string()
-        ))
+        Some(
+            format!(
+                "Buffer Diagnostics - {}",
+                self.project_path.path.display(path_style)
+            )
+            .into(),
+        )
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("Buffer Diagnostics Opened")
     }
 
     fn to_item_events(event: &EditorEvent, f: &mut dyn FnMut(ItemEvent)) {
@@ -891,8 +901,8 @@ impl Render for BufferDiagnosticsEditor {
 
         let child = if error_count + warning_count == 0 {
             let label = match warning_count {
-                0 => localization::text(cx, "diagnostics-no-problems-in"),
-                _ => localization::text(cx, "diagnostics-no-errors-in"),
+                0 => "No problems in",
+                _ => "No errors in",
             };
 
             v_flex()
@@ -902,7 +912,7 @@ impl Render for BufferDiagnosticsEditor {
                 .justify_center()
                 .items_center()
                 .text_center()
-                .bg(cx.theme().colors().editor_background)
+                .bg(diagnostics_background(cx))
                 .child(
                     div()
                         .h_flex()
@@ -910,10 +920,7 @@ impl Render for BufferDiagnosticsEditor {
                         .child(
                             Button::new("open-file", filename)
                                 .style(ButtonStyle::Transparent)
-                                .tooltip(Tooltip::text(localization::text(
-                                    cx,
-                                    "diagnostics-open-file",
-                                )))
+                                .tooltip(Tooltip::text("Open File"))
                                 .on_click(cx.listener(|buffer_diagnostics, _, window, cx| {
                                     if let Some(workspace) = Workspace::for_window(window, cx) {
                                         workspace.update(cx, |workspace, cx| {
@@ -932,11 +939,10 @@ impl Render for BufferDiagnosticsEditor {
                         ),
                 )
                 .when(self.summary.warning_count > 0, |div| {
-                    let label = localization::tr!(
-                        cx,
-                        "diagnostics-show-warnings",
-                        count = self.summary.warning_count
-                    );
+                    let label = match self.summary.warning_count {
+                        1 => "Show 1 warning".into(),
+                        warning_count => format!("Show {} warnings", warning_count),
+                    };
 
                     div.child(
                         Button::new("diagnostics-show-warning-label", label).on_click(cx.listener(
@@ -959,6 +965,7 @@ impl Render for BufferDiagnosticsEditor {
             .key_context("Diagnostics")
             .track_focus(&self.focus_handle(cx))
             .size_full()
+            .bg(diagnostics_background(cx))
             .child(child)
     }
 }

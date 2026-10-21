@@ -1,0 +1,469 @@
+#!/usr/bin/env node
+
+const fs = require("fs");
+const path = require("path");
+
+const root = path.resolve(__dirname, "..");
+const themePath = path.join(root, "assets/themes/lumin/lumin.json");
+const defaultSettingsPath = path.join(root, "assets/settings/default.json");
+const initialSettingsPath = path.join(root, "assets/settings/initial_user_settings.json");
+
+function fail(message) {
+  console.error(`Dez theme check failed: ${message}`);
+  process.exit(1);
+}
+
+function requireValue(condition, message) {
+  if (!condition) fail(message);
+}
+
+function parseHex(color) {
+  const value = color.replace("#", "");
+  requireValue(value.length === 6 || value.length === 8, `unsupported color ${color}`);
+  return {
+    red: Number.parseInt(value.slice(0, 2), 16) / 255,
+    green: Number.parseInt(value.slice(2, 4), 16) / 255,
+    blue: Number.parseInt(value.slice(4, 6), 16) / 255,
+    alpha: value.length === 8 ? Number.parseInt(value.slice(6, 8), 16) / 255 : 1,
+  };
+}
+
+function parseColor(color) {
+  return typeof color === "string" ? parseHex(color) : color;
+}
+
+function composite(foreground, background) {
+  const foregroundColor = parseColor(foreground);
+  const backgroundColor = parseColor(background);
+  const alpha = foregroundColor.alpha + backgroundColor.alpha * (1 - foregroundColor.alpha);
+  requireValue(alpha > 0, "cannot composite two fully transparent colors");
+  return {
+    red:
+      (foregroundColor.red * foregroundColor.alpha +
+        backgroundColor.red * backgroundColor.alpha * (1 - foregroundColor.alpha)) /
+      alpha,
+    green:
+      (foregroundColor.green * foregroundColor.alpha +
+        backgroundColor.green * backgroundColor.alpha * (1 - foregroundColor.alpha)) /
+      alpha,
+    blue:
+      (foregroundColor.blue * foregroundColor.alpha +
+        backgroundColor.blue * backgroundColor.alpha * (1 - foregroundColor.alpha)) /
+      alpha,
+    alpha,
+  };
+}
+
+function channelLuminance(channel) {
+  return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function luminance(color) {
+  return (
+    channelLuminance(color.red) * 0.2126 +
+    channelLuminance(color.green) * 0.7152 +
+    channelLuminance(color.blue) * 0.0722
+  );
+}
+
+function contrast(foreground, background) {
+  const backgroundColor = parseColor(background);
+  requireValue(backgroundColor.alpha === 1, "contrast background must be opaque");
+  const foregroundLuminance = luminance(composite(foreground, backgroundColor));
+  const backgroundLuminance = luminance(backgroundColor);
+  return (
+    (Math.max(foregroundLuminance, backgroundLuminance) + 0.05) /
+    (Math.min(foregroundLuminance, backgroundLuminance) + 0.05)
+  );
+}
+
+function describeColor(color) {
+  if (typeof color === "string") return color;
+  const channel = (value) =>
+    Math.round(value * 255)
+      .toString(16)
+      .padStart(2, "0")
+      .toUpperCase();
+  return `#${channel(color.red)}${channel(color.green)}${channel(color.blue)}`;
+}
+
+function requireAlphaRange(theme, token, minimum, maximum) {
+  const color = parseHex(theme.style[token]);
+  requireValue(
+    color.alpha >= minimum && color.alpha <= maximum,
+    `${theme.name}.${token} alpha is ${color.alpha.toFixed(2)}; expected ${minimum.toFixed(2)}–${maximum.toFixed(2)}`,
+  );
+}
+
+function requireGlassMaterial(theme) {
+  // The native macOS material is the primary glass layer. Theme colors tint
+  // that material. The dark variant needs a stronger tint to remain readable
+  // over bright desktops, while the light variant keeps its lighter wash.
+  const darkMaterial = theme.appearance === "dark";
+  requireAlphaRange(theme, "background", darkMaterial ? 0.78 : 0.32, darkMaterial ? 0.84 : 0.5);
+  for (const token of [
+    "surface.background",
+    "panel.background",
+    "editor.background",
+    "editor.gutter.background",
+    "terminal.background",
+    "tab_bar.background",
+    "toolbar.background",
+  ]) {
+    requireAlphaRange(theme, token, darkMaterial ? 0.72 : 0.16, darkMaterial ? 0.84 : 0.32);
+  }
+  for (const token of ["title_bar.background", "status_bar.background"]) {
+    requireAlphaRange(theme, token, darkMaterial ? 0.8 : 0.32, darkMaterial ? 0.88 : 0.5);
+  }
+  for (const token of ["elevated_surface.background", "panel.overlay_background"]) {
+    requireAlphaRange(theme, token, 0.8, 0.95);
+  }
+}
+
+function requireGlassInteractionLayers(theme) {
+  for (const [token, minimum, maximum] of [
+    ["element.background", 0.03, 0.1],
+    ["element.hover", 0.06, 0.15],
+    ["element.active", 0.09, 0.2],
+    ["element.selected", 0.12, 0.28],
+    ["element.disabled", 0.01, 0.08],
+    ["editor.active_line.background", 0.03, 0.1],
+  ]) {
+    requireAlphaRange(theme, token, minimum, maximum);
+  }
+}
+
+function requireGlassSemanticLayers(theme) {
+  for (const token of [
+    "conflict.background",
+    "created.background",
+    "deleted.background",
+    "error.background",
+    "hidden.background",
+    "hint.background",
+    "ignored.background",
+    "info.background",
+    "modified.background",
+    "predictive.background",
+    "renamed.background",
+    "success.background",
+    "unreachable.background",
+    "warning.background",
+  ]) {
+    requireAlphaRange(theme, token, 0.025, 0.14);
+  }
+}
+
+function requireContrast(label, foreground, backgrounds, minimum) {
+  for (const background of backgrounds) {
+    const ratio = contrast(foreground, background);
+    requireValue(
+      ratio >= minimum,
+      `${label} is ${ratio.toFixed(2)}:1 on ${describeColor(background)}; expected at least ${minimum}:1`,
+    );
+  }
+}
+
+function resolvedThemeSurface(style, token, backdrop) {
+  const shell = composite(style.background, backdrop);
+  return composite(style[token], shell);
+}
+
+function resolvedThemeSurfaces(theme, backdrops) {
+  const tokens = [
+    "surface.background",
+    "panel.background",
+    "editor.background",
+    "terminal.background",
+    "tab_bar.background",
+    "elevated_surface.background",
+  ];
+  return backdrops.flatMap((backdrop) => {
+    const shell = composite(theme.style.background, backdrop);
+    return [shell, ...tokens.map((token) => resolvedThemeSurface(theme.style, token, backdrop))];
+  });
+}
+
+function requireRegionHierarchy(theme, backdrops) {
+  const style = theme.style;
+  for (const backdrop of backdrops) {
+    const panel = resolvedThemeSurface(style, "panel.background", backdrop);
+    const editor = resolvedThemeSurface(style, "editor.background", backdrop);
+    const elevated = resolvedThemeSurface(style, "elevated_surface.background", backdrop);
+    const tabBar = resolvedThemeSurface(style, "tab_bar.background", backdrop);
+    const activeTab = composite(style["tab.active_background"], tabBar);
+    const boundary = composite(style.border, editor);
+
+    requireContrast(`${theme.name} panel/editor hierarchy`, panel, [editor], 1.03);
+    requireContrast(`${theme.name} panel/elevated hierarchy`, panel, [elevated], 1.11);
+    requireContrast(`${theme.name} active tab hierarchy`, activeTab, [tabBar], 1.12);
+    requireContrast(`${theme.name} structural boundary`, boundary, [editor], 1.5);
+  }
+}
+
+function requireInteractionHierarchy(theme, backdrops) {
+  const style = theme.style;
+  for (const backdrop of backdrops) {
+    const panel = resolvedThemeSurface(style, "panel.background", backdrop);
+    const editor = resolvedThemeSurface(style, "editor.background", backdrop);
+    const state = (token, surface = panel) => composite(style[token], surface);
+
+    const hover = state("element.hover");
+    const active = state("element.active");
+    const selected = state("element.selected");
+    requireContrast(`${theme.name} hover state`, hover, [panel], 1.18);
+    requireContrast(`${theme.name} active state`, active, [panel], 1.3);
+    requireContrast(`${theme.name} selected state`, selected, [panel], 1.3);
+    requireValue(
+      contrast(active, panel) > contrast(hover, panel),
+      `${theme.name} active state must remain stronger than hover`,
+    );
+    requireValue(
+      contrast(selected, panel) > contrast(hover, panel),
+      `${theme.name} selected state must remain stronger than hover`,
+    );
+
+    requireContrast(`${theme.name} ghost hover state`, state("ghost_element.hover"), [panel], 1.15);
+    requireContrast(`${theme.name} ghost active state`, state("ghost_element.active"), [panel], 1.25);
+    requireContrast(`${theme.name} ghost selected state`, state("ghost_element.selected"), [panel], 1.3);
+
+    const scrollbar = state("scrollbar.thumb.background");
+    const scrollbarHover = state("scrollbar.thumb.hover_background");
+    const scrollbarActive = state("scrollbar.thumb.active_background");
+    requireContrast(`${theme.name} scrollbar`, scrollbar, [panel], 1.3);
+    requireContrast(`${theme.name} scrollbar hover`, scrollbarHover, [panel], 1.6);
+    requireContrast(`${theme.name} scrollbar active`, scrollbarActive, [panel], 1.9);
+    requireValue(
+      contrast(scrollbar, panel) < contrast(scrollbarHover, panel) &&
+        contrast(scrollbarHover, panel) < contrast(scrollbarActive, panel),
+      `${theme.name} scrollbar states must strengthen from idle to hover to drag`,
+    );
+
+    requireContrast(`${theme.name} active editor line`, state("editor.active_line.background", editor), [editor], 1.09);
+  }
+}
+
+const themeDocument = JSON.parse(fs.readFileSync(themePath, "utf8"));
+const themeByName = new Map(themeDocument.themes.map((theme) => [theme.name, theme]));
+const luminBlur = themeByName.get("Lumin Blur");
+const luminOpaque = themeByName.get("Lumin");
+const luminLight = themeByName.get("Lumin Light");
+
+requireValue(luminBlur?.appearance === "dark", "Lumin Blur must be dark");
+requireValue(
+  luminBlur?.style["background.appearance"] === "blurred",
+  "Lumin Blur must request the blurred window shell",
+);
+requireValue(luminOpaque?.style["background.appearance"] === "opaque", "Lumin must remain the opaque dark fallback");
+requireValue(luminLight?.appearance === "light", "Lumin Light must be light");
+requireValue(
+  luminLight?.style["background.appearance"] === "blurred",
+  "Lumin Light must request the blurred window shell",
+);
+requireGlassMaterial(luminBlur);
+requireGlassMaterial(luminLight);
+requireGlassInteractionLayers(luminBlur);
+requireGlassInteractionLayers(luminLight);
+requireGlassSemanticLayers(luminBlur);
+requireGlassSemanticLayers(luminLight);
+
+const darkTextTokens = [
+  "text",
+  "text.muted",
+  "text.placeholder",
+  "text.accent",
+  "editor.foreground",
+  "editor.line_number",
+  "editor.active_line_number",
+  "error",
+  "success",
+  "warning",
+  "modified",
+  "renamed",
+  "conflict",
+  "created",
+  "deleted",
+  "link_text.hover",
+  "terminal.foreground",
+  "terminal.bright_foreground",
+  "terminal.dim_foreground",
+  "terminal.ansi.black",
+  "terminal.ansi.red",
+  "terminal.ansi.green",
+  "terminal.ansi.yellow",
+  "terminal.ansi.blue",
+  "terminal.ansi.magenta",
+  "terminal.ansi.cyan",
+  "terminal.ansi.white",
+  "terminal.ansi.bright_black",
+  "terminal.ansi.bright_red",
+  "terminal.ansi.bright_green",
+  "terminal.ansi.bright_yellow",
+  "terminal.ansi.bright_blue",
+  "terminal.ansi.bright_magenta",
+  "terminal.ansi.bright_cyan",
+  "terminal.ansi.bright_white",
+];
+const darkFocusTokens = ["border.focused", "border.selected", "panel.focused_border", "pane.focused_border"];
+const darkControlSurfaces = [
+  "element.background",
+  "element.hover",
+  "element.active",
+  "element.selected",
+  "ghost_element.hover",
+  "ghost_element.active",
+  "ghost_element.selected",
+  "editor.active_line.background",
+  "editor.highlighted_line.background",
+  "editor.selection.background",
+  "search.match_background",
+  "search.active_match_background",
+];
+
+function requireDarkThemeContrast(theme, surfaces) {
+  const style = theme.style;
+
+  requireValue(
+    style.syntax.boolean.color === style.syntax.constant.color,
+    `${theme.name} booleans and constants must retain one neutral hierarchy`,
+  );
+  requireValue(
+    style.syntax["function.special.definition"].color === style.syntax.function.color,
+    `${theme.name} special-function definitions must retain the established function color`,
+  );
+  requireValue(
+    style["terminal.ansi.black"] !== style["terminal.ansi.bright_black"],
+    `${theme.name} terminal black and bright black must remain distinguishable`,
+  );
+
+  for (const token of darkTextTokens) {
+    requireContrast(`${theme.name}.${token}`, style[token], surfaces, 4.5);
+  }
+  for (const token of ["icon", "icon.muted", "icon.accent"]) {
+    requireContrast(`${theme.name}.${token}`, style[token], surfaces, 3);
+  }
+  for (const token of darkFocusTokens) {
+    requireContrast(`${theme.name}.${token}`, style[token], surfaces, 3);
+  }
+  for (const token of darkControlSurfaces) {
+    if (!style[token]) continue;
+    const controlBackgrounds = surfaces.map((surface) => composite(style[token], surface));
+    requireContrast(`${theme.name}.${token} text`, style.text, controlBackgrounds, 4.5);
+  }
+  for (const [token, syntaxStyle] of Object.entries(style.syntax)) {
+    if (syntaxStyle.color) {
+      requireContrast(`${theme.name}.syntax.${token}`, syntaxStyle.color, surfaces, 4.5);
+    }
+  }
+}
+
+const opaqueDarkSurfaces = resolvedThemeSurfaces(luminOpaque, ["#000000"]);
+const blurredDarkBackdrops = [
+  "#000000",
+  "#303030",
+  "#18212B",
+  "#FFFFFF",
+  "#D8E2EC",
+  "#E9DED2",
+];
+const blurredDarkSurfaces = resolvedThemeSurfaces(luminBlur, blurredDarkBackdrops);
+requireDarkThemeContrast(luminBlur, blurredDarkSurfaces);
+requireDarkThemeContrast(luminOpaque, opaqueDarkSurfaces);
+requireRegionHierarchy(luminBlur, blurredDarkBackdrops);
+requireRegionHierarchy(luminOpaque, ["#000000"]);
+requireInteractionHierarchy(luminBlur, blurredDarkBackdrops);
+requireInteractionHierarchy(luminOpaque, ["#000000"]);
+
+const light = luminLight.style;
+const blurredLightBackdrops = ["#FFFFFF", "#D8E2EC", "#E9DED2"];
+const lightSurfaces = resolvedThemeSurfaces(luminLight, blurredLightBackdrops);
+const lightEditorSurfaces = blurredLightBackdrops.map((backdrop) =>
+  resolvedThemeSurface(luminLight.style, "editor.background", backdrop),
+);
+
+const lightActiveControlSurfaces = blurredLightBackdrops.map((backdrop) => {
+  const panel = resolvedThemeSurface(luminLight.style, "panel.background", backdrop);
+  return composite(light["element.active"], panel);
+});
+requireContrast("active control text", light.text, lightActiveControlSurfaces, 4.5);
+requireContrast("accent text", light["text.accent"], lightSurfaces, 4.5);
+requireContrast("focused border", light["border.focused"], lightSurfaces, 3);
+requireContrast("placeholder text", light["text.placeholder"], lightSurfaces, 4.5);
+requireContrast("editor line number", light["editor.line_number"], lightSurfaces, 4.5);
+
+for (const token of [
+  "error",
+  "success",
+  "warning",
+  "modified",
+  "renamed",
+  "conflict",
+  "link_text.hover",
+  "terminal.foreground",
+  "terminal.dim_foreground",
+  "terminal.ansi.red",
+  "terminal.ansi.green",
+  "terminal.ansi.yellow",
+  "terminal.ansi.blue",
+  "terminal.ansi.magenta",
+  "terminal.ansi.cyan",
+  "terminal.ansi.white",
+]) {
+  requireContrast(token, light[token], lightSurfaces, 4.5);
+}
+
+for (const [token, style] of Object.entries(light.syntax)) {
+  if (style.color) {
+    requireContrast(`syntax.${token}`, style.color, lightEditorSurfaces, 4.5);
+  }
+}
+requireRegionHierarchy(luminLight, blurredLightBackdrops);
+requireInteractionHierarchy(luminLight, blurredLightBackdrops);
+
+const defaultSettings = fs.readFileSync(defaultSettingsPath, "utf8");
+const initialSettings = fs.readFileSync(initialSettingsPath, "utf8");
+for (const settings of [defaultSettings, initialSettings]) {
+  requireValue(settings.includes('"light": "Lumin Light"'), "light default must select Lumin Light");
+  requireValue(settings.includes('"dark": "Lumin Blur"'), "dark default must select Lumin Blur");
+  requireValue(settings.includes('"density": "spacious"'), "Dez visual defaults must use spacious density");
+  requireValue(
+    settings.includes('"buffer_font_family": "Lilex"'),
+    "editor default must select the bundled Lilex coding face",
+  );
+  requireValue(
+    settings.includes('"ui_font_family": "IBM Plex Sans"'),
+    "UI default must select the bundled IBM Plex Sans interface face",
+  );
+}
+requireValue(
+  defaultSettings.includes('"font_family": "Lilex"') &&
+    initialSettings.includes('"font_family": "Lilex"'),
+  "terminal default must select Lilex",
+);
+requireValue(
+  defaultSettings.includes('"icon_theme": "Dez (Default)"'),
+  "default icon theme must use the product-facing Dez name",
+);
+requireValue(
+  defaultSettings.includes('"code_font_family": "Lilex"'),
+  "Markdown code must select Lilex",
+);
+
+for (const file of [
+  "Lilex-Regular.ttf",
+  "Lilex-Italic.ttf",
+  "Lilex-Bold.ttf",
+  "Lilex-BoldItalic.ttf",
+]) {
+  requireValue(fs.existsSync(path.join(root, "assets/fonts/lilex", file)), `missing bundled font ${file}`);
+}
+for (const file of [
+  "IBMPlexSans-Regular.ttf",
+  "IBMPlexSans-Italic.ttf",
+  "IBMPlexSans-SemiBold.ttf",
+  "IBMPlexSans-SemiBoldItalic.ttf",
+]) {
+  requireValue(fs.existsSync(path.join(root, "assets/fonts/ibm-plex-sans", file)), `missing bundled font ${file}`);
+}
+
+console.log("Dez theme checks passed");

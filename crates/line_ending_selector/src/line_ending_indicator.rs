@@ -40,18 +40,13 @@ impl Render for LineEndingIndicator {
             el.child(
                 Button::new("change-line-ending", line_ending.label())
                     .label_size(LabelSize::Small)
+                    .tab_index(0isize)
                     .on_click(cx.listener(|this, _, window, cx| {
                         if let Some(editor) = this.active_editor.as_ref() {
                             LineEndingSelector::toggle(editor, window, cx);
                         }
                     }))
-                    .tooltip(|_window, cx| {
-                        Tooltip::for_action(
-                            localization::text(cx, "line-ending-selector-action"),
-                            &Toggle,
-                            cx,
-                        )
-                    }),
+                    .tooltip(|_window, cx| Tooltip::for_action("Select Line Ending", &Toggle, cx)),
             )
         })
     }

@@ -13,7 +13,6 @@ pub use sqlez;
 pub use sqlez_macros;
 pub use uuid;
 
-use dez_env_vars::ZED_STATELESS;
 pub use release_channel::RELEASE_CHANNEL;
 use release_channel::ReleaseChannel;
 use sqlez::domain::Migrator;
@@ -25,6 +24,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::{LazyLock, atomic::Ordering};
 use util::{ResultExt, maybe};
+use zed_env_vars::ZED_STATELESS;
 
 /// A migration registered via `static_connection!` and collected at link time.
 pub struct DomainMigration {
@@ -124,13 +124,15 @@ static TEST_APP_DATABASE: LazyLock<AppDatabase> = LazyLock::new(AppDatabase::tes
 
 const CONNECTION_INITIALIZE_QUERY: &str = sql!(
     PRAGMA foreign_keys=TRUE;
+    PRAGMA busy_timeout=5000;
 );
 
 const DB_INITIALIZE_QUERY: &str = sql!(
     PRAGMA journal_mode=WAL;
-    PRAGMA busy_timeout=500;
+    PRAGMA busy_timeout=5000;
     PRAGMA case_sensitive_like=TRUE;
     PRAGMA synchronous=NORMAL;
+    PRAGMA foreign_keys=TRUE;
 );
 
 const FALLBACK_DB_NAME: &str = "FALLBACK_MEMORY_DB";

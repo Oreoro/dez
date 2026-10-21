@@ -8,13 +8,13 @@ mod types;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use ::lsp::{LanguageServerBinaryOptions, LanguageServerName};
+use ::lsp::LanguageServerName;
 use anyhow::{Context as _, Result, bail};
 use async_trait::async_trait;
-use gpui::{App, Task};
+use gpui::{App, EntityId, Task};
 use language::LanguageName;
 use semver::Version;
-use task::{DezDebugConfig, SpawnInTerminal};
+use task::{SpawnInTerminal, ZedDebugConfig};
 use util::rel_path::RelPath;
 
 pub use crate::capabilities::*;
@@ -56,15 +56,15 @@ pub trait Extension: Send + Sync + 'static {
 
     /// Returns a path relative to this extension's working directory.
     fn path_from_extension(&self, path: &Path) -> PathBuf {
-        util::normalize_path(&self.work_dir().join(path))
+        path::normalize_path(&self.work_dir().join(path))
     }
 
     async fn language_server_command(
         &self,
         language_server_id: LanguageServerName,
         language_name: LanguageName,
-        binary_options: LanguageServerBinaryOptions,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Command>;
 
     async fn language_server_initialization_options(
@@ -72,24 +72,28 @@ pub trait Extension: Send + Sync + 'static {
         language_server_id: LanguageServerName,
         language_name: LanguageName,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Option<String>>;
 
     async fn language_server_workspace_configuration(
         &self,
         language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Option<String>>;
 
     async fn language_server_initialization_options_schema(
         &self,
         language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Option<String>>;
 
     async fn language_server_workspace_configuration_schema(
         &self,
         language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Option<String>>;
 
     async fn language_server_additional_initialization_options(
@@ -97,6 +101,7 @@ pub trait Extension: Send + Sync + 'static {
         language_server_id: LanguageServerName,
         target_language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Option<String>>;
 
     async fn language_server_additional_workspace_configuration(
@@ -104,6 +109,7 @@ pub trait Extension: Send + Sync + 'static {
         language_server_id: LanguageServerName,
         target_language_server_id: LanguageServerName,
         worktree: Arc<dyn WorktreeDelegate>,
+        language_server_status_source: EntityId,
     ) -> Result<Option<String>>;
 
     async fn labels_for_completions(
@@ -166,7 +172,7 @@ pub trait Extension: Send + Sync + 'static {
         config: serde_json::Value,
     ) -> Result<StartDebuggingRequestArgumentsRequest>;
 
-    async fn dap_config_to_scenario(&self, config: DezDebugConfig) -> Result<DebugScenario>;
+    async fn dap_config_to_scenario(&self, config: ZedDebugConfig) -> Result<DebugScenario>;
 
     async fn dap_locator_create_scenario(
         &self,
@@ -188,12 +194,12 @@ pub fn parse_wasm_extension_version(extension_id: &str, wasm_bytes: &[u8]) -> Re
     for part in wasmparser::Parser::new(0).parse_all(wasm_bytes) {
         if let wasmparser::Payload::CustomSection(s) =
             part.context("error parsing wasm extension")?
-            && s.name() == "dez:api-version"
+            && s.name() == "zed:api-version"
         {
             version = parse_wasm_extension_version_custom_section(s.data());
             if version.is_none() {
                 bail!(
-                    "extension {} has invalid dez:api-version section: {:?}",
+                    "extension {} has invalid zed:api-version section: {:?}",
                     extension_id,
                     s.data()
                 );
@@ -206,7 +212,7 @@ pub fn parse_wasm_extension_version(extension_id: &str, wasm_bytes: &[u8]) -> Re
     //
     // By parsing the entirety of the Wasm bytes before we return, we're able to detect this problem
     // earlier as an `Err` rather than as a panic.
-    version.with_context(|| format!("extension {extension_id} has no dez:api-version section"))
+    version.with_context(|| format!("extension {extension_id} has no zed:api-version section"))
 }
 
 fn parse_wasm_extension_version_custom_section(data: &[u8]) -> Option<Version> {

@@ -67,6 +67,7 @@ let
       relPath = lib.removePrefix root path;
       topLevelIncludes = [
         "crates"
+        "corgi-patches"
         "assets"
         "extensions"
         "script"
@@ -79,17 +80,21 @@ let
     in
     builtins.elem firstComp topLevelIncludes;
 
+  corgiPatches = builtins.path {
+    path = ../corgi-patches;
+    name = "corgi-patches";
+  };
   craneLib = crane.overrideToolchain rustToolchain;
   gpu-lib = if withGLES then libglvnd else vulkan-loader;
   commonArgs =
     let
-      dezCargoLock = builtins.fromTOML (builtins.readFile ../crates/dez/Cargo.toml);
+      zedCargoLock = builtins.fromTOML (builtins.readFile ../crates/zed/Cargo.toml);
       stdenv' = stdenv;
     in
     rec {
-      pname = "dez-editor";
+      pname = "zed-editor";
       version =
-        dezCargoLock.package.version
+        zedCargoLock.package.version
         + "-nightly"
         + lib.optionalString (commitSha != null) "+${builtins.substring 0 7 commitSha}";
       src = builtins.path {
@@ -202,7 +207,7 @@ let
         (darwinMinVersionHook "10.15")
       ];
 
-      cargoExtraArgs = "-p dez -p cli --locked --features=gpui_platform/runtime_shaders";
+      cargoExtraArgs = "-p zed -p cli --locked --features=gpui_platform/runtime_shaders";
 
       stdenv =
         pkgs:
@@ -228,7 +233,7 @@ let
             ../assets/fonts/ibm-plex-sans
           ];
         };
-        ZED_UPDATE_EXPLANATION = "Dez has been installed using Nix. Auto-updates have thus been disabled.";
+        ZED_UPDATE_EXPLANATION = "Zed has been installed using Nix. Auto-updates have thus been disabled.";
         RELEASE_VERSION = version;
         ZED_COMMIT_SHA = lib.optionalString (commitSha != null) "${commitSha}";
         LK_CUSTOM_WEBRTC = pkgs.callPackage ./livekit-libwebrtc/package.nix { };
@@ -305,11 +310,31 @@ let
             drv;
       };
     };
-  cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+  cargoArtifacts = craneLib.buildDepsOnly (
+    builtins.removeAttrs commonArgs [ "src" ]
+    // {
+      dummySrc = craneLib.mkDummySrc {
+        inherit (commonArgs) src cargoLock;
+        # `scratch` is a local dependency of `cxx-build`, so its API is needed
+        # while Crane builds third-party dependencies.
+        extraDummyScript = ''
+          rm -rf $out/corgi-patches
+          cp --recursive ${corgiPatches} $out/corgi-patches
+        '';
+      };
+    }
+  );
 in
 craneLib.buildPackage (
   lib.recursiveUpdate commonArgs {
     inherit cargoArtifacts;
+
+    # Expose the crane builder and shared arguments so other derivations (e.g.
+    # the docs preprocessor in the devshell) can build sibling workspace crates
+    # without duplicating all of the build inputs and environment setup.
+    passthru = {
+      inherit craneLib commonArgs cargoArtifacts;
+    };
 
     dontUseCmakeConfigure = true;
 
@@ -318,7 +343,7 @@ craneLib.buildPackage (
     # TODO: put this in a separate derivation that depends on src to avoid running it on every build
     preBuild = ''
       ALLOW_MISSING_LICENSES=yes bash script/generate-licenses
-      echo nightly > crates/dez/RELEASE_CHANNEL
+      echo nightly > crates/zed/RELEASE_CHANNEL
     '';
 
     installPhase =
@@ -326,21 +351,21 @@ craneLib.buildPackage (
         ''
           runHook preInstall
 
-          pushd crates/dez
+          pushd crates/zed
           sed -i "s/package.metadata.bundle-nightly/package.metadata.bundle/" Cargo.toml
           export CARGO_BUNDLE_SKIP_BUILD=true
           app_path="$(cargo bundle --profile $CARGO_PROFILE | xargs)"
           popd
 
           mkdir -p $out/Applications $out/bin
-          # Dez expects git next to its own binary
+          # Zed expects git next to its own binary
           ln -s ${git}/bin/git "$app_path/Contents/MacOS/git"
           mv $TARGET_DIR/cli "$app_path/Contents/MacOS/cli"
           mv "$app_path" $out/Applications/
 
           # Physical location of the CLI must be inside the app bundle as this is used
           # to determine which app to start
-          ln -s "$out/Applications/Dez Nightly.app/Contents/MacOS/cli" $out/bin/dez
+          ln -s "$out/Applications/Zed Nightly.app/Contents/MacOS/cli" $out/bin/zed
 
           runHook postInstall
         ''
@@ -349,26 +374,26 @@ craneLib.buildPackage (
           runHook preInstall
 
           mkdir -p $out/bin $out/libexec
-          cp $TARGET_DIR/dez $out/libexec/dez-editor
-          cp $TARGET_DIR/cli  $out/bin/dez
-          ln -s $out/bin/dez $out/bin/dezitor  # home-manager expects the CLI binary to be here
+          cp $TARGET_DIR/zed $out/libexec/zed-editor
+          cp $TARGET_DIR/cli  $out/bin/zed
+          ln -s $out/bin/zed $out/bin/zeditor  # home-manager expects the CLI binary to be here
 
 
-          install -D "crates/dez/resources/app-icon-nightly@2x.png" \
-            "$out/share/icons/hicolor/1024x1024@2x/apps/dez.png"
-          install -D crates/dez/resources/app-icon-nightly.png \
-            $out/share/icons/hicolor/512x512/apps/dez.png
+          install -D "crates/zed/resources/app-icon-nightly@2x.png" \
+            "$out/share/icons/hicolor/1024x1024@2x/apps/zed.png"
+          install -D crates/zed/resources/app-icon-nightly.png \
+            $out/share/icons/hicolor/512x512/apps/zed.png
 
-          # TODO: icons should probably be named "dez-nightly"
+          # TODO: icons should probably be named "zed-nightly"
           (
             export DO_STARTUP_NOTIFY="true"
-            export APP_CLI="dez"
-            export APP_ICON="dez"
-            export APP_NAME="Dez Nightly"
+            export APP_CLI="zed"
+            export APP_ICON="zed"
+            export APP_NAME="Zed Nightly"
             export APP_ARGS="%U"
             mkdir -p "$out/share/applications"
-            ${lib.getExe envsubst} < "crates/dez/resources/dez.desktop.in" > "$out/share/applications/dev.dez.Dez-Nightly.desktop"
-            chmod +x "$out/share/applications/dev.dez.Dez-Nightly.desktop"
+            ${lib.getExe envsubst} < "crates/zed/resources/zed.desktop.in" > "$out/share/applications/dev.zed.Zed-Nightly.desktop"
+            chmod +x "$out/share/applications/dev.zed.Zed-Nightly.desktop"
           )
 
           runHook postInstall
@@ -376,15 +401,15 @@ craneLib.buildPackage (
 
     # TODO: why isn't this also done on macOS?
     postFixup = lib.optionalString stdenv.hostPlatform.isLinux ''
-      wrapProgram $out/libexec/dez-editor --suffix PATH : ${lib.makeBinPath [ nodejs_22 ]}
+      wrapProgram $out/libexec/zed-editor --suffix PATH : ${lib.makeBinPath [ nodejs_22 ]}
     '';
 
     meta = {
-      description = "Dez is a terminal-first code editor crafted for speed.";
-      homepage = "https://github.com/Oreoro/dez";
-      changelog = "https://github.com/Oreoro/dez/releases";
+      description = "High-performance, multiplayer code editor from the creators of Atom and Tree-sitter";
+      homepage = "https://zed.dev";
+      changelog = "https://zed.dev/releases/preview";
       license = lib.licenses.gpl3Only;
-      mainProgram = "dez";
+      mainProgram = "zed";
       platforms = lib.platforms.linux ++ lib.platforms.darwin;
     };
   }

@@ -1,28 +1,29 @@
-use dez_actions::feedback::{Emaildez, FileBugReport, RequestFeature};
+use client::telemetry;
 use extension_host::ExtensionStore;
-use gpui::{App, ClipboardItem, PromptButton, PromptLevel, actions};
-use system_specs::{CopySystemSpecsIntoClipboard, SystemSpecs, os_name, os_version};
+use gpui::{App, ClipboardItem, PromptLevel, actions};
+use system_specs::{CopySystemSpecsIntoClipboard, SystemSpecs};
 use util::ResultExt;
 use workspace::Workspace;
+use zed_actions::feedback::{EmailZed, FileBugReport, RequestFeature};
 
 actions!(
-    dez,
+    zed,
     [
-        /// Opens the dez repository on GitHub.
-        OpendezRepo,
+        /// Opens the Zed repository on GitHub.
+        OpenZedRepo,
         /// Copies installed extensions to the clipboard for bug reports.
         CopyInstalledExtensionsIntoClipboard
     ]
 );
 
-const ZED_REPO_URL: &str = "https://github.com/Oreoro/dez";
+const ZED_REPO_URL: &str = "https://github.com/zed-industries/zed";
 
-const REQUEST_FEATURE_URL: &str = "https://github.com/Oreoro/dez/discussions/new/choose";
+const REQUEST_FEATURE_URL: &str = "https://github.com/zed-industries/zed/discussions/new/choose";
 
 fn file_bug_report_url(specs: &SystemSpecs) -> String {
     format!(
         concat!(
-            "https://github.com/Oreoro/dez/issues/new",
+            "https://github.com/zed-industries/zed/issues/new",
             "?",
             "template=10_bug_report.yml",
             "&",
@@ -32,9 +33,9 @@ fn file_bug_report_url(specs: &SystemSpecs) -> String {
     )
 }
 
-fn email_dez_url(specs: &SystemSpecs) -> String {
+fn email_zed_url(specs: &SystemSpecs) -> String {
     format!(
-        concat!("https://github.com/Oreoro/dez/issues/new", "?", "body={}"),
+        concat!("mailto:hi@zed.dev", "?", "body={}"),
         email_body(specs)
     )
 }
@@ -48,29 +49,24 @@ pub fn init(cx: &mut App) {
     cx.observe_new(|workspace: &mut Workspace, _, _| {
         workspace
             .register_action(|_, _: &CopySystemSpecsIntoClipboard, window, cx| {
-                let specs = SystemSpecs::new(window, cx, os_name(), os_version());
+                let specs =
+                    SystemSpecs::new(window, cx, telemetry::os_name(), telemetry::os_version());
 
                 cx.spawn_in(window, async move |_, cx| {
                     let specs = specs.await.to_string();
 
-                    let Ok((message, ok)) = cx.update(|_, cx| {
-                        cx.write_to_clipboard(ClipboardItem::new_string(specs.clone()));
-                        (
-                            localization::text(cx, "common-copied-clipboard"),
-                            localization::text(cx, "common-ok"),
-                        )
-                    }) else {
-                        return;
-                    };
+                    cx.update(|_, cx| {
+                        cx.write_to_clipboard(ClipboardItem::new_string(specs.clone()))
+                    })
+                    .log_err();
 
                     cx.prompt(
                         PromptLevel::Info,
-                        &message,
+                        "Copied into clipboard",
                         Some(&specs),
-                        &[PromptButton::ok(ok)],
+                        &["OK"],
                     )
                     .await
-                    .log_err();
                 })
                 .detach();
             })
@@ -79,9 +75,9 @@ pub fn init(cx: &mut App) {
                 cx.write_to_clipboard(ClipboardItem::new_string(clipboard_text.clone()));
                 drop(window.prompt(
                     PromptLevel::Info,
-                    &localization::text(cx, "common-copied-clipboard"),
+                    "Copied into clipboard",
                     Some(&clipboard_text),
-                    &[PromptButton::ok(localization::text(cx, "common-ok"))],
+                    &["OK"],
                     cx,
                 ));
             })
@@ -89,7 +85,8 @@ pub fn init(cx: &mut App) {
                 cx.open_url(REQUEST_FEATURE_URL);
             })
             .register_action(move |_, _: &FileBugReport, window, cx| {
-                let specs = SystemSpecs::new(window, cx, os_name(), os_version());
+                let specs =
+                    SystemSpecs::new(window, cx, telemetry::os_name(), telemetry::os_version());
                 cx.spawn_in(window, async move |_, cx| {
                     let specs = specs.await;
                     cx.update(|_, cx| {
@@ -99,18 +96,19 @@ pub fn init(cx: &mut App) {
                 })
                 .detach();
             })
-            .register_action(move |_, _: &Emaildez, window, cx| {
-                let specs = SystemSpecs::new(window, cx, os_name(), os_version());
+            .register_action(move |_, _: &EmailZed, window, cx| {
+                let specs =
+                    SystemSpecs::new(window, cx, telemetry::os_name(), telemetry::os_version());
                 cx.spawn_in(window, async move |_, cx| {
                     let specs = specs.await;
                     cx.update(|_, cx| {
-                        cx.open_url(&email_dez_url(&specs));
+                        cx.open_url(&email_zed_url(&specs));
                     })
                     .log_err();
                 })
                 .detach();
             })
-            .register_action(move |_, _: &OpendezRepo, _, cx| {
+            .register_action(move |_, _: &OpenZedRepo, _, cx| {
                 cx.open_url(ZED_REPO_URL);
             });
     })

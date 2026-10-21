@@ -39,7 +39,6 @@ impl VtslsLspAdapter {
     const PACKAGE_NAME: &'static str = "@vtsls/language-server";
     const SERVER_PATH: &'static str = "node_modules/@vtsls/language-server/bin/vtsls.js";
 
-    const TYPESCRIPT_PACKAGE_NAME: &'static str = "typescript";
     const TYPESCRIPT_TSDK_PATH: &'static str = "node_modules/typescript/lib";
     const TYPESCRIPT_YARN_TSDK_PATH: &'static str = ".yarn/sdks/typescript/lib";
 
@@ -58,6 +57,7 @@ impl VtslsLspAdapter {
             Self::TYPESCRIPT_TSDK_PATH
         };
 
+        // vtsls doesn't support TypeScript 7+, which no longer ships `tsserver.js`.
         if self
             .fs
             .is_file(
@@ -89,15 +89,10 @@ impl VtslsLspAdapter {
     }
 }
 
-pub struct TypeScriptVersions {
-    typescript_version: Version,
-    server_version: Version,
-}
-
 const SERVER_NAME: LanguageServerName = LanguageServerName::new_static("vtsls");
 
 impl LspInstaller for VtslsLspAdapter {
-    type BinaryVersion = TypeScriptVersions;
+    type BinaryVersion = Version;
 
     async fn fetch_latest_server_version(
         &self,
@@ -105,13 +100,9 @@ impl LspInstaller for VtslsLspAdapter {
         _: bool,
         _: &mut AsyncApp,
     ) -> Result<Self::BinaryVersion> {
-        Ok(TypeScriptVersions {
-            typescript_version: self.node.npm_package_latest_version("typescript").await?,
-            server_version: self
-                .node
-                .npm_package_latest_version("@vtsls/language-server")
-                .await?,
-        })
+        self.node
+            .npm_package_latest_version(Self::PACKAGE_NAME)
+            .await
     }
 
     async fn check_if_user_installed(
@@ -140,11 +131,8 @@ impl LspInstaller for VtslsLspAdapter {
         async move {
             let server_path = container_dir.join(Self::SERVER_PATH);
 
-            node.npm_install_latest_packages(
-                &container_dir,
-                &[Self::PACKAGE_NAME, Self::TYPESCRIPT_PACKAGE_NAME],
-            )
-            .await?;
+            node.npm_install_latest_packages(&container_dir, &[Self::PACKAGE_NAME])
+                .await?;
 
             Ok(LanguageServerBinary {
                 path: node.binary_path().await?,
@@ -161,8 +149,7 @@ impl LspInstaller for VtslsLspAdapter {
         _: &Arc<dyn LspAdapterDelegate>,
     ) -> impl Send + Future<Output = Option<LanguageServerBinary>> + use<> {
         let node = self.node.clone();
-        let typescript_version = version.typescript_version.clone();
-        let server_version = version.server_version.clone();
+        let server_version = version.clone();
         let container_dir = container_dir.clone();
 
         async move {
@@ -174,18 +161,6 @@ impl LspInstaller for VtslsLspAdapter {
                     &server_path,
                     &container_dir,
                     VersionStrategy::Latest(&server_version),
-                )
-                .await
-            {
-                return None;
-            }
-
-            if node
-                .should_install_npm_package(
-                    Self::TYPESCRIPT_PACKAGE_NAME,
-                    &container_dir.join(Self::TYPESCRIPT_TSDK_PATH),
-                    &container_dir,
-                    VersionStrategy::Latest(&typescript_version),
                 )
                 .await
             {
@@ -306,7 +281,7 @@ impl LspAdapter for VtslsLspAdapter {
                 "showOnAllFunctions": true
             },
             "tsserver": {
-                "maxTsServerMemory": 8092
+                "maxTsServerMemory": 8192
             },
         });
 
@@ -418,62 +393,7 @@ async fn get_cached_ts_server_binary(
 
 #[cfg(test)]
 mod tests {
-    use gpui::BackgroundExecutor;
-    use node_runtime::NodeRuntime;
-    use project::FakeFs;
-    use serde_json::json;
-    use util::path;
-
-    use crate::test_support::TestLspAdapterDelegate;
     use crate::vtsls::VtslsLspAdapter;
-
-    #[gpui::test]
-    async fn typescript_7_project_sdk_is_not_passed_to_vtsls(executor: BackgroundExecutor) {
-        let fs = FakeFs::new(executor);
-        fs.insert_tree(
-            path!("/root"),
-            json!({
-                "node_modules": {
-                    "typescript": {
-                        "lib": {
-                            "typescript.js": "",
-                        }
-                    }
-                }
-            }),
-        )
-        .await;
-        let delegate = TestLspAdapterDelegate::new(path!("/root").into());
-        let adapter = VtslsLspAdapter::new(NodeRuntime::unavailable(), fs);
-
-        assert_eq!(adapter.tsdk_path(&delegate).await, None);
-    }
-
-    #[gpui::test]
-    async fn typescript_6_project_sdk_is_passed_to_vtsls(executor: BackgroundExecutor) {
-        let fs = FakeFs::new(executor);
-        fs.insert_tree(
-            path!("/root"),
-            json!({
-                "node_modules": {
-                    "typescript": {
-                        "lib": {
-                            "tsserver.js": "",
-                            "typescript.js": "",
-                        }
-                    }
-                }
-            }),
-        )
-        .await;
-        let delegate = TestLspAdapterDelegate::new(path!("/root").into());
-        let adapter = VtslsLspAdapter::new(NodeRuntime::unavailable(), fs);
-
-        assert_eq!(
-            adapter.tsdk_path(&delegate).await,
-            Some("node_modules/typescript/lib")
-        );
-    }
 
     #[test]
     fn test_diagnostic_message_to_markdown() {

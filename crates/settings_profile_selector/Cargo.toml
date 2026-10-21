@@ -15,12 +15,11 @@ doctest = false
 [dependencies]
 fuzzy.workspace = true
 gpui.workspace = true
-localization.workspace = true
 picker.workspace = true
 settings.workspace = true
 ui.workspace = true
 workspace.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 
 [dev-dependencies]
 editor = { workspace = true, features = ["test-support"] }

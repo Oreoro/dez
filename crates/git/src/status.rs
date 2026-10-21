@@ -454,7 +454,7 @@ impl FromStr for GitStatus {
                 let status = entry.as_bytes()[0..2].try_into().unwrap();
                 let status = FileStatus::from_bytes(status).log_err()?;
                 // git-status outputs `/`-delimited repo paths, even on Windows.
-                let path = RepoPath::from_rel_path(RelPath::unix(path).log_err()?);
+                let path = RepoPath::from_rel_path(RelPath::from_unix_str(path).log_err()?);
                 Some((path, status))
             })
             .collect::<Vec<_>>();
@@ -503,26 +503,13 @@ pub enum DiffTreeType {
         base: SharedString,
         head: SharedString,
     },
+    MergeBaseWithWorktree {
+        base: SharedString,
+    },
     Since {
         base: SharedString,
         head: SharedString,
     },
-}
-
-impl DiffTreeType {
-    pub fn base(&self) -> &SharedString {
-        match self {
-            DiffTreeType::MergeBase { base, .. } => base,
-            DiffTreeType::Since { base, .. } => base,
-        }
-    }
-
-    pub fn head(&self) -> &SharedString {
-        match self {
-            DiffTreeType::MergeBase { head, .. } => head,
-            DiffTreeType::Since { head, .. } => head,
-        }
-    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -544,7 +531,7 @@ impl FromStr for TreeDiff {
         let mut fields = s.split('\0');
         let mut parsed = HashMap::default();
         while let Some((status, path)) = fields.next().zip(fields.next()) {
-            let path = RepoPath::from_rel_path(RelPath::unix(path)?);
+            let path = RepoPath::from_rel_path(RelPath::from_unix_str(path)?);
 
             let mut fields = status.split(" ").skip(2);
             let old_sha = fields
@@ -620,7 +607,7 @@ pub fn parse_numstat(output: &str) -> GitDiffStat {
         };
         entries.push((path, DiffStat { added, deleted }));
     }
-    entries.sort_by(|(a, _), (b, _)| a.cmp(b));
+    entries.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
     entries.dedup_by(|(a, _), (b, _)| a == b);
 
     GitDiffStat {
@@ -741,7 +728,7 @@ mod tests {
 
     #[test]
     fn test_tree_diff_parsing() {
-        let input = ":000000 100644 0000000000000000000000000000000000000000 0062c311b8727c3a2e3cd7a41bc9904feacf8f98 A\x00.dez/settings.json\x00".to_owned() +
+        let input = ":000000 100644 0000000000000000000000000000000000000000 0062c311b8727c3a2e3cd7a41bc9904feacf8f98 A\x00.zed/settings.json\x00".to_owned() +
             ":100644 000000 bb3e9ed2e97a8c02545bae243264d342c069afb3 0000000000000000000000000000000000000000 D\x00README.md\x00" +
             ":100644 100644 42f097005a1f21eb2260fad02ec8c991282beee8 a437d85f63bb8c62bd78f83f40c506631fabf005 M\x00parallel.go\x00";
 
@@ -751,7 +738,7 @@ mod tests {
             TreeDiff {
                 entries: [
                     (
-                        RepoPath::new(".dez/settings.json").unwrap(),
+                        RepoPath::new(".zed/settings.json").unwrap(),
                         TreeDiffStatus::Added,
                     ),
                     (

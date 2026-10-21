@@ -1,13 +1,14 @@
 mod icon_theme_selector;
 
-use dez_actions::{ExtensionCategoryFilter, Extensions};
 use fs::Fs;
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, Focusable, Render, UpdateGlobal, WeakEntity,
     Window, actions,
 };
-use picker::{Picker, PickerDelegate};
+use picker::{
+    Picker, PickerDelegate, PickerSurfaceContrast, PickerSurfaceDensity, PickerSurfaceRadius,
+};
 use settings::{Settings, SettingsStore, update_settings_file};
 use std::sync::Arc;
 use theme::{Appearance, SystemAppearance, Theme, ThemeMeta, ThemeRegistry};
@@ -16,7 +17,10 @@ use theme_settings::{
 };
 use ui::{ListItem, ListItemSpacing, prelude::*, v_flex};
 use util::ResultExt;
-use workspace::{ModalView, Workspace, ui::HighlightedLabel, with_active_or_new_workspace};
+use workspace::{
+    DesignSystemSettings, ModalView, Workspace, ui::HighlightedLabel, with_active_or_new_workspace,
+};
+use zed_actions::{ExtensionCategoryFilter, Extensions};
 
 use crate::icon_theme_selector::{IconThemeSelector, IconThemeSelectorDelegate};
 
@@ -28,14 +32,38 @@ actions!(
     ]
 );
 
+pub(crate) fn picker_surface_density(cx: &App) -> PickerSurfaceDensity {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => PickerSurfaceDensity::Compact,
+        settings::CanvasDensity::Balanced => PickerSurfaceDensity::Balanced,
+        settings::CanvasDensity::Spacious => PickerSurfaceDensity::Spacious,
+    }
+}
+
+pub(crate) fn picker_surface_radius(cx: &App) -> PickerSurfaceRadius {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => PickerSurfaceRadius::None,
+        settings::CanvasRadius::Subtle => PickerSurfaceRadius::Subtle,
+        settings::CanvasRadius::Rounded => PickerSurfaceRadius::Rounded,
+    }
+}
+
+pub(crate) fn picker_surface_contrast(cx: &App) -> PickerSurfaceContrast {
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => PickerSurfaceContrast::Low,
+        settings::CanvasContrast::Standard => PickerSurfaceContrast::Standard,
+        settings::CanvasContrast::High => PickerSurfaceContrast::High,
+    }
+}
+
 pub fn init(cx: &mut App) {
-    cx.on_action(|action: &dez_actions::theme_selector::Toggle, cx| {
+    cx.on_action(|action: &zed_actions::theme_selector::Toggle, cx| {
         let action = action.clone();
         with_active_or_new_workspace(cx, move |workspace, window, cx| {
             toggle_theme_selector(workspace, &action, window, cx);
         });
     });
-    cx.on_action(|action: &dez_actions::icon_theme_selector::Toggle, cx| {
+    cx.on_action(|action: &zed_actions::icon_theme_selector::Toggle, cx| {
         let action = action.clone();
         with_active_or_new_workspace(cx, move |workspace, window, cx| {
             toggle_icon_theme_selector(workspace, &action, window, cx);
@@ -45,7 +73,7 @@ pub fn init(cx: &mut App) {
 
 fn toggle_theme_selector(
     workspace: &mut Workspace,
-    toggle: &dez_actions::theme_selector::Toggle,
+    toggle: &zed_actions::theme_selector::Toggle,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
@@ -63,7 +91,7 @@ fn toggle_theme_selector(
 
 fn toggle_icon_theme_selector(
     workspace: &mut Workspace,
-    toggle: &dez_actions::icon_theme_selector::Toggle,
+    toggle: &zed_actions::icon_theme_selector::Toggle,
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
@@ -119,7 +147,12 @@ impl ThemeSelector {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(picker_surface_density(cx))
+                .surface_radius(picker_surface_radius(cx))
+                .surface_contrast(picker_surface_contrast(cx))
+        });
         Self { picker }
     }
 }
@@ -378,8 +411,12 @@ fn retain_original_opposing_theme(
 impl PickerDelegate for ThemeSelectorDelegate {
     type ListItem = ui::ListItem;
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "theme-selector-placeholder").into()
+    fn name() -> &'static str {
+        "theme selector"
+    }
+
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Select Theme...".into()
     }
 
     fn match_count(&self) -> usize {
@@ -398,6 +435,8 @@ impl PickerDelegate for ThemeSelectorDelegate {
         let theme_appearance = self.new_theme.appearance;
         let system_appearance = SystemAppearance::global(cx).0;
 
+        telemetry::event!("Settings Changed", setting = "theme", value = theme_name);
+
         update_settings_file(self.fs.clone(), cx, move |settings, _| {
             theme_settings::set_theme(settings, theme_name, theme_appearance, system_appearance);
         });
@@ -412,9 +451,7 @@ impl PickerDelegate for ThemeSelectorDelegate {
     fn dismissed(&mut self, _: &mut Window, cx: &mut Context<Picker<ThemeSelectorDelegate>>) {
         self.revert_theme(cx);
 
-        self.selector
-            .update(cx, |_, cx| cx.emit(DismissEvent))
-            .log_err();
+        self.selector.update(cx, |_, cx| cx.emit(DismissEvent)).ok();
     }
 
     fn selected_index(&self) -> usize {
@@ -537,22 +574,18 @@ impl PickerDelegate for ThemeSelectorDelegate {
                 .border_t_1()
                 .border_color(cx.theme().colors().border_variant)
                 .child(
-                    Button::new("docs", localization::text(cx, "theme-selector-view-docs"))
+                    Button::new("docs", "View Theme Docs")
                         .end_icon(
                             Icon::new(IconName::ArrowUpRight)
                                 .size(IconSize::Small)
                                 .color(Color::Muted),
                         )
                         .on_click(cx.listener(|_, _, _, cx| {
-                            cx.open_url(&release_channel::docs_url("themes", cx));
+                            cx.open_url("https://zed.dev/docs/themes");
                         })),
                 )
                 .child(
-                    Button::new(
-                        "more-themes",
-                        localization::text(cx, "theme-selector-install"),
-                    )
-                    .on_click(cx.listener({
+                    Button::new("more-themes", "Install Themes").on_click(cx.listener({
                         move |_, _, window, cx| {
                             window.dispatch_action(
                                 Box::new(Extensions {
@@ -633,7 +666,7 @@ mod tests {
         workspace: &Entity<workspace::Workspace>,
         cx: &mut VisualTestContext,
     ) -> Entity<Picker<ThemeSelectorDelegate>> {
-        cx.dispatch_action(dez_actions::theme_selector::Toggle {
+        cx.dispatch_action(zed_actions::theme_selector::Toggle {
             themes_filter: None,
         });
         cx.run_until_parked();

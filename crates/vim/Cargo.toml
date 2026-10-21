@@ -30,7 +30,6 @@ fuzzy.workspace = true
 gpui.workspace = true
 itertools.workspace = true
 language.workspace = true
-localization.workspace = true
 log.workspace = true
 multi_buffer.workspace = true
 nvim-rs = { git = "https://github.com/KillTheMule/nvim-rs", rev = "764dd270c642f77f10f3e19d05cc178a6cbe69f3", features = ["use_tokio"], optional = true }
@@ -53,7 +52,7 @@ util.workspace = true
 util_macros.workspace = true
 vim_mode_setting.workspace = true
 workspace.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 
 [dev-dependencies]
 command_palette = { workspace = true, features = ["test-support"] }
@@ -70,6 +69,7 @@ project_panel.workspace = true
 outline_panel.workspace = true
 release_channel.workspace = true
 semver.workspace = true
+settings_ui.workspace = true
 settings.workspace = true
 perf.workspace = true
 util = { workspace = true, features = ["test-support"] }

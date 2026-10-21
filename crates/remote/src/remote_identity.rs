@@ -26,6 +26,37 @@ pub enum RemoteConnectionIdentity {
     Mock { id: u64 },
 }
 
+impl RemoteConnectionIdentity {
+    /// A stable string form of this identity, suitable for use in
+    /// persistence keys (e.g. database keys scoped to a remote host).
+    pub fn persistence_key(&self) -> String {
+        match self {
+            Self::Ssh {
+                host,
+                username,
+                port,
+            } => format!(
+                "ssh:{}@{}:{}",
+                username.as_deref().unwrap_or_default(),
+                host,
+                port.map(|port| port.to_string()).unwrap_or_default()
+            ),
+            Self::Wsl { distro_name, user } => format!(
+                "wsl:{}@{}",
+                user.as_deref().unwrap_or_default(),
+                distro_name
+            ),
+            Self::Docker {
+                container_id,
+                name,
+                remote_user,
+            } => format!("docker:{remote_user}@{name}:{container_id}"),
+            #[cfg(any(test, feature = "test-support"))]
+            Self::Mock { id } => format!("mock:{id}"),
+        }
+    }
+}
+
 impl From<&RemoteConnectionOptions> for RemoteConnectionIdentity {
     fn from(options: &RemoteConnectionOptions) -> Self {
         match options {
@@ -136,7 +167,7 @@ mod tests {
     #[test]
     fn docker_identity_ignores_non_persisted_runtime_fields() {
         let left = RemoteConnectionOptions::Docker(DockerConnectionOptions {
-            name: "dez-dev".to_string(),
+            name: "zed-dev".to_string(),
             container_id: "container-123".to_string(),
             remote_user: "anth".to_string(),
             upload_binary_over_docker_exec: true,
@@ -144,7 +175,7 @@ mod tests {
             remote_env: BTreeMap::from([("FOO".to_string(), "BAR".to_string())]),
         });
         let right = RemoteConnectionOptions::Docker(DockerConnectionOptions {
-            name: "dez-dev".to_string(),
+            name: "zed-dev".to_string(),
             container_id: "container-123".to_string(),
             remote_user: "anth".to_string(),
             upload_binary_over_docker_exec: false,

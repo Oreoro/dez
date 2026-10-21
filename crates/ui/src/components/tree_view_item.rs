@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use gpui::{AnyElement, AnyView, ClickEvent, MouseButton, MouseDownEvent};
+use gpui::{AnyElement, AnyView, ClickEvent, MouseButton, MouseDownEvent, Role};
 
 use crate::{Disclosure, prelude::*};
 
@@ -9,6 +9,7 @@ pub struct TreeViewItem {
     id: ElementId,
     group_name: Option<SharedString>,
     label: SharedString,
+    start_icon: Option<IconName>,
     expanded: bool,
     selected: bool,
     disabled: bool,
@@ -30,6 +31,7 @@ impl TreeViewItem {
             id: id.into(),
             group_name: None,
             label: label.into(),
+            start_icon: None,
             expanded: false,
             selected: false,
             disabled: false,
@@ -48,6 +50,11 @@ impl TreeViewItem {
 
     pub fn group_name(mut self, group_name: impl Into<SharedString>) -> Self {
         self.group_name = Some(group_name.into());
+        self
+    }
+
+    pub fn start_icon(mut self, icon: IconName) -> Self {
+        self.start_icon = Some(icon);
         self
     }
 
@@ -138,7 +145,7 @@ impl RenderOnce for TreeViewItem {
         let selected_border = cx.theme().colors().border.opacity(0.4);
         let focused_border = cx.theme().colors().border_focused;
 
-        let item_size = rems_from_px(28.);
+        let item_size = rems_from_px(28_f32);
         let indentation_line = h_flex()
             .h(item_size)
             .w(px(22.))
@@ -151,6 +158,12 @@ impl RenderOnce for TreeViewItem {
                     .bg(cx.theme().colors().border.opacity(0.5)),
             );
 
+        let aria_label = self.label.clone();
+        let root_item = self.root_item;
+        let expanded = self.expanded;
+        let selected = self.selected;
+        let start_icon = self.start_icon;
+
         h_flex()
             .id(self.id)
             .when_some(self.group_name, |this, group| this.group(group))
@@ -158,6 +171,15 @@ impl RenderOnce for TreeViewItem {
             .child(
                 h_flex()
                     .id("inner_tree_view_item")
+                    // The accessible role and state live on this element
+                    // because it also carries the click handler and focus, so
+                    // assistive technology reports a single actionable tree
+                    // item rather than an inert container.
+                    .role(Role::TreeItem)
+                    .aria_label(aria_label)
+                    .aria_selected(selected)
+                    .aria_level(if root_item { 1 } else { 2 })
+                    .when(root_item, |this| this.aria_expanded(expanded))
                     .cursor_pointer()
                     .size_full()
                     .h(item_size)
@@ -184,6 +206,15 @@ impl RenderOnce for TreeViewItem {
                                     .opened_icon(IconName::ChevronDown)
                                     .closed_icon(IconName::ChevronRight),
                             )
+                            .when_some(start_icon, |this, icon| {
+                                this.child(Icon::new(icon).size(IconSize::Small).color(
+                                    if selected {
+                                        Color::Default
+                                    } else {
+                                        Color::Muted
+                                    },
+                                ))
+                            })
                             .child(
                                 Label::new(label)
                                     .when(!self.selected, |this| this.color(Color::Muted)),
@@ -194,6 +225,15 @@ impl RenderOnce for TreeViewItem {
                                     .id("nested_inner_tree_view_item")
                                     .w_full()
                                     .flex_grow_1()
+                                    .when_some(start_icon, |this, icon| {
+                                        this.child(Icon::new(icon).size(IconSize::Small).color(
+                                            if selected {
+                                                Color::Default
+                                            } else {
+                                                Color::Muted
+                                            },
+                                        ))
+                                    })
                                     .child(
                                         Label::new(label)
                                             .when(!self.selected, |this| this.color(Color::Muted)),

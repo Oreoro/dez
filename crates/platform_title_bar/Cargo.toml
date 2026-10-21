@@ -14,15 +14,13 @@ doctest = false
 
 [dependencies]
 gpui.workspace = true
-localization.workspace = true
-project.workspace = true
 settings.workspace = true
 smallvec.workspace = true
 theme.workspace = true
 theme_settings.workspace = true
 ui.workspace = true
 workspace.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows.workspace = true

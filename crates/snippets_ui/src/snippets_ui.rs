@@ -16,9 +16,11 @@ use std::{
     path::Path,
     sync::Arc,
 };
-use ui::{HighlightedLabel, ListItem, ListItemSpacing, prelude::*};
+use ui::{HighlightedLabel, ListItem, prelude::*};
 use util::ResultExt;
 use workspace::{ModalView, OpenOptions, OpenVisible, Workspace, notifications::NotifyResultExt};
+
+mod canvas;
 
 #[derive(Eq, Hash, PartialEq)]
 struct ScopeName(Cow<'static, str>);
@@ -111,7 +113,12 @@ impl ScopeSelector {
         let delegate =
             ScopeSelectorDelegate::new(workspace, cx.entity().downgrade(), language_registry);
 
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::snippets_picker_density(cx))
+                .surface_radius(canvas::snippets_picker_radius(cx))
+                .surface_contrast(canvas::snippets_picker_contrast(cx))
+        });
 
         Self { picker }
     }
@@ -129,7 +136,7 @@ impl Focusable for ScopeSelector {
 
 impl Render for ScopeSelector {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex().w(rems(34.)).child(self.picker.clone())
+        v_flex().child(self.picker.clone())
     }
 }
 
@@ -199,6 +206,10 @@ impl ScopeSelectorDelegate {
 impl PickerDelegate for ScopeSelectorDelegate {
     type ListItem = ListItem;
 
+    fn name() -> &'static str {
+        "snippet scope selector"
+    }
+
     fn placeholder_text(&self, _window: &mut Window, _: &mut App) -> Arc<str> {
         "Select snippet scope...".into()
     }
@@ -216,7 +227,7 @@ impl PickerDelegate for ScopeSelectorDelegate {
                 cx.spawn_in(window, async move |_, cx| {
                     let scope_file_name = ScopeFileName(match scope_name.to_lowercase().as_str() {
                         GLOBAL_SCOPE_NAME => Cow::Borrowed(GLOBAL_SCOPE_FILE_NAME),
-                        _ => Cow::Owned(language.await?.lsp_id()),
+                        _ => Cow::Owned(language.await?.snippet_scope_id()),
                     });
 
                     workspace.update_in(cx, |workspace, window, cx| {
@@ -246,7 +257,7 @@ impl PickerDelegate for ScopeSelectorDelegate {
     fn dismissed(&mut self, _: &mut Window, cx: &mut Context<Picker<Self>>) {
         self.scope_selector
             .update(cx, |_, cx| cx.emit(DismissEvent))
-            .log_err();
+            .ok();
     }
 
     fn selected_index(&self) -> usize {
@@ -318,7 +329,7 @@ impl PickerDelegate for ScopeSelectorDelegate {
         let name_label = mat.string.clone();
 
         let scope_name = ScopeName(Cow::Owned(
-            LanguageName::new(&self.candidates[mat.candidate_id].string).lsp_id(),
+            LanguageName::new(&self.candidates[mat.candidate_id].string).snippet_scope_id(),
         ));
         let file_label = if self.existing_scopes.contains(&scope_name) {
             Some(ScopeFileName::from(scope_name).with_extension())
@@ -344,12 +355,12 @@ impl PickerDelegate for ScopeSelectorDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::snippets_row_spacing(cx))
                 .toggle_state(selected)
                 .start_slot::<Icon>(language_icon)
                 .child(
                     h_flex()
-                        .gap_x_2()
+                        .gap(canvas::snippets_row_gap(cx))
                         .child(HighlightedLabel::new(name_label, mat.positions.clone()))
                         .when_some(file_label, |item, path_label| {
                             item.child(

@@ -141,12 +141,8 @@ impl RenderOnce for AlertModal {
         if let Some(footer) = self.footer {
             modal = modal.child(footer);
         } else if has_default_footer {
-            let primary_action = self
-                .primary_action
-                .unwrap_or_else(|| localization::text(cx, "common-ok"));
-            let dismiss_label = self
-                .dismiss_label
-                .unwrap_or_else(|| localization::text(cx, "common-cancel"));
+            let primary_action = self.primary_action.unwrap_or_else(|| "OK".into());
+            let dismiss_label = self.dismiss_label.unwrap_or_else(|| "Cancel".into());
 
             modal = modal.child(
                 h_flex()
@@ -220,7 +216,7 @@ impl Component for AlertModal {
                             )
                             .child(
                                 "Untrusted workspaces are opened in Restricted Mode to protect your system.
-Review .dez/settings.json for any extensions or commands configured by this project.",
+Review .zed/settings.json for any extensions or commands configured by this project.",
                             )
                             .child(
                                 v_flex()

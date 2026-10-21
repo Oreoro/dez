@@ -1,5 +1,7 @@
 pub mod cursor_position;
 
+mod canvas;
+
 use cursor_position::UserCaretPosition;
 use editor::{
     Anchor, Editor, RowHighlightOptions, SelectionEffects, ToPoint,
@@ -133,19 +135,18 @@ impl GoToLine {
         });
         let line_editor_change = cx.subscribe_in(&line_editor, window, Self::on_line_editor_event);
 
-        let current_text = localization::tr!(
-            cx,
-            "go-to-line-current",
-            line = line,
-            total = last_line + 1,
-            column = column
+        let current_text = format!(
+            "Current Line: {} of {} (column {})",
+            line,
+            last_line + 1,
+            column
         );
 
         Self {
             line_editor,
             active_editor,
             active_buffer,
-            current_text,
+            current_text: current_text.into(),
             prev_scroll_position: Some(scroll_position),
             current_line: line,
             _subscriptions: vec![line_editor_change, cx.on_release_in(window, Self::release)],
@@ -167,11 +168,11 @@ impl GoToLine {
         &mut self,
         _: &Entity<Editor>,
         event: &editor::EditorEvent,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         match event {
-            editor::EditorEvent::Blurred => {
+            editor::EditorEvent::Blurred if window.is_window_active() => {
                 self.prev_scroll_position.take();
                 cx.emit(DismissEvent)
             }
@@ -198,7 +199,7 @@ impl GoToLine {
             let end = snapshot.anchor_after(end_point);
             editor.highlight_rows::<GoToLineRowHighlights>(
                 start..end,
-                cx.theme().colors().editor_highlighted_line_background,
+                |cx| cx.theme().colors().editor_highlighted_line_background,
                 RowHighlightOptions {
                     autoscroll: true,
                     ..Default::default()
@@ -314,29 +315,24 @@ impl Render for GoToLine {
             } else {
                 self.current_line.saturating_sub(offset.unsigned_abs())
             };
-            localization::tr!(
-                cx,
-                "go-to-line-relative",
-                line = target_line,
-                offset = format!("{offset:+}")
-            )
+            format!("Go to line {target_line} ({offset:+} from current)").into()
         } else {
             match self.line_and_char_from_query(cx) {
                 Some((line, Some(character))) => {
-                    localization::tr!(
-                        cx,
-                        "go-to-line-character",
-                        line = line,
-                        character = character
-                    )
+                    format!("Go to line {line}, character {character}").into()
                 }
-                Some((line, None)) => localization::tr!(cx, "go-to-line-line", line = line),
+                Some((line, None)) => format!("Go to line {line}").into(),
                 None => self.current_text.clone(),
             }
         };
 
         v_flex()
             .w(rems(24.))
+            .bg(canvas::go_to_line_background(cx))
+            .border_1()
+            .border_color(canvas::go_to_line_border(cx))
+            .map(|modal| canvas::go_to_line_radius(modal, cx))
+            .overflow_hidden()
             .elevation_2(cx)
             .key_context("GoToLine")
             .on_action(cx.listener(Self::cancel))
@@ -344,16 +340,16 @@ impl Render for GoToLine {
             .child(
                 div()
                     .border_b_1()
-                    .border_color(cx.theme().colors().border_variant)
-                    .px_2()
-                    .py_1()
+                    .border_color(canvas::go_to_line_border(cx))
+                    .px(canvas::go_to_line_padding_x(cx))
+                    .py(canvas::go_to_line_padding_y(cx))
                     .child(self.line_editor.clone()),
             )
             .child(
                 h_flex()
-                    .px_2()
-                    .py_1()
-                    .gap_1()
+                    .px(canvas::go_to_line_padding_x(cx))
+                    .py(canvas::go_to_line_padding_y(cx))
+                    .gap(canvas::go_to_line_gap(cx))
                     .child(Label::new(help_text).color(Color::Muted)),
             )
     }

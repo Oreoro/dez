@@ -295,10 +295,12 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> RenderOnce
                         selected,
                         tooltip,
                     } = button.into_configuration();
+                    let accessibility_label = label.clone();
 
                     let entry_index = row_index * COLS + col_index;
 
                     ButtonLike::new((group_name.clone(), entry_index))
+                        .aria_label(accessibility_label)
                         .when(!self.auto_width, |this| this.full_width())
                         .rounding(Some(
                             ToggleButtonPosition {
@@ -453,9 +455,9 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                         ToggleButtonGroup::single_row(
                             "single_row_test_icon",
                             [
-                                ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("First", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Second", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Third", IconName::AiZed, |_, _, _| {}),
                             ],
                         )
                         .selected_index(1)
@@ -484,14 +486,14 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                         ToggleButtonGroup::two_rows(
                             "multiple_row_test_icons",
                             [
-                                ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("First", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Second", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Third", IconName::AiZed, |_, _, _| {}),
                             ],
                             [
-                                ToggleButtonWithIcon::new("Fourth", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Fifth", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Sixth", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Fourth", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Fifth", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Sixth", IconName::AiZed, |_, _, _| {}),
                             ],
                         )
                         .selected_index(3)
@@ -521,9 +523,9 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                         ToggleButtonGroup::single_row(
                             "single_row_test_icon_outlined",
                             [
-                                ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("First", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Second", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Third", IconName::AiZed, |_, _, _| {}),
                             ],
                         )
                         .selected_index(1)
@@ -554,14 +556,14 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                         ToggleButtonGroup::two_rows(
                             "multiple_row_test",
                             [
-                                ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("First", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Second", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Third", IconName::AiZed, |_, _, _| {}),
                             ],
                             [
-                                ToggleButtonWithIcon::new("Fourth", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Fifth", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Sixth", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Fourth", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Fifth", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Sixth", IconName::AiZed, |_, _, _| {}),
                             ],
                         )
                         .selected_index(3)
@@ -592,9 +594,9 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                         ToggleButtonGroup::single_row(
                             "single_row_test_icon_outlined",
                             [
-                                ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("First", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Second", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Third", IconName::AiZed, |_, _, _| {}),
                             ],
                         )
                         .selected_index(1)
@@ -617,7 +619,7 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                             ],
                         )
                         .selected_index(3)
-                        .width(rems_from_px(100.))
+                        .width(rems_from_px(100_f32))
                         .style(ToggleButtonGroupStyle::Filled)
                         .into_any_element(),
                     ),
@@ -626,18 +628,18 @@ impl<T: ButtonBuilder, const COLS: usize, const ROWS: usize> Component
                         ToggleButtonGroup::two_rows(
                             "multiple_row_test",
                             [
-                                ToggleButtonWithIcon::new("First", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Second", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Third", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("First", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Second", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Third", IconName::AiZed, |_, _, _| {}),
                             ],
                             [
-                                ToggleButtonWithIcon::new("Fourth", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Fifth", IconName::Aidez, |_, _, _| {}),
-                                ToggleButtonWithIcon::new("Sixth", IconName::Aidez, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Fourth", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Fifth", IconName::AiZed, |_, _, _| {}),
+                                ToggleButtonWithIcon::new("Sixth", IconName::AiZed, |_, _, _| {}),
                             ],
                         )
                         .selected_index(3)
-                        .width(rems_from_px(100.))
+                        .width(rems_from_px(100_f32))
                         .style(ToggleButtonGroupStyle::Filled)
                         .into_any_element(),
                     ),

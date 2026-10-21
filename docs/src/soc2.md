@@ -1,10 +1,10 @@
 ---
-title: SOC2 - dez
-description: dez's SOC2 certification status.
+title: SOC2 - Zed
+description: Zed's SOC2 certification status.
 ---
 
 # SOC2
 
-dez is working toward SOC2 Type 1 certification.
+Zed is working toward SOC2 Type 1 certification.
 
-For updates or compliance questions, email [sales@dez.dev](mailto:sales@dez.dev).
+For updates or compliance questions, email [sales@zed.dev](mailto:sales@zed.dev).

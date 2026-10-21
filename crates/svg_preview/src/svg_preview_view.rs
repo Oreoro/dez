@@ -3,16 +3,73 @@ use std::sync::Arc;
 
 use file_icons::FileIcons;
 use gpui::{
-    App, Context, Entity, EventEmitter, FocusHandle, Focusable, IntoElement, ParentElement, Render,
-    RenderImage, Styled, Subscription, Task, WeakEntity, Window, div, img,
+    App, Context, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement,
+    ParentElement, Pixels, Render, RenderImage, Styled, Subscription, Task, WeakEntity, Window,
+    div, img, px,
 };
 use language::{Buffer, BufferEvent};
 use multi_buffer::MultiBuffer;
+use settings::Settings;
+use ui::ActiveTheme;
 use ui::prelude::*;
 use workspace::item::Item;
-use workspace::{Pane, Workspace};
+use workspace::{DesignSystemSettings, Pane, Workspace};
 
 use crate::{OpenFollowingPreview, OpenPreview, OpenPreviewToTheSide};
+
+fn canvas_svg_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_svg_empty_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.surface_background,
+        settings::CanvasContrast::Standard => colors.surface_background,
+        settings::CanvasContrast::High => colors.panel_background,
+    }
+}
+
+fn canvas_svg_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.5),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
+fn canvas_svg_empty_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(12.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(24.),
+    }
+}
+
+fn canvas_svg_radius(element: Div, cx: &App) -> Div {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
+}
+
+fn canvas_svg_empty_card(cx: &App) -> Div {
+    canvas_svg_radius(
+        div()
+            .p(canvas_svg_empty_padding(cx))
+            .bg(canvas_svg_empty_background(cx))
+            .border_1()
+            .border_color(canvas_svg_border(cx)),
+        cx,
+    )
+}
 
 pub struct SvgPreviewView {
     focus_handle: FocusHandle,
@@ -202,63 +259,62 @@ impl SvgPreviewView {
             })
     }
 
+    pub fn open_preview_in_pane(
+        workspace: &mut Workspace,
+        buffer: Entity<MultiBuffer>,
+        pane: Entity<Pane>,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        Self::activate_or_add_preview(workspace, buffer, pane, true, window, cx);
+    }
+
+    pub fn open_preview_to_the_side_of_pane(
+        workspace: &mut Workspace,
+        buffer: Entity<MultiBuffer>,
+        origin_pane: Entity<Pane>,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        let target_pane = workspace.adjacent_pane_of(&origin_pane, window, cx);
+        Self::activate_or_add_preview(workspace, buffer, target_pane, false, window, cx);
+    }
+
+    fn activate_or_add_preview(
+        workspace: &mut Workspace,
+        buffer: Entity<MultiBuffer>,
+        pane: Entity<Pane>,
+        focus: bool,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        let existing_view_idx = Self::find_existing_preview_item_idx(pane.read(cx), &buffer, cx);
+        if let Some(existing_view_idx) = existing_view_idx {
+            pane.update(cx, |pane, cx| {
+                pane.activate_item(existing_view_idx, focus, focus, window, cx);
+            });
+        } else {
+            let view =
+                Self::create_svg_view(SvgPreviewMode::Default, workspace, buffer, window, cx);
+            pane.update(cx, |pane, cx| {
+                pane.add_item(Box::new(view), focus, focus, None, window, cx)
+            });
+        }
+        cx.notify();
+    }
+
     pub fn register(workspace: &mut Workspace, _window: &mut Window, _cx: &mut Context<Workspace>) {
         workspace.register_action(move |workspace, _: &OpenPreview, window, cx| {
-            if let Some(buffer) = Self::resolve_active_item_as_svg_buffer(workspace, cx)
-                && Self::is_svg_file(&buffer, cx)
-            {
-                let view = Self::create_svg_view(
-                    SvgPreviewMode::Default,
-                    workspace,
-                    buffer.clone(),
-                    window,
-                    cx,
-                );
-                workspace.active_pane().update(cx, |pane, cx| {
-                    if let Some(existing_view_idx) =
-                        Self::find_existing_preview_item_idx(pane, &buffer, cx)
-                    {
-                        pane.activate_item(existing_view_idx, true, true, window, cx);
-                    } else {
-                        pane.add_item(Box::new(view), true, true, None, window, cx)
-                    }
-                });
-                cx.notify();
+            if let Some(buffer) = Self::resolve_active_item_as_svg_buffer(workspace, cx) {
+                let pane = workspace.active_pane().clone();
+                Self::open_preview_in_pane(workspace, buffer, pane, window, cx);
             }
         });
 
         workspace.register_action(move |workspace, _: &OpenPreviewToTheSide, window, cx| {
-            if let Some(editor) = Self::resolve_active_item_as_svg_buffer(workspace, cx)
-                && Self::is_svg_file(&editor, cx)
-            {
-                let editor_clone = editor.clone();
-                let view = Self::create_svg_view(
-                    SvgPreviewMode::Default,
-                    workspace,
-                    editor_clone,
-                    window,
-                    cx,
-                );
-                let pane = workspace
-                    .find_pane_in_direction(workspace::SplitDirection::Right, cx)
-                    .unwrap_or_else(|| {
-                        workspace.split_pane(
-                            workspace.active_pane().clone(),
-                            workspace::SplitDirection::Right,
-                            window,
-                            cx,
-                        )
-                    });
-                pane.update(cx, |pane, cx| {
-                    if let Some(existing_view_idx) =
-                        Self::find_existing_preview_item_idx(pane, &editor, cx)
-                    {
-                        pane.activate_item(existing_view_idx, true, true, window, cx);
-                    } else {
-                        pane.add_item(Box::new(view), false, false, None, window, cx)
-                    }
-                });
-                cx.notify();
+            if let Some(buffer) = Self::resolve_active_item_as_svg_buffer(workspace, cx) {
+                let pane = workspace.active_pane().clone();
+                Self::open_preview_to_the_side_of_pane(workspace, buffer, pane, window, cx);
             }
         });
 
@@ -279,30 +335,32 @@ impl SvgPreviewView {
 
 impl Render for SvgPreviewView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let load_failed = localization::text(cx, "preview-svg-load-failed");
-        let no_file = localization::text(cx, "preview-svg-none");
         v_flex()
             .id("SvgPreview")
             .key_context("SvgPreview")
             .track_focus(&self.focus_handle(cx))
             .size_full()
-            .bg(cx.theme().colors().editor_background)
+            .bg(canvas_svg_background(cx))
             .flex()
             .justify_center()
             .items_center()
             .map(|this| match self.current_svg.clone() {
                 Some(Ok(image)) => {
-                    this.child(img(image).max_w_full().max_h_full().with_fallback(move || {
+                    this.child(img(image).max_w_full().max_h_full().with_fallback(|| {
                         h_flex()
                             .p_4()
                             .gap_2()
                             .child(Icon::new(IconName::Warning))
-                            .child(load_failed.clone())
+                            .child("Failed to load SVG image")
                             .into_any_element()
                     }))
                 }
-                Some(Err(e)) => this.child(div().p_4().child(e).into_any_element()),
-                None => this.child(div().p_4().child(no_file)),
+                Some(Err(e)) => this.child(canvas_svg_empty_card(cx).child(e).into_any_element()),
+                None => this.child(
+                    canvas_svg_empty_card(cx)
+                        .child("No SVG file selected")
+                        .into_any_element(),
+                ),
             })
     }
 }
@@ -331,14 +389,12 @@ impl Item for SvgPreviewView {
         self.buffer
             .as_ref()
             .and_then(|svg_path| svg_path.read(cx).file())
-            .map(|name| {
-                localization::tr!(
-                    cx,
-                    "preview-svg-tab",
-                    title = name.file_name(cx).to_string(),
-                )
-            })
-            .unwrap_or_else(|| localization::text(cx, "preview-svg-default"))
+            .map(|name| format!("Preview {}", name.file_name(cx)).into())
+            .unwrap_or_else(|| "SVG Preview".into())
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("svg preview: open")
     }
 
     fn to_item_events(_event: &Self::Event, _f: &mut dyn FnMut(workspace::item::ItemEvent)) {}

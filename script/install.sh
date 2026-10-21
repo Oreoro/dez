@@ -1,29 +1,20 @@
 #!/usr/bin/env sh
 set -eu
 
-# Downloads a release tarball from GitHub Releases
-# (https://github.com/Oreoro/dez/releases) and unpacks it into ~/.local/.
-# Set ZED_VERSION to a tag (e.g. v0.3.7) to pin a version; it defaults to the
-# latest release for the selected channel.
-# Set ZED_CHANNEL=nightly to install the latest nightly build.
+# Downloads a tarball from https://zed.dev/releases and unpacks it
+# into ~/.local/. If you'd prefer to do this manually, instructions are at
+# https://zed.dev/docs/linux.
 
 main() {
     platform="$(uname -s)"
     arch="$(uname -m)"
     channel="${ZED_CHANNEL:-stable}"
     ZED_VERSION="${ZED_VERSION:-latest}"
-    case "$channel" in
-        stable | nightly) ;;
-        *)
-            echo "Unsupported release channel: $channel" >&2
-            exit 1
-            ;;
-    esac
     # Use TMPDIR if available (for environments with non-standard temp directories)
     if [ -n "${TMPDIR:-}" ] && [ -d "${TMPDIR}" ]; then
-        temp="$(mktemp -d "$TMPDIR/dez-XXXXXX")"
+        temp="$(mktemp -d "$TMPDIR/zed-XXXXXX")"
     else
-        temp="$(mktemp -d "/tmp/dez-XXXXXX")"
+        temp="$(mktemp -d "/tmp/zed-XXXXXX")"
     fi
 
     if [ "$platform" = "Darwin" ]; then
@@ -36,10 +27,10 @@ main() {
     fi
 
     case "$platform-$arch" in
-        macos-arm64* | linux-arm64* | linux-armhf | linux-aarch64)
+        macos-arm64* | linux-arm64* | linux-aarch64)
             arch="aarch64"
             ;;
-        macos-x86* | linux-x86* | linux-i686*)
+        macos-x86* | linux-x86*)
             arch="x86_64"
             ;;
         *)
@@ -63,10 +54,10 @@ main() {
 
     "$platform" "$@"
 
-    if [ "$(command -v dez)" = "$HOME/.local/bin/dez" ]; then
-        echo "dez has been installed. Run with 'dez'"
+    if [ "$(command -v zed)" = "$HOME/.local/bin/zed" ]; then
+        echo "Zed has been installed. Run with 'zed'"
     else
-        echo "To run dez from your terminal, you must add ~/.local/bin to your PATH"
+        echo "To run Zed from your terminal, you must add ~/.local/bin to your PATH"
         echo "Run:"
 
         case "$SHELL" in
@@ -83,54 +74,16 @@ main() {
                 ;;
         esac
 
-        echo "To run dez now, '~/.local/bin/dez'"
-    fi
-}
-
-# Resolves the newest published release tag, prereleases included. Every dez
-# release is flagged as a prerelease, and GitHub's `releases/latest` redirect
-# deliberately skips prereleases, so that redirect cannot be used to find the
-# current build.
-latest_release_tag() {
-    if [ -z "${resolved_latest_tag:-}" ]; then
-        resolved_latest_tag=$(curl -fsSL https://api.github.com/repos/Oreoro/dez/releases 2>/dev/null |
-            sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
-            head -n 1 || true)
-        if [ -z "$resolved_latest_tag" ]; then
-            echo "Could not determine the latest dez release; pin one with ZED_VERSION=<tag>." >&2
-            exit 1
-        fi
-    fi
-    echo "$resolved_latest_tag"
-}
-
-# Builds the GitHub Releases download URL for a given asset filename. Uses the
-# newest release unless ZED_VERSION pins a specific tag (with or without the
-# leading "v"). Nightly uses its moving tag.
-github_release_url() {
-    asset="$1"
-    if [ "$ZED_VERSION" = "latest" ]; then
-        if [ "$channel" = "nightly" ]; then
-            echo "https://github.com/Oreoro/dez/releases/download/nightly/$asset"
-        else
-            tag=$(latest_release_tag) || exit 1
-            echo "https://github.com/Oreoro/dez/releases/download/$tag/$asset"
-        fi
-    else
-        case "$ZED_VERSION" in
-            v*) tag="$ZED_VERSION" ;;
-            *) tag="v$ZED_VERSION" ;;
-        esac
-        echo "https://github.com/Oreoro/dez/releases/download/$tag/$asset"
+        echo "To run Zed now, '~/.local/bin/zed'"
     fi
 }
 
 linux() {
     if [ -n "${ZED_BUNDLE_PATH:-}" ]; then
-        cp "$ZED_BUNDLE_PATH" "$temp/dez-linux-$arch.tar.gz"
+        cp "$ZED_BUNDLE_PATH" "$temp/zed-linux-$arch.tar.gz"
     else
-        echo "Downloading dez version: $ZED_VERSION"
-        curl "$(github_release_url "dez-linux-$arch.tar.gz")" > "$temp/dez-linux-$arch.tar.gz"
+        echo "Downloading Zed version: $ZED_VERSION"
+        curl "https://cloud.zed.dev/releases/$channel/$ZED_VERSION/download?asset=zed&arch=$arch&os=linux&source=install.sh" > "$temp/zed-linux-$arch.tar.gz"
     fi
 
     suffix=""
@@ -141,53 +94,66 @@ linux() {
     appid=""
     case "$channel" in
       stable)
-        appid="dev.dez.dez"
+        appid="dev.zed.Zed"
         ;;
       nightly)
-        appid="dev.dez.dez-Nightly"
+        appid="dev.zed.Zed-Nightly"
+        ;;
+      preview)
+        appid="dev.zed.Zed-Preview"
         ;;
       dev)
-        appid="dev.dez.dez-Dev"
+        appid="dev.zed.Zed-Dev"
         ;;
       *)
         echo "Unknown release channel: ${channel}. Using stable app ID."
-        appid="dev.dez.dez"
+        appid="dev.zed.Zed"
         ;;
     esac
 
     # Unpack
-    rm -rf "$HOME/.local/dez$suffix.app"
-    mkdir -p "$HOME/.local/dez$suffix.app"
-    tar -xzf "$temp/dez-linux-$arch.tar.gz" -C "$HOME/.local/"
+    rm -rf "$HOME/.local/zed$suffix.app"
+    mkdir -p "$HOME/.local/zed$suffix.app"
+    tar -xzf "$temp/zed-linux-$arch.tar.gz" -C "$HOME/.local/"
+
+    zed_editor="$HOME/.local/zed$suffix.app/libexec/zed-editor"
+    if [ -f "$zed_editor" ] && command -v ldd >/dev/null 2>&1; then
+        missing="$(ldd "$zed_editor" 2>/dev/null | sed -n 's/^[[:space:]]*\(.*\) => not found$/\1/p')"
+        if [ -n "$missing" ]; then
+            echo "Warning: your system is missing libraries that Zed needs:"
+            echo "$missing" | sed 's/^/    /'
+            echo "Install them with your package manager, or Zed will fail to start."
+        fi
+    fi
 
     # Setup ~/.local directories
     mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications"
 
     # Link the binary
-    if [ -f "$HOME/.local/dez$suffix.app/bin/dez" ]; then
-        ln -sf "$HOME/.local/dez$suffix.app/bin/dez" "$HOME/.local/bin/dez"
+    if [ -f "$HOME/.local/zed$suffix.app/bin/zed" ]; then
+        ln -sf "$HOME/.local/zed$suffix.app/bin/zed" "$HOME/.local/bin/zed"
     else
         # support for versions before 0.139.x.
-        ln -sf "$HOME/.local/dez$suffix.app/bin/cli" "$HOME/.local/bin/dez"
+        ln -sf "$HOME/.local/zed$suffix.app/bin/cli" "$HOME/.local/bin/zed"
     fi
 
     # Copy .desktop file
     desktop_file_path="$HOME/.local/share/applications/${appid}.desktop"
-    src_dir="$HOME/.local/dez$suffix.app/share/applications"
+    src_dir="$HOME/.local/zed$suffix.app/share/applications"
     if [ -f "$src_dir/${appid}.desktop" ]; then
         cp "$src_dir/${appid}.desktop" "${desktop_file_path}"
     else
         # Fallback for older tarballs
-        cp "$src_dir/dez$suffix.desktop" "${desktop_file_path}"
+        cp "$src_dir/zed$suffix.desktop" "${desktop_file_path}"
     fi
-    sed -i "s|Icon=dez|Icon=$HOME/.local/dez$suffix.app/share/icons/hicolor/512x512/apps/dez.png|g" "${desktop_file_path}"
-    sed -i "s|Exec=dez|Exec=$HOME/.local/dez$suffix.app/bin/dez|g" "${desktop_file_path}"
+    sed -i "s|Icon=zed|Icon=$HOME/.local/zed$suffix.app/share/icons/hicolor/512x512/apps/zed.png|g" "${desktop_file_path}"
+    sed -i "s|Exec=zed|Exec=$HOME/.local/zed$suffix.app/bin/zed|g" "${desktop_file_path}"
 }
 
 macos() {
-    echo "Downloading dez version: $ZED_VERSION"
-    curl "$(github_release_url "dez-$arch.dmg")" > "$temp/dez-$arch.dmg"
-    hdiutil attach -quiet "$temp/dez-$arch.dmg" -mountpoint "$temp/mount"
+    echo "Downloading Zed version: $ZED_VERSION"
+    curl "https://cloud.zed.dev/releases/$channel/$ZED_VERSION/download?asset=zed&os=macos&arch=$arch&source=install.sh" > "$temp/Zed-$arch.dmg"
+    hdiutil attach -quiet "$temp/Zed-$arch.dmg" -mountpoint "$temp/mount"
     app="$(cd "$temp/mount/"; echo *.app)"
     echo "Installing $app"
     if [ -d "/Applications/$app" ]; then
@@ -199,7 +165,7 @@ macos() {
 
     mkdir -p "$HOME/.local/bin"
     # Link the binary
-    ln -sf "/Applications/$app/Contents/MacOS/cli" "$HOME/.local/bin/dez"
+    ln -sf "/Applications/$app/Contents/MacOS/cli" "$HOME/.local/bin/zed"
 }
 
 main "$@"

@@ -13,6 +13,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 
 $buildSuccess = $false
+$canCodeSign = $false
 
 $OSArchitecture = switch ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture) {
     "X64" { "x86_64" }
@@ -39,17 +40,25 @@ function Get-VSArch {
     }
 }
 
-# Enable git long paths before cargo fetches git dependencies (needed for crates with deep test paths)
-git config --system core.longpaths true
-
-Push-Location
-$vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-# Launch-VsDevShell.ps1 only accepts x86/amd64 for -HostArch; omit it on ARM runners
-if ($OSArchitecture -eq "aarch64") {
-    & "$vsInstallPath\Common7\Tools\Launch-VsDevShell.ps1" -Arch (Get-VSArch -Arch $Architecture)
-} else {
-    & "$vsInstallPath\Common7\Tools\Launch-VsDevShell.ps1" -Arch (Get-VSArch -Arch $Architecture) -HostArch (Get-VSArch -Arch $OSArchitecture)
+# Locate the Visual Studio installation through vswhere so the script works
+# on both GitHub-hosted runners (which ship Visual Studio Enterprise) and
+# developer machines (which commonly install the Community edition).
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+if (-not (Test-Path $vswhere)) {
+    throw "vswhere is required to locate Visual Studio: $vswhere"
 }
+$vsInstallationPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath | Select-Object -First 1
+if (-not $vsInstallationPath) {
+    throw "Visual Studio with the C++ toolset was not found."
+}
+$vsDevShell = Join-Path $vsInstallationPath "Common7\Tools\Launch-VsDevShell.ps1"
+if (-not (Test-Path $vsDevShell)) {
+    throw "Launch-VsDevShell.ps1 was not found at $vsDevShell"
+}
+Push-Location
+# VsDevShell validates -HostArch against {x86, amd64} only; on ARM64
+# hosts the x64 dev shell runs under emulation, so always use amd64.
+& $vsDevShell -Arch (Get-VSArch -Arch $Architecture) -HostArch amd64
 Pop-Location
 
 $target = "$Architecture-pc-windows-msvc"
@@ -64,8 +73,13 @@ if ($Help) {
     exit 0
 }
 
-Push-Location -Path crates/dez
+Push-Location -Path crates/zed
 $channel = Get-Content "RELEASE_CHANNEL"
+if ($env:DEZ_BUNDLE_CHANNEL) {
+    # Manual fork builds may select one of the existing Dez bundle identities
+    # without rewriting the checked-in development channel.
+    $channel = $env:DEZ_BUNDLE_CHANNEL
+}
 $env:ZED_RELEASE_CHANNEL = $channel
 $env:RELEASE_CHANNEL = $channel
 Pop-Location
@@ -75,42 +89,31 @@ function CheckEnvironmentVariables {
         return
     }
 
-    $requiredVars = @(
-        'ZED_WORKSPACE', 'RELEASE_VERSION', 'ZED_RELEASE_CHANNEL'
-    )
+    $requiredVars = @('ZED_WORKSPACE', 'RELEASE_VERSION', 'ZED_RELEASE_CHANNEL')
 
     foreach ($var in $requiredVars) {
-        if (-not (Test-Path "env:$var")) {
+        if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($var))) {
             Write-Error "$var is not set"
             exit 1
         }
     }
 
+    # On PRs from forks the signing secrets are not populated,
+    # so skip code signing instead of failing, like bundle-mac does.
     $signingVars = @(
         'AZURE_TENANT_ID', 'AZURE_CLIENT_ID', 'AZURE_CLIENT_SECRET',
         'ACCOUNT_NAME', 'CERT_PROFILE_NAME', 'ENDPOINT',
         'FILE_DIGEST', 'TIMESTAMP_DIGEST', 'TIMESTAMP_SERVER'
     )
 
-    $script:canCodeSign = $true
-    foreach ($var in $signingVars) {
-        # GitHub Actions interpolates an unset `vars.*`/`secrets.*` reference as an
-        # empty string rather than leaving the env var unset, so `Test-Path` alone
-        # would not catch a missing value here.
-        if ([string]::IsNullOrWhiteSpace([System.Environment]::GetEnvironmentVariable($var))) {
-            Write-Output "Azure signing variable $var is not set, code signing will be skipped"
-            $script:canCodeSign = $false
-            break
-        }
-    }
-
-    if ($script:canCodeSign) {
-        $env:AZURE_SIGNING_TENANT_ID = $env:AZURE_TENANT_ID
-        $env:AZURE_SIGNING_CLIENT_ID = $env:AZURE_CLIENT_ID
-        $env:AZURE_SIGNING_CLIENT_SECRET = $env:AZURE_CLIENT_SECRET
-        $env:AZURE_SIGNING_ACCOUNT_NAME = $env:ACCOUNT_NAME
-        $env:AZURE_SIGNING_CERT_PROFILE_NAME = $env:CERT_PROFILE_NAME
-        $env:AZURE_SIGNING_ENDPOINT = $env:ENDPOINT
+    $missingVars = @($signingVars | Where-Object { [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($_)) })
+    if ($missingVars.Count -eq 0) {
+        $script:canCodeSign = $true
+    } else {
+        Write-Host "====== WARNING ======"
+        Write-Host "One or more of the following variables are missing: $($missingVars -join ', ')"
+        Write-Host "This bundle will not be code signed"
+        Write-Host "====== WARNING ======"
     }
 }
 
@@ -119,7 +122,7 @@ function PrepareForBundle {
         Remove-Item -Path "$innoDir" -Recurse -Force
     }
     New-Item -Path "$innoDir" -ItemType Directory -Force
-    Copy-Item -Path "$env:ZED_WORKSPACE\crates\dez\resources\windows\*" -Destination "$innoDir" -Recurse -Force
+    Copy-Item -Path "$env:ZED_WORKSPACE\crates\zed\resources\windows\*" -Destination "$innoDir" -Recurse -Force
     New-Item -Path "$innoDir\make_appx" -ItemType Directory -Force
     New-Item -Path "$innoDir\appx" -ItemType Directory -Force
     New-Item -Path "$innoDir\bin" -ItemType Directory -Force
@@ -132,61 +135,86 @@ function GenerateLicenses {
     . $PSScriptRoot/generate-licenses.ps1
 }
 
-function BuilddezAndItsFriends {
-    Write-Output "Building dez and its friends, for channel: $channel"
-    # Build dez and its companion executables.
-    cargo build --release --package dez --package cli --package auto_update_helper --package agent_control_cli --target $target
-    Copy-Item -Path ".\$CargoOutDir\dez.exe" -Destination "$innoDir\dez.exe" -Force
+function BuildZedAndItsFriends {
+    Write-Output "Building Zed and its friends, for channel: $channel"
+    # Build dez.exe, cli.exe and auto_update_helper.exe
+    cargo --config .cargo/bundle-config.toml build --release --package zed --package cli --package auto_update_helper --target $target
+    Copy-Item -Path ".\$CargoOutDir\dez.exe" -Destination "$innoDir\Zed.exe" -Force
     Copy-Item -Path ".\$CargoOutDir\cli.exe" -Destination "$innoDir\cli.exe" -Force
     Copy-Item -Path ".\$CargoOutDir\auto_update_helper.exe" -Destination "$innoDir\auto_update_helper.exe" -Force
-    Copy-Item -Path ".\$CargoOutDir\dezctl.exe" -Destination "$innoDir\dezctl.exe" -Force
     # Build explorer_command_injector.dll
     switch ($channel) {
         "stable" {
-            cargo build --release --features stable --no-default-features --package explorer_command_injector --target $target
+            cargo --config .cargo/bundle-config.toml build --release --features stable --no-default-features --package explorer_command_injector --target $target
         }
         "preview" {
-            cargo build --release --features preview --no-default-features --package explorer_command_injector --target $target
+            cargo --config .cargo/bundle-config.toml build --release --features preview --no-default-features --package explorer_command_injector --target $target
         }
         default {
-            cargo build --release --package explorer_command_injector --target $target
+            cargo --config .cargo/bundle-config.toml build --release --package explorer_command_injector --target $target
         }
     }
-    Copy-Item -Path ".\$CargoOutDir\explorer_command_injector.dll" -Destination "$innoDir\dez_explorer_command_injector.dll" -Force
+    Copy-Item -Path ".\$CargoOutDir\explorer_command_injector.dll" -Destination "$innoDir\zed_explorer_command_injector.dll" -Force
 }
 
 function BuildRemoteServer {
     Write-Output "Building remote_server for $target"
-    cargo build --release --package remote_server --target $target
+    cargo --config .cargo/bundle-config.toml build --release --package remote_server --target $target
 
     # Create zipped remote server binary
     $remoteServerSrc = (Resolve-Path ".\$CargoOutDir\remote_server.exe").Path
 
-    if ($env:CI -and $script:canCodeSign) {
+    if ($canCodeSign) {
         Write-Output "Code signing remote_server.exe"
         & "$innoDir\sign.ps1" $remoteServerSrc
     }
 
-    $remoteServerDst = "$env:ZED_WORKSPACE\target\dez-remote-server-windows-$Architecture.zip"
+    $remoteServerDst = "$env:ZED_WORKSPACE\target\zed-remote-server-windows-$Architecture.zip"
     Write-Output "Compressing remote_server to $remoteServerDst"
     Compress-Archive -Path $remoteServerSrc -DestinationPath $remoteServerDst -Force
 
     Write-Output "Remote server compressed successfully"
 }
 
-function ZipdezAndItsFriendsDebug {
+function ZipZedAndItsFriendsDebug {
     $items = @(
         ".\$CargoOutDir\dez.pdb",
         ".\$CargoOutDir\cli.pdb",
         ".\$CargoOutDir\auto_update_helper.pdb",
-        ".\$CargoOutDir\dezctl.pdb",
         ".\$CargoOutDir\explorer_command_injector.pdb",
         ".\$CargoOutDir\remote_server.pdb"
     )
 
-    Compress-Archive -Path $items -DestinationPath ".\$CargoOutDir\dez-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip" -Force
+    Compress-Archive -Path $items -DestinationPath ".\$CargoOutDir\zed-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip" -Force
 }
 
+
+function UploadToSentry {
+    if (-not (Get-Command "sentry-cli" -ErrorAction SilentlyContinue)) {
+        Write-Output "sentry-cli not found. skipping sentry upload."
+        Write-Output "install with: 'winget install -e --id=Sentry.sentry-cli'"
+        return
+    }
+    if ([string]::IsNullOrWhiteSpace($env:SENTRY_AUTH_TOKEN)) {
+        Write-Output "missing SENTRY_AUTH_TOKEN. skipping sentry upload."
+        return
+    }
+    Write-Output "Uploading zed debug symbols to sentry..."
+    for ($i = 1; $i -le 3; $i++) {
+        try {
+            sentry-cli debug-files upload --include-sources --wait -p zed -o zed-dev $CargoOutDir
+            break
+        }
+        catch {
+            Write-Output "Sentry upload attempt $i failed: $_"
+            if ($i -eq 3) {
+                Write-Output "All sentry upload attempts failed"
+                throw
+            }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
 
 function MakeAppx {
     switch ($channel) {
@@ -204,18 +232,15 @@ function MakeAppx {
     # Add makeAppx.exe to Path
     $sdk = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64"
     $env:Path += ';' + $sdk
-    makeAppx.exe pack /d "$innoDir\make_appx" /p "$innoDir\dez_explorer_command_injector.appx" /nv
+    makeAppx.exe pack /d "$innoDir\make_appx" /p "$innoDir\zed_explorer_command_injector.appx" /nv
 }
 
-function SigndezAndItsFriends {
-    if (-not $env:CI -or -not $script:canCodeSign) {
-        if ($env:CI) {
-            Write-Output "Azure signing not configured, skipping code signing"
-        }
+function SignZedAndItsFriends {
+    if (-not $canCodeSign) {
         return
     }
 
-    $files = "$innoDir\dez.exe,$innoDir\cli.exe,$innoDir\auto_update_helper.exe,$innoDir\dezctl.exe,$innoDir\dez_explorer_command_injector.dll,$innoDir\dez_explorer_command_injector.appx"
+    $files = "$innoDir\Zed.exe,$innoDir\cli.exe,$innoDir\auto_update_helper.exe,$innoDir\zed_explorer_command_injector.dll,$innoDir\zed_explorer_command_injector.appx"
     & "$innoDir\sign.ps1" $files
 }
 
@@ -237,10 +262,10 @@ function DownloadConpty {
 }
 
 function CollectFiles {
-    Move-Item -Path "$innoDir\dez_explorer_command_injector.appx" -Destination "$innoDir\appx\dez_explorer_command_injector.appx" -Force
-    Move-Item -Path "$innoDir\dez_explorer_command_injector.dll" -Destination "$innoDir\appx\dez_explorer_command_injector.dll" -Force
-    Move-Item -Path "$innoDir\cli.exe" -Destination "$innoDir\bin\dez.exe" -Force
-    Move-Item -Path "$innoDir\dez.sh" -Destination "$innoDir\bin\dez" -Force
+    Move-Item -Path "$innoDir\zed_explorer_command_injector.appx" -Destination "$innoDir\appx\zed_explorer_command_injector.appx" -Force
+    Move-Item -Path "$innoDir\zed_explorer_command_injector.dll" -Destination "$innoDir\appx\zed_explorer_command_injector.dll" -Force
+    Move-Item -Path "$innoDir\cli.exe" -Destination "$innoDir\bin\zed.exe" -Force
+    Move-Item -Path "$innoDir\zed.sh" -Destination "$innoDir\bin\zed" -Force
     Move-Item -Path "$innoDir\auto_update_helper.exe" -Destination "$innoDir\tools\auto_update_helper.exe" -Force
     if($Architecture -eq "aarch64") {
         New-Item -Type Directory -Path "$innoDir\arm64" -Force
@@ -258,63 +283,63 @@ function CollectFiles {
 }
 
 function BuildInstaller {
-    $issFilePath = "$innoDir\dez.iss"
+    $issFilePath = "$innoDir\zed.iss"
     switch ($channel) {
         "stable" {
             $appId = "{{2DB0DA96-CA55-49BB-AF4F-64AF36A86712}"
             $appIconName = "app-icon"
-            $appName = "dez"
-            $appDisplayName = "dez"
-            $appSetupName = "dez-$Architecture"
-            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
-            $appMutex = "dez-Stable-Instance-Mutex"
-            $appExeName = "dez"
-            $regValueName = "dez"
-            $appUserId = "dezIndustries.dez"
+            $appName = "Zed"
+            $appDisplayName = "Zed"
+            $appSetupName = "Zed-$Architecture"
+            # The mutex name here should match the mutex name in crates\zed\src\zed\windows_only_instance.rs
+            $appMutex = "Zed-Stable-Instance-Mutex"
+            $appExeName = "Zed"
+            $regValueName = "Zed"
+            $appUserId = "ZedIndustries.Zed"
             $appShellNameShort = "Z&ed"
-            $appAppxFullName = "dezIndustries.dez_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "ZedIndustries.Zed_1.0.0.0_neutral__japxn1gcva8rg"
         }
         "preview" {
             $appId = "{{F70E4811-D0E2-4D88-AC99-D63752799F95}"
             $appIconName = "app-icon-preview"
-            $appName = "dez Preview"
-            $appDisplayName = "dez Preview"
-            $appSetupName = "dez-$Architecture"
-            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
-            $appMutex = "dez-Preview-Instance-Mutex"
-            $appExeName = "dez"
-            $regValueName = "dezPreview"
-            $appUserId = "dezIndustries.dez.Preview"
+            $appName = "Zed Preview"
+            $appDisplayName = "Zed Preview"
+            $appSetupName = "Zed-$Architecture"
+            # The mutex name here should match the mutex name in crates\zed\src\zed\windows_only_instance.rs
+            $appMutex = "Zed-Preview-Instance-Mutex"
+            $appExeName = "Zed"
+            $regValueName = "ZedPreview"
+            $appUserId = "ZedIndustries.Zed.Preview"
             $appShellNameShort = "Z&ed Preview"
-            $appAppxFullName = "dezIndustries.dez.Preview_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "ZedIndustries.Zed.Preview_1.0.0.0_neutral__japxn1gcva8rg"
         }
         "nightly" {
             $appId = "{{1BDB21D3-14E7-433C-843C-9C97382B2FE0}"
             $appIconName = "app-icon-nightly"
-            $appName = "dez Nightly"
-            $appDisplayName = "dez Nightly"
-            $appSetupName = "dez-$Architecture"
-            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
-            $appMutex = "dez-Nightly-Instance-Mutex"
-            $appExeName = "dez"
-            $regValueName = "dezNightly"
-            $appUserId = "dezIndustries.dez.Nightly"
+            $appName = "Zed Nightly"
+            $appDisplayName = "Zed Nightly"
+            $appSetupName = "Zed-$Architecture"
+            # The mutex name here should match the mutex name in crates\zed\src\zed\windows_only_instance.rs
+            $appMutex = "Zed-Nightly-Instance-Mutex"
+            $appExeName = "Zed"
+            $regValueName = "ZedNightly"
+            $appUserId = "ZedIndustries.Zed.Nightly"
             $appShellNameShort = "Z&ed Editor Nightly"
-            $appAppxFullName = "dezIndustries.dez.Nightly_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "ZedIndustries.Zed.Nightly_1.0.0.0_neutral__japxn1gcva8rg"
         }
         "dev" {
             $appId = "{{8357632E-24A4-4F32-BA97-E575B4D1FE5D}"
             $appIconName = "app-icon-dev"
-            $appName = "dez Dev"
-            $appDisplayName = "dez Dev"
-            $appSetupName = "dez-$Architecture"
-            # The mutex name here should match the mutex name in crates\dez\src\dez\windows_only_instance.rs
-            $appMutex = "dez-Dev-Instance-Mutex"
-            $appExeName = "dez"
-            $regValueName = "dezDev"
-            $appUserId = "dezIndustries.dez.Dev"
+            $appName = "Zed Dev"
+            $appDisplayName = "Zed Dev"
+            $appSetupName = "Zed-$Architecture"
+            # The mutex name here should match the mutex name in crates\zed\src\zed\windows_only_instance.rs
+            $appMutex = "Zed-Dev-Instance-Mutex"
+            $appExeName = "Zed"
+            $regValueName = "ZedDev"
+            $appUserId = "ZedIndustries.Zed.Dev"
             $appShellNameShort = "Z&ed Dev"
-            $appAppxFullName = "dezIndustries.dez.Dev_1.0.0.0_neutral__japxn1gcva8rg"
+            $appAppxFullName = "ZedIndustries.Zed.Dev_1.0.0.0_neutral__japxn1gcva8rg"
         }
         default {
             Write-Error "can't bundle installer for $channel."
@@ -351,10 +376,11 @@ function BuildInstaller {
     }
 
     $innoArgs = @($issFilePath) + $defs
-    if($env:CI -and $script:canCodeSign) {
+    if($canCodeSign) {
+        # Checked by zed.iss to decide whether to sign the installer.
+        $env:ZED_SIGN_BUNDLE = "1"
         $signTool = "powershell.exe -ExecutionPolicy Bypass -File $innoDir\sign.ps1 `$f"
         $innoArgs += "/sDefaultsign=`"$signTool`""
-        $innoArgs += "/DCanSign=1"
     }
 
     # Execute Inno Setup
@@ -372,32 +398,33 @@ function BuildInstaller {
     }
 }
 
-ParsedezWorkspace
+ParseZedWorkspace
 $innoDir = "$env:ZED_WORKSPACE\inno\$Architecture"
-$debugArchive = "$CargoOutDir\dez-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
-$debugStoreKey = "$env:ZED_RELEASE_CHANNEL/dez-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
+$debugArchive = "$CargoOutDir\zed-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
+$debugStoreKey = "$env:ZED_RELEASE_CHANNEL/zed-$env:RELEASE_VERSION-$env:ZED_RELEASE_CHANNEL.dbg.zip"
 
 CheckEnvironmentVariables
 PrepareForBundle
 GenerateLicenses
-BuilddezAndItsFriends
+BuildZedAndItsFriends
 BuildRemoteServer
 MakeAppx
-SigndezAndItsFriends
-ZipdezAndItsFriendsDebug
+SignZedAndItsFriends
+ZipZedAndItsFriendsDebug
 DownloadAMDGpuServices
 DownloadConpty
 CollectFiles
 BuildInstaller
 
 if($env:CI) {
+    UploadToSentry
 }
 
 if ($buildSuccess) {
     Write-Output "Build successful"
     if ($Install) {
-        Write-Output "Installing dez..."
-        Start-Process -FilePath "$env:ZED_WORKSPACE/target/dezEditorUserSetup-x64-$env:RELEASE_VERSION.exe"
+        Write-Output "Installing Zed..."
+        Start-Process -FilePath "$env:ZED_WORKSPACE/target/ZedEditorUserSetup-x64-$env:RELEASE_VERSION.exe"
     }
     exit 0
 }

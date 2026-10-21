@@ -17,14 +17,15 @@ doctest = false
 
 [dependencies]
 anyhow.workspace = true
-collections.workspace = true
+client.workspace = true
 command_palette_hooks.workspace = true
 db.workspace = true
+editor.workspace = true
 fuzzy_nucleo.workspace = true
 gpui.workspace = true
 menu.workspace = true
 log.workspace = true
-localization.workspace = true
+paths.workspace = true
 picker.workspace = true
 postage.workspace = true
 serde.workspace = true
@@ -33,8 +34,9 @@ theme.workspace = true
 time.workspace = true
 ui.workspace = true
 util.workspace = true
+telemetry.workspace = true
 workspace.workspace = true
-dez_actions.workspace = true
+zed_actions.workspace = true
 
 [dev-dependencies]
 

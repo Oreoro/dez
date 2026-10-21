@@ -1,9 +1,79 @@
 use std::rc::Rc;
 
-use dez_actions::toast;
-use gpui::{DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, IntoElement};
+use gpui::{
+    DismissEvent, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, IntoElement, Pixels,
+    Stateful, WindowBackgroundAppearance,
+};
+use settings::Settings;
 use ui::{Tooltip, prelude::*};
-use workspace::{ToastAction, ToastView};
+use workspace::{DesignSystemSettings, ToastAction, ToastView};
+use zed_actions::toast;
+
+fn status_toast_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.elevated_surface_background.opacity(0.88),
+        settings::CanvasContrast::Standard => colors.elevated_surface_background,
+        settings::CanvasContrast::High => colors
+            .elevated_surface_background
+            .blend(colors.border_focused.opacity(0.08)),
+    }
+}
+
+fn status_toast_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.42),
+        settings::CanvasContrast::Standard => colors.border_variant,
+        settings::CanvasContrast::High => colors.border_focused,
+    }
+}
+
+fn status_toast_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn status_toast_padding_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(4.),
+        settings::CanvasDensity::Balanced => px(6.),
+        settings::CanvasDensity::Spacious => px(8.),
+    }
+}
+
+fn status_toast_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(8.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    }
+}
+
+fn status_toast_trailing_padding(has_action_or_dismiss: bool, cx: &App) -> Pixels {
+    let base = match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(10.),
+        settings::CanvasDensity::Spacious => px(14.),
+    };
+
+    if has_action_or_dismiss {
+        base
+    } else {
+        status_toast_padding_x(cx)
+    }
+}
+
+fn status_toast_radius(element: Stateful<Div>, cx: &App) -> Stateful<Div> {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_md(),
+        settings::CanvasRadius::Rounded => element.rounded_lg(),
+    }
+}
 
 #[derive(RegisterComponent)]
 pub struct StatusToast {
@@ -77,51 +147,73 @@ impl StatusToast {
 impl Render for StatusToast {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_action_or_dismiss = self.action.is_some() || self.show_dismiss;
+        let opaque_window =
+            cx.theme().window_background_appearance() == WindowBackgroundAppearance::Opaque;
 
         h_flex()
             .id("status-toast")
-            .elevation_3(cx)
-            .gap_2()
-            .py_1p5()
-            .pl_2p5()
-            .map(|this| {
-                if has_action_or_dismiss {
-                    this.pr_1p5()
-                } else {
-                    this.pr_2p5()
-                }
-            })
+            .min_w_0()
+            .max_w_full()
+            .elevation_2(cx)
+            .when(!opaque_window, |this| this.shadow_none())
+            .gap(status_toast_gap(cx))
+            .py(status_toast_padding_y(cx))
+            .pl(status_toast_padding_x(cx))
+            .pr(status_toast_trailing_padding(has_action_or_dismiss, cx))
             .flex_none()
-            .bg(cx.theme().colors().surface_background)
-            .shadow_lg()
+            .bg(status_toast_background(cx))
+            .border_1()
+            .border_color(status_toast_border(cx))
+            .map(|this| status_toast_radius(this, cx))
             .when_some(self.icon.clone(), |this, icon| this.child(icon))
-            .child(Label::new(self.text.clone()).color(Color::Default))
+            .child(
+                div()
+                    .id("status-toast-message")
+                    .min_w_0()
+                    .flex_1()
+                    .tooltip(Tooltip::text(self.text.clone()))
+                    .child(
+                        Label::new(self.text.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Default)
+                            .truncate(),
+                    ),
+            )
             .when_some(self.action.as_ref(), |this, action| {
                 this.child(
-                    Button::new(action.id.clone(), action.label.clone())
-                        .tooltip(Tooltip::for_action_title(
-                            action.label.clone(),
-                            &toast::RunAction,
-                        ))
-                        .color(Color::Muted)
-                        .when_some(action.on_click.clone(), |el, handler| {
-                            el.on_click(move |_click_event, window, cx| handler(window, cx))
-                        }),
+                    div().flex_none().child(
+                        Button::new(action.id.clone(), action.label.clone())
+                            .size(ButtonSize::Compact)
+                            .tab_index(0isize)
+                            .aria_label(action.label.clone())
+                            .tooltip(Tooltip::for_action_title(
+                                action.label.clone(),
+                                &toast::RunAction,
+                            ))
+                            .color(Color::Muted)
+                            .when_some(action.on_click.clone(), |el, handler| {
+                                el.on_click(move |_click_event, window, cx| handler(window, cx))
+                            }),
+                    ),
                 )
             })
             .when(self.show_dismiss, |this| {
                 let handle = self.this_handle.clone();
                 this.child(
-                    IconButton::new("dismiss", IconName::Close)
-                        .shape(ui::IconButtonShape::Square)
-                        .icon_size(IconSize::Small)
-                        .icon_color(Color::Muted)
-                        .tooltip(Tooltip::text(localization::text(cx, "common-dismiss")))
-                        .on_click(move |_click_event, _window, cx| {
-                            handle.update(cx, |_, cx| {
-                                cx.emit(DismissEvent);
-                            });
-                        }),
+                    div().flex_none().child(
+                        IconButton::new("dismiss", IconName::Close)
+                            .shape(ui::IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted)
+                            .tab_index(0isize)
+                            .aria_label("Dismiss notification")
+                            .tooltip(Tooltip::text("Dismiss notification"))
+                            .on_click(move |_click_event, _window, cx| {
+                                handle.update(cx, |_, cx| {
+                                    cx.emit(DismissEvent);
+                                });
+                            }),
+                    ),
                 )
             })
     }
@@ -166,15 +258,19 @@ impl Component for StatusToast {
         let dismiss_button_example =
             StatusToast::new("Dismiss Button", cx, |this, _| this.dismiss_button(true));
 
-        let icon_example = StatusToast::new("Background task completed", cx, |this, _| {
-            this.icon(
-                Icon::new(IconName::Check)
-                    .size(IconSize::Small)
-                    .color(Color::Muted),
-            )
-        });
+        let icon_example = StatusToast::new(
+            "Nathan Sobo accepted your contact request",
+            cx,
+            |this, _| {
+                this.icon(
+                    Icon::new(IconName::Check)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                )
+            },
+        );
 
-        let success_example = StatusToast::new("Pushed 4 changes to `dez/main`", cx, |this, _| {
+        let success_example = StatusToast::new("Pushed 4 changes to `zed/main`", cx, |this, _| {
             this.icon(
                 Icon::new(IconName::Check)
                     .size(IconSize::Small)
@@ -183,7 +279,7 @@ impl Component for StatusToast {
         });
 
         let error_example = StatusToast::new(
-            "git push: Couldn't find remote origin `iamnbutler/dez`",
+            "git push: Couldn't find remote origin `iamnbutler/zed`",
             cx,
             |this, _cx| {
                 this.icon(
@@ -205,7 +301,7 @@ impl Component for StatusToast {
         });
 
         let pr_example =
-            StatusToast::new("`dez/new-notification-system` created!", cx, |this, _cx| {
+            StatusToast::new("`zed/new-notification-system` created!", cx, |this, _cx| {
                 this.icon(
                     Icon::new(IconName::GitBranch)
                         .size(IconSize::Small)

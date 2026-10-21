@@ -1,7 +1,7 @@
 use super::{SerializedAxis, SerializedWindowBounds};
 use crate::{
-    Member, Pane, PaneAxis, SerializableItemRegistry, Workspace, WorkspaceId, item::ItemHandle,
-    multi_workspace::SerializedProjectGroupState, path_list::PathList,
+    Member, Pane, PaneAxis, PaneKind, SerializableItemRegistry, Workspace, WorkspaceId,
+    item::ItemHandle, multi_workspace::SerializedProjectGroupState, path_list::PathList,
 };
 use anyhow::{Context, Result};
 use async_recursion::async_recursion;
@@ -13,7 +13,10 @@ use db::sqlez::{
 use gpui::{AsyncWindowContext, Entity, WeakEntity, WindowId};
 
 use language::{Toolchain, ToolchainScope};
-use project::{Project, ProjectGroupKey, bookmark_store::SerializedBookmark};
+use project::{
+    Project, ProjectGroupKey, bookmark_store::SerializedBookmark,
+    debugger::breakpoint_store::SourceBreakpoint,
+};
 use remote::RemoteConnectionOptions;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -143,74 +146,8 @@ pub(crate) struct SerializedWorkspace {
     pub(crate) bookmarks: BTreeMap<Arc<Path>, Vec<SerializedBookmark>>,
     pub(crate) breakpoints: BTreeMap<Arc<Path>, Vec<SourceBreakpoint>>,
     pub(crate) user_toolchains: BTreeMap<ToolchainScope, IndexSet<Toolchain>>,
+    pub(crate) recent_navigation_history: Vec<PathBuf>,
     pub(crate) window_id: Option<u64>,
-}
-
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
-pub(crate) enum BreakpointState {
-    Enabled,
-    Disabled,
-}
-
-impl BreakpointState {
-    pub(crate) fn to_int(self) -> i32 {
-        match self {
-            Self::Enabled => 0,
-            Self::Disabled => 1,
-        }
-    }
-}
-
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-pub(crate) struct SourceBreakpoint {
-    pub(crate) row: u32,
-    pub(crate) path: Arc<Path>,
-    pub(crate) message: Option<Arc<str>>,
-    pub(crate) condition: Option<Arc<str>>,
-    pub(crate) hit_condition: Option<Arc<str>>,
-    pub(crate) state: BreakpointState,
-}
-
-#[cfg(any())]
-impl From<project::debugger::breakpoint_store::SourceBreakpoint> for SourceBreakpoint {
-    fn from(breakpoint: project::debugger::breakpoint_store::SourceBreakpoint) -> Self {
-        Self {
-            row: breakpoint.row,
-            path: breakpoint.path,
-            message: breakpoint.message,
-            condition: breakpoint.condition,
-            hit_condition: breakpoint.hit_condition,
-            state: match breakpoint.state {
-                project::debugger::breakpoint_store::BreakpointState::Enabled => {
-                    BreakpointState::Enabled
-                }
-                project::debugger::breakpoint_store::BreakpointState::Disabled => {
-                    BreakpointState::Disabled
-                }
-            },
-        }
-    }
-}
-
-#[cfg(any())]
-impl From<SourceBreakpoint> for project::debugger::breakpoint_store::SourceBreakpoint {
-    fn from(breakpoint: SourceBreakpoint) -> Self {
-        Self {
-            row: breakpoint.row,
-            path: breakpoint.path,
-            message: breakpoint.message,
-            condition: breakpoint.condition,
-            hit_condition: breakpoint.hit_condition,
-            state: match breakpoint.state {
-                BreakpointState::Enabled => {
-                    project::debugger::breakpoint_store::BreakpointState::Enabled
-                }
-                BreakpointState::Disabled => {
-                    project::debugger::breakpoint_store::BreakpointState::Disabled
-                }
-            },
-        }
-    }
 }
 
 #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
@@ -311,6 +248,8 @@ impl Default for SerializedPaneGroup {
             children: vec![SerializedItem::default()],
             active: false,
             pinned_count: 0,
+            kind: PaneKind::Tabs,
+            visible: true,
         })
     }
 }
@@ -363,9 +302,13 @@ impl SerializedPaneGroup {
                 ))
             }
             SerializedPaneGroup::Pane(serialized_pane) => {
+                let pane_kind = serialized_pane.kind;
+                let visible = serialized_pane.visible;
                 let pane = workspace
                     .update_in(cx, |workspace, window, cx| {
-                        workspace.add_pane(window, cx).downgrade()
+                        let pane = workspace.add_pane_with_kind(pane_kind, true, window, cx);
+                        pane.update(cx, |pane, cx| pane.set_visible(visible, cx));
+                        pane.downgrade()
                     })
                     .log_err()?;
                 let active = serialized_pane.active;
@@ -375,9 +318,11 @@ impl SerializedPaneGroup {
                     .context("Could not deserialize pane)")
                     .log_err()?;
 
-                if pane
-                    .read_with(cx, |pane, _| pane.items_len() != 0)
-                    .log_err()?
+                let keep_empty_pane = !serialized_pane.kind.is_tabbed();
+                if keep_empty_pane
+                    || pane
+                        .read_with(cx, |pane, _| pane.items_len() != 0)
+                        .log_err()?
                 {
                     let pane = pane.upgrade()?;
                     Some((
@@ -404,15 +349,33 @@ pub struct SerializedPane {
     pub(crate) active: bool,
     pub(crate) children: Vec<SerializedItem>,
     pub(crate) pinned_count: usize,
+    pub(crate) kind: PaneKind,
+    pub(crate) visible: bool,
 }
 
 impl SerializedPane {
     pub fn new(children: Vec<SerializedItem>, active: bool, pinned_count: usize) -> Self {
+        Self::new_with_kind(children, active, pinned_count, PaneKind::Tabs)
+    }
+
+    pub fn new_with_kind(
+        children: Vec<SerializedItem>,
+        active: bool,
+        pinned_count: usize,
+        kind: PaneKind,
+    ) -> Self {
         SerializedPane {
             children,
             active,
             pinned_count,
+            kind,
+            visible: true,
         }
+    }
+
+    pub fn with_visible(mut self, visible: bool) -> Self {
+        self.visible = visible;
+        self
     }
 
     pub async fn deserialize_to(
@@ -459,21 +422,30 @@ impl SerializedPane {
             }
         }
 
-        if let Some(active_item_index) = active_item_index {
+        if let Some(active_item) = active_item_index.and_then(|index| items.get(index)?.clone()) {
             pane.update_in(cx, |pane, window, cx| {
-                pane.activate_item(active_item_index, false, false, window, cx);
-            })?;
-        }
-
-        if let Some(preview_item_index) = preview_item_index {
-            pane.update(cx, |pane, cx| {
-                if let Some(item) = pane.item_for_index(preview_item_index) {
-                    pane.set_preview_item_id(Some(item.item_id()), cx);
+                if let Some(index) = pane.index_for_item(active_item.as_ref()) {
+                    pane.activate_item(index, false, false, window, cx);
                 }
             })?;
         }
+
+        if let Some(preview_item) = preview_item_index.and_then(|index| items.get(index)?.clone()) {
+            pane.update(cx, |pane, cx| {
+                pane.set_preview_item_id(Some(preview_item.item_id()), cx);
+            })?;
+        }
+
+        // `items` keeps a `None` for every item that failed to deserialize, and those
+        // were never added to the pane. Counting them would leave the pinned count
+        // pointing past the pinned tabs and pin unpinned ones in their place.
+        let pinned_count = items
+            .iter()
+            .take(self.pinned_count)
+            .filter(|item| item.is_some())
+            .count();
         pane.update(cx, |pane, _| {
-            pane.set_pinned_count(self.pinned_count.min(items.len()));
+            pane.set_pinned_count(pinned_count);
         })?;
 
         anyhow::Ok(items)

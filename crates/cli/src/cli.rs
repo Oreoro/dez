@@ -16,26 +16,27 @@ pub struct IpcHandshake {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum OpenBehavior {
-    /// Consult the user's `cli_default_open_behavior` setting to choose between
-    /// `ExistingWindow` or `Classic`.
+    /// Consult the user's `cli_default_open_behavior` setting.
     #[default]
     Default,
     /// Always create a new window. No matching against existing worktrees.
-    /// Corresponds to `dez -n`.
+    /// Corresponds to `zed -n`.
     AlwaysNew,
+    /// Create a new window unless opening a subpath of an existing project.
+    PreferNewWindow,
     /// Match broadly including subdirectories, and fall back to any existing
-    /// window if no worktree matched. Corresponds to `dez -a`.
+    /// window if no worktree matched. Corresponds to `zed -a`.
     Add,
-    /// Open directories as a new workspace in the current dez window's sidebar.
+    /// Open directories as a new workspace in the current Zed window's sidebar.
     /// Reuse existing windows for files in open worktrees.
-    /// Corresponds to `dez -e`.
+    /// Corresponds to `zed -e`.
     ExistingWindow,
     /// New window for directories, reuse existing window for files in open
     /// worktrees. The classic pre-sidebar behavior.
-    /// Corresponds to `dez --classic`.
+    /// Corresponds to `zed --classic`.
     Classic,
     /// Replace the content of an existing window with a new workspace.
-    /// Corresponds to `dez -r`.
+    /// Corresponds to `zed -r`.
     Reuse,
 }
 
@@ -45,11 +46,9 @@ pub enum OpenBehavior {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CliBehaviorSetting {
-    /// Open directories as a new workspace in the current dez window's sidebar.
+    /// Open directories as a new workspace in the current Zed window's sidebar.
     ExistingWindow,
-    /// Classic behavior: open directories in a new window, but reuse an
-    /// existing window when opening files that are already part of an open
-    /// project.
+    /// Open paths in a new window unless they are subpaths of an existing project.
     NewWindow,
 }
 
@@ -84,14 +83,14 @@ pub enum CliResponse {
     PromptOpenBehavior,
 }
 
-/// When dez started not as an *.app but as a binary (e.g. local development),
+/// When Zed started not as an *.app but as a binary (e.g. local development),
 /// there's a possibility to tell it to behave "regularly".
 ///
-/// Note that in the main dez binary, this variable is unset after it's read for the first time,
+/// Note that in the main zed binary, this variable is unset after it's read for the first time,
 /// therefore it should always be accessed through the `FORCE_CLI_MODE` static.
 pub const FORCE_CLI_MODE_ENV_VAR_NAME: &str = "ZED_FORCE_CLI_MODE";
 
-/// Abstracts the transport for sending CLI responses (dez → CLI).
+/// Abstracts the transport for sending CLI responses (Zed → CLI).
 ///
 /// Production code uses `IpcSender<CliResponse>`. Tests can provide in-memory
 /// implementations to avoid OS-level IPC.

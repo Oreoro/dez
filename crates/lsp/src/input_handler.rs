@@ -6,11 +6,11 @@ use collections::HashMap;
 use futures::{
     AsyncBufReadExt, AsyncRead, AsyncReadExt as _, SinkExt as _,
     channel::mpsc::{Receiver, Sender, channel},
+    io::BufReader,
 };
 use gpui::{BackgroundExecutor, Task};
 use log::warn;
 use parking_lot::Mutex;
-use smol::io::BufReader;
 
 use crate::{
     AnyResponse, CONTENT_LEN_HEADER, IoHandler, IoKind, NotificationOrRequest, RequestId,
@@ -19,9 +19,12 @@ use crate::{
 
 const HEADER_DELIMITER: &[u8; 4] = b"\r\n\r\n";
 
-/// Bounds messages buffered between the background reader and foreground dispatcher.
-/// A full queue stops reading server stdout so the OS pipe applies backpressure.
-const INCOMING_MESSAGE_QUEUE_CAPACITY: usize = 128;
+/// Bounds the number of incoming LSP messages buffered between the background
+/// reader and the foreground dispatcher. When the queue is full, the reader
+/// stops reading the server's stdout, letting the OS pipe apply backpressure
+/// to the server instead of buffering messages in memory without limit while
+/// the foreground thread is unresponsive.
+pub(crate) const INCOMING_MESSAGE_QUEUE_CAPACITY: usize = 128;
 
 /// Handler for stdout of language server.
 pub struct LspStdoutHandler {
@@ -136,28 +139,12 @@ impl LspStdoutHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use futures::{AsyncWriteExt as _, FutureExt as _, StreamExt as _};
+    use futures::{AsyncWriteExt as _, StreamExt as _};
     use gpui::TestAppContext;
-    use std::{
-        sync::{
-            Arc,
-            atomic::{AtomicBool, Ordering},
-        },
-        time::Duration,
-    };
-
-    fn framed_notification() -> String {
-        let payload = r#"{"jsonrpc":"2.0","method":"test/notification","params":{}}"#;
-        format!("Content-Length: {}\r\n\r\n{payload}", payload.len())
-    }
 
     #[gpui::test]
-    async fn incoming_notifications_apply_backpressure_without_losing_messages(
-        cx: &mut TestAppContext,
-    ) {
-        const EXPECTED_QUEUE_CAPACITY: usize = 128;
-        const TOTAL_MESSAGES: usize = EXPECTED_QUEUE_CAPACITY * 4;
-
+    async fn test_backpressure_when_messages_are_not_consumed(cx: &mut TestAppContext) {
+        let total_messages = INCOMING_MESSAGE_QUEUE_CAPACITY * 4;
         let (mut writer, reader) = async_pipe::pipe();
         let mut handler = LspStdoutHandler::new(
             reader,
@@ -165,90 +152,50 @@ mod tests {
             Arc::new(Mutex::new(HashMap::default())),
             cx.background_executor.clone(),
         );
-        let message = framed_notification();
-        let writer_task = cx.background_executor.spawn(async move {
-            for _ in 0..TOTAL_MESSAGES {
-                writer.write_all(message.as_bytes()).await?;
-            }
-            anyhow::Ok(())
-        });
+
+        cx.background_executor
+            .spawn(async move {
+                let payload = r#"{"jsonrpc":"2.0","method":"test/notification","params":{}}"#;
+                let message = format!("Content-Length: {}\r\n\r\n{}", payload.len(), payload);
+                for _ in 0..total_messages {
+                    writer.write_all(message.as_bytes()).await.unwrap();
+                }
+            })
+            .detach();
 
         cx.run_until_parked();
         let mut received = 0;
         while handler.incoming_messages.try_recv().is_ok() {
             received += 1;
         }
-
         assert!(
-            received <= EXPECTED_QUEUE_CAPACITY + 2,
-            "expected a bounded queue near {EXPECTED_QUEUE_CAPACITY} messages, got {received}"
+            received < total_messages,
+            "the reader buffered all {total_messages} messages while the consumer was wedged"
+        );
+        assert!(
+            received <= INCOMING_MESSAGE_QUEUE_CAPACITY + 2,
+            "expected at most {} buffered messages, got {received}",
+            INCOMING_MESSAGE_QUEUE_CAPACITY + 2
         );
 
-        while received < TOTAL_MESSAGES {
+        while received < total_messages {
             assert!(
                 handler.incoming_messages.next().await.is_some(),
-                "the message stream ended after {received} of {TOTAL_MESSAGES} notifications"
+                "the message stream ended after {received} of {total_messages} messages"
             );
             received += 1;
-        }
-        writer_task.await.expect("write all notifications");
-    }
-
-    #[gpui::test]
-    async fn dropping_a_handler_releases_a_writer_blocked_by_backpressure(cx: &mut TestAppContext) {
-        const TOTAL_MESSAGES: usize = 4096;
-
-        let (mut writer, reader) = async_pipe::pipe();
-        let handler = LspStdoutHandler::new(
-            reader,
-            Arc::new(Mutex::new(Some(HashMap::default()))),
-            Arc::new(Mutex::new(HashMap::default())),
-            cx.background_executor.clone(),
-        );
-        let writer_finished = Arc::new(AtomicBool::new(false));
-        let writer_task = cx.background_executor.spawn({
-            let writer_finished = writer_finished.clone();
-            async move {
-                let message = framed_notification();
-                let result = async {
-                    for _ in 0..TOTAL_MESSAGES {
-                        writer.write_all(message.as_bytes()).await?;
-                    }
-                    anyhow::Ok(())
-                }
-                .await;
-                writer_finished.store(true, Ordering::SeqCst);
-                result
-            }
-        });
-
-        cx.run_until_parked();
-        assert!(
-            !writer_finished.load(Ordering::SeqCst),
-            "the writer should be blocked while the bounded queue is not consumed"
-        );
-
-        drop(handler);
-        let writer_result = writer_task.fuse();
-        let timeout = cx.background_executor.timer(Duration::from_secs(1)).fuse();
-        futures::pin_mut!(writer_result, timeout);
-        futures::select_biased! {
-            result = writer_result => {
-                assert!(result.is_err(), "closing a blocked reader should close its pipe");
-            }
-            () = timeout => panic!("blocked language-server writer did not stop after shutdown"),
         }
     }
 
     #[gpui::test]
     async fn test_read_headers() {
         let mut buf = Vec::new();
-        let mut reader = smol::io::BufReader::new(b"Content-Length: 123\r\n\r\n" as &[u8]);
+        let mut reader = BufReader::new(b"Content-Length: 123\r\n\r\n" as &[u8]);
         read_headers(&mut reader, &mut buf).await.unwrap();
         assert_eq!(buf, b"Content-Length: 123\r\n\r\n");
 
         let mut buf = Vec::new();
-        let mut reader = smol::io::BufReader::new(b"Content-Type: application/vscode-jsonrpc\r\nContent-Length: 1235\r\n\r\n{\"somecontent\":123}" as &[u8]);
+        let mut reader = BufReader::new(b"Content-Type: application/vscode-jsonrpc\r\nContent-Length: 1235\r\n\r\n{\"somecontent\":123}" as &[u8]);
         read_headers(&mut reader, &mut buf).await.unwrap();
         assert_eq!(
             buf,
@@ -256,7 +203,7 @@ mod tests {
         );
 
         let mut buf = Vec::new();
-        let mut reader = smol::io::BufReader::new(b"Content-Length: 1235\r\nContent-Type: application/vscode-jsonrpc\r\n\r\n{\"somecontent\":true}" as &[u8]);
+        let mut reader = BufReader::new(b"Content-Length: 1235\r\nContent-Type: application/vscode-jsonrpc\r\n\r\n{\"somecontent\":true}" as &[u8]);
         read_headers(&mut reader, &mut buf).await.unwrap();
         assert_eq!(
             buf,

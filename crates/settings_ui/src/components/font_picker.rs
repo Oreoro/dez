@@ -56,6 +56,10 @@ impl FontPickerDelegate {
 impl PickerDelegate for FontPickerDelegate {
     type ListItem = AnyElement;
 
+    fn name() -> &'static str {
+        "font picker"
+    }
+
     fn match_count(&self) -> usize {
         self.filtered_fonts.len()
     }
@@ -69,8 +73,8 @@ impl PickerDelegate for FontPickerDelegate {
         cx.notify();
     }
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "settings-search-fonts").into()
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Search fonts…".into()
     }
 
     fn update_matches(
@@ -176,6 +180,7 @@ pub fn font_picker(
 
     Picker::uniform_list(delegate, window, cx)
         .show_scrollbar(true)
-        .width(rems_from_px(210.))
-        .max_height(Some(rems(18.).into()))
+        .initial_width(rems_from_px(210_f32))
+        .max_height(rems(18.))
+        .popover()
 }

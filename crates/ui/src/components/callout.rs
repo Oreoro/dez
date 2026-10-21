@@ -1,11 +1,18 @@
-use gpui::AnyElement;
+use gpui::{AnyElement, ElementId, Role};
 
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BorderPosition {
+pub enum CalloutBorderPosition {
     Top,
     Bottom,
+}
+
+fn callout_accessibility_role(severity: Severity) -> Role {
+    match severity {
+        Severity::Warning | Severity::Error => Role::Alert,
+        Severity::Info | Severity::Success => Role::Status,
+    }
 }
 
 /// A callout component for displaying important information that requires user attention.
@@ -26,6 +33,7 @@ pub enum BorderPosition {
 ///
 #[derive(IntoElement, RegisterComponent)]
 pub struct Callout {
+    id: ElementId,
     severity: Severity,
     icon: Option<IconName>,
     title: Option<SharedString>,
@@ -34,13 +42,15 @@ pub struct Callout {
     actions_slot: Option<AnyElement>,
     dismiss_action: Option<AnyElement>,
     line_height: Option<Pixels>,
-    border_position: BorderPosition,
+    border_position: CalloutBorderPosition,
 }
 
 impl Callout {
     /// Creates a new `Callout` component with default styling.
+    #[track_caller]
     pub fn new() -> Self {
         Self {
+            id: ElementId::CodeLocation(*std::panic::Location::caller()),
             severity: Severity::Info,
             icon: None,
             title: None,
@@ -49,7 +59,7 @@ impl Callout {
             actions_slot: None,
             dismiss_action: None,
             line_height: None,
-            border_position: BorderPosition::Top,
+            border_position: CalloutBorderPosition::Top,
         }
     }
 
@@ -105,7 +115,7 @@ impl Callout {
     }
 
     /// Sets the border position in the callout.
-    pub fn border_position(mut self, border_position: BorderPosition) -> Self {
+    pub fn border_position(mut self, border_position: CalloutBorderPosition) -> Self {
         self.border_position = border_position;
         self
     }
@@ -114,6 +124,7 @@ impl Callout {
 impl RenderOnce for Callout {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let line_height = self.line_height.unwrap_or(window.line_height());
+        let accessibility_role = callout_accessibility_role(self.severity);
 
         let has_actions = self.actions_slot.is_some() || self.dismiss_action.is_some();
 
@@ -141,14 +152,16 @@ impl RenderOnce for Callout {
         };
 
         h_flex()
+            .id(self.id)
+            .role(accessibility_role)
             .min_w_0()
             .w_full()
             .p_2()
             .gap_2()
             .items_start()
             .map(|this| match self.border_position {
-                BorderPosition::Top => this.border_t_1(),
-                BorderPosition::Bottom => this.border_b_1(),
+                CalloutBorderPosition::Top => this.border_t_1(),
+                CalloutBorderPosition::Bottom => this.border_b_1(),
             })
             .border_color(cx.theme().colors().border)
             .bg(bg_color)
@@ -185,6 +198,7 @@ impl RenderOnce for Callout {
                                 this.child(
                                     h_flex()
                                         .gap_0p5()
+                                        .flex_wrap()
                                         .when_some(self.actions_slot, |this, action| {
                                             this.child(action)
                                         })
@@ -216,6 +230,19 @@ impl RenderOnce for Callout {
                         }
                     }),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn callout_role_matches_message_urgency() {
+        assert_eq!(callout_accessibility_role(Severity::Info), Role::Status);
+        assert_eq!(callout_accessibility_role(Severity::Success), Role::Status);
+        assert_eq!(callout_accessibility_role(Severity::Warning), Role::Alert);
+        assert_eq!(callout_accessibility_role(Severity::Error), Role::Alert);
     }
 }
 

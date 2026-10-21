@@ -5,7 +5,7 @@ use futures::{StreamExt as _, future::join_all, stream::FuturesUnordered};
 use gpui::{MouseButton, SharedString, Task, TaskExt, WeakEntity};
 use itertools::Itertools;
 use language::{BufferId, ClientCommand};
-use multi_buffer::{Anchor, MultiBufferRow, MultiBufferSnapshot, ToPoint as _};
+use multi_buffer::{Anchor, BufferOffset, MultiBufferRow, MultiBufferSnapshot, ToPoint as _};
 use project::{CodeAction, TaskSourceKind, lsp_store::code_lens::CodeLensActions};
 use task::TaskContext;
 use text::ToOffset as _;
@@ -17,6 +17,7 @@ use crate::{
     actions::ToggleCodeLens,
     display_map::{BlockPlacement, BlockProperties, BlockStyle, CustomBlockId, RenderBlock},
     hover_links::HoverLink,
+    runnables::RunnableTaskStatus,
 };
 
 static EMPTY_LENS_FALLBACK_TITLE: SharedString = SharedString::new_static("0 references");
@@ -97,7 +98,7 @@ pub(super) fn try_handle_client_command(
 fn schedule_task(
     task_template: task::TaskTemplate,
     action: &CodeAction,
-    editor: &Editor,
+    editor: &mut Editor,
     workspace: &gpui::Entity<workspace::Workspace>,
     window: &mut Window,
     cx: &mut Context<Editor>,
@@ -127,15 +128,49 @@ fn schedule_task(
         },
     };
 
+    let Some(resolved_task) =
+        task_template.resolve_task(&task_source_kind.to_id_base(), &task_context)
+    else {
+        return true;
+    };
+    let runnable_task_key = editor
+        .buffer()
+        .read(cx)
+        .buffer(action.range.start.buffer_id)
+        .and_then(|buffer| {
+            let buffer_snapshot = buffer.read(cx).snapshot();
+            let buffer_id = buffer_snapshot.remote_id();
+            let offset = BufferOffset(action.range.start.to_offset(&buffer_snapshot));
+            editor.runnable_task_key_for_offset(buffer_id, offset)
+        });
+    if let Some((buffer_id, buffer_row)) = runnable_task_key {
+        editor.set_runnable_task_status(buffer_id, buffer_row, RunnableTaskStatus::Running, cx);
+    }
+    let editor_handle = cx.weak_entity();
     workspace.update(cx, |workspace, cx| {
-        workspace.schedule_task(
-            task_source_kind,
-            &task_template,
-            &task_context,
-            false,
-            window,
-            cx,
-        );
+        if let Some((buffer_id, buffer_row)) = runnable_task_key {
+            workspace.schedule_resolved_task_with_completion(
+                task_source_kind,
+                resolved_task,
+                false,
+                move |result, cx| {
+                    editor_handle
+                        .update(cx, |editor, cx| {
+                            editor.set_runnable_task_status(
+                                buffer_id,
+                                buffer_row,
+                                RunnableTaskStatus::from(result),
+                                cx,
+                            );
+                        })
+                        .ok();
+                },
+                window,
+                cx,
+            );
+        } else {
+            workspace.schedule_resolved_task(task_source_kind, resolved_task, false, window, cx);
+        }
     });
     true
 }
@@ -572,13 +607,7 @@ fn build_code_lens_renderer(line: CodeLensLine, editor: WeakEntity<Editor>) -> R
             .items
             .iter()
             .filter_map(|item| {
-                let title = if item.title.is_some() {
-                    displayed_title(item)?.clone()
-                } else if item.action.resolved {
-                    localization::text(cx.app, "editor-zero-references")
-                } else {
-                    return None;
-                };
+                let title = displayed_title(item)?;
                 let action = item.title.is_some().then(|| item.action.clone());
                 Some((title, action))
             })
@@ -606,7 +635,7 @@ fn build_code_lens_renderer(line: CodeLensLine, editor: WeakEntity<Editor>) -> R
                     .font(font.clone())
                     .text_size(font_size)
                     .text_color(cx.app.theme().colors().text_muted)
-                    .child(title)
+                    .child(title.clone())
                     .when_some(action, |code_lens_div, action| {
                         let position = line.position;
                         let editor_handle = editor.clone();
@@ -692,7 +721,7 @@ mod tests {
     use util::path;
 
     use multi_buffer::{MultiBufferRow, ToPoint as _};
-    use text::{Point, ToOffset as _};
+    use text::Point;
 
     use super::{CODE_LENS_SEPARATOR, displayed_title};
     use crate::{
@@ -771,6 +800,173 @@ mod tests {
                     Line 2: function world() {}
                 "#},
                 "both lenses should render their server-provided titles"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_code_lens_refresh_requeries_open_document(cx: &mut TestAppContext) {
+        init_test(cx, |_| {});
+        update_test_editor_settings(cx, &|settings| {
+            settings.code_lens = Some(CodeLens::On);
+        });
+
+        let mut cx = EditorLspTestContext::new_typescript(
+            lsp::ServerCapabilities {
+                code_lens_provider: Some(lsp::CodeLensOptions {
+                    resolve_provider: None,
+                }),
+                execute_command_provider: Some(lsp::ExecuteCommandOptions {
+                    commands: vec!["lens_cmd".to_string()],
+                    ..lsp::ExecuteCommandOptions::default()
+                }),
+                ..lsp::ServerCapabilities::default()
+            },
+            cx,
+        )
+        .await;
+
+        let lens_title = Arc::new(Mutex::new("Initial lens".to_string()));
+        let mut code_lens_request =
+            cx.set_request_handler::<lsp::request::CodeLensRequest, _, _>({
+                let lens_title = lens_title.clone();
+                move |_, _, _| {
+                    let lens_title = lens_title.clone();
+                    async move {
+                        let title = lens_title.lock().unwrap().clone();
+                        Ok(Some(vec![lsp::CodeLens {
+                            range: lsp::Range::new(
+                                lsp::Position::new(0, 0),
+                                lsp::Position::new(0, 19),
+                            ),
+                            command: Some(lsp::Command {
+                                title,
+                                command: "lens_cmd".to_owned(),
+                                arguments: None,
+                            }),
+                            data: None,
+                        }]))
+                    }
+                }
+            });
+
+        cx.set_state("ˇfunction hello() {}\nfunction world() {}");
+        assert!(
+            code_lens_request.next().await.is_some(),
+            "should have received the initial code lens request"
+        );
+        cx.run_until_parked();
+        cx.editor(|editor, _, cx| {
+            assert_eq!(
+                code_lens_assertion_text(editor, cx),
+                indoc! {r#"
+                    Lenses: Initial lens
+                    Line 1: function hello() {}
+                "#},
+                "initial fetch should render the server title"
+            );
+        });
+
+        *lens_title.lock().unwrap() = "Refreshed lens".to_string();
+        cx.lsp
+            .request::<lsp::request::CodeLensRefresh>((), lsp::DEFAULT_LSP_REQUEST_TIMEOUT)
+            .await
+            .into_response()
+            .expect("code lens refresh request failed");
+        cx.executor()
+            .advance_clock(LSP_REQUEST_DEBOUNCE_TIMEOUT * 2);
+        cx.run_until_parked();
+        cx.editor(|editor, _, cx| {
+            assert_eq!(
+                code_lens_assertion_text(editor, cx),
+                indoc! {r#"
+                    Lenses: Refreshed lens
+                    Line 1: function hello() {}
+                "#},
+                "refresh should update the displayed lens to the new server title"
+            );
+        });
+    }
+
+    #[gpui::test]
+    async fn test_code_lens_dynamic_registration_requeries_open_document(cx: &mut TestAppContext) {
+        init_test(cx, |_| {});
+        update_test_editor_settings(cx, &|settings| {
+            settings.code_lens = Some(CodeLens::On);
+        });
+
+        // The server advertises no code lens capability up front; it registers
+        // `textDocument/codeLens` dynamically only after the document is open.
+        let mut cx = EditorLspTestContext::new_typescript(
+            lsp::ServerCapabilities {
+                execute_command_provider: Some(lsp::ExecuteCommandOptions {
+                    commands: vec!["lens_cmd".to_string()],
+                    ..lsp::ExecuteCommandOptions::default()
+                }),
+                ..lsp::ServerCapabilities::default()
+            },
+            cx,
+        )
+        .await;
+
+        let _code_lens_request =
+            cx.set_request_handler::<lsp::request::CodeLensRequest, _, _>(move |_, _, _| async {
+                Ok(Some(vec![lsp::CodeLens {
+                    range: lsp::Range::new(lsp::Position::new(0, 0), lsp::Position::new(0, 19)),
+                    command: Some(lsp::Command {
+                        title: "Dynamic lens".to_owned(),
+                        command: "lens_cmd".to_owned(),
+                        arguments: None,
+                    }),
+                    data: None,
+                }]))
+            });
+
+        cx.set_state("ˇfunction hello() {}\nfunction world() {}");
+        // Drain any debounced refresh scheduled before the capability exists, so
+        // the post-registration re-query can only come from the dynamic
+        // registration handling itself.
+        cx.executor()
+            .advance_clock(LSP_REQUEST_DEBOUNCE_TIMEOUT * 2);
+        cx.run_until_parked();
+        cx.editor(|editor, _, cx| {
+            assert_eq!(
+                code_lens_assertion_text(editor, cx),
+                "\n",
+                "no lenses should render before the capability is registered"
+            );
+        });
+
+        cx.lsp
+            .request::<lsp::request::RegisterCapability>(
+                lsp::RegistrationParams {
+                    registrations: vec![lsp::Registration {
+                        id: "code-lens".to_string(),
+                        method: "textDocument/codeLens".to_string(),
+                        register_options: Some(
+                            serde_json::to_value(lsp::CodeLensOptions {
+                                resolve_provider: None,
+                            })
+                            .unwrap(),
+                        ),
+                    }],
+                },
+                lsp::DEFAULT_LSP_REQUEST_TIMEOUT,
+            )
+            .await
+            .into_response()
+            .expect("register capability request failed");
+        cx.executor()
+            .advance_clock(LSP_REQUEST_DEBOUNCE_TIMEOUT * 2);
+        cx.run_until_parked();
+        cx.editor(|editor, _, cx| {
+            assert_eq!(
+                code_lens_assertion_text(editor, cx),
+                indoc! {r#"
+                    Lenses: Dynamic lens
+                    Line 1: function hello() {}
+                "#},
+                "dynamic textDocument/codeLens registration should re-query and display lenses for the open document"
             );
         });
     }
@@ -1513,10 +1709,11 @@ mod tests {
         language_registry.add(Arc::new(language::Language::new(
             language::LanguageConfig {
                 name: "TypeScript".into(),
-                matcher: language::LanguageMatcher {
+                matcher: (language::LanguageMatcher {
                     path_suffixes: vec!["ts".to_string()],
                     ..language::LanguageMatcher::default()
-                },
+                })
+                .into(),
                 ..language::LanguageConfig::default()
             },
             Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
@@ -1616,29 +1813,19 @@ mod tests {
         cx.executor().advance_clock(Duration::from_millis(500));
         cx.run_until_parked();
 
-        let expected_after_scroll_resolved = editor.update(cx, |editor, cx| {
-            let mut expected_resolved = HashSet::default();
-            for (buffer_snapshot, visible_range, _) in editor.visible_buffer_ranges(cx) {
-                for line in &lens_lines {
-                    let lens_offset = Point::new(*line, 0).to_offset(&buffer_snapshot);
-                    if lens_offset >= visible_range.start.0
-                        && lens_offset <= visible_range.end.0
-                        && !initial_resolved.contains(line)
-                    {
-                        expected_resolved.insert(*line);
-                    }
-                }
-            }
-            expected_resolved
-        });
-
         let after_scroll_resolved = resolved_lines
             .lock()
             .unwrap()
             .drain(..)
             .collect::<HashSet<_>>();
+        // Once the lenses are first applied we insert a placeholder block per
+        // lens row so the line is reserved while the resolve is in flight.
+        // Those placeholder blocks add display height, so after scrolling to
+        // the end the visible buffer-row range is slightly smaller than it
+        // would be without them, and lens row 60 is just outside it.
         assert_eq!(
-            after_scroll_resolved, expected_after_scroll_resolved,
+            after_scroll_resolved,
+            HashSet::from_iter([70, 80, 90]),
             "Only newly visible lenses at the bottom should be resolved, not middle ones"
         );
     }

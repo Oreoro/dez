@@ -1,13 +1,16 @@
 use gpui::{
-    App, Entity, EventEmitter, FocusHandle, Focusable, PromptButton, PromptHandle, PromptLevel,
-    PromptResponse, RenderablePromptHandle, ScrollHandle, SharedString, TextStyleRefinement,
-    Window, div, prelude::*,
+    App, Decorations, Entity, EventEmitter, FocusHandle, Focusable, PromptButton, PromptHandle,
+    PromptLevel, PromptResponse, RenderablePromptHandle, SharedString, TextStyleRefinement, Window,
+    div, prelude::*,
 };
 use markdown::{Markdown, MarkdownElement, MarkdownStyle};
 use settings::{Settings, SettingsStore};
+use theme::ClientDecorationsExt;
 use theme_settings::ThemeSettings;
-use ui::{FluentBuilder, TintColor, WithScrollbar, prelude::*};
+use ui::{FluentBuilder, TintColor, prelude::*};
 use workspace::WorkspaceSettings;
+
+mod canvas;
 
 pub fn init(cx: &mut App) {
     process_settings(cx);
@@ -21,13 +24,13 @@ fn process_settings(cx: &mut App) {
     if settings.use_system_prompts && cfg!(not(any(target_os = "linux", target_os = "freebsd"))) {
         cx.reset_prompt_builder();
     } else {
-        cx.set_prompt_builder(dez_prompt_renderer);
+        cx.set_prompt_builder(zed_prompt_renderer);
     }
 }
 
 /// Use this function in conjunction with [App::set_prompt_builder] to force
 /// GPUI to use the internal prompt system.
-pub fn dez_prompt_renderer(
+fn zed_prompt_renderer(
     level: PromptLevel,
     message: &str,
     detail: Option<&str>,
@@ -37,14 +40,12 @@ pub fn dez_prompt_renderer(
     cx: &mut App,
 ) -> RenderablePromptHandle {
     let renderer = cx.new({
-        |cx| DezPromptRenderer {
+        |cx| ZedPromptRenderer {
             _level: level,
             message: cx.new(|cx| Markdown::new(SharedString::new(message), None, None, cx)),
-            actions: actions.to_vec(),
+            actions: actions.iter().map(|a| a.label().to_string()).collect(),
             focus: cx.focus_handle(),
             active_action_id: 0,
-            detail_scroll_handle: ScrollHandle::new(),
-            has_long_detail: detail.is_some_and(|text| text.len() > 800),
             detail: detail
                 .filter(|text| !text.is_empty())
                 .map(|text| cx.new(|cx| Markdown::new(SharedString::new(text), None, None, cx))),
@@ -54,24 +55,22 @@ pub fn dez_prompt_renderer(
     handle.with_view(renderer, window, cx)
 }
 
-pub struct DezPromptRenderer {
+pub struct ZedPromptRenderer {
     _level: PromptLevel,
     message: Entity<Markdown>,
-    actions: Vec<PromptButton>,
+    actions: Vec<String>,
     focus: FocusHandle,
     active_action_id: usize,
     detail: Option<Entity<Markdown>>,
-    detail_scroll_handle: ScrollHandle,
-    has_long_detail: bool,
 }
 
-impl DezPromptRenderer {
+impl ZedPromptRenderer {
     fn confirm(&mut self, _: &menu::Confirm, _window: &mut Window, cx: &mut Context<Self>) {
         cx.emit(PromptResponse(self.active_action_id));
     }
 
     fn cancel(&mut self, _: &menu::Cancel, _window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(ix) = self.actions.iter().position(PromptButton::is_cancel) {
+        if let Some(ix) = self.actions.iter().position(|a| a == "Cancel") {
             cx.emit(PromptResponse(ix));
         }
     }
@@ -111,7 +110,7 @@ impl DezPromptRenderer {
     }
 }
 
-impl Render for DezPromptRenderer {
+impl Render for ZedPromptRenderer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let settings = ThemeSettings::get_global(cx);
 
@@ -126,12 +125,12 @@ impl Render for DezPromptRenderer {
             .on_action(cx.listener(Self::select_first))
             .on_action(cx.listener(Self::select_last))
             .w_80()
-            .max_h(vh(0.8, window))
-            .when(self.has_long_detail, |this| {
-                this.w(rems(48.)).max_w(vw(0.9, window)).h(vh(0.75, window))
-            })
-            .p_4()
-            .gap_4()
+            .p(canvas::prompt_padding(cx))
+            .gap(canvas::prompt_gap(cx))
+            .bg(canvas::prompt_background(cx))
+            .border_1()
+            .border_color(canvas::prompt_border(cx))
+            .map(|dialog| canvas::prompt_radius(dialog, cx))
             .elevation_3(cx)
             .overflow_hidden()
             .font_family(settings.ui_font.family.clone())
@@ -140,56 +139,48 @@ impl Render for DezPromptRenderer {
                 markdown_style(true, window, cx),
             )))
             .children(self.detail.clone().map(|detail| {
-                div()
-                    .w_full()
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_hidden()
-                    .vertical_scrollbar_for(&self.detail_scroll_handle, window, cx)
-                    .child(
-                        div()
-                            .id("prompt-detail")
-                            .size_full()
-                            .overflow_y_scroll()
-                            .track_scroll(&self.detail_scroll_handle)
-                            .text_xs()
-                            .child(MarkdownElement::new(
-                                detail,
-                                markdown_style(false, window, cx),
-                            )),
-                    )
+                div().w_full().text_xs().child(MarkdownElement::new(
+                    detail,
+                    markdown_style(false, window, cx),
+                ))
             }))
-            .child(
-                v_flex()
-                    .gap_1()
-                    .children(self.actions.iter().enumerate().map(|(ix, action)| {
-                        Button::new(ix, action.label().clone())
-                            .full_width()
-                            .style(ButtonStyle::Outlined)
-                            .when(ix == self.active_action_id, |s| {
-                                s.style(ButtonStyle::Tinted(TintColor::Accent))
-                            })
-                            .tab_index(ix as isize)
-                            .on_click(cx.listener(move |_, _, _window, cx| {
-                                cx.emit(PromptResponse(ix));
-                            }))
-                    })),
-            );
+            .child(v_flex().gap(canvas::prompt_action_gap(cx)).children(
+                self.actions.iter().enumerate().map(|(ix, action)| {
+                    Button::new(ix, action.clone())
+                        .full_width()
+                        .style(ButtonStyle::Outlined)
+                        .when(ix == self.active_action_id, |s| {
+                            s.style(ButtonStyle::Tinted(TintColor::Accent))
+                        })
+                        .tab_index(ix as isize)
+                        .on_click(cx.listener(move |_, _, _window, cx| {
+                            cx.emit(PromptResponse(ix));
+                        }))
+                }),
+            ));
 
-        div()
-            .size_full()
-            .occlude()
-            .bg(gpui::black().opacity(0.2))
-            .child(
-                v_flex()
-                    .size_full()
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .items_center()
-                    .justify_center()
-                    .child(dialog),
-            )
+        let decorations = window.window_decorations();
+        let inset = window.client_inset().unwrap_or(Pixels::ZERO);
+
+        div().size_full().child(
+            v_flex()
+                .occlude()
+                .absolute()
+                .inset_0()
+                .bg(canvas::prompt_backdrop(cx))
+                .map(|this| match decorations {
+                    Decorations::Server => this,
+                    Decorations::Client { tiling } => this
+                        .when(!tiling.top, |this| this.top(inset))
+                        .when(!tiling.bottom, |this| this.bottom(inset))
+                        .when(!tiling.left, |this| this.left(inset))
+                        .when(!tiling.right, |this| this.right(inset))
+                        .rounded_client_corners(tiling),
+                })
+                .items_center()
+                .justify_center()
+                .child(dialog),
+        )
     }
 }
 
@@ -218,9 +209,9 @@ fn markdown_style(main_message: bool, window: &Window, cx: &App) -> MarkdownStyl
     }
 }
 
-impl EventEmitter<PromptResponse> for DezPromptRenderer {}
+impl EventEmitter<PromptResponse> for ZedPromptRenderer {}
 
-impl Focusable for DezPromptRenderer {
+impl Focusable for ZedPromptRenderer {
     fn focus_handle(&self, _: &crate::App) -> FocusHandle {
         self.focus.clone()
     }

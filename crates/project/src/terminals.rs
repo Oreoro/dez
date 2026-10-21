@@ -1,22 +1,30 @@
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use collections::HashMap;
 use gpui::{App, AppContext as _, Context, Entity, Task, WeakEntity};
 
-use async_channel::bounded;
-use futures::{FutureExt, future::Shared};
+use futures::{FutureExt, StreamExt as _, future::Shared};
 use itertools::Itertools as _;
 use language::LanguageName;
-use remote::{ConnectionSharing, Interactive, RemoteClient};
+use remote::{Interactive, RemoteClient};
 use settings::{Settings, SettingsLocation};
 use std::{
     borrow::Cow,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 use task::{Shell, ShellBuilder, ShellKind, SpawnInTerminal};
 use terminal::{
-    RemoteTerminalControlRegistration, TaskState, TaskStatus, Terminal, TerminalBuilder,
-    insert_dez_terminal_env, terminal_settings::TerminalSettings,
+    Terminal, TerminalBuilder, TerminalMode, insert_zed_terminal_env,
+    session_host::{
+        TerminalSessionCommand, TerminalSessionId, TerminalSessionShell,
+        transport::{
+            TERMINAL_HOST_BIN_ENV, TERMINAL_HOST_ID_ENV, TERMINAL_HOST_SOCKET_ENV,
+            TERMINAL_HOST_TOKEN_FILE_ENV, TERMINAL_SESSION_ID_ENV, TerminalHostConnection,
+            TerminalHostResponse, terminal_host_executable_path,
+        },
+    },
+    terminal_settings::TerminalSettings,
 };
 use util::{
     command::new_std_command, get_default_system_shell, get_system_shell, maybe, rel_path::RelPath,
@@ -24,9 +32,37 @@ use util::{
 
 use crate::{Project, ProjectPath};
 
+const TERMINAL_HOST_CREATE_ATTEMPTS: usize = 40;
+const TERMINAL_HOST_CREATE_INTERVAL: Duration = Duration::from_millis(50);
+
 pub struct Terminals {
     pub(crate) local_handles: Vec<WeakEntity<terminal::Terminal>>,
 }
+
+#[derive(Debug)]
+pub struct TerminalWorkspaceAccessRequired {
+    path: PathBuf,
+    detail: String,
+}
+
+impl TerminalWorkspaceAccessRequired {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl std::fmt::Display for TerminalWorkspaceAccessRequired {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            formatter,
+            "Workspace access required for {} before a terminal can start: {}",
+            self.path.display(),
+            self.detail
+        )
+    }
+}
+
+impl std::error::Error for TerminalWorkspaceAccessRequired {}
 
 impl Project {
     pub fn active_entry_directory(&self, cx: &App) -> Option<PathBuf> {
@@ -92,14 +128,9 @@ impl Project {
         let settings = TerminalSettings::get(settings_location, cx).clone();
         let detect_venv = settings.detect_venv.as_option().is_some();
 
-        let (completion_tx, completion_rx) = bounded(1);
+        let terminal_mode = TerminalMode::task(spawn_task.clone());
 
         let local_path = if is_via_remote { None } else { path.clone() };
-        let task_state = Some(TaskState {
-            spawned_task: spawn_task.clone(),
-            status: TaskStatus::Running,
-            completion_rx,
-        });
         let remote_client = self.remote_client.clone();
         let shell = match &remote_client {
             Some(remote_client) => remote_client
@@ -110,10 +141,6 @@ impl Project {
         };
         let path_style = self.path_style(cx);
         let shell_kind = ShellKind::new(&shell, path_style.is_windows());
-
-        // Prepare a task for resolving the environment
-        let env_task =
-            self.resolve_directory_environment(&shell, path.clone(), remote_client.clone(), cx);
 
         // Scope the toolchain lookup to the worktree the terminal is being
         // spawned in. Previously this iterated the active editor's worktree
@@ -130,21 +157,34 @@ impl Project {
             })
             .into_iter()
             .collect();
-        let toolchains = project_path_contexts
-            .into_iter()
-            .filter(|_| detect_venv)
-            .map(|p| self.active_toolchain(p, LanguageName::new_static("Python"), cx))
-            .collect::<Vec<_>>();
         let lang_registry = self.languages.clone();
+        let fs = self.fs.clone();
         cx.spawn(async move |project, cx| {
+            if let Some(local_path) = &local_path {
+                preflight_terminal_working_directory(fs.as_ref(), local_path).await?;
+            }
+            let (env_task, toolchains) = project.update(cx, |project, cx| {
+                let env_task = project.resolve_directory_environment(
+                    &shell,
+                    path.clone(),
+                    remote_client.clone(),
+                    cx,
+                );
+                let toolchains = project_path_contexts
+                    .into_iter()
+                    .filter(|_| detect_venv)
+                    .map(|project_path| {
+                        project.active_toolchain(
+                            project_path,
+                            LanguageName::new_static("Python"),
+                            cx,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                (env_task, toolchains)
+            })?;
             let mut env = env_task.await.unwrap_or_default();
             env.extend(settings.env);
-            let remote_control_registration = match remote_client.as_ref() {
-                Some(remote_client) => {
-                    allocate_remote_control_registration(remote_client, cx).await?
-                }
-                None => None,
-            };
 
             let activation_script = maybe!(async {
                 for toolchain in toolchains {
@@ -165,121 +205,117 @@ impl Project {
             .await
             .unwrap_or_default();
 
-            let builder = project.update(cx, move |_, cx| {
-                let format_to_run = |spawn_task: &SpawnInTerminal| {
-                    format_task_for_activation(
-                        spawn_task,
-                        shell_kind,
-                        &shell,
-                        path_style.is_windows(),
-                    )
-                };
+            let builder = project
+                .update(cx, move |_, cx| {
+                    let format_to_run = |spawn_task: &SpawnInTerminal| {
+                        format_task_for_activation(
+                            spawn_task,
+                            shell_kind,
+                            &shell,
+                            path_style.is_windows(),
+                        )
+                    };
 
-                let (shell, env, remote_control_registration) = {
-                    let to_run =
-                        (!activation_script.is_empty()).then(|| format_to_run(&spawn_task));
-                    env.extend(spawn_task.env);
-                    match remote_client {
-                        Some(remote_client) => match activation_script.clone() {
-                            activation_script if !activation_script.is_empty() => {
-                                let separator = shell_kind.sequential_commands_separator();
-                                let activation_script =
-                                    activation_script.join(&format!("{separator} "));
-                                let to_run = to_run.expect("activation command was formatted");
+                    let (shell, env) = {
+                        let to_run =
+                            (!activation_script.is_empty()).then(|| format_to_run(&spawn_task));
+                        env.extend(spawn_task.env);
+                        match remote_client {
+                            Some(remote_client) => match activation_script.clone() {
+                                activation_script if !activation_script.is_empty() => {
+                                    let separator = shell_kind.sequential_commands_separator();
+                                    let activation_script =
+                                        activation_script.join(&format!("{separator} "));
+                                    let to_run = to_run.expect("activation command was formatted");
 
-                                let arg = format!("{activation_script}{separator} {to_run}");
-                                let args = shell_kind.args_for_shell(true, arg);
-                                let shell = remote_client
-                                    .read(cx)
-                                    .shell()
-                                    .unwrap_or_else(get_default_system_shell);
+                                    let arg = format!("{activation_script}{separator} {to_run}");
+                                    let args = shell_kind.args_for_shell(true, arg);
+                                    let shell = remote_client
+                                        .read(cx)
+                                        .shell()
+                                        .unwrap_or_else(get_default_system_shell);
 
-                                create_remote_shell(
-                                    Some((&shell, &args)),
+                                    create_remote_shell(
+                                        Some((&shell, &args)),
+                                        env,
+                                        path,
+                                        remote_client,
+                                        cx,
+                                    )?
+                                }
+                                _ => create_remote_shell(
+                                    spawn_task
+                                        .command
+                                        .as_ref()
+                                        .map(|command| (command, &spawn_task.args)),
                                     env,
                                     path,
                                     remote_client,
-                                    remote_control_registration.clone(),
-                                    connection_sharing_for(settings.dedicated_ssh_connection),
                                     cx,
-                                )?
-                            }
-                            _ => create_remote_shell(
-                                spawn_task
-                                    .command
-                                    .as_ref()
-                                    .map(|command| (command, &spawn_task.args)),
-                                env,
-                                path,
-                                remote_client,
-                                remote_control_registration,
-                                connection_sharing_for(settings.dedicated_ssh_connection),
-                                cx,
-                            )?,
-                        },
-                        None => match activation_script.clone() {
-                            activation_script if !activation_script.is_empty() => {
-                                let separator = shell_kind.sequential_commands_separator();
-                                let activation_script =
-                                    activation_script.join(&format!("{separator} "));
-                                let to_run = to_run.expect("activation command was formatted");
+                                )?,
+                            },
+                            None => match activation_script.clone() {
+                                activation_script if !activation_script.is_empty() => {
+                                    let separator = shell_kind.sequential_commands_separator();
+                                    let activation_script =
+                                        activation_script.join(&format!("{separator} "));
+                                    let to_run = to_run.expect("activation command was formatted");
 
-                                let arg = format!("{activation_script}{separator} {to_run}");
-                                let args = shell_kind.args_for_shell(true, arg);
+                                    let arg = format!("{activation_script}{separator} {to_run}");
+                                    let args = shell_kind.args_for_shell(true, arg);
 
-                                (
-                                    Shell::WithArguments {
-                                        program: shell,
-                                        args,
-                                        title_override: None,
+                                    (
+                                        Shell::WithArguments {
+                                            program: shell,
+                                            args,
+                                            title_override: None,
+                                        },
+                                        env,
+                                    )
+                                }
+                                _ => (
+                                    if let Some(program) = spawn_task.command {
+                                        Shell::WithArguments {
+                                            program,
+                                            args: spawn_task.args,
+                                            title_override: None,
+                                        }
+                                    } else {
+                                        Shell::System
                                     },
                                     env,
-                                    None,
-                                )
-                            }
-                            _ => (
-                                if let Some(program) = spawn_task.command {
-                                    Shell::WithArguments {
-                                        program,
-                                        args: spawn_task.args,
-                                        title_override: None,
-                                    }
-                                } else {
-                                    Shell::System
-                                },
-                                env,
-                                None,
-                            ),
-                        },
-                    }
-                };
-                anyhow::Ok((
-                    TerminalBuilder::new(
+                                ),
+                            },
+                        }
+                    };
+                    anyhow::Ok(TerminalBuilder::new(
                         local_path.map(|path| path.to_path_buf()),
-                        task_state,
+                        terminal_mode,
                         shell,
                         env,
                         settings.cursor_shape,
                         settings.alternate_scroll,
                         settings.max_scroll_history_lines,
                         settings.path_hyperlink_regexes,
-                        settings.path_hyperlink_timeout_ms,
+                        Duration::from_millis(settings.path_hyperlink_timeout_ms),
                         is_via_remote,
                         cx.entity_id().as_u64(),
-                        Some(completion_tx),
                         cx,
                         activation_script,
                         path_style,
-                    ),
-                    remote_control_registration,
-                ))
-            })??;
-            let (builder, remote_control_registration) = builder;
-            let builder = builder
-                .await?
-                .with_remote_control_registration(remote_control_registration);
+                    ))
+                })??
+                .await?;
             project.update(cx, move |this, cx| {
                 let terminal_handle = cx.new(|cx| builder.subscribe(cx));
+
+                if !is_via_remote
+                    && let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx)
+                {
+                    host.update(cx, |host, cx| {
+                        host.register(terminal_handle.clone(), cx);
+                    });
+                }
 
                 this.terminals
                     .local_handles
@@ -313,14 +349,14 @@ impl Project {
     }
 
     /// Creates a local terminal even if the project is remote.
-    /// In remote projects: opens in dez's launch directory (bypasses SSH).
+    /// In remote projects: opens in Zed's launch directory (bypasses SSH).
     /// In local projects: opens in the project directory (same as regular terminals).
     pub fn create_local_terminal(
         &mut self,
         cx: &mut Context<Self>,
     ) -> Task<Result<Entity<Terminal>>> {
         let working_directory = if self.remote_client.is_some() {
-            // Remote project: don't use remote paths, let shell use dez's cwd
+            // Remote project: don't use remote paths, let shell use Zed's cwd
             None
         } else {
             // Local project: use project directory like normal terminals
@@ -366,11 +402,6 @@ impl Project {
             })
             .into_iter()
             .collect();
-        let toolchains = project_path_contexts
-            .into_iter()
-            .filter(|_| detect_venv)
-            .map(|p| self.active_toolchain(p, LanguageName::new_static("Python"), cx))
-            .collect::<Vec<_>>();
         let remote_client = if force_local {
             None
         } else {
@@ -390,21 +421,35 @@ impl Project {
 
         let path_style = self.path_style(cx);
 
-        // Prepare a task for resolving the environment
-        let env_task =
-            self.resolve_directory_environment(&env_shell, path.clone(), remote_client.clone(), cx);
-
         let lang_registry = self.languages.clone();
+        let fs = self.fs.clone();
         cx.spawn(async move |project, cx| {
+            if let Some(local_path) = &local_path {
+                preflight_terminal_working_directory(fs.as_ref(), local_path).await?;
+            }
+            let (env_task, toolchains) = project.update(cx, |project, cx| {
+                let env_task = project.resolve_directory_environment(
+                    &env_shell,
+                    path.clone(),
+                    remote_client.clone(),
+                    cx,
+                );
+                let toolchains = project_path_contexts
+                    .into_iter()
+                    .filter(|_| detect_venv)
+                    .map(|project_path| {
+                        project.active_toolchain(
+                            project_path,
+                            LanguageName::new_static("Python"),
+                            cx,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                (env_task, toolchains)
+            })?;
             let shell_kind = ShellKind::new(&shell, path_style.is_windows());
             let mut env = env_task.await.unwrap_or_default();
             env.extend(settings.env);
-            let remote_control_registration = match remote_client.as_ref() {
-                Some(remote_client) => {
-                    allocate_remote_control_registration(remote_client, cx).await?
-                }
-                None => None,
-            };
 
             let activation_script = maybe!(async {
                 for toolchain in toolchains {
@@ -425,25 +470,140 @@ impl Project {
             .await
             .unwrap_or_default();
 
-            let builder = project.update(cx, move |_, cx| {
-                let (shell, env, remote_control_registration) = {
-                    match remote_client {
-                        Some(remote_client) => create_remote_shell(
-                            None,
-                            env,
-                            path,
-                            remote_client,
-                            remote_control_registration,
-                            connection_sharing_for(settings.dedicated_ssh_connection),
-                            cx,
-                        )?,
-                        None => (settings.shell, env, None),
+            let helper_enabled =
+                terminal::session_host::transport::terminal_host_enabled_for_app(paths::APP_NAME);
+            let mut hosted_connection = if is_via_remote {
+                None
+            } else {
+                cx.update(|cx| TerminalHostConnection::try_global(cx))
+            };
+            if helper_enabled && !is_via_remote && hosted_connection.is_none() {
+                for _ in 0..TERMINAL_HOST_CREATE_ATTEMPTS {
+                    cx.background_executor()
+                        .timer(TERMINAL_HOST_CREATE_INTERVAL)
+                        .await;
+                    hosted_connection = cx.update(|cx| TerminalHostConnection::try_global(cx));
+                    if hosted_connection.is_some() {
+                        break;
                     }
+                }
+                if hosted_connection.is_none() {
+                    let detail = cx.update(|cx| {
+                        match terminal::session_host::transport::TerminalHostStartupStatus::state(
+                            cx,
+                        ) {
+                            terminal::session_host::transport::TerminalHostStartupState::Failed {
+                                message,
+                            }
+                            | terminal::session_host::transport::TerminalHostStartupState::Reconnecting {
+                                message,
+                            }
+                            | terminal::session_host::transport::TerminalHostStartupState::InstallationRequired {
+                                message,
+                            } => Some(message),
+                            terminal::session_host::transport::TerminalHostStartupState::Disabled
+                            | terminal::session_host::transport::TerminalHostStartupState::Connecting
+                            | terminal::session_host::transport::TerminalHostStartupState::Connected {
+                                ..
+                            } => None,
+                        }
+                    });
+                    match detail {
+                        Some(detail) => anyhow::bail!(
+                            "the Dez terminal service is unavailable: {detail}; no disposable fallback shell was started"
+                        ),
+                        None => anyhow::bail!(
+                            "the Dez terminal service is unavailable; no disposable fallback shell was started"
+                        ),
+                    }
+                }
+            }
+            let (builder, hosted_session) = if let Some(connection) = hosted_connection {
+                let session_id = TerminalSessionId::new();
+                let working_directory = local_path.map(|path| path.to_path_buf());
+                let shell = settings.shell;
+                env.remove("SHLVL");
+                if std::env::var("LANG").is_err() {
+                    env.entry("LANG".to_owned())
+                        .or_insert_with(|| "en_US.UTF-8".to_owned());
+                }
+                cx.update(|cx| {
+                    insert_zed_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
+                });
+                if let Ok(helper) = terminal_host_executable_path() {
+                    env.insert(
+                        TERMINAL_HOST_BIN_ENV.to_owned(),
+                        helper.to_string_lossy().into_owned(),
+                    );
+                }
+                env.insert(
+                    TERMINAL_HOST_SOCKET_ENV.to_owned(),
+                    connection
+                        .endpoint()
+                        .socket_path()
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                env.insert(
+                    TERMINAL_HOST_TOKEN_FILE_ENV.to_owned(),
+                    connection
+                        .endpoint()
+                        .token_file_path()
+                        .to_string_lossy()
+                        .into_owned(),
+                );
+                env.insert(TERMINAL_HOST_ID_ENV.to_owned(), connection.host_id().to_string());
+                env.insert(TERMINAL_SESSION_ID_ENV.to_owned(), session_id.to_string());
+                let hosted_shell = match &shell {
+                    Shell::System => None,
+                    Shell::Program(program) => Some(TerminalSessionShell {
+                        program: program.clone(),
+                        args: Vec::new(),
+                    }),
+                    Shell::WithArguments { program, args, .. } => Some(TerminalSessionShell {
+                        program: program.clone(),
+                        args: args.clone(),
+                    }),
                 };
-                anyhow::Ok((
-                    TerminalBuilder::new(
-                        local_path.map(|path| path.to_path_buf()),
-                        None,
+                let response = connection
+                    .command(TerminalSessionCommand::Create {
+                        session_id,
+                        working_directory: working_directory.clone(),
+                        shell: hosted_shell,
+                        environment: env
+                            .iter()
+                            .map(|(name, value)| (name.clone(), value.clone()))
+                            .collect(),
+                        columns: 80,
+                        rows: 24,
+                    })
+                    .await?;
+                match response {
+                    TerminalHostResponse::Snapshot { snapshot } if snapshot.state.may_be_live() => {
+                    }
+                    TerminalHostResponse::Error { message }
+                    | TerminalHostResponse::Unsupported { message } => {
+                        anyhow::bail!("terminal host could not create a shell: {message}");
+                    }
+                    TerminalHostResponse::Snapshot { snapshot } => {
+                        anyhow::bail!(
+                            "terminal host created a non-live shell state: {}",
+                            snapshot.state.label()
+                        );
+                    }
+                    TerminalHostResponse::Sessions { .. }
+                    | TerminalHostResponse::Attachment { .. }
+                    | TerminalHostResponse::Heartbeat { .. }
+                    | TerminalHostResponse::Events { .. } => {
+                        anyhow::bail!("terminal host returned an invalid create response");
+                    }
+                }
+                let controller = connection.controller(session_id);
+                let builder = project.update(cx, move |_, cx| {
+                    TerminalBuilder::new_hosted(
+                        session_id,
+                        controller,
+                        working_directory,
                         shell,
                         env,
                         settings.cursor_shape,
@@ -451,22 +611,61 @@ impl Project {
                         settings.max_scroll_history_lines,
                         settings.path_hyperlink_regexes,
                         settings.path_hyperlink_timeout_ms,
-                        is_via_remote,
                         cx.entity_id().as_u64(),
-                        None,
-                        cx,
+                        cx.background_executor(),
                         activation_script,
                         path_style,
-                    ),
-                    remote_control_registration,
-                ))
-            })??;
-            let (builder, remote_control_registration) = builder;
-            let builder = builder
-                .await?
-                .with_remote_control_registration(remote_control_registration);
+                    )
+                })?;
+                (builder, Some((connection, session_id)))
+            } else {
+                let builder = project
+                    .update(cx, move |_, cx| {
+                        let (shell, env) = {
+                            match remote_client {
+                                Some(remote_client) => {
+                                    create_remote_shell(None, env, path, remote_client, cx)?
+                                }
+                                None => (settings.shell, env),
+                            }
+                        };
+                        anyhow::Ok(TerminalBuilder::new(
+                            local_path.map(|path| path.to_path_buf()),
+                            TerminalMode::interactive(),
+                            shell,
+                            env,
+                            settings.cursor_shape,
+                            settings.alternate_scroll,
+                            settings.max_scroll_history_lines,
+                            settings.path_hyperlink_regexes,
+                            Duration::from_millis(settings.path_hyperlink_timeout_ms),
+                            is_via_remote,
+                            cx.entity_id().as_u64(),
+                            cx,
+                            activation_script,
+                            path_style,
+                        ))
+                    })??
+                    .await?;
+                (builder, None)
+            };
             project.update(cx, move |this, cx| {
                 let terminal_handle = cx.new(|cx| builder.subscribe(cx));
+
+                if let Some((connection, session_id)) = hosted_session {
+                    connection.observe_terminal(&terminal_handle, cx);
+                    let replay_task =
+                        connection.follow_session(terminal_handle.downgrade(), session_id, cx);
+                    terminal_handle.update(cx, |terminal, _cx| {
+                        terminal.set_hosted_replay_task(replay_task);
+                    });
+                } else if !is_via_remote
+                    && let Some(host) = terminal::session_host::LocalTerminalHost::try_global(cx)
+                {
+                    host.update(cx, |host, cx| {
+                        host.register(terminal_handle.clone(), cx);
+                    });
+                }
 
                 this.terminals
                     .local_handles
@@ -592,6 +791,7 @@ impl Project {
                             &env,
                             None,
                             None,
+                            Interactive::Yes,
                         )?;
                         let mut command = new_std_command(command_template.program);
                         command.args(command_template.args);
@@ -645,46 +845,33 @@ impl Project {
     }
 }
 
-fn connection_sharing_for(dedicated_ssh_connection: bool) -> ConnectionSharing {
-    if dedicated_ssh_connection {
-        ConnectionSharing::Dedicated
-    } else {
-        ConnectionSharing::Shared
+async fn preflight_terminal_working_directory(fs: &dyn fs::Fs, path: &Path) -> Result<()> {
+    let mut entries = fs
+        .read_dir(path)
+        .await
+        .map_err(|error| terminal_working_directory_error(path, error))?;
+    if let Some(entry) = entries.next().await {
+        entry.map_err(|error| terminal_working_directory_error(path, error))?;
     }
+    Ok(())
 }
 
-async fn allocate_remote_control_registration(
-    remote_client: &Entity<RemoteClient>,
-    cx: &mut gpui::AsyncApp,
-) -> Result<Option<RemoteTerminalControlRegistration>> {
-    let allocation = remote_client.read_with(cx, |remote_client, _cx| {
-        if !remote_client.has_server_capability(remote::REMOTE_TERMINAL_CONTROL_CAPABILITY)
-            || remote_client.remote_server_executable().is_none()
-        {
-            return None;
-        }
-        Some((
-            remote_client.control_connection_generation(),
-            remote_client
-                .proto_client()
-                .request(rpc::proto::AllocateRemoteTerminalRegistration {}),
+fn terminal_working_directory_error(path: &Path, error: anyhow::Error) -> anyhow::Error {
+    if error.chain().any(|cause| {
+        cause
+            .downcast_ref::<std::io::Error>()
+            .is_some_and(|error| error.kind() == std::io::ErrorKind::PermissionDenied)
+    }) {
+        anyhow::Error::new(TerminalWorkspaceAccessRequired {
+            path: path.to_path_buf(),
+            detail: format!("{error:#}"),
+        })
+    } else {
+        error.context(format!(
+            "could not read terminal working directory {}",
+            path.display()
         ))
-    });
-    let Some(allocation) = allocation else {
-        return Ok(None);
-    };
-    let (remote_connection_generation, allocation) = allocation;
-    let response = allocation
-        .await
-        .context("failed to allocate remote terminal control registration")?;
-    if response.registration_id.is_empty() {
-        anyhow::bail!("remote server returned an empty terminal control registration");
     }
-    Ok(Some(RemoteTerminalControlRegistration {
-        remote_connection_id: remote_client.entity_id().as_u64(),
-        remote_connection_generation,
-        remote_terminal_registration_id: response.registration_id,
-    }))
 }
 
 fn create_remote_shell(
@@ -692,70 +879,22 @@ fn create_remote_shell(
     mut env: HashMap<String, String>,
     working_directory: Option<Arc<Path>>,
     remote_client: Entity<RemoteClient>,
-    registration: Option<RemoteTerminalControlRegistration>,
-    connection_sharing: ConnectionSharing,
     cx: &mut App,
-) -> Result<(
-    Shell,
-    HashMap<String, String>,
-    Option<RemoteTerminalControlRegistration>,
-)> {
-    insert_dez_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
+) -> Result<(Shell, HashMap<String, String>)> {
+    insert_zed_terminal_env(&mut env, &release_channel::AppVersion::global(cx));
 
-    let remote_client_state = remote_client.read(cx);
-    let remote_shell = remote_client_state
-        .shell()
-        .unwrap_or_else(get_default_system_shell);
-    let shell_kind = ShellKind::new(&remote_shell, remote_client_state.path_style().is_windows());
-    let registration_command = registration
-        .as_ref()
-        .and_then(|registration| {
-            Some((
-                remote_client_state.remote_server_executable()?,
-                registration.remote_terminal_registration_id.clone(),
-            ))
-        })
-        .map(|(server_executable, remote_terminal_registration_id)| {
-            let (program, args) = wrap_remote_terminal_command(
-                shell_kind,
-                &remote_shell,
-                &server_executable,
-                &remote_terminal_registration_id,
-                spawn_command,
-            )?;
-            Ok::<_, anyhow::Error>((
-                program,
-                args,
-                RemoteTerminalControlRegistration {
-                    remote_connection_id: registration
-                        .as_ref()
-                        .map(|registration| registration.remote_connection_id)
-                        .context("remote terminal registration is missing")?,
-                    remote_connection_generation: registration
-                        .as_ref()
-                        .map(|registration| registration.remote_connection_generation)
-                        .context("remote terminal registration is missing")?,
-                    remote_terminal_registration_id,
-                },
-            ))
-        })
-        .transpose()?;
-    let (program, args, registration) = match registration_command {
-        Some((program, args, registration)) => (Some(program), args, Some(registration)),
-        None => match spawn_command {
-            Some((program, args)) => (Some(program.clone()), args.clone(), None),
-            None => (None, Vec::new(), None),
-        },
+    let (program, args) = match spawn_command {
+        Some((program, args)) => (Some(program.clone()), args),
+        None => (None, &Vec::new()),
     };
 
-    let command = remote_client.read(cx).build_command_with_options(
+    let command = remote_client.read(cx).build_command(
         program,
-        &args,
+        args.as_slice(),
         &env,
         working_directory.map(|path| path.display().to_string()),
         None,
         Interactive::Yes,
-        connection_sharing,
     )?;
 
     log::debug!("Connecting to a remote server: {:?}", command.program);
@@ -768,52 +907,6 @@ fn create_remote_shell(
             title_override: Some(format!("{} — Terminal", host)),
         },
         command.env,
-        registration,
-    ))
-}
-
-fn wrap_remote_terminal_command(
-    shell_kind: ShellKind,
-    remote_shell: &str,
-    server_executable: &str,
-    remote_terminal_registration_id: &str,
-    spawn_command: Option<(&String, &Vec<String>)>,
-) -> Result<(String, Vec<String>)> {
-    let server_executable = shell_kind
-        .try_quote(server_executable)
-        .context("remote server executable cannot be quoted")?;
-    let server_executable = shell_kind.prepend_command_prefix(&server_executable);
-    let registration_id = shell_kind
-        .try_quote(remote_terminal_registration_id)
-        .context("remote terminal registration id cannot be quoted")?;
-    let register =
-        format!("{server_executable} register-terminal --registration-id {registration_id}");
-    let target = match spawn_command {
-        Some((program, args)) => std::iter::once(program)
-            .chain(args)
-            .map(|argument| {
-                shell_kind
-                    .try_quote(argument)
-                    .context("remote terminal command argument cannot be quoted")
-            })
-            .collect::<Result<Vec<_>>>()?
-            .join(" "),
-        None => {
-            let remote_shell = shell_kind
-                .try_quote(remote_shell)
-                .context("remote shell executable cannot be quoted")?;
-            shell_kind
-                .prepend_command_prefix(&remote_shell)
-                .into_owned()
-        }
-    };
-    let command = format!(
-        "{register}{} {target}",
-        shell_kind.sequential_commands_separator()
-    );
-    Ok((
-        remote_shell.to_string(),
-        shell_kind.args_for_shell(true, command),
     ))
 }
 
@@ -841,47 +934,6 @@ fn format_task_for_activation(
         // todo: this breaks for remotes to windows
         format!("exec {shell} -l")
     }
-}
-
-pub fn wrap_task_with_initialization_command(
-    task: SpawnInTerminal,
-    initialization_command: &str,
-    shell: &str,
-    is_windows: bool,
-) -> SpawnInTerminal {
-    let shell_kind = ShellKind::new(shell, is_windows);
-    let task_command = format_task_for_activation(&task, shell_kind, shell, is_windows);
-    let combined_command = if shell_kind == ShellKind::PowerShell {
-        format!("& {{ {initialization_command} }}; if ($?) {{ {task_command} }} else {{ exit 1 }}")
-    } else {
-        let separator = shell_kind.sequential_and_commands_separator();
-        format!("{initialization_command} {separator} {task_command}")
-    };
-
-    wrap_task_in_shell(task, shell, is_windows, combined_command)
-}
-
-pub fn wrap_task_in_system_shell(
-    task: SpawnInTerminal,
-    shell: &str,
-    is_windows: bool,
-) -> SpawnInTerminal {
-    let shell_kind = ShellKind::new(shell, is_windows);
-    let task_command = format_task_for_activation(&task, shell_kind, shell, is_windows);
-    wrap_task_in_shell(task, shell, is_windows, task_command)
-}
-
-fn wrap_task_in_shell(
-    mut task: SpawnInTerminal,
-    shell: &str,
-    is_windows: bool,
-    command: String,
-) -> SpawnInTerminal {
-    let shell_kind = ShellKind::new(shell, is_windows);
-    task.command = Some(shell.to_string());
-    task.args = shell_kind.args_for_shell(true, command);
-    task.shell = Shell::Program(shell.to_string());
-    task
 }
 
 fn quote_prepared_task_arg_for_activation<'a>(
@@ -1005,129 +1057,6 @@ mod tests {
         assert_eq!(
             format_task_for_activation(&task, ShellKind::PowerShell, "powershell.exe", true),
             "&cargo test 'some test'"
-        );
-    }
-
-    #[test]
-    fn system_shell_wraps_windows_command_shims_with_quoted_arguments() {
-        let task = SpawnInTerminal {
-            command: Some("codex".to_string()),
-            args: vec!["resume".to_string(), "session with spaces".to_string()],
-            shell: Shell::System,
-            ..SpawnInTerminal::default()
-        };
-
-        let task = wrap_task_in_system_shell(task, "powershell.exe", true);
-
-        assert_eq!(task.command.as_deref(), Some("powershell.exe"));
-        assert_eq!(
-            task.args,
-            vec![
-                "-C".to_string(),
-                "&codex resume 'session with spaces'".to_string(),
-            ]
-        );
-        assert_eq!(task.shell, Shell::Program("powershell.exe".to_string()));
-    }
-
-    #[test]
-    fn initialization_command_runs_before_the_quoted_task() {
-        let task = SpawnInTerminal {
-            command: Some("/opt/dez Agents/codex".to_string()),
-            args: vec!["resume".to_string(), "session with spaces".to_string()],
-            shell: Shell::System,
-            ..SpawnInTerminal::default()
-        };
-
-        let task =
-            wrap_task_with_initialization_command(task, "source ~/.profile", "/bin/zsh", false);
-
-        assert_eq!(task.command.as_deref(), Some("/bin/zsh"));
-        assert_eq!(
-            task.args,
-            vec![
-                "-i",
-                "-c",
-                "source ~/.profile && '/opt/dez Agents/codex' resume 'session with spaces'"
-            ]
-        );
-    }
-
-    #[test]
-    fn remote_registration_preserves_direct_and_tunneled_agent_executables() {
-        let arguments = vec!["resume".to_string(), "session with spaces".to_string()];
-        for executable in ["/usr/local/bin/codex", "/home/user/.dez/agents/codex"] {
-            let executable = executable.to_string();
-            let (program, wrapped_arguments) = wrap_remote_terminal_command(
-                ShellKind::new("/bin/sh", false),
-                "/bin/sh",
-                "/home/user/.dez/remote/remote_server",
-                "registration-1",
-                Some((&executable, &arguments)),
-            )
-            .expect("wrap remote agent command");
-            let command = wrapped_arguments.join(" ");
-
-            assert_eq!(program, "/bin/sh");
-            assert!(command.contains("register-terminal --registration-id registration-1"));
-            assert!(command.contains(&executable));
-            assert!(command.contains("'session with spaces'"));
-        }
-    }
-
-    #[test]
-    fn powershell_initialization_failure_prevents_the_agent_command() {
-        let task = SpawnInTerminal {
-            command: Some("codex.exe".to_string()),
-            args: vec!["resume".to_string(), "session-a".to_string()],
-            shell: Shell::System,
-            ..SpawnInTerminal::default()
-        };
-
-        let task = wrap_task_with_initialization_command(
-            task,
-            "Initialize-AgentEnvironment",
-            "powershell.exe",
-            true,
-        );
-
-        assert_eq!(task.command.as_deref(), Some("powershell.exe"));
-        assert_eq!(
-            task.args,
-            vec![
-                "-C",
-                "& { Initialize-AgentEnvironment }; if ($?) { &codex.exe resume session-a } else { exit 1 }"
-            ]
-        );
-    }
-
-    #[cfg(unix)]
-    #[gpui::test]
-    async fn initialization_failure_prevents_the_agent_command(cx: &mut gpui::TestAppContext) {
-        cx.executor().allow_parking();
-        let temporary_directory = tempfile::tempdir().expect("temporary directory");
-        let marker = temporary_directory.path().join("agent-ran");
-        let task = SpawnInTerminal {
-            command: Some("/usr/bin/touch".to_string()),
-            args: vec![marker.to_string_lossy().into_owned()],
-            shell: Shell::System,
-            ..SpawnInTerminal::default()
-        };
-        let task = wrap_task_with_initialization_command(task, "exit 17", "/bin/sh", false);
-        let status = util::command::new_command(
-            task.command
-                .as_deref()
-                .expect("wrapped task should have a command"),
-        )
-        .args(&task.args)
-        .status()
-        .await
-        .expect("wrapped command should run");
-
-        assert_eq!(status.code(), Some(17));
-        assert!(
-            !marker.exists(),
-            "agent command must not run after init failure"
         );
     }
 }

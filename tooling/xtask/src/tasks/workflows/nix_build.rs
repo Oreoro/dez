@@ -1,6 +1,6 @@
 use crate::tasks::workflows::{
     runners::{Arch, Platform},
-    steps::{CommonJobConditions, DEFAULT_REPOSITORY_OWNER_GUARD, NamedJob},
+    steps::{CommonJobConditions, CommonPermissionSets, DEFAULT_REPOSITORY_OWNER_GUARD, NamedJob},
 };
 
 use super::{runners, steps, steps::named, vars};
@@ -13,6 +13,7 @@ use gh_workflow::*;
 pub fn nix_build() -> Workflow {
     let [nix_linux_x86_64, nix_mac_aarch64] = nix_pr_jobs(&["run-nix", "run-bundling"]);
     named::workflow()
+        .with_minimal_permissions()
         .on(Event::default().pull_request(
             PullRequest::default().types([PullRequestType::Labeled, PullRequestType::Synchronize]),
         ))
@@ -138,6 +139,8 @@ pub(crate) fn build_nix(
         .continue_on_error(true)
         .with_repository_owner_guard()
         .runs_on(runner)
+        .add_env(("ZED_CLIENT_CHECKSUM_SEED", vars::ZED_CLIENT_CHECKSUM_SEED))
+        .add_env(("ZED_MINIDUMP_ENDPOINT", vars::ZED_SENTRY_MINIDUMP_ENDPOINT))
         .add_env((
             "ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON",
             vars::ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON,

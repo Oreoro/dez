@@ -10,9 +10,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use ::util::ResultExt;
 use anyhow::{Context as _, Result};
 use futures::channel::oneshot::{self, Receiver};
+use gpui_util::ResultExt;
 use raw_window_handle as rwh;
 use smallvec::SmallVec;
 use windows::{
@@ -63,12 +63,14 @@ pub struct WindowsWindowState {
     pub direct_manipulation: DirectManipulationHandler,
 
     pub renderer: RefCell<DirectXRenderer>,
-    /// Set after a GPU device-lost recovery so the next `draw_window` call is
-    /// treated as a forced render. This guarantees the next frame both
-    /// re-enables drawing (via `mark_drawable`) and bypasses the GPUI view
-    /// cache, which would otherwise replay stale atlas tile references from
-    /// the previous frame and panic in `DirectXAtlasState::texture`.
-    pub force_render_after_recovery: Cell<bool>,
+    /// Set when the next `draw_window` call must be treated as a forced
+    /// render. Used after a GPU device-lost recovery, where the next frame
+    /// must both re-enable drawing (via `mark_drawable`) and bypass the GPUI
+    /// view cache (which would otherwise replay stale atlas tile references
+    /// from the previous frame and panic in `DirectXAtlasState::texture`),
+    /// and when a forced render was requested while another draw was in
+    /// progress and had to be deferred.
+    pub force_render_pending: Cell<bool>,
 
     pub click_state: ClickState,
     pub current_cursor: Cell<Option<HCURSOR>>,
@@ -80,6 +82,7 @@ pub struct WindowsWindowState {
     /// Flag to instruct the `VSyncProvider` thread to invalidate the directx devices
     /// as resizing them has failed, causing us to have lost at least the render target.
     pub invalidate_devices: Arc<AtomicBool>,
+    /// Shared with [`WindowsPlatformState::draw_coordinator`] and every other window.
     pub(crate) draw_coordinator: Rc<DrawCoordinator>,
     fullscreen: Cell<Option<StyleAndBounds>>,
     initial_placement: Cell<Option<WindowOpenStatus>>,
@@ -95,6 +98,8 @@ pub(crate) struct WindowsWindowInner {
     pub(crate) handle: AnyWindowHandle,
     pub(crate) hide_title_bar: bool,
     pub(crate) is_movable: bool,
+    pub(crate) is_resizable: bool,
+    pub(crate) is_minimizable: bool,
     pub(crate) executor: ForegroundExecutor,
     pub(crate) validation_number: usize,
     pub(crate) main_receiver: PriorityQueueReceiver<RunnableVariant>,
@@ -168,7 +173,7 @@ impl WindowsWindowState {
             last_reported_capslock: Cell::new(last_reported_capslock),
             hovered: Cell::new(hovered),
             renderer: RefCell::new(renderer),
-            force_render_after_recovery: Cell::new(false),
+            force_render_pending: Cell::new(false),
             click_state,
             current_cursor: Cell::new(current_cursor),
             cursor_visible,
@@ -266,6 +271,8 @@ impl WindowsWindowInner {
             handle: context.handle,
             hide_title_bar: context.hide_title_bar,
             is_movable: context.is_movable,
+            is_resizable: context.is_resizable,
+            is_minimizable: context.is_minimizable,
             executor: context.executor.clone(),
             validation_number: context.validation_number,
             main_receiver: context.main_receiver.clone(),
@@ -388,6 +395,8 @@ struct WindowCreateContext {
     hide_title_bar: bool,
     display: WindowsDisplay,
     is_movable: bool,
+    is_resizable: bool,
+    is_minimizable: bool,
     min_size: Option<Size<Pixels>>,
     executor: ForegroundExecutor,
     current_cursor: Option<HCURSOR>,
@@ -410,6 +419,12 @@ impl WindowsWindow {
         params: WindowParams,
         creation_info: WindowCreationInfo,
     ) -> Result<Self> {
+        // Native popups are not implemented on Windows yet. Rejecting lets callers fall back to
+        // gpui's in-window popovers.
+        if let WindowKind::AnchoredPopup(_) = params.kind {
+            return Err(popup::PopupNotSupportedError.into());
+        }
+
         let WindowCreationInfo {
             icon,
             executor,
@@ -454,7 +469,7 @@ impl WindowsWindow {
         );
 
         let (mut dwexstyle, dwstyle) = if params.kind == WindowKind::PopUp {
-            (WS_EX_TOOLWINDOW, WINDOW_STYLE(0x0))
+            (WS_EX_TOOLWINDOW | WS_EX_TOPMOST, WINDOW_STYLE(0x0))
         } else {
             let mut dwstyle = WS_SYSMENU;
 
@@ -493,6 +508,8 @@ impl WindowsWindow {
             hide_title_bar,
             display,
             is_movable: params.is_movable,
+            is_resizable: params.is_resizable,
+            is_minimizable: params.is_minimizable,
             min_size: params.window_min_size,
             executor,
             current_cursor,
@@ -535,14 +552,13 @@ impl WindowsWindow {
         set_non_rude_hwnd(hwnd, true);
         configure_dwm_dark_mode(hwnd, appearance);
         this.state.border_offset.update(hwnd)?;
-        let placement = retrieve_window_placement(
-            hwnd,
-            display,
-            params.bounds,
-            this.state.scale_factor.get(),
-            &this.state.border_offset,
-        )?;
+        let placement =
+            retrieve_window_placement(hwnd, display, params.bounds, &this.state.border_offset)?;
         if params.show {
+            let mut placement = placement;
+            if !params.focus {
+                placement.showCmd = SW_SHOWNOACTIVATE.0 as u32;
+            }
             unsafe { SetWindowPlacement(hwnd, &placement)? };
         } else {
             this.state.initial_placement.set(Some(WindowOpenStatus {
@@ -825,8 +841,8 @@ impl PlatformWindow for WindowsWindow {
                 let info = FLASHWINFO {
                     cbSize: std::mem::size_of::<FLASHWINFO>() as u32,
                     hwnd,
-                    dwFlags: FLASHW_ALL | FLASHW_TIMERNOFG,
-                    uCount: 0,
+                    dwFlags: FLASHW_ALL,
+                    uCount: 1,
                     dwTimeout: 0,
                 };
                 unsafe { FlashWindowEx(&info).ok().log_err() };
@@ -973,6 +989,14 @@ impl PlatformWindow for WindowsWindow {
             .borrow_mut()
             .draw(scene, self.state.background_appearance.get())
             .log_err();
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    fn render_to_image(&self, scene: &Scene) -> anyhow::Result<image::RgbaImage> {
+        self.state
+            .renderer
+            .borrow_mut()
+            .render_to_image(scene, self.state.background_appearance.get())
     }
 
     fn sprite_atlas(&self) -> Arc<dyn PlatformAtlas> {
@@ -1347,7 +1371,7 @@ enum WindowOpenState {
     Windowed,
 }
 
-const WINDOW_CLASS_NAME: PCWSTR = w!("dez::Window");
+const WINDOW_CLASS_NAME: PCWSTR = w!("Zed::Window");
 
 fn register_window_class(icon_handle: HICON) {
     static ONCE: Once = Once::new();
@@ -1427,7 +1451,7 @@ fn get_module_handle() -> HMODULE {
         let mut h_module = std::mem::zeroed();
         GetModuleHandleExW(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            windows::core::w!("dezModule"),
+            windows::core::w!("ZedModule"),
             &mut h_module,
         )
         .expect("Unable to get module handle"); // this should never fail
@@ -1499,7 +1523,6 @@ fn retrieve_window_placement(
     hwnd: HWND,
     display: WindowsDisplay,
     initial_bounds: Bounds<Pixels>,
-    scale_factor: f32,
     border_offset: &WindowBorderOffset,
 ) -> Result<WINDOWPLACEMENT> {
     let mut placement = WINDOWPLACEMENT {
@@ -1513,7 +1536,14 @@ fn retrieve_window_placement(
     } else {
         display.default_bounds()
     };
-    let bounds = bounds.to_device_pixels(scale_factor);
+    // `bounds` is expressed in logical pixels for `display`, so it must be converted
+    // to device pixels using that display's own scale factor. The window's current
+    // scale factor can't be used here: `CreateWindowExW` was called with
+    // `CW_USEDEFAULT`, so at this point the window may still be sitting on whichever
+    // monitor Windows picked by default, which can have a different DPI than `display`
+    // and would otherwise throw off the physical position (e.g. leaving the window
+    // partially off-screen when moved to a monitor with a different scale factor).
+    let bounds = bounds.to_device_pixels(display.scale_factor());
     placement.rcNormalPosition = calculate_window_rect(bounds, border_offset);
     Ok(placement)
 }
@@ -1559,8 +1589,12 @@ fn set_window_composition_attribute(hwnd: HWND, color: Option<Color>, state: u32
             .log_err()
         {
             let func_name = PCSTR::from_raw(c"SetWindowCompositionAttribute".as_ptr() as *const u8);
+            let Some(raw_set_window_composition_attribute) = GetProcAddress(user32, func_name)
+            else {
+                return;
+            };
             let set_window_composition_attribute: SetWindowCompositionAttributeType =
-                std::mem::transmute(GetProcAddress(user32, func_name));
+                std::mem::transmute(raw_set_window_composition_attribute);
             let mut color = color.unwrap_or_default();
             let is_acrylic = state == 4;
             if is_acrylic && color.3 == 0 {

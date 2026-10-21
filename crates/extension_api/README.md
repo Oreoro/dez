@@ -1,6 +1,6 @@
-# The dez Rust Extension API
+# The Zed Rust Extension API
 
-This crate lets you write extensions for dez in Rust.
+This crate lets you write extensions for Zed in Rust.
 
 ## Extension Manifest
 
@@ -18,12 +18,12 @@ repository = "https://github.com/your/extension-repository"
 
 ## Cargo metadata
 
-dez extensions are packaged as WebAssembly files. In your Cargo.toml, you'll
+Zed extensions are packaged as WebAssembly files. In your Cargo.toml, you'll
 need to set your `crate-type` accordingly:
 
 ```toml
 [dependencies]
-dez_extension_api = "0.6.0"
+zed_extension_api = "0.6.0"
 
 [lib]
 crate-type = ["cdylib"]
@@ -34,36 +34,36 @@ crate-type = ["cdylib"]
 To define your extension, create a type that implements the `Extension` trait, and register it.
 
 ```rust
-use dez_extension_api as dez;
+use zed_extension_api as zed;
 
 struct MyExtension {
     // ... state
 }
 
-impl dez::Extension for MyExtension {
+impl zed::Extension for MyExtension {
     // ...
 }
 
-dez::register_extension!(MyExtension);
+zed::register_extension!(MyExtension);
 ```
 
 ## Testing your extension
 
-To run your extension in dez as you're developing it:
+To run your extension in Zed as you're developing it:
 
 - Make sure you have [Rust installed](https://www.rust-lang.org/learn/get-started)
 - Have the `wasm32-wasip2` target installed (`rustup target add wasm32-wasip2`)
-- Open the extensions view using the `dez: extensions` action in the command palette.
+- Open the extensions view using the `zed: extensions` action in the command palette.
 - Click the `Install Dev Extension` button in the top right
 - Choose the path to your extension directory.
 
-## Compatible dez versions
+## Compatible Zed versions
 
-Extensions created using newer versions of the dez extension API won't be compatible with older versions of dez.
+Extensions created using newer versions of the Zed extension API won't be compatible with older versions of Zed.
 
-Here is the compatibility of the `dez_extension_api` with versions of dez:
+Here is the compatibility of the `zed_extension_api` with versions of Zed:
 
-| dez version | `dez_extension_api` version |
+| Zed version | `zed_extension_api` version |
 | ----------- | --------------------------- |
 | `0.192.x`   | `0.0.1` - `0.6.0`           |
 | `0.186.x`   | `0.0.1` - `0.5.0`           |

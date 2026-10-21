@@ -4,7 +4,7 @@ use super::{
     locators,
     session::{self, Session, SessionStateEvent},
 };
-use remote::{ConnectionSharing, Interactive};
+use remote::Interactive;
 
 use crate::{
     InlayHint, InlayHintLabel, ProjectEnvironment, ResolveState,
@@ -343,14 +343,13 @@ impl DapStore {
                     }
 
                     let command = remote.read_with(cx, |remote, _cx| {
-                        remote.build_command_with_options(
+                        remote.build_command(
                             binary.command,
                             &binary.arguments,
                             &binary.envs,
                             binary.cwd.map(|path| path.display().to_string()),
                             port_forwarding,
                             Interactive::No,
-                            ConnectionSharing::Shared,
                         )
                     })?;
 

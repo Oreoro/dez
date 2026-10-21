@@ -1,5 +1,6 @@
 use super::{KernelSession, RunningKernel, SshRemoteKernelSpecification, start_kernel_tasks};
 use anyhow::{Context as _, Result};
+use client::proto;
 
 use futures::{
     AsyncBufReadExt as _, StreamExt as _,
@@ -35,11 +36,12 @@ impl SshRunningKernel {
         window: &mut Window,
         cx: &mut App,
     ) -> Task<Result<Box<dyn RunningKernel>>> {
-        let Some(remote_client) = project.read(cx).remote_client() else {
-            return Task::ready(Err(anyhow::anyhow!("SSH kernel requires a remote project")));
-        };
-        let client = remote_client.read(cx).proto_client();
-        let project_id = proto::REMOTE_SERVER_PROJECT_ID;
+        let client = project.read(cx).client();
+        let remote_client = project.read(cx).remote_client();
+        let project_id = project
+            .read(cx)
+            .remote_id()
+            .unwrap_or(proto::REMOTE_SERVER_PROJECT_ID);
 
         window.spawn(cx, async move |cx| {
             let command = kernel_spec
@@ -63,7 +65,14 @@ impl SshRunningKernel {
                 command,
                 args,
             };
-            let response = client.request(request).await?;
+            let response = if let Some(remote_client) = remote_client.as_ref() {
+                remote_client
+                    .read_with(cx, |client, _| client.proto_client())
+                    .request(request)
+                    .await?
+            } else {
+                client.request(request).await?
+            };
 
             let kernel_id = response.kernel_id.clone();
             let connection_info: serde_json::Value =
@@ -102,6 +111,7 @@ impl SshRunningKernel {
                 (local_ports[4], "127.0.0.1".to_string(), remote_hb_port),
             ];
 
+            let remote_client = remote_client.ok_or_else(|| anyhow::anyhow!("no remote client"))?;
             let command_template = cx.update(|_window, cx| {
                 remote_client.read(cx).build_forward_ports_command(forwards)
             })??;
@@ -150,8 +160,9 @@ impl SshRunningKernel {
                             attempt + 1
                         );
                         // giving the tunnel a moment to fully establish forwarding
+                        // waiting same as WSL
                         cx.background_executor()
-                            .timer(std::time::Duration::from_millis(500))
+                            .timer(std::time::Duration::from_secs(2))
                             .await;
                         break;
                     }
@@ -188,7 +199,7 @@ impl SshRunningKernel {
             local_connection_info["ip"] = serde_json::json!("127.0.0.1");
 
             let local_connection_file =
-                std::env::temp_dir().join(format!("dez_ssh_kernel_{}.json", kernel_id));
+                std::env::temp_dir().join(format!("zed_ssh_kernel_{}.json", kernel_id));
             std::fs::write(
                 &local_connection_file,
                 serde_json::to_string_pretty(&local_connection_info)?,
@@ -199,13 +210,38 @@ impl SshRunningKernel {
                 serde_json::from_value(local_connection_info)?;
             let session_id = uuid::Uuid::new_v4().to_string();
 
-            let output_socket = runtimelib::create_client_iopub_connection(
-                &connection_info_struct,
-                "",
-                &session_id,
-            )
-            .await
-            .context("Failed to create iopub connection. Is `ipykernel` installed in the remote environment? Try running `pip install ipykernel` on the remote host.")?;
+            let output_socket = {
+                let max_retries = 5;
+                let mut retry = 0;
+                loop {
+                    match runtimelib::create_client_iopub_connection(
+                        &connection_info_struct,
+                        "",
+                        &session_id,
+                    )
+                    .await
+                    {
+                        Ok(socket) => break socket,
+                        Err(err) => {
+                            if retry >= max_retries {
+                                anyhow::bail!(
+                                    "Failed to create iopub connection: {}. Is `ipykernel` installed in the remote environment? Try running `pip install ipykernel` on the remote host.",
+                                    err
+                                );
+                            }
+                            log::debug!(
+                                "Retrying iopub connection (attempt {}/{})",
+                                retry + 1,
+                                max_retries
+                            );
+                            cx.background_executor()
+                                .timer(std::time::Duration::from_millis(200 << retry))
+                                .await;
+                            retry += 1;
+                        }
+                    }
+                }
+            };
 
             let peer_identity = runtimelib::peer_identity_for_session(&session_id)?;
             let shell_socket = runtimelib::create_client_shell_connection_with_identity(
@@ -284,10 +320,7 @@ impl RunningKernel for SshRunningKernel {
     fn force_shutdown(&mut self, _window: &mut Window, cx: &mut App) -> Task<Result<()>> {
         let kernel_id = self.kernel_id.clone();
         let project_id = self.project_id;
-        let Some(remote_client) = self.project.read(cx).remote_client() else {
-            return Task::ready(Err(anyhow::anyhow!("SSH kernel requires a remote project")));
-        };
-        let client = remote_client.read(cx).proto_client();
+        let client = self.project.read(cx).client();
 
         cx.background_executor().spawn(async move {
             let request = proto::KillKernel {

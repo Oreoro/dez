@@ -163,7 +163,7 @@ pub enum Motion {
     // we don't have a good way to run a search synchronously, so
     // we handle search motions by running the search async and then
     // calling back into motion with this
-    DezSearchResult {
+    ZedSearchResult {
         prior_selections: Vec<Range<Anchor>>,
         new_selections: Vec<Range<Anchor>>,
     },
@@ -691,7 +691,7 @@ pub fn register(editor: &mut Editor, cx: &mut Context<Vim>) {
 
 impl Vim {
     pub(crate) fn search_motion(&mut self, m: Motion, window: &mut Window, cx: &mut Context<Self>) {
-        if let Motion::DezSearchResult {
+        if let Motion::ZedSearchResult {
             prior_selections, ..
         } = &m
         {
@@ -820,7 +820,7 @@ impl Motion {
             | Sneak { .. }
             | SneakBackward { .. }
             | Jump { .. }
-            | DezSearchResult { .. } => MotionKind::Exclusive,
+            | ZedSearchResult { .. } => MotionKind::Exclusive,
             RepeatFind { last_find: motion } | RepeatFindReversed { last_find: motion } => {
                 motion.default_kind()
             }
@@ -894,7 +894,7 @@ impl Motion {
             | WindowBottom
             | WindowMiddle
             | WindowTop
-            | DezSearchResult { .. } => true,
+            | ZedSearchResult { .. } => true,
         }
     }
 
@@ -941,7 +941,7 @@ impl Motion {
             | WindowBottom
             | NextLineStart
             | PreviousLineStart
-            | DezSearchResult { .. }
+            | ZedSearchResult { .. }
             | NextSectionStart
             | NextSectionEnd
             | PreviousSectionStart
@@ -1250,7 +1250,7 @@ impl Motion {
             WindowMiddle => window_middle(map, point, text_layout_details),
             WindowBottom => window_bottom(map, point, text_layout_details, times - 1),
             Jump { line, anchor } => mark::jump_motion(map, *anchor, *line),
-            DezSearchResult { new_selections, .. } => {
+            ZedSearchResult { new_selections, .. } => {
                 // There will be only one selection, as
                 // Search::SelectNextMatch selects a single match.
                 if let Some(new_selection) = new_selections.first() {
@@ -1340,7 +1340,7 @@ impl Motion {
         text_layout_details: &TextLayoutDetails,
         forced_motion: bool,
     ) -> Option<(Range<DisplayPoint>, MotionKind)> {
-        if let Motion::DezSearchResult {
+        if let Motion::ZedSearchResult {
             prior_selections,
             new_selections,
         } = self
@@ -1477,13 +1477,8 @@ impl Motion {
         text_layout_details: &TextLayoutDetails,
         forced_motion: bool,
     ) -> Option<MotionKind> {
-        let (range, kind) = self.range(
-            map,
-            selection.clone(),
-            times,
-            text_layout_details,
-            forced_motion,
-        )?;
+        let (range, kind) =
+            self.range(map, *selection, times, text_layout_details, forced_motion)?;
         selection.start = range.start;
         selection.end = range.end;
         Some(kind)
@@ -4700,7 +4695,7 @@ mod test {
         cx.update_editor(|editor, _window, cx| {
             let range = editor.selections.newest_anchor().range();
             let inlay_text = "  field: int,\n  field2: string\n  field3: float";
-            let inlay = Inlay::mock_hint(1, range.start, inlay_text);
+            let inlay = Inlay::edit_prediction(1, range.start, inlay_text);
             editor.splice_inlays(&[], vec![inlay], cx);
         });
 
@@ -4732,7 +4727,7 @@ mod test {
             let end_of_line =
                 snapshot.anchor_after(Point::new(0, snapshot.line_len(MultiBufferRow(0))));
             let inlay_text = " hint";
-            let inlay = Inlay::mock_hint(1, end_of_line, inlay_text);
+            let inlay = Inlay::edit_prediction(1, end_of_line, inlay_text);
             editor.splice_inlays(&[], vec![inlay], cx);
         });
         cx.simulate_keystrokes("$");
@@ -4771,7 +4766,7 @@ mod test {
             // The empty line is at line 3 (0-indexed)
             let line_start = snapshot.anchor_after(Point::new(3, 0));
             let inlay_text = ": Vec<u32>";
-            let inlay = Inlay::mock_hint(1, line_start, inlay_text);
+            let inlay = Inlay::edit_prediction(1, line_start, inlay_text);
             editor.splice_inlays(&[], vec![inlay], cx);
         });
 
@@ -4815,7 +4810,7 @@ mod test {
             let snapshot = editor.buffer().read(cx).snapshot(cx);
             let empty_line_start = snapshot.anchor_after(Point::new(2, 0));
             let inlay_text = ": i32";
-            let inlay = Inlay::mock_hint(2, empty_line_start, inlay_text);
+            let inlay = Inlay::edit_prediction(2, empty_line_start, inlay_text);
             editor.splice_inlays(&[], vec![inlay], cx);
         });
 

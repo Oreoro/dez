@@ -92,10 +92,10 @@ impl Editor {
     }
 
     pub fn has_visible_completions_menu(&self) -> bool {
-        self.context_menu
-            .borrow()
-            .as_ref()
-            .is_some_and(|menu| menu.visible() && matches!(menu, CodeContextMenu::Completions(_)))
+        !self.edit_prediction_preview_is_active()
+            && self.context_menu.borrow().as_ref().is_some_and(|menu| {
+                menu.visible() && matches!(menu, CodeContextMenu::Completions(_))
+            })
     }
 
     pub(super) fn trigger_completion_on_input(
@@ -184,6 +184,9 @@ impl Editor {
             .range_to_buffer_ranges(visible_range)
             .into_iter()
             .filter(|(_, excerpt_visible_range, _)| !excerpt_visible_range.is_empty())
+            .map(|(buffer_snapshot, buffer_offset_range, excerpt_range)| {
+                (buffer_snapshot.clone(), buffer_offset_range, excerpt_range)
+            })
             .collect()
     }
 
@@ -209,7 +212,11 @@ impl Editor {
             return None;
         }
 
+        // OnTypeFormatting returns a list of edits, no need to pass them between Zed instances,
+        // hence we do LSP request & edit on host side only — add formats to host's history.
         let push_to_lsp_host_history = true;
+        // If this is not the host, append its history with new edits.
+        let push_to_client_history = project.read(cx).is_via_collab();
 
         let on_type_formatting = project.update(cx, |project, cx| {
             project.on_type_format(
@@ -219,10 +226,91 @@ impl Editor {
                 push_to_lsp_host_history,
                 cx,
             )
-        });
+        })?;
+
+        // Cursors are right-biased, so an edit inserting text at one drags it along. Pin a
+        // left-biased copy, keyed by the current anchor so cursors the user moves are skipped.
+        let snapshot = self.buffer.read(cx).snapshot(cx);
+        let cursors_to_pin = self
+            .selections
+            .disjoint_anchors()
+            .iter()
+            .filter(|selection| selection.start == selection.end)
+            .map(|selection| (selection.head(), snapshot.anchor_before(selection.head())))
+            .collect::<HashMap<_, _>>();
+
         Some(cx.spawn_in(window, async move |editor, cx| {
-            if on_type_formatting.await?.is_some() {
-                editor.update(cx, |editor, cx| {
+            if let Some(transaction) = on_type_formatting.await? {
+                let (formatted_buffer_id, formatted_ranges) = buffer.update(cx, |buffer, _| {
+                    let formatted_ranges = buffer
+                        .edited_ranges_for_transaction::<usize>(&transaction)
+                        .collect::<Vec<_>>();
+                    if push_to_client_history {
+                        buffer.push_transaction(transaction, Instant::now());
+                        buffer.finalize_last_transaction();
+                    }
+                    (buffer.remote_id(), formatted_ranges)
+                });
+                editor.update_in(cx, |editor, window, cx| {
+                    let snapshot = editor.buffer.read(cx).snapshot(cx);
+                    let pinned_cursor = |selection: &Selection<Anchor>| {
+                        if selection.start != selection.end {
+                            return None;
+                        }
+                        let head = selection.head();
+                        let &cursor = cursors_to_pin.get(&head)?;
+                        let (buffer_cursor, cursor_snapshot) =
+                            snapshot.anchor_to_buffer_anchor(cursor)?;
+                        let (buffer_head, head_snapshot) =
+                            snapshot.anchor_to_buffer_anchor(head)?;
+                        if cursor_snapshot.remote_id() != formatted_buffer_id
+                            || head_snapshot.remote_id() != formatted_buffer_id
+                        {
+                            return None;
+                        }
+                        let cursor_offset = buffer_cursor.to_offset(cursor_snapshot);
+                        let head_offset = buffer_head.to_offset(head_snapshot);
+                        if cursor_offset == head_offset {
+                            return None;
+                        }
+                        // A gap in the formatter's edits means something else, such as a user edit
+                        // while the request was in flight, moved the cursor.
+                        let mut formatted_end = cursor_offset;
+                        for range in &formatted_ranges {
+                            if range.end <= formatted_end {
+                                continue;
+                            }
+                            if range.start > formatted_end || range.end > head_offset {
+                                break;
+                            }
+                            formatted_end = range.end;
+                        }
+                        (formatted_end == head_offset).then_some(cursor)
+                    };
+
+                    let mut restored_any_cursor = false;
+                    let pinned = editor
+                        .selections
+                        .disjoint_anchors()
+                        .iter()
+                        .map(|selection| match pinned_cursor(selection) {
+                            Some(cursor) => {
+                                restored_any_cursor = true;
+                                Selection {
+                                    start: cursor,
+                                    end: cursor,
+                                    goal: SelectionGoal::None,
+                                    ..*selection
+                                }
+                            }
+                            None => *selection,
+                        })
+                        .collect();
+                    if restored_any_cursor {
+                        editor.change_selections(SelectionEffects::no_scroll(), window, cx, |s| {
+                            s.select_anchors(pinned)
+                        });
+                    }
                     editor.refresh_document_highlights(cx);
                 })?;
             }
@@ -253,14 +341,20 @@ impl Editor {
 
         let multibuffer_snapshot = self.buffer.read(cx).read(cx);
 
-        // Typically `start` == `end`, but with snippet tabstop choices the default choice is
-        // inserted and selected. To handle that case, the start of the selection is used so that
-        // the menu starts with all choices.
-        let position = self
-            .selections
-            .newest_anchor()
-            .start
-            .bias_right(&multibuffer_snapshot);
+        let is_showing_snippet_choices = matches!(
+            completions_source,
+            Some(CompletionsMenuSource::SnippetChoices)
+        );
+
+        let anchor = self.selections.newest_anchor();
+        let position = if is_showing_snippet_choices {
+            // Typically `start` == `end`, but with snippet tabstop choices the default choice is
+            // inserted and selected. To handle that case, the start of the selection is used so that
+            // the menu starts with all choices.
+            anchor.start.bias_right(&multibuffer_snapshot)
+        } else {
+            anchor.head().bias_right(&multibuffer_snapshot)
+        };
 
         if position.diff_base_anchor().is_some() {
             return;
@@ -302,7 +396,7 @@ impl Editor {
 
         // Hide the current completions menu when query is empty. Without this, cached
         // completions from before the trigger char may be reused (#32774).
-        if query.is_none() && menu_is_open {
+        if query.is_none() && menu_is_open && !is_showing_snippet_choices {
             self.hide_context_menu(window, cx);
         }
 
@@ -581,6 +675,7 @@ impl Editor {
                 match_start: None,
                 snippet_deduplication_key: None,
                 icon_path: None,
+                icon_color: None,
                 documentation: None,
                 source: CompletionSource::BufferWord {
                     word_range,
@@ -693,13 +788,25 @@ impl Editor {
                             Some(CodeContextMenu::Completions(menu));
 
                         crate::hover_popover::hide_hover(editor, cx);
+                        if editor.show_edit_predictions_in_menu() {
+                            editor.update_visible_edit_prediction(window, cx);
+                        } else {
+                            editor
+                                .discard_edit_prediction(EditPredictionDiscardReason::Ignored, cx);
+                        }
 
                         cx.notify();
                         return;
                     }
 
                     if editor.completion_tasks.len() <= 1 {
-                        editor.hide_context_menu(window, cx);
+                        // If there are no more completion tasks and the last menu was empty, we should hide it.
+                        let was_hidden = editor.hide_context_menu(window, cx).is_none();
+                        // If it was already hidden and we don't show edit predictions in the menu,
+                        // we should also show the edit prediction when available.
+                        if was_hidden && editor.show_edit_predictions_in_menu() {
+                            editor.update_visible_edit_prediction(window, cx);
+                        }
                     }
                 })
                 .ok();
@@ -756,6 +863,9 @@ impl Editor {
             let entries = completions_menu.entries.borrow();
             let entry = entries.get(item_ix.unwrap_or(completions_menu.selected_item))?;
             let mat = entry.as_match()?;
+            if self.show_edit_predictions_in_menu() {
+                self.discard_edit_prediction(EditPredictionDiscardReason::Rejected, cx);
+            }
             mat.candidate_id
         };
 
@@ -890,6 +1000,13 @@ impl Editor {
                 });
             }
             linked_edits.apply(cx);
+            editor.refresh_edit_prediction(
+                true,
+                false,
+                EditPredictionRequestTrigger::LSPCompletionAccepted,
+                window,
+                cx,
+            );
         });
         self.invalidate_autoclose_regions(
             &self.selections.disjoint_anchors_arc(),
@@ -1098,7 +1215,7 @@ fn has_strong_snippet_prefix_match(
 
     languages.iter().any(|language| {
         snippet_store
-            .snippets_for(Some(language.lsp_id()), cx)
+            .snippets_for(Some(language.snippet_scope_id()), cx)
             .iter()
             .flat_map(|snippet| snippet.prefix.iter())
             .flat_map(|prefix| snippet_candidate_suffixes(prefix, &is_word_char))
@@ -1119,7 +1236,7 @@ fn snippet_completions(
     let scopes: Vec<_> = languages
         .iter()
         .filter_map(|language| {
-            let language_name = language.lsp_id();
+            let language_name = language.snippet_scope_id();
             let snippets = snippet_store.snippets_for(Some(language_name), cx);
 
             if snippets.is_empty() {
@@ -1305,7 +1422,6 @@ fn snippet_completions(
                                     replace: lsp_range,
                                 },
                             )),
-                            filter_text: Some(snippet.body.clone()),
                             sort_text: Some(char::MAX.to_string()),
                             ..lsp::CompletionItem::default()
                         }),
@@ -1317,6 +1433,7 @@ fn snippet_completions(
                         filter_range: 0..matching_prefix.len(),
                     },
                     icon_path: None,
+                    icon_color: None,
                     documentation: Some(CompletionDocumentation::SingleLineAndMultiLinePlainText {
                         single_line: snippet.name.clone().into(),
                         plain_text: snippet

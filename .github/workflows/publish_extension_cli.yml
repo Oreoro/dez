@@ -5,23 +5,29 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: '0'
 on:
-  push:
-    tags:
-    - extension-cli
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Describe why the extension CLI is being bumped and/or what changes are included.
+        required: true
+        type: string
+permissions:
+  contents: read
 jobs:
   publish_job:
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-16x32-ubuntu-2204
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: steps::setup_linux
       run: ./script/linux
     - name: publish_extension_cli::publish_job::build_extension_cli
@@ -31,11 +37,32 @@ jobs:
       env:
         DIGITALOCEAN_SPACES_ACCESS_KEY: ${{ secrets.DIGITALOCEAN_SPACES_ACCESS_KEY }}
         DIGITALOCEAN_SPACES_SECRET_KEY: ${{ secrets.DIGITALOCEAN_SPACES_SECRET_KEY }}
-  update_sha_in_dez:
+    - id: generate-token
+      name: steps::authenticate_as_zippy
+      uses: actions/create-github-app-token@f8d387b68d61c58ab83c6c016672934102569859
+      with:
+        app-id: ${{ secrets.ZED_ZIPPY_APP_ID }}
+        private-key: ${{ secrets.ZED_ZIPPY_APP_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+        permission-contents: write
+    - name: steps::update_tag
+      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+      with:
+        script: |
+          github.rest.git.updateRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'tags/extension-cli',
+              sha: context.sha,
+              force: true
+          })
+        github-token: ${{ steps.generate-token.outputs.token }}
+  update_sha_in_zed:
     needs:
     - publish_job
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-8x16-ubuntu-2204
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -43,24 +70,31 @@ jobs:
       with:
         app-id: ${{ secrets.ZED_ZIPPY_APP_ID }}
         private-key: ${{ secrets.ZED_ZIPPY_APP_PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: ${{ github.event.repository.name }}
+        permission-contents: write
+        permission-issues: write
+        permission-pull-requests: write
+        permission-workflows: write
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - id: short-sha
       name: publish_extension_cli::get_short_sha
       run: |
         echo "sha_short=$(echo "$GITHUB_SHA" | cut -c1-7)" >> "$GITHUB_OUTPUT"
-    - name: publish_extension_cli::update_sha_in_dez::replace_sha
+    - name: publish_extension_cli::update_sha_in_zed::replace_sha
       run: |
         sed -i "s/ZED_EXTENSION_CLI_SHA: &str = \"[a-f0-9]*\"/ZED_EXTENSION_CLI_SHA: \&str = \"$GITHUB_SHA\"/" \
             tooling/xtask/src/tasks/workflows/extension_tests.rs
-    - name: publish_extension_cli::update_sha_in_dez::regenerate_workflows
+    - name: publish_extension_cli::update_sha_in_zed::regenerate_workflows
       run: cargo xtask workflows
     - name: steps::create_pull_request
       uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725
@@ -69,13 +103,15 @@ jobs:
         body: |
           This PR bumps the extension CLI version used in the extension workflows to `${{ github.sha }}`.
 
+          ${{ inputs.message }}
+
           Release Notes:
 
           - N/A
         commit-message: 'extension_ci: Bump extension CLI version to `${{ steps.short-sha.outputs.sha_short }}`'
         branch: update-extension-cli-sha
-        committer: dez-zippy[bot] <234243425+dez-zippy[bot]@users.noreply.github.com>
-        author: dez-zippy[bot] <234243425+dez-zippy[bot]@users.noreply.github.com>
+        committer: zed-zippy[bot] <234243425+zed-zippy[bot]@users.noreply.github.com>
+        author: zed-zippy[bot] <234243425+zed-zippy[bot]@users.noreply.github.com>
         base: main
         delete-branch: true
         token: ${{ steps.generate-token.outputs.token }}
@@ -84,8 +120,8 @@ jobs:
   update_sha_in_extensions:
     needs:
     - publish_job
-    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     steps:
     - id: generate-token
       name: steps::generate_token
@@ -93,8 +129,12 @@ jobs:
       with:
         app-id: ${{ secrets.ZED_ZIPPY_APP_ID }}
         private-key: ${{ secrets.ZED_ZIPPY_APP_PRIVATE_KEY }}
-        owner: zed-industries
+        owner: ${{ github.repository_owner }}
         repositories: extensions
+        permission-contents: write
+        permission-issues: write
+        permission-pull-requests: write
+        permission-workflows: write
     - id: short-sha
       name: publish_extension_cli::get_short_sha
       run: |
@@ -102,7 +142,7 @@ jobs:
     - name: publish_extension_cli::update_sha_in_extensions::checkout_extensions_repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
-        repository: zed-industries/extensions
+        repository: ${{ github.repository_owner }}/extensions
         token: ${{ steps.generate-token.outputs.token }}
     - name: publish_extension_cli::update_sha_in_extensions::replace_sha
       run: |
@@ -113,11 +153,13 @@ jobs:
       with:
         title: Bump extension CLI version to `${{ steps.short-sha.outputs.sha_short }}`
         body: |
-          This PR bumps the extension CLI version to https://github.com/zed-industries/zed/commit/${{ github.sha }}.
+          This PR bumps the extension CLI version to https://github.com/${{ github.repository }}/commit/${{ github.sha }}.
+
+          ${{ inputs.message }}
         commit-message: Bump extension CLI version to `${{ steps.short-sha.outputs.sha_short }}`
         branch: update-extension-cli-sha
-        committer: dez-zippy[bot] <234243425+dez-zippy[bot]@users.noreply.github.com>
-        author: dez-zippy[bot] <234243425+dez-zippy[bot]@users.noreply.github.com>
+        committer: zed-zippy[bot] <234243425+zed-zippy[bot]@users.noreply.github.com>
+        author: zed-zippy[bot] <234243425+zed-zippy[bot]@users.noreply.github.com>
         base: main
         delete-branch: true
         token: ${{ steps.generate-token.outputs.token }}

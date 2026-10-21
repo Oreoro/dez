@@ -66,7 +66,7 @@ pub struct ProjectTerminalSettingsContent {
 }
 
 #[with_fallible_options]
-#[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
+#[derive(Clone, Debug, PartialEq, Default, Serialize, JsonSchema, MergeFrom)]
 pub struct TerminalSettingsContent {
     #[serde(flatten)]
     pub project: ProjectTerminalSettingsContent,
@@ -124,8 +124,11 @@ pub struct TerminalSettingsContent {
     ///
     /// Default: true
     pub keep_selection_on_copy: Option<bool>,
-    /// Whether cmd-click (ctrl-click on Linux and Windows) opens hyperlinks
-    /// while the terminal application has enabled mouse reporting.
+    /// Whether cmd-click (ctrl-click on Linux and Windows) opens hyperlinks even
+    /// when the terminal application has enabled mouse reporting (e.g. vim with
+    /// mouse=a, htop). When false, these clicks are forwarded to the application
+    /// instead, and hyperlinks can still be opened with shift-cmd-click
+    /// (shift-ctrl-click).
     ///
     /// Default: true
     pub open_links_in_mouse_mode: Option<bool>,
@@ -134,6 +137,10 @@ pub struct TerminalSettingsContent {
     /// Default: true
     pub button: Option<bool>,
     pub dock: Option<TerminalDockPosition>,
+    /// Whether the terminal panel should open on startup.
+    ///
+    /// Default: false
+    pub starts_open: Option<bool>,
     /// Whether the terminal panel should use flexible (proportional) sizing.
     ///
     /// Default: true
@@ -141,13 +148,11 @@ pub struct TerminalSettingsContent {
     /// Default width when the terminal is docked to the left or right.
     ///
     /// Default: 640
-    #[serde(serialize_with = "crate::serialize_optional_f32_with_two_decimal_places")]
-    pub default_width: Option<f32>,
+    pub default_width: Option<crate::PixelSetting>,
     /// Default height when the terminal is docked to the bottom.
     ///
     /// Default: 320
-    #[serde(serialize_with = "crate::serialize_optional_f32_with_two_decimal_places")]
-    pub default_height: Option<f32>,
+    pub default_height: Option<crate::PixelSetting>,
     /// The maximum number of lines to keep in the scrollback history.
     /// Maximum allowed value is 100_000, all values above that will be treated as 100_000.
     /// 0 disables the scrolling.
@@ -188,21 +193,19 @@ pub struct TerminalSettingsContent {
     ///
     /// Default: "system"
     pub bell: Option<TerminalBell>,
-    /// Whether terminals opened on an SSH remote should use their own dedicated
-    /// SSH connection instead of sharing the multiplexed ControlMaster connection
-    /// used by the rest of the project (file sync, LSP, agents).
-    ///
-    /// The shared connection multiplexes every channel over a single TCP stream,
-    /// so bulk project traffic can head-of-line-block interactive keystrokes and
-    /// make typing feel laggy. A dedicated connection avoids that contention at
-    /// the cost of an extra connection (and a re-authentication, which may prompt
-    /// if the host does not use key/agent-based auth).
-    ///
-    /// No effect on local, WSL, or Docker terminals.
-    ///
-    /// Default: false
-    pub dedicated_ssh_connection: Option<bool>,
 }
+
+crate::fallible_options::flattened_deserialize!(TerminalSettingsContent {
+    sections: { project },
+    options: {
+        font_size, font_family, font_fallbacks, line_height, font_features, font_weight,
+        cursor_shape, blinking, alternate_scroll, option_as_meta, copy_on_select,
+        keep_selection_on_copy, open_links_in_mouse_mode, button, dock, starts_open, flexible,
+        default_width, default_height, max_scroll_history_lines, scroll_multiplier, toolbar,
+        scrollbar, minimum_contrast, show_count_badge, bell,
+    },
+    defaults: {},
+});
 
 /// Shell configuration to open the terminal with.
 #[derive(
@@ -413,7 +416,7 @@ pub struct TerminalToolbarContent {
     /// The shell running in the terminal needs to be configured to emit the title.
     /// Example: `echo -e "\e]2;New Title\007";`
     ///
-    /// Default: true
+    /// Default: false
     pub breadcrumbs: Option<bool>,
 }
 
@@ -523,7 +526,6 @@ pub enum PathHyperlinkRegex {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum TerminalDockPosition {
-    Center,
     Left,
     Bottom,
     Right,

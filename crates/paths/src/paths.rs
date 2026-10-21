@@ -1,4 +1,4 @@
-//! Paths to locations used by dez.
+//! Paths to locations used by Zed.
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -11,14 +11,51 @@ use util::rel_path::RelPath;
 /// A default editorconfig file name to use when resolving project settings.
 pub const EDITORCONFIG_NAME: &str = ".editorconfig";
 
-/// The application name, used to derive platform-specific data, config, cache,
-/// and state directory paths.
-///
-/// Forks should change this to avoid colliding with dez's user data.
-pub const APP_NAME: &str = "dez";
+/// The user-facing application name.
+pub const APP_NAME: &str = "Dez";
 
-/// Lowercased form of [`APP_NAME`], for use in XDG-style paths on
-/// Linux/FreeBSD and the macOS `~/.config` fallback.
+/// Directory name used for user data during the Dez v0.0.1 transition.
+///
+/// Keep this on the previous Superzed identity until a transactional migration
+/// can move settings, databases, extensions, and cached credentials without
+/// risking a seemingly empty first launch.
+pub const APP_STORAGE_NAME: &str = "Superzed";
+
+/// Directory name used for user configuration.
+///
+/// Configuration is deliberately separate from the legacy data directory so
+/// that the product-facing `~/.config/dez` path is authoritative. Data keeps
+/// using [`APP_STORAGE_NAME`] until its transactional migration lands.
+pub const APP_CONFIG_NAME: &str = "Dez";
+
+/// Lowercased form of [`APP_STORAGE_NAME`] for XDG-style paths.
+pub const APP_STORAGE_NAME_LOWERCASE: &str = "superzed";
+
+/// Lowercased form of [`APP_CONFIG_NAME`] for XDG-style paths.
+pub const APP_CONFIG_NAME_LOWERCASE: &str = "dez";
+const _: () = assert!(
+    APP_STORAGE_NAME_LOWERCASE
+        .as_bytes()
+        .eq_ignore_ascii_case(APP_STORAGE_NAME.as_bytes()),
+    "APP_STORAGE_NAME_LOWERCASE must match APP_STORAGE_NAME",
+);
+const _: () = assert!(
+    APP_CONFIG_NAME_LOWERCASE
+        .as_bytes()
+        .eq_ignore_ascii_case(APP_CONFIG_NAME.as_bytes()),
+    "APP_CONFIG_NAME_LOWERCASE must match APP_CONFIG_NAME",
+);
+
+/// Schema namespace for the Preview 2 database.
+///
+/// Preview 2 and newer Dez builds previously shared `db/0-preview`. When the
+/// newer build advanced migrations first, Preview 2 saw a migration table that
+/// claimed columns existed while the physical schema did not, producing
+/// "no such column" failures. A separate namespace gives each product line a
+/// single schema owner and keeps the old database intact for recovery.
+pub const DB_SCHEMA_NAMESPACE: &str = "preview-2-v0.6";
+
+/// Lowercased form of [`APP_NAME`], used for executable identity.
 pub const APP_NAME_LOWERCASE: &str = {
     assert!(!APP_NAME.is_empty(), "APP_NAME must not be empty");
     assert!(APP_NAME.as_bytes().is_ascii(), "APP_NAME must be ASCII");
@@ -53,53 +90,30 @@ static CUSTOM_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// The resolved data directory, combining custom override or platform defaults.
 /// This is set once and cached for subsequent calls.
-/// On macOS, this is `~/Library/Application Support/dez`.
-/// On Linux/FreeBSD, this is `$XDG_DATA_HOME/dez`.
-/// On Windows, this is `%LOCALAPPDATA%\dez`.
+/// On macOS, this is `~/Library/Application Support/Zed`.
+/// On Linux/FreeBSD, this is `$XDG_DATA_HOME/zed`.
+/// On Windows, this is `%LOCALAPPDATA%\Zed`.
 static CURRENT_DATA_DIR: OnceLock<PathBuf> = OnceLock::new();
 
 /// The resolved config directory, combining custom override or platform defaults.
 /// This is set once and cached for subsequent calls.
-/// On macOS, this is `~/.config/dez`.
-/// On Linux/FreeBSD, this is `$XDG_CONFIG_HOME/dez`.
-/// On Windows, this is `%APPDATA%\dez`.
+/// On macOS, this is `~/.config/zed`.
+/// On Linux/FreeBSD, this is `$XDG_CONFIG_HOME/zed`.
+/// On Windows, this is `%APPDATA%\Zed`.
 static CONFIG_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-/// The release channel this build was compiled for, read directly from the
-/// binary crate's `RELEASE_CHANNEL` file so `paths` does not depend on
-/// `release_channel`.
-const BUILD_CHANNEL: &str = include_str!("../../dez/RELEASE_CHANNEL");
-
-/// Returns the storage-directory suffix for this build's release channel.
-///
-/// The channel comes from `ZED_RELEASE_CHANNEL` when set, mirroring the release
-/// tooling, and otherwise from the compiled-in `RELEASE_CHANNEL`. Stable builds
-/// keep the unsuffixed directory; other channels append their name so parallel
-/// installations can be told apart.
-pub fn storage_channel_suffix() -> Option<String> {
-    let channel =
-        env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| BUILD_CHANNEL.trim().to_string());
-    match channel.as_str() {
-        "stable" | "" => None,
-        _ => Some(channel),
-    }
-}
-
-/// Returns the relative path to the dez_server directory on the ssh host.
-///
-/// Deliberately diverges from upstream Zed's `.zed_server` so that a host used by both
-/// Zed and dez doesn't have two unrelated daemons sharing one socket/binary directory.
+/// Returns the relative path to the zed_server directory on the ssh host.
 pub fn remote_server_dir_relative() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".dez_server").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".zed_server").unwrap());
     *CACHED
 }
 
 // Remove this once 223 goes stable
-/// Returns the relative path to the dez_wsl_server directory on the wsl host.
+/// Returns the relative path to the zed_wsl_server directory on the wsl host.
 pub fn remote_wsl_server_dir_relative() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".dez_wsl_server").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".zed_wsl_server").unwrap());
     *CACHED
 }
 
@@ -141,7 +155,7 @@ pub fn set_custom_data_dir(dir: &str) -> &'static PathBuf {
     })
 }
 
-/// Returns the path to the configuration directory used by dez.
+/// Returns the path to the configuration directory used by Zed.
 pub fn config_dir() -> &'static PathBuf {
     CONFIG_DIR.get_or_init(|| {
         if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
@@ -149,21 +163,42 @@ pub fn config_dir() -> &'static PathBuf {
         } else if cfg!(target_os = "windows") {
             dirs::config_dir()
                 .expect("failed to determine RoamingAppData directory")
-                .join(APP_NAME)
+                .join(APP_CONFIG_NAME)
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             if let Ok(flatpak_xdg_config) = std::env::var("FLATPAK_XDG_CONFIG_HOME") {
                 flatpak_xdg_config.into()
             } else {
                 dirs::config_dir().expect("failed to determine XDG_CONFIG_HOME directory")
             }
-            .join(APP_NAME_LOWERCASE)
+            .join(APP_CONFIG_NAME_LOWERCASE)
         } else {
-            home_dir().join(".config").join(APP_NAME_LOWERCASE)
+            home_dir().join(".config").join(APP_CONFIG_NAME_LOWERCASE)
         }
     })
 }
 
-/// Returns the path to the data directory used by dez.
+/// Returns the legacy configuration directory from before the config/data split.
+///
+/// Used once at startup to copy user configuration into [`config_dir`] without
+/// overwriting files the user has already created there.
+pub fn legacy_config_dir() -> PathBuf {
+    if cfg!(target_os = "windows") {
+        dirs::config_dir()
+            .expect("failed to determine RoamingAppData directory")
+            .join(APP_STORAGE_NAME)
+    } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
+        if let Ok(flatpak_xdg_config) = std::env::var("FLATPAK_XDG_CONFIG_HOME") {
+            PathBuf::from(flatpak_xdg_config)
+        } else {
+            dirs::config_dir().expect("failed to determine XDG_CONFIG_HOME directory")
+        }
+        .join(APP_STORAGE_NAME_LOWERCASE)
+    } else {
+        home_dir().join(".config").join(APP_STORAGE_NAME_LOWERCASE)
+    }
+}
+
+/// Returns the path to the data directory used by Zed.
 pub fn data_dir() -> &'static PathBuf {
     CURRENT_DATA_DIR.get_or_init(|| {
         if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
@@ -171,34 +206,32 @@ pub fn data_dir() -> &'static PathBuf {
         } else if cfg!(target_os = "macos") {
             home_dir()
                 .join("Library/Application Support")
-                .join(APP_NAME)
+                .join(APP_STORAGE_NAME)
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             if let Ok(flatpak_xdg_data) = std::env::var("FLATPAK_XDG_DATA_HOME") {
                 flatpak_xdg_data.into()
             } else {
                 dirs::data_local_dir().expect("failed to determine XDG_DATA_HOME directory")
             }
-            .join(APP_NAME_LOWERCASE)
+            .join(APP_STORAGE_NAME_LOWERCASE)
         } else if cfg!(target_os = "windows") {
             dirs::data_local_dir()
                 .expect("failed to determine LocalAppData directory")
-                .join(APP_NAME)
+                .join(APP_STORAGE_NAME)
         } else {
             config_dir().clone() // Fallback
         }
     })
 }
 
-pub fn agent_artifact_cache_dir() -> &'static PathBuf {
-    static AGENT_ARTIFACT_CACHE_DIR: OnceLock<PathBuf> = OnceLock::new();
-    AGENT_ARTIFACT_CACHE_DIR.get_or_init(|| data_dir().join("agent_artifacts"))
-}
-
 pub fn state_dir() -> &'static PathBuf {
     static STATE_DIR: OnceLock<PathBuf> = OnceLock::new();
     STATE_DIR.get_or_init(|| {
         if cfg!(target_os = "macos") {
-            return home_dir().join(".local").join("state").join(APP_NAME);
+            return home_dir()
+                .join(".local")
+                .join("state")
+                .join(APP_STORAGE_NAME);
         }
 
         if cfg!(any(target_os = "linux", target_os = "freebsd")) {
@@ -207,30 +240,30 @@ pub fn state_dir() -> &'static PathBuf {
             } else {
                 dirs::state_dir().expect("failed to determine XDG_STATE_HOME directory")
             }
-            .join(APP_NAME_LOWERCASE);
+            .join(APP_STORAGE_NAME_LOWERCASE);
         } else {
             // Windows
             return dirs::data_local_dir()
                 .expect("failed to determine LocalAppData directory")
-                .join(APP_NAME);
+                .join(APP_STORAGE_NAME);
         }
     })
 }
 
-/// Returns the path to the temp directory used by dez.
+/// Returns the path to the temp directory used by Zed.
 pub fn temp_dir() -> &'static PathBuf {
     static TEMP_DIR: OnceLock<PathBuf> = OnceLock::new();
     TEMP_DIR.get_or_init(|| {
         if cfg!(target_os = "macos") {
             return dirs::cache_dir()
                 .expect("failed to determine cachesDirectory directory")
-                .join(APP_NAME);
+                .join(APP_STORAGE_NAME);
         }
 
         if cfg!(target_os = "windows") {
             return dirs::cache_dir()
                 .expect("failed to determine LocalAppData directory")
-                .join(APP_NAME);
+                .join(APP_STORAGE_NAME);
         }
 
         if cfg!(any(target_os = "linux", target_os = "freebsd")) {
@@ -239,10 +272,10 @@ pub fn temp_dir() -> &'static PathBuf {
             } else {
                 dirs::cache_dir().expect("failed to determine XDG_CACHE_HOME directory")
             }
-            .join(APP_NAME_LOWERCASE);
+            .join(APP_STORAGE_NAME_LOWERCASE);
         }
 
-        home_dir().join(".cache").join(APP_NAME_LOWERCASE)
+        home_dir().join(".cache").join(APP_STORAGE_NAME_LOWERCASE)
     })
 }
 
@@ -257,35 +290,38 @@ pub fn logs_dir() -> &'static PathBuf {
     static LOGS_DIR: OnceLock<PathBuf> = OnceLock::new();
     LOGS_DIR.get_or_init(|| {
         if cfg!(target_os = "macos") {
-            home_dir().join("Library/Logs").join(APP_NAME)
+            home_dir().join("Library/Logs").join(APP_STORAGE_NAME)
         } else {
             data_dir().join("logs")
         }
     })
 }
 
-/// Returns the path to the dez server directory on this SSH host.
+/// Returns the path to the Zed server directory on this SSH host.
 pub fn remote_server_state_dir() -> &'static PathBuf {
     static REMOTE_SERVER_STATE: OnceLock<PathBuf> = OnceLock::new();
     REMOTE_SERVER_STATE.get_or_init(|| data_dir().join("server_state"))
 }
 
-/// Returns the path to the `dez.log` file.
+/// Returns the path to the current application log file.
 pub fn log_file() -> &'static PathBuf {
     static LOG_FILE: OnceLock<PathBuf> = OnceLock::new();
-    LOG_FILE.get_or_init(|| logs_dir().join(format!("{}.log", APP_NAME)))
+    LOG_FILE.get_or_init(|| logs_dir().join(format!("{}.log", APP_STORAGE_NAME)))
 }
 
-/// Returns the path to the `dez.log.old` file.
+/// Returns the path to the previous application log file.
 pub fn old_log_file() -> &'static PathBuf {
     static OLD_LOG_FILE: OnceLock<PathBuf> = OnceLock::new();
-    OLD_LOG_FILE.get_or_init(|| logs_dir().join(format!("{}.log.old", APP_NAME)))
+    OLD_LOG_FILE.get_or_init(|| logs_dir().join(format!("{}.log.old", APP_STORAGE_NAME)))
 }
 
 /// Returns the path to the database directory.
+///
+/// The schema namespace keeps Preview 2 databases separate from newer Dez
+/// builds that share the legacy data directory.
 pub fn database_dir() -> &'static PathBuf {
     static DATABASE_DIR: OnceLock<PathBuf> = OnceLock::new();
-    DATABASE_DIR.get_or_init(|| data_dir().join("db"))
+    DATABASE_DIR.get_or_init(|| data_dir().join("db").join(DB_SCHEMA_NAMESPACE))
 }
 
 /// Returns the path to the crashes directory, if it exists for the current platform.
@@ -347,7 +383,7 @@ pub fn debug_scenarios_file() -> &'static PathBuf {
 /// Returns the path to the user-global `AGENTS.md` file.
 ///
 /// This file holds personal agent instructions that apply to every project the
-/// user opens, and is loaded into the native dez agent's system prompt.
+/// user opens, and is loaded into the native Zed agent's system prompt.
 pub fn agents_file() -> &'static PathBuf {
     static AGENTS_FILE: OnceLock<PathBuf> = OnceLock::new();
     AGENTS_FILE.get_or_init(|| config_dir().join("AGENTS.md"))
@@ -365,10 +401,10 @@ pub fn agents_file() -> &'static PathBuf {
 /// readability in announcement copy.
 #[cfg(target_os = "windows")]
 pub const GLOBAL_AGENTS_FILE_DISPLAY: &str =
-    const_format::concatcp!("%APPDATA%\\", APP_NAME, "\\AGENTS.md");
+    const_format::concatcp!("%APPDATA%\\", APP_CONFIG_NAME, "\\AGENTS.md");
 #[cfg(not(target_os = "windows"))]
 pub const GLOBAL_AGENTS_FILE_DISPLAY: &str =
-    const_format::concatcp!("~/.config/", APP_NAME_LOWERCASE, "/AGENTS.md");
+    const_format::concatcp!("~/.config/", APP_CONFIG_NAME_LOWERCASE, "/AGENTS.md");
 
 /// Returns the path to the extensions directory.
 ///
@@ -428,7 +464,7 @@ pub fn prompts_dir() -> &'static PathBuf {
 ///
 /// # Arguments
 ///
-/// * `dev_mode` - If true, assumes the current working directory is the dez repository.
+/// * `dev_mode` - If true, assumes the current working directory is the Zed repository.
 pub fn prompt_overrides_dir(repo_path: Option<&Path>) -> PathBuf {
     if let Some(path) = repo_path {
         let dev_path = path.join("assets").join("prompts");
@@ -465,7 +501,7 @@ pub fn embeddings_dir() -> &'static PathBuf {
 
 /// Returns the path to the languages directory.
 ///
-/// This is where language servers are downloaded to for languages built-in to dez.
+/// This is where language servers are downloaded to for languages built-in to Zed.
 pub fn languages_dir() -> &'static PathBuf {
     static LANGUAGES_DIR: OnceLock<PathBuf> = OnceLock::new();
     LANGUAGES_DIR.get_or_init(|| data_dir().join("languages"))
@@ -473,7 +509,7 @@ pub fn languages_dir() -> &'static PathBuf {
 
 /// Returns the path to the debug adapters directory
 ///
-/// This is where debug adapters are downloaded to for DAPs that are built-in to dez.
+/// This is where debug adapters are downloaded to for DAPs that are built-in to Zed.
 pub fn debug_adapters_dir() -> &'static PathBuf {
     static DEBUG_ADAPTERS_DIR: OnceLock<PathBuf> = OnceLock::new();
     DEBUG_ADAPTERS_DIR.get_or_init(|| data_dir().join("debug_adapters"))
@@ -511,9 +547,9 @@ pub fn devcontainer_dir() -> &'static PathBuf {
     DEVCONTAINER_DIR.get_or_init(|| data_dir().join("devcontainer"))
 }
 
-/// Returns the relative path to a `.dez` folder within a project.
+/// Returns the relative path to a `.zed` folder within a project.
 pub fn local_settings_folder_name() -> &'static str {
-    ".dez"
+    ".zed"
 }
 
 /// Returns the relative path to a `.vscode` folder within a project.
@@ -524,21 +560,21 @@ pub fn local_vscode_folder_name() -> &'static str {
 /// Returns the relative path to a `settings.json` file within a project.
 pub fn local_settings_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".dez/settings.json").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".zed/settings.json").unwrap());
     *CACHED
 }
 
 /// Returns the relative path to a `tasks.json` file within a project.
 pub fn local_tasks_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".dez/tasks.json").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".zed/tasks.json").unwrap());
     *CACHED
 }
 
 /// Returns the relative path to a `.vscode/tasks.json` file within a project.
 pub fn local_vscode_tasks_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".vscode/tasks.json").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".vscode/tasks.json").unwrap());
     *CACHED
 }
 
@@ -551,17 +587,17 @@ pub fn task_file_name() -> &'static str {
 }
 
 /// Returns the relative path to a `debug.json` file within a project.
-/// .dez/debug.json
+/// .zed/debug.json
 pub fn local_debug_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".dez/debug.json").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".zed/debug.json").unwrap());
     *CACHED
 }
 
 /// Returns the relative path to a `.vscode/launch.json` file within a project.
 pub fn local_vscode_launch_file_relative_path() -> &'static RelPath {
     static CACHED: LazyLock<&'static RelPath> =
-        LazyLock::new(|| RelPath::unix(".vscode/launch.json").unwrap());
+        LazyLock::new(|| RelPath::from_unix_str(".vscode/launch.json").unwrap());
     *CACHED
 }
 

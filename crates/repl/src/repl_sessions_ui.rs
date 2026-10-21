@@ -109,7 +109,13 @@ pub fn init(cx: &mut App) {
             cx.defer_in(window, |editor, _window, cx| {
                 let project = editor.project().cloned();
 
-                let is_valid_project = project.is_some();
+                let is_valid_project = project
+                    .as_ref()
+                    .map(|project| {
+                        let p = project.read(cx);
+                        !p.is_via_collab()
+                    })
+                    .unwrap_or(false);
 
                 if !is_valid_project {
                     return;
@@ -204,6 +210,10 @@ impl Item for ReplSessionsPage {
         "REPL Sessions".into()
     }
 
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("REPL Session Started")
+    }
+
     fn show_toolbar(&self) -> bool {
         false
     }
@@ -228,7 +238,7 @@ impl Render for ReplSessionsPage {
             )
         });
 
-        // When there are no kernel specifications, show a link to the dez docs explaining how to
+        // When there are no kernel specifications, show a link to the Zed docs explaining how to
         // install kernels. It can be assumed they don't have a running kernel if we have no
         // specifications.
         if kernel_specifications.is_empty() {
@@ -242,10 +252,10 @@ impl Render for ReplSessionsPage {
                             .style(ButtonStyle::Filled)
                             .size(ButtonSize::Large)
                             .layer(ElevationIndex::ModalSurface)
-                            .child(Label::new(localization::text(cx, "repl-install-kernels")))
+                            .child(Label::new("Install Kernels"))
                             .on_click(move |_, _, cx| {
                                 cx.open_url(
-                                    "https://github.com/Oreoro/dez/blob/main/docs/src/repl.md#language-specific-instructions",
+                                    "https://zed.dev/docs/repl#language-specific-instructions",
                                 )
                             }),
                     ),
@@ -388,10 +398,11 @@ mod tests {
             Language::new(
                 LanguageConfig {
                     name: "Python".into(),
-                    matcher: LanguageMatcher {
+                    matcher: (LanguageMatcher {
                         path_suffixes: vec!["py".to_string()],
                         ..Default::default()
-                    },
+                    })
+                    .into(),
                     ..Default::default()
                 },
                 None,

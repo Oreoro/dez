@@ -1,3 +1,4 @@
+use futures::FutureExt as _;
 use gpui::{App, SharedString, UpdateGlobal};
 use node_runtime::NodeRuntime;
 use project::Fs;
@@ -41,11 +42,12 @@ pub static LANGUAGE_GIT_COMMIT: std::sync::LazyLock<Arc<Language>> =
             LanguageConfig {
                 name: "Git Commit".into(),
                 soft_wrap: Some(language::SoftWrap::EditorWidth),
-                matcher: LanguageMatcher {
+                matcher: (LanguageMatcher {
                     path_suffixes: vec!["COMMIT_EDITMSG".to_owned()],
                     first_line_pattern: None,
                     ..LanguageMatcher::default()
-                },
+                })
+                .into(),
                 line_comments: vec![Arc::from("#")],
                 ..LanguageConfig::default()
             },
@@ -214,7 +216,7 @@ pub fn init(languages: Arc<LanguageRegistry>, fs: Arc<dyn Fs>, node: NodeRuntime
             ..Default::default()
         },
         LanguageInfo {
-            name: "dez-keybind-context",
+            name: "zed-keybind-context",
             ..Default::default()
         },
     ];
@@ -362,13 +364,20 @@ fn register_language(
         config.hidden,
         manifest_name.clone(),
         Arc::new(move || {
-            Ok(LoadedLanguage {
-                config: config.clone(),
-                queries: grammars::load_queries(name),
-                context_provider: context.clone(),
-                toolchain_provider: toolchain.clone(),
-                manifest_name: manifest_name.clone(),
-            })
+            let config = config.clone();
+            let context = context.clone();
+            let toolchain = toolchain.clone();
+            let manifest_name = manifest_name.clone();
+            async move {
+                Ok(LoadedLanguage {
+                    config,
+                    queries: grammars::load_queries(name),
+                    context_provider: context,
+                    toolchain_provider: toolchain,
+                    manifest_name,
+                })
+            }
+            .boxed()
         }),
     );
 }
@@ -385,90 +394,4 @@ pub fn language(name: &str, grammar: tree_sitter::Language) -> Arc<Language> {
 fn load_config(name: &str) -> LanguageConfig {
     let grammars_loaded = cfg!(any(feature = "load-grammars", test));
     grammars::load_config_for_feature(name, grammars_loaded)
-}
-
-#[cfg(test)]
-mod test_support {
-    use std::{
-        ffi::OsStr,
-        path::{Path, PathBuf},
-        sync::Arc,
-    };
-
-    use anyhow::Result;
-    use async_trait::async_trait;
-    use collections::HashMap;
-    use gpui::App;
-    use http_client::{BlockedHttpClient, HttpClient};
-    use language::{BinaryStatus, LanguageServerName, LspAdapter, LspAdapterDelegate};
-    use lsp::LanguageServerBinary;
-    use semver::Version;
-    use settings::WorktreeId;
-
-    pub(super) struct TestLspAdapterDelegate {
-        worktree_root: PathBuf,
-    }
-
-    impl TestLspAdapterDelegate {
-        pub(super) fn new(worktree_root: PathBuf) -> Arc<dyn LspAdapterDelegate> {
-            Arc::new(Self { worktree_root })
-        }
-    }
-
-    #[async_trait]
-    impl LspAdapterDelegate for TestLspAdapterDelegate {
-        fn show_notification(&self, _message: &str, _cx: &mut App) {}
-
-        fn http_client(&self) -> Arc<dyn HttpClient> {
-            Arc::new(BlockedHttpClient)
-        }
-
-        fn worktree_id(&self) -> WorktreeId {
-            WorktreeId::from_usize(1)
-        }
-
-        fn worktree_root_path(&self) -> &Path {
-            &self.worktree_root
-        }
-
-        fn resolve_relative_path(&self, path: PathBuf) -> PathBuf {
-            self.worktree_root.join(path)
-        }
-
-        fn update_status(&self, _language: LanguageServerName, _status: BinaryStatus) {}
-
-        fn registered_lsp_adapters(&self) -> Vec<Arc<dyn LspAdapter>> {
-            Vec::new()
-        }
-
-        async fn language_server_download_dir(
-            &self,
-            _name: &LanguageServerName,
-        ) -> Option<Arc<Path>> {
-            None
-        }
-
-        async fn npm_package_installed_version(
-            &self,
-            _package_name: &str,
-        ) -> Result<Option<(PathBuf, Version)>> {
-            Ok(None)
-        }
-
-        async fn which(&self, _command: &OsStr) -> Option<PathBuf> {
-            None
-        }
-
-        async fn shell_env(&self) -> HashMap<String, String> {
-            HashMap::default()
-        }
-
-        async fn read_text_file(&self, _path: &util::rel_path::RelPath) -> Result<String> {
-            anyhow::bail!("test project does not provide this file")
-        }
-
-        async fn try_exec(&self, _binary: LanguageServerBinary) -> Result<()> {
-            Ok(())
-        }
-    }
 }

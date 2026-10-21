@@ -47,7 +47,7 @@ impl ActiveToolchain {
         Self {
             active_toolchain: None,
             active_buffer: None,
-            term: localization::text(cx, "toolchain-name"),
+            term: SharedString::new_static("Toolchain"),
             workspace: workspace.weak_handle(),
 
             _update_toolchain_task: Self::spawn_tracker_task(window, cx),
@@ -240,6 +240,7 @@ impl Render for ActiveToolchain {
         div().child(
             Button::new("change-toolchain", active_toolchain.name.clone())
                 .label_size(LabelSize::Small)
+                .tab_index(0isize)
                 .on_click(cx.listener(|this, _, window, cx| {
                     if let Some(workspace) = this.workspace.upgrade() {
                         workspace.update(cx, |workspace, cx| {
@@ -247,11 +248,7 @@ impl Render for ActiveToolchain {
                         });
                     }
                 }))
-                .tooltip(Tooltip::text(localization::tr!(
-                    cx,
-                    "toolchain-select",
-                    term = self.term.to_string()
-                ))),
+                .tooltip(Tooltip::text(format!("Select {}", self.term))),
         )
     }
 }

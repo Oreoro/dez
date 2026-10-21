@@ -5,7 +5,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: '1'
   CARGO_INCREMENTAL: '0'
-  ZED_EXTENSION_CLI_SHA: ca0fd8d4e16e0e2687058552a9545625f00e0fb3
+  ZED_EXTENSION_CLI_SHA: 9ee3c503a4bbbc6b4a0f8a789acca4871d773223
   RUSTUP_TOOLCHAIN: stable
   CARGO_BUILD_TARGET: wasm32-wasip2
 on:
@@ -15,10 +15,12 @@ on:
         description: working-directory
         type: string
         default: .
+permissions:
+  contents: read
 jobs:
   orchestrate:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
@@ -70,17 +72,18 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.check_rust == 'true'
-    runs-on: namespace-profile-8x32-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: extension_tests::install_rust_target
       run: rustup target add wasm32-wasip2
     - id: get-package-name
@@ -97,7 +100,9 @@ jobs:
       env:
         PACKAGE_NAME: ${{ steps.get-package-name.outputs.package_name }}
     - name: steps::cargo_install_nextest
-      uses: taiki-e/install-action@921e2c9f7148d7ba14cd819f417db338f63e733c
+      uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9
+      with:
+        tool: nextest
     - name: extension_tests::run_nextest
       run: 'cargo nextest run -p "$PACKAGE_NAME" --no-fail-fast --no-tests=warn --target "$(rustc -vV | sed -n ''s|host: ||p'')"'
       env:
@@ -112,47 +117,46 @@ jobs:
     needs:
     - orchestrate
     if: needs.orchestrate.outputs.check_extension == 'true'
-    runs-on: namespace-profile-8x32-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
       with:
         clean: false
         fetch-depth: 0
-    - id: cache-dez-extension-cli
-      name: extension_tests::cache_dez_extension_cli
+    - id: cache-zed-extension-cli
+      name: extension_tests::cache_zed_extension_cli
       uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        path: dez-extension
-        key: dez-extension-${{ env.ZED_EXTENSION_CLI_SHA }}
-    - name: extension_tests::download_dez_extension_cli
-      if: steps.cache-dez-extension-cli.outputs.cache-hit != 'true'
+        path: zed-extension
+        key: zed-extension-${{ env.ZED_EXTENSION_CLI_SHA }}
+    - name: extension_tests::download_zed_extension_cli
+      if: steps.cache-zed-extension-cli.outputs.cache-hit != 'true'
       run: |
-        wget --quiet "https://dez-extension-cli.nyc3.digitaloceanspaces.com/$ZED_EXTENSION_CLI_SHA/x86_64-unknown-linux-gnu/dez-extension" -O "$GITHUB_WORKSPACE/dez-extension"
-        chmod +x "$GITHUB_WORKSPACE/dez-extension"
+        wget --quiet "https://zed-extension-cli.nyc3.digitaloceanspaces.com/$ZED_EXTENSION_CLI_SHA/x86_64-unknown-linux-gnu/zed-extension" -O "$GITHUB_WORKSPACE/zed-extension"
+        chmod +x "$GITHUB_WORKSPACE/zed-extension"
     - name: steps::cache_rust_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: rust
         path: ~/.rustup
+        key: dez-rust-deps-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: dez-rust-deps-${{ runner.os }}-
     - name: extension_tests::check
       run: |
         mkdir -p /tmp/ext-scratch
         mkdir -p /tmp/ext-output
-        "$GITHUB_WORKSPACE/dez-extension" --source-dir . --scratch-dir /tmp/ext-scratch --output-dir /tmp/ext-output
+        "$GITHUB_WORKSPACE/zed-extension" --source-dir . --scratch-dir /tmp/ext-scratch --output-dir /tmp/ext-output
     - name: run_tests::fetch_ts_query_ls
-      uses: dsaltares/fetch-gh-release-asset@aa37ae5c44d3c9820bc12fe675e8670ecd93bd1c
-      with:
-        repo: ribru17/ts_query_ls
-        version: tags/v3.15.1
-        file: ts_query_ls-x86_64-unknown-linux-gnu.tar.gz
+      run: gh release download v3.15.1 --repo ribru17/ts_query_ls --pattern ts_query_ls-x86_64-unknown-linux-gnu.tar.gz --dir "$GITHUB_WORKSPACE"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: run_tests::run_ts_query_ls
       run: |-
         tar -xf "$GITHUB_WORKSPACE/ts_query_ls-x86_64-unknown-linux-gnu.tar.gz" -C "$GITHUB_WORKSPACE"
         "$GITHUB_WORKSPACE/ts_query_ls" format --check languages || {
             echo "Found unformatted queries, please format them with ts_query_ls."
             echo "For easy use, install the Tree-sitter query extension:"
-            echo "dez://extension/tree-sitter-query"
+            echo "zed://extension/tree-sitter-query"
             false
         }
     - id: compare-versions-check
@@ -176,9 +180,9 @@ jobs:
         echo "current_version=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
     - name: extension_tests::verify_version_did_not_change
       run: |
-        if [[ "$VERSION_CHANGED" == "true" && "$GITHUB_EVENT_NAME" == "pull_request" && "$PR_USER_LOGIN" != "dez-zippy[bot]" ]] ; then
+        if [[ "$VERSION_CHANGED" == "true" && "$GITHUB_EVENT_NAME" == "pull_request" && "$PR_USER_LOGIN" != "zed-zippy[bot]" ]] ; then
             echo "Version change detected in your change!"
-            echo "Version changes happen in separate PRs and will be performed by the dez-zippy bot"
+            echo "Version changes happen in separate PRs and will be performed by the zed-zippy bot"
             exit 42
         fi
       env:
@@ -195,7 +199,7 @@ jobs:
     - check_rust
     - check_extension
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && always()
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: run_tests::tests_pass
       run: |

@@ -379,6 +379,16 @@ pub struct InsertSnippet {
 }
 
 actions!(
+    debugger,
+    [
+        /// Runs program execution to the current cursor position.
+        RunToCursor,
+        /// Evaluates the selected text in the debugger context.
+        EvaluateSelectedText
+    ]
+);
+
+actions!(
     go_to_line,
     [
         /// Toggles the go to line dialog.
@@ -393,12 +403,6 @@ actions!(
         /// Toggles a block quote (`> `) prefix on the selected lines (or the
         /// current line) while in Markdown files.
         ToggleBlockQuote,
-        /// Displays the current Markdown editor with inline formatting.
-        ShowRendered,
-        /// Displays the current Markdown editor as source text.
-        ShowSource,
-        /// Toggles the current Markdown editor between rendered and source modes.
-        ToggleRendered,
     ]
 );
 
@@ -483,7 +487,7 @@ actions!(
         CopyFileName,
         /// Copies the file name without extension to the clipboard.
         CopyFileNameWithoutExtension,
-        /// Copies a permalink to the current line.
+        /// Copies a permalink to the current line or selection.
         CopyPermalinkToLine,
         /// Cuts selected text to the clipboard.
         Cut,
@@ -495,6 +499,8 @@ actions!(
         DeleteToEndOfLine,
         /// Diffs the text stored in the clipboard against the current selection.
         DiffClipboardWithSelection,
+        /// Displays names of all active cursors.
+        DisplayCursorNames,
         /// Duplicates the current line below.
         DuplicateLineDown,
         /// Duplicates the current line above.
@@ -572,8 +578,6 @@ actions!(
         /// edits outside the selected ranges are discarded. External command formatters do not
         /// support range formatting and are skipped.
         FormatSelections,
-        /// Goes to the declaration of the symbol at cursor.
-        GoToDeclaration,
         /// Goes to declaration in a split pane.
         GoToDeclarationSplit,
         /// Goes to definition in a split pane.
@@ -602,8 +606,6 @@ actions!(
         GoToNextReference,
         /// Goes to the previous reference to the symbol under the cursor.
         GoToPreviousReference,
-        /// Goes to the type definition of the symbol at cursor.
-        GoToTypeDefinition,
         /// Goes to type definition in a split pane.
         GoToTypeDefinitionSplit,
         /// Goes to the next document highlight.
@@ -644,14 +646,29 @@ actions!(
         MoveToBeginning,
         /// Moves cursor to the enclosing bracket.
         MoveToEnclosingBracket,
+        /// Selects the content within the nearest enclosing delimiters
+        /// (brackets, braces, parentheses, or quotes), excluding the
+        /// delimiters.
+        /// Repeating the action expands the selection to the next enclosing
+        /// pair.
+        SelectInsideDelimiters,
+        /// Selects the nearest enclosing delimiters (brackets, braces,
+        /// parentheses, or quotes) together with the content between them.
+        /// Repeating the action expands the selection to the next enclosing
+        /// pair.
+        SelectAroundDelimiters,
         /// Moves cursor to the end of the document.
         MoveToEnd,
         /// Moves cursor to the end of the paragraph.
         MoveToEndOfParagraph,
+        /// Moves cursor to the start of the next comment paragraph.
+        MoveToNextCommentParagraph,
         /// Moves cursor to the end of the next subword.
         MoveToNextSubwordEnd,
         /// Moves cursor to the end of the next word.
         MoveToNextWordEnd,
+        /// Moves cursor to the start of the previous comment paragraph.
+        MoveToPreviousCommentParagraph,
         /// Moves cursor to the start of the previous subword.
         MoveToPreviousSubwordStart,
         /// Moves cursor to the start of the previous word.
@@ -694,7 +711,7 @@ actions!(
         OpenProposedChangesEditor,
         /// Opens documentation for the symbol at cursor.
         OpenDocs,
-        /// Opens a permalink to the current line.
+        /// Opens a permalink to the current line or selection.
         OpenPermalinkToLine,
         /// Opens the file whose name is selected in the editor.
         #[action(deprecated_aliases = ["editor::OpenFile"])]
@@ -835,14 +852,30 @@ actions!(
         Backtab,
         /// Toggles a bookmark at the current line.
         ToggleBookmark,
+        /// Toggles a bookmark at the current line, prompting for a label when adding one.
+        ToggleBookmarkWithLabel,
+        /// Edits the bookmark's label at the current line.
+        EditBookmark,
+        /// Toggles a breakpoint at the current line.
+        ToggleBreakpoint,
         /// Toggles the case of selected text.
         ToggleCase,
+        /// Disables the breakpoint at the current line.
+        DisableBreakpoint,
+        /// Enables the breakpoint at the current line.
+        EnableBreakpoint,
+        /// Edits the log message for a breakpoint.
+        EditLogBreakpoint,
         /// Toggles automatic signature help.
         ToggleAutoSignatureHelp,
         /// Toggles inline git blame display.
         ToggleGitBlameInline,
         /// Opens the git commit for the blame at cursor.
         OpenGitBlameCommit,
+        /// Opens a blame of the file at the revision of the blame entry at cursor.
+        BlameRevision,
+        /// Opens a blame of the file at the revision preceding the blame entry at cursor.
+        BlamePreviousRevision,
         /// Toggles the diagnostics panel.
         ToggleDiagnostics,
         /// Toggles indent guides display.
@@ -853,6 +886,8 @@ actions!(
         ToggleCodeLens,
         /// Toggles semantic highlights display.
         ToggleSemanticHighlights,
+        /// Toggles inline values display.
+        ToggleInlineValues,
         /// Toggles inline diagnostics display.
         ToggleInlineDiagnostics,
         /// Toggles edit prediction feature.
@@ -903,6 +938,8 @@ actions!(
         UnwrapSyntaxNode,
         /// Wraps selections in tag specified by language.
         WrapSelectionsInTag,
+        /// Wraps selections in an expanded Emmet abbreviation.
+        WrapWithAbbreviation,
         /// Aligns selections from different rows into the same column
         AlignSelections,
         /// Saves the current location to navigation history.
@@ -923,12 +960,34 @@ pub struct GoToDefinition {
     pub open_results_in: Option<OpenResultsIn>,
 }
 
+/// Goes to the declaration of the symbol at cursor.
+#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
+#[action(namespace = editor)]
+#[serde(deny_unknown_fields)]
+pub struct GoToDeclaration {
+    /// Where to show the declarations. Falls back to the `lsp_results_location`
+    /// setting when omitted. A single result is always opened directly.
+    #[serde(default)]
+    pub open_results_in: Option<OpenResultsIn>,
+}
+
 /// Goes to the implementation of the symbol at cursor.
 #[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
 #[action(namespace = editor)]
 #[serde(deny_unknown_fields)]
 pub struct GoToImplementation {
     /// Where to show the implementations. Falls back to the `lsp_results_location`
+    /// setting when omitted. A single result is always opened directly.
+    #[serde(default)]
+    pub open_results_in: Option<OpenResultsIn>,
+}
+
+/// Goes to the type definition of the symbol at cursor.
+#[derive(PartialEq, Clone, Default, Deserialize, JsonSchema, Action)]
+#[action(namespace = editor)]
+#[serde(deny_unknown_fields)]
+pub struct GoToTypeDefinition {
+    /// Where to show the definitions. Falls back to the `lsp_results_location`
     /// setting when omitted. A single result is always opened directly.
     #[serde(default)]
     pub open_results_in: Option<OpenResultsIn>,

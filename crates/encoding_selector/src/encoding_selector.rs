@@ -1,4 +1,6 @@
 mod active_buffer_encoding;
+mod canvas;
+
 pub use active_buffer_encoding::ActiveBufferEncoding;
 
 use editor::Editor;
@@ -6,12 +8,12 @@ use encoding_rs::Encoding;
 use fuzzy::{StringMatch, StringMatchCandidate, match_strings};
 use gpui::{
     App, AppContext, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable,
-    InteractiveElement, ParentElement, Render, Styled, Task, WeakEntity, Window, actions,
+    InteractiveElement, ParentElement, Render, Task, WeakEntity, Window, actions,
 };
 use language::Buffer;
 use picker::{Picker, PickerDelegate};
 use std::sync::Arc;
-use ui::{HighlightedLabel, ListItem, ListItemSpacing, Toggleable, v_flex};
+use ui::{HighlightedLabel, ListItem, Toggleable, v_flex};
 use util::ResultExt;
 use workspace::{ModalView, Toast, Workspace, notifications::NotificationId};
 
@@ -60,7 +62,7 @@ impl EncodingSelector {
             workspace.show_toast(
                 Toast::new(
                     NotificationId::unique::<EncodingSelector>(),
-                    localization::text(cx, "encoding-selector-save-first").to_string(),
+                    "Save file to change encoding",
                 ),
                 cx,
             );
@@ -70,7 +72,7 @@ impl EncodingSelector {
             workspace.show_toast(
                 Toast::new(
                     NotificationId::unique::<EncodingSelector>(),
-                    localization::text(cx, "encoding-selector-collaboration").to_string(),
+                    "Cannot change encoding during collaboration",
                 ),
                 cx,
             );
@@ -80,7 +82,7 @@ impl EncodingSelector {
             workspace.show_toast(
                 Toast::new(
                     NotificationId::unique::<EncodingSelector>(),
-                    localization::text(cx, "encoding-selector-remote").to_string(),
+                    "Cannot change encoding of remote server file",
                 ),
                 cx,
             );
@@ -95,7 +97,12 @@ impl EncodingSelector {
 
     fn new(buffer: Entity<Buffer>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let delegate = EncodingSelectorDelegate::new(cx.entity().downgrade(), buffer);
-        let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx));
+        let picker = cx.new(|cx| {
+            Picker::uniform_list(delegate, window, cx)
+                .surface_density(canvas::encoding_picker_density(cx))
+                .surface_radius(canvas::encoding_picker_radius(cx))
+                .surface_contrast(canvas::encoding_picker_contrast(cx))
+        });
         Self { picker }
     }
 }
@@ -104,7 +111,6 @@ impl Render for EncodingSelector {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl gpui::IntoElement {
         v_flex()
             .key_context("EncodingSelector")
-            .w(gpui::rems(34.))
             .child(self.picker.clone())
     }
 }
@@ -150,12 +156,7 @@ impl EncodingSelectorDelegate {
         let current_encoding = self.buffer.read(cx).encoding();
 
         if candidate_encoding.name() == current_encoding.name() {
-            localization::tr!(
-                cx,
-                "encoding-selector-current",
-                encoding = candidate_encoding.name(),
-            )
-            .to_string()
+            format!("{} (current)", candidate_encoding.name())
         } else {
             candidate_encoding.name().to_string()
         }
@@ -226,8 +227,12 @@ fn available_encodings() -> Vec<&'static Encoding> {
 impl PickerDelegate for EncodingSelectorDelegate {
     type ListItem = ListItem;
 
-    fn placeholder_text(&self, _window: &mut Window, cx: &mut App) -> Arc<str> {
-        localization::text(cx, "encoding-selector-placeholder").into()
+    fn name() -> &'static str {
+        "encoding selector"
+    }
+
+    fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
+        "Reopen with encoding...".into()
     }
 
     fn match_count(&self) -> usize {
@@ -307,7 +312,7 @@ impl PickerDelegate for EncodingSelectorDelegate {
     fn dismissed(&mut self, _: &mut Window, cx: &mut Context<Picker<Self>>) {
         self.encoding_selector
             .update(cx, |_, cx| cx.emit(DismissEvent))
-            .log_err();
+            .ok();
     }
 
     fn render_match(
@@ -324,7 +329,7 @@ impl PickerDelegate for EncodingSelectorDelegate {
         Some(
             ListItem::new(ix)
                 .inset(true)
-                .spacing(ListItemSpacing::Sparse)
+                .spacing(canvas::encoding_row_spacing(cx))
                 .toggle_state(selected)
                 .child(HighlightedLabel::new(label, mat.positions.clone())),
         )

@@ -27,6 +27,7 @@ async-compression.workspace = true
 async-pipe = { workspace = true, optional = true }
 async-tar.workspace = true
 async-trait.workspace = true
+client.workspace = true
 collections.workspace = true
 dap-types.workspace = true
 fs.workspace = true
@@ -46,10 +47,8 @@ settings.workspace = true
 smallvec.workspace = true
 smol.workspace = true
 task.workspace = true
+telemetry.workspace = true
 util.workspace = true
-
-[target.'cfg(not(windows))'.dependencies]
-libc.workspace = true
 
 [dev-dependencies]
 async-pipe.workspace = true

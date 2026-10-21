@@ -1,4 +1,4 @@
-//! Provides constructs for the dez app version and release channel.
+//! Provides constructs for the Zed app version and release channel.
 
 #![deny(missing_docs)]
 
@@ -7,18 +7,31 @@ use std::{env, str::FromStr, sync::LazyLock};
 use gpui::{App, Global};
 use semver::Version;
 
-const DEZ_DOCS_URL: &str = "https://dez.dev/docs";
-const CHINESE_DOCUMENTATION_PAGES: &[&str] = &["", "development/glossary", "getting-started"];
+const ZED_DOCS_URL: &str = "https://zed.dev/docs";
 
 /// stable | dev | nightly | preview
 pub static RELEASE_CHANNEL_NAME: LazyLock<String> = LazyLock::new(|| {
     if cfg!(debug_assertions) {
-        env::var("ZED_RELEASE_CHANNEL")
-            .unwrap_or_else(|_| include_str!("../../dez/RELEASE_CHANNEL").trim().to_string())
+        env::var("ZED_RELEASE_CHANNEL").unwrap_or_else(|_| compile_time_release_channel_name())
     } else {
-        include_str!("../../dez/RELEASE_CHANNEL").trim().to_string()
+        compile_time_release_channel_name()
     }
 });
+
+/// When a crate in zed is used as a dependency that uses the `crane` nix
+/// library, it vendors each crate separately and builds it in isolation, which
+/// makes the `include_str!` fail.
+///
+/// The build script checks for `$ZED_RELEASE_CHANNEL` and emits the `cfg`
+#[cfg(__do_not_set_zed_release_channel)]
+fn compile_time_release_channel_name() -> String {
+    env!("ZED_RELEASE_CHANNEL").trim().to_string()
+}
+
+#[cfg(not(__do_not_set_zed_release_channel))]
+fn compile_time_release_channel_name() -> String {
+    include_str!("../../zed/RELEASE_CHANNEL").trim().to_string()
+}
 
 #[doc(hidden)]
 pub static RELEASE_CHANNEL: LazyLock<ReleaseChannel> =
@@ -31,14 +44,14 @@ pub static RELEASE_CHANNEL: LazyLock<ReleaseChannel> =
 #[cfg(target_os = "windows")]
 pub fn app_identifier() -> &'static str {
     match *RELEASE_CHANNEL {
-        ReleaseChannel::Dev => "dez-Editor-Dev",
-        ReleaseChannel::Nightly => "dez-Editor-Nightly",
-        ReleaseChannel::Preview => "dez-Editor-Preview",
-        ReleaseChannel::Stable => "dez-Editor-Stable",
+        ReleaseChannel::Dev => "Dez-Dev",
+        ReleaseChannel::Nightly => "Dez-Nightly",
+        ReleaseChannel::Preview => "Dez-Preview",
+        ReleaseChannel::Stable => "Dez",
     }
 }
 
-/// The Git commit SHA that dez was built at.
+/// The Git commit SHA that Zed was built at.
 #[derive(Clone, Eq, Debug, PartialEq)]
 pub struct AppCommitSha(String);
 
@@ -78,7 +91,7 @@ struct GlobalAppVersion(Version);
 
 impl Global for GlobalAppVersion {}
 
-/// The version of dez.
+/// The version of Zed.
 pub struct AppVersion;
 
 impl AppVersion {
@@ -121,12 +134,12 @@ impl AppVersion {
     }
 }
 
-/// A dez release channel.
+/// A Zed release channel.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 pub enum ReleaseChannel {
     /// The development release channel.
     ///
-    /// Used for local debug builds of dez.
+    /// Used for local debug builds of Zed.
     #[default]
     Dev,
 
@@ -156,40 +169,12 @@ pub fn init_test(app_version: Version, release_channel: ReleaseChannel, cx: &mut
     cx.set_global(GlobalReleaseChannel(release_channel))
 }
 
-/// Returns the dez docs URL for the current release channel for the given
+/// Returns the Zed docs URL for the current release channel for the given
 /// `slug`.
 pub fn docs_url(slug: &str, cx: &App) -> String {
-    let english_url = ReleaseChannel::try_global(cx)
+    ReleaseChannel::try_global(cx)
         .unwrap_or(*RELEASE_CHANNEL)
-        .docs_url(slug);
-    if localization::try_language(cx) != Some(localization::UiLanguage::SimplifiedChinese) {
-        return english_url;
-    }
-
-    let (page, anchor) = slug
-        .split_once('#')
-        .map_or((slug, None), |(page, anchor)| (page, Some(anchor)));
-    if !CHINESE_DOCUMENTATION_PAGES.contains(&page) {
-        let english_page_url = ReleaseChannel::try_global(cx)
-            .unwrap_or(*RELEASE_CHANNEL)
-            .docs_url(page);
-        return match anchor {
-            Some(anchor) => {
-                format!("{english_page_url}?language-fallback=zh-CN#{anchor}")
-            }
-            None => format!("{english_page_url}?language-fallback=zh-CN"),
-        };
-    }
-
-    let page = if page.is_empty() {
-        String::new()
-    } else {
-        format!("{page}.html")
-    };
-    match anchor {
-        Some(anchor) => format!("{DEZ_DOCS_URL}/zh-CN/{page}#{anchor}"),
-        None => format!("{DEZ_DOCS_URL}/zh-CN/{page}"),
-    }
+        .docs_url(slug)
 }
 
 impl ReleaseChannel {
@@ -214,7 +199,12 @@ impl ReleaseChannel {
 
     /// Returns whether we want to poll for updates for this [`ReleaseChannel`]
     pub fn poll_for_updates(&self) -> bool {
-        !matches!(self, ReleaseChannel::Dev)
+        // Dez is a fork with no update server of its own. Gating every
+        // update path (background polling and the manual "Check for Updates"
+        // action both funnel through here) off so it can never download and
+        // replace itself with upstream Zed. Updates are installed manually by
+        // rebuilding. Previously: `!matches!(self, ReleaseChannel::Dev)`.
+        false
     }
 
     /// Returns the display name for this [`ReleaseChannel`].
@@ -239,13 +229,23 @@ impl ReleaseChannel {
 
     /// Returns the application ID that's used by Wayland as application ID
     /// and WM_CLASS on X11.
-    /// This also has to match the bundle identifier for dez on macOS.
+    /// This also has to match the bundle identifier for Dez on macOS.
     pub fn app_id(&self) -> &'static str {
         match self {
             ReleaseChannel::Dev => "dev.dez.Dez-Dev",
             ReleaseChannel::Nightly => "dev.dez.Dez-Nightly",
             ReleaseChannel::Preview => "dev.dez.Dez-Preview",
             ReleaseChannel::Stable => "dev.dez.Dez",
+        }
+    }
+
+    /// Returns the isolated URL scheme for this Dez release channel.
+    pub fn url_scheme(&self) -> &'static str {
+        match self {
+            ReleaseChannel::Dev => "dez-dev",
+            ReleaseChannel::Nightly => "dez-nightly",
+            ReleaseChannel::Preview => "dez-preview",
+            ReleaseChannel::Stable => "dez",
         }
     }
 
@@ -259,17 +259,20 @@ impl ReleaseChannel {
         }
     }
 
-    /// Returns the dez docs URL for the given `slug`.
-    ///
-    /// Documentation has one hosted copy for all release channels.
+    /// Returns the Zed docs URL for this [`ReleaseChannel`] for the given
+    /// `slug`.
     pub fn docs_url(&self, slug: &str) -> String {
-        if slug.is_empty() {
-            return DEZ_DOCS_URL.to_string();
-        }
+        let channel_path_segment = match self {
+            Self::Dev | Self::Nightly => Some("nightly"),
+            Self::Preview => Some("preview"),
+            Self::Stable => None,
+        };
 
-        match slug.split_once('#') {
-            Some((page, anchor)) => format!("{DEZ_DOCS_URL}/{page}.html#{anchor}"),
-            None => format!("{DEZ_DOCS_URL}/{slug}.html"),
+        match channel_path_segment {
+            Some(channel) if slug.is_empty() => format!("{ZED_DOCS_URL}/{channel}"),
+            Some(channel) => format!("{ZED_DOCS_URL}/{channel}/{slug}"),
+            None if slug.is_empty() => ZED_DOCS_URL.to_string(),
+            None => format!("{ZED_DOCS_URL}/{slug}"),
         }
     }
 }
@@ -295,36 +298,50 @@ impl FromStr for ReleaseChannel {
 #[cfg(test)]
 mod tests {
     use super::ReleaseChannel;
-    use gpui::TestAppContext;
+
+    #[test]
+    fn test_dez_release_identities() {
+        let expected = [
+            (ReleaseChannel::Dev, "Dez Dev", "dev.dez.Dez-Dev", "dez-dev"),
+            (
+                ReleaseChannel::Nightly,
+                "Dez Nightly",
+                "dev.dez.Dez-Nightly",
+                "dez-nightly",
+            ),
+            (
+                ReleaseChannel::Preview,
+                "Dez Preview",
+                "dev.dez.Dez-Preview",
+                "dez-preview",
+            ),
+            (ReleaseChannel::Stable, "Dez", "dev.dez.Dez", "dez"),
+        ];
+
+        for (channel, display_name, app_id, url_scheme) in expected {
+            assert_eq!(channel.display_name(), display_name);
+            assert_eq!(channel.app_id(), app_id);
+            assert_eq!(channel.url_scheme(), url_scheme);
+        }
+    }
 
     #[test]
     fn test_docs_url_for_release_channel() {
-        let expected = "https://dez.dev/docs/settings.html";
-        assert_eq!(ReleaseChannel::Dev.docs_url("settings"), expected);
-        assert_eq!(ReleaseChannel::Nightly.docs_url("settings"), expected);
-        assert_eq!(ReleaseChannel::Preview.docs_url("settings"), expected);
-        assert_eq!(ReleaseChannel::Stable.docs_url("settings"), expected);
         assert_eq!(
-            ReleaseChannel::Stable.docs_url("tasks#custom-git-commands"),
-            "https://dez.dev/docs/tasks.html#custom-git-commands"
+            ReleaseChannel::Dev.docs_url("settings"),
+            "https://zed.dev/docs/nightly/settings"
         );
-    }
-
-    #[gpui::test]
-    fn test_chinese_docs_url_and_english_fallback(cx: &mut TestAppContext) {
-        cx.update(|cx| {
-            super::init_test(semver::Version::new(1, 0, 0), ReleaseChannel::Stable, cx);
-            localization::init(localization::UiLanguage::SimplifiedChinese, cx)
-                .expect("test localization must load");
-
-            assert_eq!(
-                super::docs_url("getting-started", cx),
-                "https://dez.dev/docs/zh-CN/getting-started.html"
-            );
-            assert_eq!(
-                super::docs_url("tasks#custom-git-commands", cx),
-                "https://dez.dev/docs/tasks.html?language-fallback=zh-CN#custom-git-commands"
-            );
-        });
+        assert_eq!(
+            ReleaseChannel::Nightly.docs_url("settings"),
+            "https://zed.dev/docs/nightly/settings"
+        );
+        assert_eq!(
+            ReleaseChannel::Preview.docs_url("settings"),
+            "https://zed.dev/docs/preview/settings"
+        );
+        assert_eq!(
+            ReleaseChannel::Stable.docs_url("settings"),
+            "https://zed.dev/docs/settings"
+        );
     }
 }

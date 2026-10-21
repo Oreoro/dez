@@ -10,19 +10,23 @@ use ui::{App, Context, Window};
 use util::ResultExt as _;
 
 use db::{
+    kvp::KeyValueStore,
     query,
     sqlez::{domain::Domain, statement::Statement, thread_safe_connection::ThreadSafeConnection},
     sqlez_macros::sql,
 };
 use workspace::{
-    ItemHandle, ItemId, Member, Pane, PaneAxis, PaneGroup, SerializableItem as _, Workspace,
-    WorkspaceDb, WorkspaceId,
+    ItemHandle, ItemId, Member, Pane, PaneAxis, PaneGroup, SerializableItem as _, SplitDirection,
+    Workspace, WorkspaceDb, WorkspaceId,
 };
 
 use crate::{
     TerminalView, default_working_directory,
     terminal_panel::{TerminalPanel, new_terminal_pane},
 };
+use terminal::session_host::{TerminalHostId, TerminalSessionId, TerminalSessionRef};
+
+const TERMINAL_PANEL_KEY: &str = "TerminalPanel";
 
 pub(crate) fn serialize_pane_group(
     pane_group: &PaneGroup,
@@ -92,14 +96,12 @@ pub(crate) fn deserialize_terminal_panel(
     project: Entity<Project>,
     database_id: WorkspaceId,
     serialized_panel: SerializedTerminalPanel,
+    terminal_panel: WeakEntity<TerminalPanel>,
     window: &mut Window,
     cx: &mut App,
-) -> Task<anyhow::Result<Entity<TerminalPanel>>> {
+) -> Task<anyhow::Result<usize>> {
     window.spawn(cx, async move |cx| {
-        let terminal_panel = workspace.update_in(cx, |workspace, window, cx| {
-            cx.new(|cx| TerminalPanel::new(workspace, window, cx))
-        })?;
-        match &serialized_panel.items {
+        let restored_items = match &serialized_panel.items {
             SerializedItems::NoSplits(item_ids) => {
                 let items = deserialize_terminal_views(
                     database_id,
@@ -109,12 +111,14 @@ pub(crate) fn deserialize_terminal_panel(
                     cx,
                 )
                 .await;
+                let restored_items = items.len();
                 let active_item = serialized_panel.active_item_id;
                 terminal_panel.update_in(cx, |terminal_panel, window, cx| {
                     terminal_panel.active_pane.update(cx, |pane, cx| {
                         populate_pane_items(pane, items, active_item, window, cx);
                     });
                 })?;
+                restored_items
             }
             SerializedItems::WithSplits(serialized_pane_group) => {
                 let center_pane = deserialize_pane_group(
@@ -127,16 +131,48 @@ pub(crate) fn deserialize_terminal_panel(
                 )
                 .await;
                 if let Some((center_group, active_pane)) = center_pane {
-                    terminal_panel.update(cx, |terminal_panel, _| {
+                    terminal_panel.update_in(cx, |terminal_panel, window, cx| {
+                        let interim_panes = terminal_panel
+                            .center
+                            .panes()
+                            .into_iter()
+                            .filter(|pane| pane.read(cx).items_len() > 0)
+                            .cloned()
+                            .collect::<Vec<_>>();
+                        let focused_interim_pane = interim_panes
+                            .iter()
+                            .find(|pane| pane.read(cx).has_focus(window, cx))
+                            .cloned();
                         terminal_panel.center = PaneGroup::with_root(center_group);
                         terminal_panel.active_pane =
                             active_pane.unwrap_or_else(|| terminal_panel.center.first_pane());
-                    });
+                        let restored_items = terminal_panel
+                            .center
+                            .panes()
+                            .into_iter()
+                            .map(|pane| pane.read(cx).items_len())
+                            .sum::<usize>();
+                        let restored_pane = terminal_panel.active_pane.clone();
+                        for interim_pane in &interim_panes {
+                            terminal_panel.center.split(
+                                &restored_pane,
+                                interim_pane,
+                                SplitDirection::Right,
+                                cx,
+                            );
+                        }
+                        if let Some(focused_interim_pane) = focused_interim_pane {
+                            terminal_panel.active_pane = focused_interim_pane;
+                        }
+                        restored_items
+                    })?
+                } else {
+                    0
                 }
             }
-        }
+        };
 
-        Ok(terminal_panel)
+        Ok(restored_items)
     })
 }
 
@@ -147,6 +183,7 @@ fn populate_pane_items(
     window: &mut Window,
     cx: &mut Context<Pane>,
 ) {
+    let interim_active_item = (pane.items_len() > 0).then(|| pane.active_item()).flatten();
     let mut active_item_index = None;
     for (item_index, item) in (pane.items_len()..).zip(items) {
         if Some(item.item_id().as_u64()) == active_item {
@@ -154,8 +191,145 @@ fn populate_pane_items(
         }
         pane.add_item(Box::new(item), false, false, None, window, cx);
     }
-    if let Some(index) = active_item_index {
+    if let Some(interim_active_item) = interim_active_item {
+        if let Some(index) = pane.index_for_item(interim_active_item.as_ref()) {
+            pane.activate_item(index, false, false, window, cx);
+        }
+    } else if let Some(index) = active_item_index {
         pane.activate_item(index, false, false, window, cx);
+    }
+}
+
+pub(crate) fn migrate_legacy_terminal_panel(
+    workspace: WeakEntity<Workspace>,
+    database_id: WorkspaceId,
+    serialization_key: String,
+    project: Entity<Project>,
+    window: &mut Window,
+    cx: &mut App,
+) -> Task<Result<()>> {
+    let kvp = KeyValueStore::global(cx);
+
+    window.spawn(cx, async move |cx| {
+        let Some(serialized_panel) = kvp
+            .read_kvp(&serialization_key)
+            .log_err()
+            .flatten()
+            .map(|panel| serde_json::from_str::<SerializedTerminalPanel>(&panel))
+            .transpose()
+            .log_err()
+            .flatten()
+        else {
+            return Ok(());
+        };
+
+        let (item_ids, active_item_id) = serialized_panel_item_ids(&serialized_panel);
+        if item_ids.is_empty() {
+            kvp.delete_kvp(serialization_key).await?;
+            return Ok(());
+        }
+
+        let items =
+            deserialize_terminal_views(database_id, project, workspace.clone(), &item_ids, cx)
+                .await;
+
+        if items.is_empty() {
+            kvp.delete_kvp(serialization_key).await?;
+            return Ok(());
+        }
+
+        workspace.update_in(cx, |workspace, window, cx| {
+            let pane = workspace.active_pane().clone();
+            let should_focus_restored_terminal = workspace.active_item(cx).is_none();
+            let active_item_id = active_item_id.or_else(|| {
+                items
+                    .first()
+                    .map(|terminal_view| terminal_view.item_id().as_u64())
+            });
+
+            for item in items {
+                let focus_item = should_focus_restored_terminal
+                    && Some(item.item_id().as_u64()) == active_item_id;
+                workspace.add_item(
+                    pane.clone(),
+                    Box::new(item),
+                    None,
+                    false,
+                    focus_item,
+                    window,
+                    cx,
+                );
+            }
+        })?;
+
+        kvp.delete_kvp(serialization_key).await?;
+        Ok(())
+    })
+}
+
+pub(crate) fn terminal_panel_serialization_key(workspace: &Workspace) -> Option<String> {
+    workspace
+        .database_id()
+        .map(|id| i64::from(id).to_string())
+        .or(workspace.session_id())
+        .map(|id| format!("{:?}-{:?}", TERMINAL_PANEL_KEY, id))
+}
+
+fn serialized_panel_item_ids(
+    serialized_panel: &SerializedTerminalPanel,
+) -> (Vec<u64>, Option<u64>) {
+    let mut item_ids = Vec::new();
+    let mut seen_item_ids = HashSet::default();
+    let mut active_item_id = serialized_panel.active_item_id;
+
+    match &serialized_panel.items {
+        SerializedItems::NoSplits(ids) => {
+            for item_id in ids {
+                push_unique_item_id(*item_id, &mut seen_item_ids, &mut item_ids);
+            }
+        }
+        SerializedItems::WithSplits(group) => {
+            collect_serialized_group_item_ids(
+                group,
+                &mut seen_item_ids,
+                &mut item_ids,
+                &mut active_item_id,
+            );
+        }
+    }
+
+    (item_ids, active_item_id)
+}
+
+fn collect_serialized_group_item_ids(
+    group: &SerializedPaneGroup,
+    seen_item_ids: &mut HashSet<u64>,
+    item_ids: &mut Vec<u64>,
+    active_item_id: &mut Option<u64>,
+) {
+    match group {
+        SerializedPaneGroup::Pane(pane) => {
+            for item_id in &pane.children {
+                push_unique_item_id(*item_id, seen_item_ids, item_ids);
+            }
+            if pane.active {
+                *active_item_id = pane
+                    .active_item
+                    .or_else(|| pane.children.first().copied())
+                    .or(*active_item_id);
+            }
+        }
+        SerializedPaneGroup::Group { children, .. } => {
+            for child in children {
+                collect_serialized_group_item_ids(child, seen_item_ids, item_ids, active_item_id);
+            }
+        }
+    }
+}
+
+fn push_unique_item_id(item_id: u64, seen_item_ids: &mut HashSet<u64>, item_ids: &mut Vec<u64>) {
+    if seen_item_ids.insert(item_id) {
+        item_ids.push(item_id);
     }
 }
 
@@ -163,7 +337,7 @@ fn populate_pane_items(
 async fn deserialize_pane_group(
     workspace: WeakEntity<Workspace>,
     project: Entity<Project>,
-    panel: Entity<TerminalPanel>,
+    panel: WeakEntity<TerminalPanel>,
     workspace_id: WorkspaceId,
     serialized: &SerializedPaneGroup,
     cx: &mut AsyncWindowContext,
@@ -372,6 +546,16 @@ impl<'de> Deserialize<'de> for SerializedAxis {
 
 pub struct TerminalDb(ThreadSafeConnection);
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum StoredTerminalSessionRef {
+    /// Rows created before host/session persistence retain legacy restoration.
+    Legacy,
+    Valid(TerminalSessionRef),
+    /// A partially written or malformed binding must never fall back to
+    /// creating replacement computation.
+    Invalid,
+}
+
 impl Domain for TerminalDb {
     const NAME: &str = stringify!(TerminalDb);
 
@@ -412,6 +596,10 @@ impl Domain for TerminalDb {
         ),
         sql! (
             ALTER TABLE terminals ADD COLUMN custom_title TEXT;
+        ),
+        sql! (
+            ALTER TABLE terminals ADD COLUMN terminal_host_id TEXT;
+            ALTER TABLE terminals ADD COLUMN terminal_session_id TEXT;
         ),
     ];
 }
@@ -502,6 +690,78 @@ impl TerminalDb {
             SELECT custom_title
             FROM terminals
             WHERE item_id = ? AND workspace_id = ?
+        }
+    }
+
+    query! {
+        async fn save_session_ref_parts(
+            item_id: ItemId,
+            workspace_id: WorkspaceId,
+            terminal_host_id: String,
+            terminal_session_id: String
+        ) -> Result<()> {
+            INSERT INTO terminals (
+                item_id,
+                workspace_id,
+                terminal_host_id,
+                terminal_session_id
+            )
+            VALUES (?1, ?2, ?3, ?4)
+            ON CONFLICT (workspace_id, item_id) DO UPDATE SET
+                terminal_host_id = excluded.terminal_host_id,
+                terminal_session_id = excluded.terminal_session_id
+        }
+    }
+
+    pub async fn save_session_ref(
+        &self,
+        item_id: ItemId,
+        workspace_id: WorkspaceId,
+        session_ref: TerminalSessionRef,
+    ) -> Result<()> {
+        self.save_session_ref_parts(
+            item_id,
+            workspace_id,
+            session_ref.host_id.to_string(),
+            session_ref.session_id.to_string(),
+        )
+        .await
+    }
+
+    query! {
+        fn get_session_ref_parts(
+            item_id: ItemId,
+            workspace_id: WorkspaceId
+        ) -> Result<Option<(Option<String>, Option<String>)>> {
+            SELECT terminal_host_id, terminal_session_id
+            FROM terminals
+            WHERE item_id = ? AND workspace_id = ?
+        }
+    }
+
+    pub fn get_session_ref(
+        &self,
+        item_id: ItemId,
+        workspace_id: WorkspaceId,
+    ) -> Result<StoredTerminalSessionRef> {
+        let Some((host_id, session_id)) = self.get_session_ref_parts(item_id, workspace_id)? else {
+            return Ok(StoredTerminalSessionRef::Legacy);
+        };
+        match (host_id, session_id) {
+            (None, None) => Ok(StoredTerminalSessionRef::Legacy),
+            (Some(host_id), Some(session_id)) => {
+                let Ok(host_id) = host_id.parse::<TerminalHostId>() else {
+                    return Ok(StoredTerminalSessionRef::Invalid);
+                };
+                let Ok(session_id) = session_id.parse::<TerminalSessionId>() else {
+                    return Ok(StoredTerminalSessionRef::Invalid);
+                };
+                Ok(StoredTerminalSessionRef::Valid(TerminalSessionRef {
+                    host_id,
+                    session_id,
+                }))
+            }
+            _ => Ok(StoredTerminalSessionRef::Invalid),
         }
     }
 }

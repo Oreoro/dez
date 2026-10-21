@@ -43,6 +43,8 @@ If you're coming from RustRover, the fastest way to feel at home is to use the J
 
 This maps familiar shortcuts like `Shift Shift` for Search Everywhere, `Cmd+O` for Go to Class, and `Cmd+Shift+A` for Find Action.
 
+In editors, the JetBrains keymap also makes `Alt+Left` / `Alt+Right` and `Shift+Alt+Left` / `Shift+Alt+Right` move and select by subword, so identifiers like `camelCase` and `snake_case` behave like RustRover's CamelHumps navigation.
+
 ## Set Up Editor Preferences
 
 You can configure most settings in the Settings Editor ({#kb zed::OpenSettings}). For advanced settings, run {#action zed::OpenSettingsFile} from the Command Palette to edit your settings file directly.
@@ -96,26 +98,28 @@ If you chose the JetBrains keymap during onboarding, most of your shortcuts shou
 
 ### Common Shared Keybindings
 
-| Action                        | Shortcut                |
-| ----------------------------- | ----------------------- |
-| Search Everywhere             | `Shift Shift`           |
-| Find Action / Command Palette | `Cmd + Shift + A`       |
-| Go to File                    | `Cmd + Shift + O`       |
-| Go to Symbol                  | `Cmd + O`               |
-| Recent Files                  | `Cmd + E`               |
-| Go to Definition              | `Cmd + B`               |
-| Find Usages                   | `Alt + F7`              |
-| Rename Symbol                 | `Shift + F6`            |
-| Reformat Code                 | `Cmd + Alt + L`         |
-| Toggle Project Panel          | `Cmd + 1`               |
-| Toggle Terminal               | `Alt + F12`             |
-| Duplicate Line                | `Cmd + D`               |
-| Delete Line                   | `Cmd + Backspace`       |
-| Move Line Up/Down             | `Shift + Alt + Up/Down` |
-| Expand/Shrink Selection       | `Alt + Up/Down`         |
-| Comment Line                  | `Cmd + /`               |
-| Go Back / Forward             | `Cmd + [` / `Cmd + ]`   |
-| Toggle Breakpoint             | `Ctrl + F8`             |
+| Action                        | Shortcut                   |
+| ----------------------------- | -------------------------- |
+| Search Everywhere             | `Shift Shift`              |
+| Find Action / Command Palette | `Cmd + Shift + A`          |
+| Go to File                    | `Cmd + Shift + O`          |
+| Go to Symbol                  | `Cmd + O`                  |
+| Recent Files                  | `Cmd + E`                  |
+| Go to Definition              | `Cmd + B`                  |
+| Find Usages                   | `Alt + F7`                 |
+| Rename Symbol                 | `Shift + F6`               |
+| Reformat Code                 | `Cmd + Alt + L`            |
+| Toggle Project Panel          | `Cmd + 1`                  |
+| Toggle Terminal               | `Alt + F12`                |
+| Duplicate Line                | `Cmd + D`                  |
+| Delete Line                   | `Cmd + Backspace`          |
+| Move Line Up/Down             | `Shift + Alt + Up/Down`    |
+| Expand/Shrink Selection       | `Alt + Up/Down`            |
+| Move by subword               | `Alt + Left/Right`         |
+| Select by subword             | `Shift + Alt + Left/Right` |
+| Comment Line                  | `Cmd + /`                  |
+| Go Back / Forward             | `Cmd + [` / `Cmd + ]`      |
+| Toggle Breakpoint             | `Ctrl + F8`                |
 
 ### Different Keybindings (RustRover → Zed)
 
@@ -130,10 +134,10 @@ If you chose the JetBrains keymap during onboarding, most of your shortcuts shou
 
 ### Unique to Zed
 
-| Action            | Shortcut                   | Notes                          |
-| ----------------- | -------------------------- | ------------------------------ |
-| Toggle Right Dock | `Cmd + R`                  | Agent panel, notifications     |
-| Split Panes       | `Cmd + K`, then arrow keys | Create splits in any direction |
+| Action              | Shortcut                   | Notes                          |
+| ------------------- | -------------------------- | ------------------------------ |
+| Toggle Project Pane | `Cmd + R`                  | Project pane                   |
+| Split Panes         | `Cmd + K`, then arrow keys | Create splits in any direction |
 
 ### How to Customize Keybindings
 
@@ -326,18 +330,31 @@ Several features that might require plugins in other editors are built into Zed:
 - rust-analyzer integration
 - rustfmt formatting
 
-### What's Not in dez
+### What's Not in Zed
 
-Here's what RustRover offers that dez doesn't have:
+Here's what RustRover offers that Zed doesn't have:
 
 - **Profiler integration** — Use `cargo flamegraph`, `perf`, or external profiling tools
 - **Database tools** — Use DataGrip, DBeaver, or TablePlus
 - **HTTP Client** — Use tools like `curl`, `httpie`, or Postman
 - **Coverage visualization** — Use `cargo tarpaulin` or `cargo llvm-cov` externally
 
-## A Note on Licensing and Privacy
+## A Note on Licensing and Telemetry
 
-dez is open source and has no telemetry, account, or collaboration service. Logs and reliability diagnostics remain local. dez preserves SSH remote editing for working on another machine, but SSH is not a multi-user collaboration system.
+On licensing and telemetry:
+
+- **Zed is open source** (primarily GPL-licensed, with Apache-licensed components)
+- **Telemetry is optional** and can be disabled during onboarding or in settings
+
+## Collaboration in Zed vs. RustRover
+
+RustRover offers Code With Me as a separate feature for collaboration. Zed has collaboration built into the core experience.
+
+- Open the Collab Panel in the left dock
+- Create a channel and [invite your collaborators](https://zed.dev/docs/collaboration#inviting-a-collaborator) to join
+- [Share your screen or your codebase](https://zed.dev/docs/collaboration#share-a-project) directly
+
+Once connected, you'll see each other's cursors, selections, and edits in real time. Voice chat is included. There's no need for separate tools or third-party logins.
 
 ## Using AI in Zed
 

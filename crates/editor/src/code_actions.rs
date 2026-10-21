@@ -29,6 +29,7 @@ impl Editor {
         let deployed_from = action.deployed_from.clone();
         let action = action.clone();
         self.completion_tasks.clear();
+        self.discard_edit_prediction(EditPredictionDiscardReason::Ignored, cx);
 
         let multibuffer_point = match &action.deployed_from {
             Some(CodeActionSource::Indicator(row)) | Some(CodeActionSource::RunMenu(row)) => {
@@ -205,19 +206,52 @@ impl Editor {
         let action_ix = action.item_ix.unwrap_or(actions_menu.selected_item);
         let action = actions_menu.actions.get(action_ix)?;
         let title = action.label();
+        let runnable_task_key =
+            self.runnable_task_key_for_source(&actions_menu.deployed_from, window, cx);
         let buffer = actions_menu.buffer;
         let workspace = self.workspace()?;
 
         match action {
             CodeActionsItem::Task(task_source_kind, resolved_task) => {
-                workspace.update(cx, |workspace, cx| {
-                    workspace.schedule_resolved_task(
-                        task_source_kind,
-                        resolved_task,
-                        false,
-                        window,
+                if let Some((buffer_id, buffer_row)) = runnable_task_key {
+                    self.set_runnable_task_status(
+                        buffer_id,
+                        buffer_row,
+                        RunnableTaskStatus::Running,
                         cx,
                     );
+                }
+                let editor = cx.weak_entity();
+                workspace.update(cx, |workspace, cx| {
+                    if let Some((buffer_id, buffer_row)) = runnable_task_key {
+                        workspace.schedule_resolved_task_with_completion(
+                            task_source_kind,
+                            resolved_task,
+                            false,
+                            move |result, cx| {
+                                editor
+                                    .update(cx, |editor, cx| {
+                                        editor.set_runnable_task_status(
+                                            buffer_id,
+                                            buffer_row,
+                                            RunnableTaskStatus::from(result),
+                                            cx,
+                                        );
+                                    })
+                                    .ok();
+                            },
+                            window,
+                            cx,
+                        );
+                    } else {
+                        workspace.schedule_resolved_task(
+                            task_source_kind,
+                            resolved_task,
+                            false,
+                            window,
+                            cx,
+                        );
+                    }
 
                     Some(Task::ready(Ok(())))
                 })
@@ -242,11 +276,11 @@ impl Editor {
                     .await
                 }))
             }
-            #[cfg(any())]
             CodeActionsItem::DebugScenario(scenario) => {
                 let context = actions_menu.actions.context.into();
 
                 workspace.update(cx, |workspace, cx| {
+                    dap::send_telemetry(&scenario, TelemetrySpawnLocation::Gutter, cx);
                     workspace.start_debug_session(
                         scenario,
                         context,
@@ -258,9 +292,26 @@ impl Editor {
                 });
                 Some(Task::ready(Ok(())))
             }
-            #[cfg(not(any()))]
-            CodeActionsItem::DebugScenario(_) => None,
         }
+    }
+
+    fn runnable_task_key_for_source(
+        &self,
+        source: &Option<CodeActionSource>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<(BufferId, BufferRow)> {
+        let display_row = match source {
+            Some(CodeActionSource::RunMenu(row)) => *row,
+            _ => return None,
+        };
+        let snapshot = self.snapshot(window, cx);
+        let multibuffer_row =
+            MultiBufferRow(DisplayPoint::new(display_row, 0).to_point(&snapshot).row);
+        let (buffer_snapshot, range) = snapshot
+            .buffer_snapshot()
+            .buffer_line_for_row(multibuffer_row)?;
+        Some((buffer_snapshot.remote_id(), range.start.row))
     }
 
     pub fn code_actions_enabled_for_toolbar(&self, cx: &App) -> bool {
@@ -298,7 +349,7 @@ impl Editor {
                     let focus_handle = self.focus_handle.clone();
                     move |_window, cx| {
                         Tooltip::for_action_in(
-                            localization::text(cx, "editor-toggle-code-actions"),
+                            "Toggle Code Actions",
                             &ToggleCodeActions {
                                 deployed_from: None,
                                 quick_launch: false,
@@ -338,7 +389,7 @@ impl Editor {
 
                 let (start_buffer, start, _, end, _newest_selection) = editor
                     .update(cx, |editor, cx| {
-                        let newest_selection = editor.selections.newest_anchor().clone();
+                        let newest_selection = *editor.selections.newest_anchor();
                         if newest_selection.head().diff_base_anchor().is_some() {
                             return None;
                         }
@@ -413,7 +464,6 @@ impl Editor {
         );
     }
 
-    #[cfg(any())]
     fn debug_scenarios(
         &mut self,
         resolved_tasks: &Option<ResolvedTasks>,
@@ -453,16 +503,6 @@ impl Editor {
             }))
         })
         .unwrap_or_else(|| Task::ready(vec![]))
-    }
-
-    #[cfg(not(any()))]
-    fn debug_scenarios(
-        &mut self,
-        _: &Option<ResolvedTasks>,
-        _: &Entity<Buffer>,
-        _: &mut App,
-    ) -> Task<Vec<task::DebugScenario>> {
-        Task::ready(Vec::new())
     }
 }
 

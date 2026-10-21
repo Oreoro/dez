@@ -69,21 +69,6 @@ impl Display for Mode {
 }
 
 impl Mode {
-    pub fn localized(self, cx: &App) -> SharedString {
-        let identifier = match self {
-            Mode::Normal | Mode::HelixNormal => "vim-mode-normal",
-            Mode::Insert => "vim-mode-insert",
-            Mode::Replace => "vim-mode-replace",
-            Mode::Visual => "vim-mode-visual",
-            Mode::VisualLine => "vim-mode-visual-line",
-            Mode::VisualBlock => "vim-mode-visual-block",
-            Mode::HelixSelect => "vim-mode-select",
-        };
-        localization::text(cx, identifier)
-    }
-}
-
-impl Mode {
     pub fn is_visual(&self) -> bool {
         match self {
             Self::Visual | Self::VisualLine | Self::VisualBlock | Self::HelixSelect => true,
@@ -98,6 +83,10 @@ impl Mode {
     /// `HelixNormal` qualifies because its cursor is itself a one-character selection.
     pub fn has_selection(&self) -> bool {
         self.is_visual() || matches!(self, Self::HelixNormal)
+    }
+
+    pub fn is_normal(&self) -> bool {
+        matches!(self, Self::Normal | Self::HelixNormal)
     }
 }
 
@@ -1275,6 +1264,10 @@ pub struct RegistersViewDelegate {
 impl PickerDelegate for RegistersViewDelegate {
     type ListItem = Div;
 
+    fn name() -> &'static str {
+        "registers view"
+    }
+
     fn match_count(&self) -> usize {
         self.matches.len()
     }
@@ -1440,9 +1433,7 @@ impl RegistersView {
             matches,
         };
 
-        Picker::nonsearchable_uniform_list(delegate, window, cx)
-            .width(rems(36.))
-            .modal(true)
+        Picker::nonsearchable_uniform_list(delegate, window, cx).initial_width(rems(36.))
     }
 }
 
@@ -1488,6 +1479,10 @@ pub struct MarksViewDelegate {
 
 impl PickerDelegate for MarksViewDelegate {
     type ListItem = Div;
+
+    fn name() -> &'static str {
+        "marks view"
+    }
 
     fn match_count(&self) -> usize {
         self.matches.len()
@@ -1803,9 +1798,7 @@ impl MarksView {
             matches,
             workspace,
         };
-        Picker::nonsearchable_uniform_list(delegate, window, cx)
-            .width(rems(36.))
-            .modal(true)
+        Picker::nonsearchable_uniform_list(delegate, window, cx).initial_width(rems(36.))
     }
 }
 

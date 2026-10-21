@@ -9,12 +9,12 @@ use crate::tasks::workflow_checks::{self};
 
 mod after_release;
 mod autofix_pr;
-mod bump_dez_version;
 mod bump_patch_version;
+mod bump_zed_version;
 mod cherry_pick;
-mod compare_perf;
 mod compliance_check;
 mod danger;
+mod deploy_collab;
 mod deploy_docs;
 mod extension_auto_bump;
 mod extension_bump;
@@ -23,10 +23,10 @@ mod extension_workflow_rollout;
 mod extensions;
 mod nix_build;
 mod publish_extension_cli;
+mod release_nightly;
 mod run_bundling;
 
 mod release;
-mod run_agent_evals;
 mod run_tests;
 mod runners;
 mod steps;
@@ -136,8 +136,8 @@ impl WorkflowFile {
             .as_ref()
             .expect("Workflow must have a name at this point");
         let filename = format!(
-            "{}.yml",
-            workflow_name.rsplit("::").next().unwrap_or(workflow_name)
+            "{workflow_name}.yml",
+            workflow_name = workflow_name.rsplit("::").next().unwrap_or(workflow_name)
         );
 
         let workflow_path = workflow_folder.join(filename);
@@ -212,7 +212,7 @@ impl WorkflowType {
 }
 
 pub fn run_workflows(args: GenerateWorkflowArgs) -> Result<()> {
-    if !Path::new("crates/dez/").is_dir() {
+    if !Path::new("crates/zed/").is_dir() {
         anyhow::bail!("xtask workflows must be ran from the project root");
     }
 
@@ -223,11 +223,11 @@ pub fn run_workflows(args: GenerateWorkflowArgs) -> Result<()> {
         WorkflowFile::zed(after_release::after_release),
         WorkflowFile::zed(autofix_pr::autofix_pr),
         WorkflowFile::zed(bump_patch_version::bump_patch_version),
-        WorkflowFile::zed(bump_dez_version::bump_zed_version),
+        WorkflowFile::zed(bump_zed_version::bump_zed_version),
         WorkflowFile::zed(cherry_pick::cherry_pick),
-        WorkflowFile::zed(compare_perf::compare_perf),
         WorkflowFile::zed(compliance_check::compliance_check),
         WorkflowFile::zed(danger::danger),
+        WorkflowFile::zed(deploy_collab::deploy_collab),
         WorkflowFile::zed(deploy_docs::deploy_docs),
         WorkflowFile::zed(deploy_docs::deploy_nightly_docs),
         WorkflowFile::zed(extension_bump::extension_bump),
@@ -237,8 +237,7 @@ pub fn run_workflows(args: GenerateWorkflowArgs) -> Result<()> {
         WorkflowFile::zed(nix_build::nix_build),
         WorkflowFile::zed(publish_extension_cli::publish_extension_cli),
         WorkflowFile::zed(release::release),
-        WorkflowFile::zed(run_agent_evals::run_cron_unit_evals),
-        WorkflowFile::zed(run_agent_evals::run_unit_evals),
+        WorkflowFile::zed(release_nightly::release_nightly),
         WorkflowFile::zed(run_bundling::run_bundling),
         WorkflowFile::zed(run_tests::run_tests),
         /* workflows used for CI/CD in extension repositories */

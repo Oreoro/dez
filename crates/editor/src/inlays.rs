@@ -4,7 +4,7 @@
 //! They are attached to a certain [`Anchor`], and display certain contents (usually, strings)
 //! between real text around that anchor.
 //!
-//! Inlay examples in dez:
+//! Inlay examples in Zed:
 //! * inlay hints, received from LSP
 //! * inline values, shown in the debugger
 //! * inline predictions, showing the Zeta/Copilot/etc. predictions
@@ -19,9 +19,7 @@ pub mod inlay_hints;
 
 use std::sync::OnceLock;
 
-#[cfg(any())]
-use gpui::Task;
-use gpui::{Context, HighlightStyle, Hsla, Rgba};
+use gpui::{Context, HighlightStyle, Hsla, Rgba, Task};
 use multi_buffer::Anchor;
 use project::{InlayHint, InlayId};
 use text::Rope;
@@ -93,6 +91,14 @@ impl Inlay {
         }
     }
 
+    pub fn edit_prediction<T: Into<Rope>>(id: usize, position: Anchor, text: T) -> Self {
+        Self {
+            id: InlayId::EditPrediction(id),
+            position,
+            content: InlayContent::Text(text.into()),
+        }
+    }
+
     pub fn debugger<T: Into<Rope>>(id: usize, position: Anchor, text: T) -> Self {
         Self {
             id: InlayId::DebuggerValue(id),
@@ -126,14 +132,12 @@ impl Inlay {
     }
 }
 
-#[cfg(any())]
 pub struct InlineValueCache {
     pub enabled: bool,
     pub inlays: Vec<InlayId>,
     pub refresh_task: Task<Option<()>>,
 }
 
-#[cfg(any())]
 impl InlineValueCache {
     pub fn new(enabled: bool) -> Self {
         Self {
@@ -175,12 +179,11 @@ impl Editor {
         cx.notify();
     }
 
-    #[cfg(any())]
     pub fn inline_values_enabled(&self) -> bool {
         self.inline_value_cache.enabled
     }
 
-    #[cfg(all(any(), any(test, feature = "test-support")))]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn inline_value_inlays(&self, cx: &gpui::App) -> Vec<Inlay> {
         self.display_map
             .read(cx)

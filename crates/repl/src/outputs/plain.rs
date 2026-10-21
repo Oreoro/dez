@@ -1,7 +1,7 @@
 //! # Plain Text Output
 //!
 //! This module provides functionality for rendering plain text output in a terminal-like format.
-//! It uses dez's terminal emulator to process and display text, supporting ANSI escape
+//! It uses Zed's terminal emulator to process and display text, supporting ANSI escape
 //! sequences for formatting, colors, and other terminal features.
 //!
 //! The main component of this module is the `TerminalOutput` struct, which handles the parsing
@@ -37,7 +37,7 @@ use crate::repl_settings::ReplSettings;
 /// * text/plain content
 /// * error tracebacks
 ///
-/// It uses dez's terminal emulator backend to process and render text,
+/// It uses Zed's terminal emulator backend to process and render text,
 /// supporting ANSI escape sequences for text formatting and colors.
 ///
 pub struct TerminalOutput {
@@ -247,8 +247,6 @@ mod tests {
         cx.update(|cx| {
             let settings_store = SettingsStore::test(cx);
             cx.set_global(settings_store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
         });
         cx.add_empty_window()
@@ -364,15 +362,17 @@ impl Render for TerminalOutput {
 
         let text_style = text_style(window, cx);
         let minimum_contrast = TerminalSettings::get_global(cx).minimum_contrast;
-        let (rects, batched_text_runs) = terminal.read(cx).with_renderable_cells(|cells| {
-            TerminalElement::layout_grid(cells, 0, &text_style, None, minimum_contrast, cx)
-        });
+        let (rects, batched_text_runs, block_element_rects) =
+            terminal.read(cx).with_renderable_cells(|cells| {
+                TerminalElement::layout_grid(cells, 0, &text_style, None, minimum_contrast, cx)
+            });
 
         // lines are 0-indexed, so we must add 1 to get the number of lines
         let text_line_height = text_style.line_height_in_pixels(window.rem_size());
         let num_lines = batched_text_runs
             .iter()
             .map(|b| b.start_point.line())
+            .chain(block_element_rects.iter().map(|rect| rect.line()))
             .max()
             .unwrap_or(0)
             + 1;
@@ -414,6 +414,18 @@ impl Render for TerminalOutput {
                         },
                         window,
                         cx,
+                    );
+                }
+
+                for block_element_rect in block_element_rects {
+                    block_element_rect.paint(
+                        bounds.origin,
+                        &terminal::TerminalBounds {
+                            cell_width,
+                            line_height: text_line_height,
+                            bounds,
+                        },
+                        window,
                     );
                 }
             },

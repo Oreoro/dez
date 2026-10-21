@@ -1,17 +1,22 @@
 use std::sync::Arc;
 
+use client::TelemetrySettings;
+use collections::HashMap;
 use fs::Fs;
-use gpui::{Action, App, IntoElement, ReadGlobal};
+use gpui::{Action, App, IntoElement};
+use paths::APP_NAME;
+use project::agent_server_store::AllAgentServersSettings;
 use project::project_settings::ProjectSettings;
+use project::{AgentRegistryStore, RegistryAgent};
 use settings::{
-    BaseKeymap, Settings, SettingsStore, UiLanguage, update_settings_file,
-    update_user_settings_file,
+    BaseKeymap, CustomAgentServerSettings, Settings, SettingsStore, update_settings_file,
 };
 use theme::{Appearance, SystemAppearance, ThemeRegistry};
 use theme_settings::{ThemeAppearanceMode, ThemeName, ThemeSelection, ThemeSettings};
 use ui::{
-    Divider, StatefulInteractiveElement, SwitchField, TintColor, ToggleButtonGroup,
-    ToggleButtonGroupSize, ToggleButtonSimple, ToggleButtonWithIcon, Tooltip, prelude::*,
+    AgentSetupButton, Divider, StatefulInteractiveElement, SwitchField, TintColor,
+    ToggleButtonGroup, ToggleButtonGroupSize, ToggleButtonSimple, ToggleButtonWithIcon, Tooltip,
+    prelude::*,
 };
 use vim_mode_setting::VimModeSetting;
 
@@ -27,40 +32,6 @@ const FAMILY_NAMES: [SharedString; 3] = [
     SharedString::new_static("Ayu"),
     SharedString::new_static("Gruvbox"),
 ];
-
-fn render_language_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement {
-    let current_language = SettingsStore::global(cx).ui_language();
-
-    h_flex()
-        .justify_between()
-        .child(Label::new(localization::text(cx, "onboarding-language")))
-        .child(
-            ToggleButtonGroup::single_row(
-                "onboarding-language-selection",
-                UiLanguage::ALL.map(|language| {
-                    ToggleButtonSimple::new(language.native_name(), move |_, _, cx| {
-                        if language != SettingsStore::global(cx).ui_language() {
-                            update_user_settings_file(
-                                <dyn Fs>::global(cx),
-                                cx,
-                                move |settings, _| settings.ui_language = Some(language),
-                            );
-                        }
-                    })
-                }),
-            )
-            .size(ToggleButtonGroupSize::Medium)
-            .tab_index(tab_index)
-            .selected_index(
-                UiLanguage::ALL
-                    .iter()
-                    .position(|language| *language == current_language)
-                    .unwrap_or_default(),
-            )
-            .style(ui::ToggleButtonGroupStyle::Outlined),
-        )
-}
-
 fn get_theme_family_themes(theme_name: &str) -> Option<(&'static str, &'static str)> {
     for i in 0..LIGHT_THEMES.len() {
         if LIGHT_THEMES[i] == theme_name || DARK_THEMES[i] == theme_name {
@@ -84,44 +55,45 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
     return v_flex()
         .gap_2()
         .child(
-            h_flex()
-                .justify_between()
-                .child(Label::new(localization::text(cx, "onboarding-theme")))
-                .child(
-                    ToggleButtonGroup::single_row(
-                        "theme-selector-onboarding-dark-light",
-                        [
-                            ThemeAppearanceMode::Light,
-                            ThemeAppearanceMode::Dark,
-                            ThemeAppearanceMode::System,
-                        ]
-                        .map(|mode| {
-                            let mode_name = match mode {
-                                ThemeAppearanceMode::Light => {
-                                    localization::text(cx, "onboarding-theme-light")
-                                }
-                                ThemeAppearanceMode::Dark => {
-                                    localization::text(cx, "onboarding-theme-dark")
-                                }
-                                ThemeAppearanceMode::System => {
-                                    localization::text(cx, "onboarding-theme-system")
-                                }
-                            };
-                            ToggleButtonSimple::new(mode_name, move |_, _, cx| {
+            h_flex().justify_between().child(Label::new("Theme")).child(
+                ToggleButtonGroup::single_row(
+                    "theme-selector-onboarding-dark-light",
+                    [
+                        ThemeAppearanceMode::Light,
+                        ThemeAppearanceMode::Dark,
+                        ThemeAppearanceMode::System,
+                    ]
+                    .map(|mode| {
+                        const MODE_NAMES: [SharedString; 3] = [
+                            SharedString::new_static("Light"),
+                            SharedString::new_static("Dark"),
+                            SharedString::new_static("System"),
+                        ];
+                        ToggleButtonSimple::new(
+                            MODE_NAMES[mode as usize].clone(),
+                            move |_, _, cx| {
                                 write_mode_change(mode, cx);
-                            })
-                        }),
-                    )
-                    .size(ToggleButtonGroupSize::Medium)
-                    .tab_index(tab_index)
-                    .selected_index(theme_mode as usize)
-                    .style(ui::ToggleButtonGroupStyle::Outlined)
-                    .width(rems_from_px(3. * 64.)),
-                ),
+
+                                telemetry::event!(
+                                    "Welcome Theme mode Changed",
+                                    from = theme_mode,
+                                    to = mode
+                                );
+                            },
+                        )
+                    }),
+                )
+                .size(ToggleButtonGroupSize::Medium)
+                .tab_index(tab_index)
+                .selected_index(theme_mode as usize)
+                .style(ui::ToggleButtonGroupStyle::Outlined)
+                .width(rems_from_px(3.0_f32 * 64.0_f32)),
+            ),
         )
         .child(
             h_flex()
                 .gap_2()
+                .flex_wrap()
                 .justify_between()
                 .children(render_theme_previews(tab_index, &theme_selection, cx)),
         );
@@ -190,8 +162,15 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
                         })
                         .on_click({
                             let theme_name = theme.name.clone();
+                            let current_theme_name = current_theme_name.clone();
+
                             move |_, _, cx| {
                                 write_theme_change(theme_name.clone(), theme_mode, cx);
+                                telemetry::event!(
+                                    "Welcome Theme Changed",
+                                    from = current_theme_name,
+                                    to = theme_name
+                                );
                             }
                         })
                         .map(|this| {
@@ -261,62 +240,230 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
     }
 }
 
+fn render_dez_workflow_section() -> impl IntoElement {
+    let steps = [
+        (
+            IconName::Terminal,
+            "Run",
+            "Start the configured terminal, pick another agent CLI, or hand this Workspace to cmux.",
+        ),
+        (
+            IconName::ListTree,
+            "Supervise",
+            "Use Workspaces to scan Workspace activity and attention without changing context.",
+        ),
+        (
+            IconName::Diff,
+            "Review",
+            "Inspect files, Git changes, checks, and diagnostics in the Main Work Area.",
+        ),
+    ];
+
+    v_flex()
+        .id("dez-terminal-workflow")
+        .role(gpui::Role::Region)
+        .aria_label("Workspace agent workflow")
+        .w_full()
+        .gap_2()
+        .child(
+            v_flex()
+                .gap_0p5()
+                .child(Label::new("How Dez works"))
+                .child(
+                    Label::new(
+                        "Run an agent in a Workspace terminal, supervise it in Workspaces, then review its work in Files and Git.",
+                    )
+                    .size(LabelSize::Small)
+                    .color(Color::Muted),
+                ),
+        )
+        .child(
+            v_flex()
+                .id("dez-terminal-workflow-steps")
+                .role(gpui::Role::List)
+                .aria_label("Workspace agent workflow steps")
+                .w_full()
+                .gap_1()
+                .children(steps.into_iter().enumerate().map(
+                    |(index, (icon, title, description))| {
+                        h_flex()
+                            .id(("dez-terminal-workflow-step", index))
+                            .role(gpui::Role::ListItem)
+                            .aria_label(format!("{title}. {description}"))
+                            .min_w_0()
+                            .items_start()
+                            .gap_2()
+                            .px_1()
+                            .py_0p5()
+                            .child(
+                                Icon::new(icon)
+                                    .size(IconSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .gap_0p5()
+                                    .child(Label::new(title).size(LabelSize::Small))
+                                    .child(
+                                        Label::new(description)
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted),
+                                    ),
+                            )
+                    },
+                )),
+        )
+        .child(
+            Label::new(
+                "Finish setup, open a Workspace, and start the agent from its Main Work Area.",
+            )
+            .size(LabelSize::XSmall)
+            .color(Color::Muted),
+        )
+}
+
+fn render_telemetry_section(tab_index: &mut isize, cx: &App) -> impl IntoElement {
+    let fs = <dyn Fs>::global(cx);
+
+    v_flex()
+        .gap_4()
+        .child(
+            SwitchField::new(
+                "onboarding-telemetry-metrics",
+                None::<&str>,
+                Some(format!("Help improve {APP_NAME} by sending anonymous usage data").into()),
+                if TelemetrySettings::get_global(cx).metrics {
+                    ui::ToggleState::Selected
+                } else {
+                    ui::ToggleState::Unselected
+                },
+                {
+                    let fs = fs.clone();
+                    move |selection, _, cx| {
+                        let enabled = match selection {
+                            ToggleState::Selected => true,
+                            ToggleState::Unselected => false,
+                            ToggleState::Indeterminate => {
+                                return;
+                            }
+                        };
+
+                        update_settings_file(fs.clone(), cx, move |setting, _| {
+                            setting.telemetry.get_or_insert_default().metrics = Some(enabled);
+                        });
+
+                        // This telemetry event shouldn't fire when it's off. If it does we'll be alerted
+                        // and can fix it in a timely manner to respect a user's choice.
+                        telemetry::event!(
+                            "Welcome Page Telemetry Metrics Toggled",
+                            options = if enabled { "on" } else { "off" }
+                        );
+                    }
+                },
+            )
+            .tab_index({
+                *tab_index += 1;
+                *tab_index
+            }),
+        )
+        .child(
+            SwitchField::new(
+                "onboarding-telemetry-crash-reports",
+                None::<&str>,
+                Some(
+                    format!("Help fix {APP_NAME} by sending crash reports for critical issues")
+                        .into(),
+                ),
+                if TelemetrySettings::get_global(cx).diagnostics {
+                    ui::ToggleState::Selected
+                } else {
+                    ui::ToggleState::Unselected
+                },
+                {
+                    let fs = fs.clone();
+                    move |selection, _, cx| {
+                        let enabled = match selection {
+                            ToggleState::Selected => true,
+                            ToggleState::Unselected => false,
+                            ToggleState::Indeterminate => {
+                                return;
+                            }
+                        };
+
+                        update_settings_file(fs.clone(), cx, move |setting, _| {
+                            setting.telemetry.get_or_insert_default().diagnostics = Some(enabled);
+                        });
+
+                        // This telemetry event shouldn't fire when it's off. If it does we'll be alerted
+                        // and can fix it in a timely manner to respect a user's choice.
+                        telemetry::event!(
+                            "Welcome Page Telemetry Diagnostics Toggled",
+                            options = if enabled { "on" } else { "off" }
+                        );
+                    }
+                },
+            )
+            .tab_index({
+                *tab_index += 1;
+                *tab_index
+            }),
+        )
+}
+
 fn render_base_keymap_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement {
     let base_keymap = match BaseKeymap::get_global(cx) {
-        BaseKeymap::VSCode => Some(0),
-        BaseKeymap::JetBrains => Some(1),
-        BaseKeymap::SublimeText => Some(2),
-        BaseKeymap::Atom => Some(3),
-        BaseKeymap::Emacs => Some(4),
-        BaseKeymap::Cursor => Some(5),
-        BaseKeymap::TextMate | BaseKeymap::None => None,
+        BaseKeymap::Zed => Some(0),
+        BaseKeymap::VSCode => Some(1),
+        BaseKeymap::JetBrains => Some(2),
+        BaseKeymap::SublimeText => Some(3),
+        BaseKeymap::Atom => Some(4),
+        BaseKeymap::Emacs => Some(5),
+        BaseKeymap::Cursor => Some(6),
+        BaseKeymap::TextMate => Some(7),
+        BaseKeymap::None => None,
     };
 
-    return v_flex()
-        .gap_2()
-        .child(Label::new(localization::text(cx, "onboarding-base-keymap")))
-        .child(
-            ToggleButtonGroup::two_rows(
-                "base_keymap_selection",
-                [
-                    ToggleButtonWithIcon::new("VS Code", IconName::EditorVsCode, |_, _, cx| {
-                        write_keymap_base(BaseKeymap::VSCode, cx);
-                    }),
-                    ToggleButtonWithIcon::new(
-                        "JetBrains",
-                        IconName::EditorJetBrains,
-                        |_, _, cx| {
-                            write_keymap_base(BaseKeymap::JetBrains, cx);
-                        },
-                    ),
-                    ToggleButtonWithIcon::new(
-                        "Sublime Text",
-                        IconName::EditorSublime,
-                        |_, _, cx| {
-                            write_keymap_base(BaseKeymap::SublimeText, cx);
-                        },
-                    ),
-                ],
-                [
-                    ToggleButtonWithIcon::new("Atom", IconName::EditorAtom, |_, _, cx| {
-                        write_keymap_base(BaseKeymap::Atom, cx);
-                    }),
-                    ToggleButtonWithIcon::new("Emacs", IconName::EditorEmacs, |_, _, cx| {
-                        write_keymap_base(BaseKeymap::Emacs, cx);
-                    }),
-                    ToggleButtonWithIcon::new("Cursor", IconName::EditorCursor, |_, _, cx| {
-                        write_keymap_base(BaseKeymap::Cursor, cx);
-                    }),
-                ],
-            )
-            .when_some(base_keymap, |this, base_keymap| {
-                this.selected_index(base_keymap)
-            })
-            .full_width()
-            .tab_index(tab_index)
-            .size(ui::ToggleButtonGroupSize::Medium)
-            .style(ui::ToggleButtonGroupStyle::Outlined),
-        );
+    return v_flex().gap_2().child(Label::new("Base Keymap")).child(
+        ToggleButtonGroup::two_rows(
+            "base_keymap_selection",
+            [
+                ToggleButtonWithIcon::new("Zed", IconName::AiZed, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::Zed, cx);
+                }),
+                ToggleButtonWithIcon::new("VS Code", IconName::EditorVsCode, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::VSCode, cx);
+                }),
+                ToggleButtonWithIcon::new("JetBrains", IconName::EditorJetBrains, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::JetBrains, cx);
+                }),
+                ToggleButtonWithIcon::new("Sublime Text", IconName::EditorSublime, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::SublimeText, cx);
+                }),
+            ],
+            [
+                ToggleButtonWithIcon::new("Atom", IconName::EditorAtom, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::Atom, cx);
+                }),
+                ToggleButtonWithIcon::new("Emacs", IconName::EditorEmacs, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::Emacs, cx);
+                }),
+                ToggleButtonWithIcon::new("Cursor", IconName::EditorCursor, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::Cursor, cx);
+                }),
+                ToggleButtonWithIcon::new("TextMate", IconName::Keyboard, |_, _, cx| {
+                    write_keymap_base(BaseKeymap::TextMate, cx);
+                }),
+            ],
+        )
+        .when_some(base_keymap, |this, base_keymap| {
+            this.selected_index(base_keymap)
+        })
+        .full_width()
+        .tab_index(tab_index)
+        .size(ui::ToggleButtonGroupSize::Medium)
+        .style(ui::ToggleButtonGroupStyle::Outlined),
+    );
 
     fn write_keymap_base(keymap_base: BaseKeymap, cx: &App) {
         let fs = <dyn Fs>::global(cx);
@@ -324,6 +471,8 @@ fn render_base_keymap_section(tab_index: &mut isize, cx: &mut App) -> impl IntoE
         update_settings_file(fs, cx, move |setting, _| {
             setting.base_keymap = Some(keymap_base.into());
         });
+
+        telemetry::event!("Welcome Keymap Changed", keymap = keymap_base);
     }
 }
 
@@ -335,8 +484,8 @@ fn render_vim_mode_switch(tab_index: &mut isize, cx: &mut App) -> impl IntoEleme
     };
     SwitchField::new(
         "onboarding-vim-mode",
-        Some(localization::text(cx, "onboarding-vim-mode")),
-        Some(localization::text(cx, "onboarding-vim-mode-description")),
+        Some("Vim Mode"),
+        Some("Coming from Neovim? Use our first-class implementation of Vim Mode".into()),
         toggle_state,
         {
             let fs = <dyn Fs>::global(cx);
@@ -351,6 +500,11 @@ fn render_vim_mode_switch(tab_index: &mut isize, cx: &mut App) -> impl IntoEleme
                 update_settings_file(fs.clone(), cx, move |setting, _| {
                     setting.vim_mode = Some(vim_mode);
                 });
+
+                telemetry::event!(
+                    "Welcome Vim Mode Toggled",
+                    options = if vim_mode { "on" } else { "off" },
+                );
             }
         },
     )
@@ -367,15 +521,28 @@ fn render_worktree_auto_trust_switch(tab_index: &mut isize, cx: &mut App) -> imp
         ui::ToggleState::Unselected
     };
 
-    let tooltip_description = localization::text(cx, "onboarding-trust-tooltip");
+    let (label, description, tooltip_description) = if APP_NAME == "Zed" {
+        (
+            "Trust All Projects By Default",
+            "Automatically trust new workspaces and allow their developer services to run",
+            format!(
+                "{APP_NAME} only runs language servers, project settings, and MCP servers after you trust a new workspace."
+            ),
+        )
+    } else {
+        (
+            "Trust Workspace Folders Automatically",
+            "Allow language servers, Workspace settings, and configured tools to run for newly opened folders",
+            format!(
+                "{APP_NAME} only runs language servers, Workspace settings, and configured tools after you trust a newly opened folder."
+            ),
+        )
+    };
 
     SwitchField::new(
         "onboarding-auto-trust-worktrees",
-        Some(localization::text(cx, "onboarding-trust-all-projects")),
-        Some(localization::text(
-            cx,
-            "onboarding-trust-all-projects-description",
-        )),
+        Some(label),
+        Some(description.into()),
         toggle_state,
         {
             let fs = <dyn Fs>::global(cx);
@@ -390,6 +557,11 @@ fn render_worktree_auto_trust_switch(tab_index: &mut isize, cx: &mut App) -> imp
                 update_settings_file(fs.clone(), cx, move |setting, _| {
                     setting.session.get_or_insert_default().trust_all_worktrees = Some(trust);
                 });
+
+                telemetry::event!(
+                    "Welcome Page Worktree Auto Trust Toggled",
+                    options = if trust { "on" } else { "off" }
+                );
             }
         },
     )
@@ -408,7 +580,7 @@ fn render_setting_import_button(
 ) -> impl IntoElement + 'static {
     let action = action.boxed_clone();
 
-    Button::new(label.clone(), label)
+    Button::new(label.clone(), label.clone())
         .style(ButtonStyle::OutlinedGhost)
         .size(ButtonSize::Medium)
         .label_size(LabelSize::Small)
@@ -420,6 +592,7 @@ fn render_setting_import_button(
                 .color(Color::Success)
         })
         .on_click(move |_, window, cx| {
+            telemetry::event!("Welcome Import Settings", import_source = label,);
             window.dispatch_action(action.boxed_clone(), cx);
         })
 }
@@ -452,19 +625,116 @@ fn render_import_settings_section(tab_index: &mut isize, cx: &mut App) -> impl I
             v_flex()
                 .gap_0p5()
                 .max_w_5_6()
-                .child(Label::new(localization::text(
-                    cx,
-                    "onboarding-import-settings",
-                )))
+                .child(Label::new("Import Settings"))
                 .child(
-                    Label::new(localization::text(
-                        cx,
-                        "onboarding-import-settings-description",
-                    ))
-                    .color(Color::Muted),
+                    Label::new("Automatically pull your settings from other editors")
+                        .color(Color::Muted),
                 ),
         )
         .child(h_flex().gap_1().child(vscode).child(cursor))
+}
+
+pub(crate) const FEATURED_AGENT_IDS: &[&str] =
+    &["claude-acp", "codex-acp", "github-copilot-cli", "cursor"];
+
+fn render_registry_agent_button(
+    agent: &RegistryAgent,
+    installed: bool,
+    cx: &mut App,
+) -> impl IntoElement {
+    let agent_id = agent.id().to_string();
+    let element_id = format!("{}-onboarding", agent_id);
+
+    let icon = match agent.icon_path() {
+        Some(icon_path) => Icon::from_external_svg(icon_path.clone()),
+        None => Icon::new(IconName::Sparkle),
+    }
+    .size(IconSize::XSmall)
+    .color(Color::Muted);
+
+    let fs = <dyn Fs>::global(cx);
+
+    let state_element = if installed {
+        Icon::new(IconName::Check)
+            .size(IconSize::Small)
+            .color(Color::Success)
+            .into_any_element()
+    } else {
+        Label::new("Install")
+            .size(LabelSize::XSmall)
+            .color(Color::Muted)
+            .into_any_element()
+    };
+
+    AgentSetupButton::new(element_id)
+        .icon(icon)
+        .name(agent.name().clone())
+        .state(state_element)
+        .disabled(installed)
+        .on_click(move |_, window, cx| {
+            telemetry::event!("Welcome Agent Install Clicked", agent = agent_id.as_str());
+            update_settings_file(fs.clone(), cx, {
+                let agent_id = agent_id.clone();
+                move |settings, _| {
+                    let agent_servers = settings.agent_servers.get_or_insert_default();
+                    agent_servers.entry(agent_id).or_insert_with(|| {
+                        CustomAgentServerSettings::Registry {
+                            env: Default::default(),
+                            default_mode: None,
+                            default_config_options: HashMap::default(),
+                            favorite_config_option_values: HashMap::default(),
+                        }
+                    });
+                }
+            });
+            window.dispatch_action(
+                Box::new(zed_actions::agent::SelectAgent {
+                    agent: agent_id.clone(),
+                }),
+                cx,
+            );
+        })
+}
+
+fn render_ai_section(cx: &mut App) -> impl IntoElement {
+    let registry_agents = AgentRegistryStore::try_global(cx)
+        .map(|store| store.read(cx).agents().to_vec())
+        .unwrap_or_default();
+
+    let installed_agents = cx
+        .global::<SettingsStore>()
+        .get::<AllAgentServersSettings>(None)
+        .clone();
+
+    let grid = FEATURED_AGENT_IDS.iter().fold(
+        h_flex().w_full().mt_1p5().flex_wrap().gap_2(),
+        |grid, agent_id| {
+            let Some(agent) = registry_agents
+                .iter()
+                .find(|a| a.id().as_ref() == *agent_id)
+            else {
+                return grid;
+            };
+            let is_installed = installed_agents.contains_key(*agent_id);
+            grid.child(
+                div()
+                    .min_w(rems_from_px(150_f32))
+                    .flex_1()
+                    .child(render_registry_agent_button(agent, is_installed, cx)),
+            )
+        },
+    );
+
+    v_flex()
+        .gap_0p5()
+        .child(Label::new("Optional ACP Agents"))
+        .child(
+            Label::new(
+                "Connect pane-native agents here. Supported terminal agents such as Codex run in a Workspace terminal and appear under that Workspace in Workspaces after detection.",
+            )
+            .color(Color::Muted),
+        )
+        .child(grid)
 }
 
 pub(crate) fn render_basics_page(cx: &mut App) -> impl IntoElement {
@@ -472,13 +742,18 @@ pub(crate) fn render_basics_page(cx: &mut App) -> impl IntoElement {
 
     v_flex()
         .id("basics-page")
-        .gap_6()
-        .child(render_language_section(&mut tab_index, cx))
-        .child(Divider::horizontal().color(ui::DividerColor::BorderVariant))
+        .gap_5()
+        .when(APP_NAME != "Zed", |this| {
+            this.child(render_dez_workflow_section())
+        })
         .child(render_theme_section(&mut tab_index, cx))
         .child(render_base_keymap_section(&mut tab_index, cx))
+        .child(render_ai_section(cx))
         .child(render_import_settings_section(&mut tab_index, cx))
         .child(render_vim_mode_switch(&mut tab_index, cx))
         .child(render_worktree_auto_trust_switch(&mut tab_index, cx))
-        .child(Divider::horizontal().color(ui::DividerColor::BorderVariant))
+        .when(APP_NAME == "Zed", |this| {
+            this.child(Divider::horizontal().color(ui::DividerColor::BorderVariant))
+                .child(render_telemetry_section(&mut tab_index, cx))
+        })
 }

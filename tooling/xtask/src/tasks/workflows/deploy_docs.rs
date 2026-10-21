@@ -6,8 +6,8 @@ use gh_workflow::{
 use crate::tasks::workflows::{
     runners,
     steps::{
-        self, CommonJobConditions, FluentBuilder as _, NamedJob, UploadArtifactStep, named,
-        release_job,
+        self, CommonJobConditions, CommonPermissionSets, FluentBuilder as _, NamedJob,
+        UploadArtifactStep, named, release_job,
     },
     vars::{self, StepOutput, WorkflowInput},
 };
@@ -97,7 +97,7 @@ fn docs_build_steps(
             .add_step(steps::cache_rust_dependencies_namespace())
             .map(steps::install_linux_dependencies)
             .add_step(steps::script("./script/generate-action-metadata"))
-            .add_step(lychee_link_check("./docs/src/**/*"))
+            .add_step(lychee_link_check("./docs/src/**/*.md"))
             .add_step(install_mdbook())
             .add_step(build_docs_book(docs_channel, site_url))
             .add_step(lychee_link_check(&format!("{BUILD_OUTPUT_DIR}/docs"))),
@@ -162,7 +162,7 @@ pub(crate) fn check_docs() -> NamedJob {
     NamedJob {
         name: "check_docs".to_owned(),
         job: docs_build_steps(
-            release_job(&[]),
+            release_job(&[]).add_step(steps::harden_runner()),
             None,
             DocsChannel::Stable.channel_name(),
             DocsChannel::Stable.site_url(),
@@ -234,7 +234,7 @@ fn docs_job(channel_expr: impl Into<String>, checkout_ref: Option<String>) -> Na
             docs_build_steps(
                 release_job(&[])
                     .cond(Expression::new(
-                        "github.repository_owner == 'zed-industries'",
+                        "(github.repository_owner == 'zed-industries' || github.repository_owner == 'Oreoro')",
                     ))
                     .name("Build and Deploy Docs")
                     .add_step(resolve_step),
@@ -254,12 +254,8 @@ pub(crate) fn deploy_docs_workflow_call(
     let job = Job::default()
         .with_repository_owner_guard()
         .permissions(Permissions::default().contents(Level::Read))
-        .uses(
-            "zed-industries",
-            "zed",
-            ".github/workflows/deploy_docs.yml",
-            "main",
-        )
+        // Same-repo reusable workflow so forks can deploy their own docs.
+        .uses_local(".github/workflows/deploy_docs.yml")
         .with(
             Input::default()
                 .add("channel", channel.into())
@@ -312,6 +308,7 @@ pub(crate) fn deploy_docs() -> Workflow {
     let deploy_docs = deploy_docs_job(&channel, &checkout_ref);
 
     named::workflow()
+        .with_minimal_permissions()
         .add_event(
             Event::default().workflow_dispatch(
                 WorkflowDispatch::default()
@@ -364,6 +361,7 @@ pub(crate) fn deploy_nightly_docs() -> Workflow {
 
     named::workflow()
         .name("deploy_nightly_docs")
+        .permissions(Permissions::default())
         .add_event(Event::default().push(Push::default().add_branch("main")))
         .add_job(deploy_docs.name, deploy_docs.job)
 }

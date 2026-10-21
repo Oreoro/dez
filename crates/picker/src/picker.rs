@@ -1,64 +1,54 @@
-mod head;
-pub mod highlighted_match_with_paths;
-mod persistence;
-pub mod popover_menu;
-mod preview;
-
-use preview::Preview;
-pub use preview::{Layout as PreviewLayout, Update as PreviewUpdate};
-
 use anyhow::Result;
-
-use dez_actions::editor::{MoveDown, MoveUp};
+use gpui::Action;
 use gpui::{
-    Action, AnyElement, App, Bounds, ClickEvent, Context, CursorStyle, DismissEvent, DragMoveEvent,
-    Entity, EventEmitter, FocusHandle, Focusable, Length, ListSizingBehavior, ListState,
-    MouseButton, MouseUpEvent, Pixels, Render, ScrollStrategy, Task, UniformListScrollHandle,
-    WeakEntity, Window, actions, canvas, div, list, prelude::*, uniform_list,
+    AnyElement, App, Bounds, ClickEvent, Context, DismissEvent, EventEmitter, FocusHandle,
+    Focusable, ListSizingBehavior, ListState, MouseButton, MouseUpEvent, Pixels, ScrollStrategy,
+    Task, UniformListScrollHandle, Window, actions, canvas, div, list, prelude::*, uniform_list,
 };
-use gpui_util::ResultExt;
 use head::Head;
-use project::Project;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::{
     cell::Cell, cell::RefCell, collections::HashMap, ops::Range, rc::Rc, sync::Arc, time::Duration,
 };
-use theme_settings::ThemeSettings;
 use ui::{
-    Button, Color, Divider, DocumentationAside, DocumentationSide, IconButton, IconName, Label,
-    ListItem, ListItemSpacing, ScrollAxes, Scrollbars, Tooltip, WithScrollbar, prelude::*,
-    utils::WithRemSize, v_flex,
+    Checkbox, ContextMenu, Divider, DocumentationAside, KeyBinding, PopoverMenuHandle, Tooltip,
+    prelude::*,
 };
-use ui_input::{ErasedEditor, ErasedEditorEvent};
-use workspace::{ModalView, item::Settings};
+use ui_input::ErasedEditorEvent;
+use util::ResultExt;
+use workspace::ModalView;
+use zed_actions::editor::{MoveDown, MoveUp};
+
+mod footer;
+mod head;
+pub mod highlighted_match_with_paths;
+pub mod parts;
+mod persistence;
+pub mod popover_menu;
+mod preview;
+mod render;
+mod shape;
+
+use crate::shape::RelativeHeight;
+use crate::shape::RelativeWidth;
+pub use footer::PickerAction;
+pub use language::{HighlightedText, HighlightedTextBuilder};
+pub use preview::Layout as PreviewLayout;
+pub use preview::MatchLocation;
+pub use preview::Preview;
+pub use preview::PreviewBackend;
+pub use preview::PreviewSource;
+pub use preview::Update as PreviewUpdate;
+pub use ui_input::ErasedEditor;
+
+pub const DEFAULT_MODAL_WIDTH: Rems = Rems(34.0);
+pub const DEFAULT_MODAL_MAX_HEIGHT: Rems = Rems(24.0);
 
 enum ElementContainer {
     List(ListState),
     UniformList(UniformListScrollHandle),
 }
-
-#[derive(Clone, Copy)]
-enum DividerDrag {
-    Right {
-        start_x: Pixels,
-        start_width: Pixels,
-    },
-    Below {
-        start_y: Pixels,
-        start_height: Pixels,
-    },
-}
-
-struct DividerDragView;
-
-impl Render for DividerDragView {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        div()
-    }
-}
-
-const MIN_PREVIEW_PX: Pixels = px(240.);
 
 pub enum Direction {
     Up,
@@ -76,10 +66,6 @@ actions!(
     [
         /// Confirms the selected completion in the picker.
         ConfirmCompletion,
-        /// Toggles multi-select mode for pickers that support it.
-        ToggleMultiSelect,
-        /// Toggles the focused item and advances to the next selectable item.
-        MultiSelectNext,
         /// Toggles the preview between hidden and visible.
         TogglePreview,
         /// Shows the preview to the right of the results.
@@ -87,7 +73,16 @@ actions!(
         /// Shows the preview below the results.
         SetPreviewBelow,
         /// Hides the preview.
-        SetPreviewHidden
+        SetPreviewHidden,
+        /// Opens the footer's actions menu.
+        ToggleActionsMenu,
+        /// Toggles multi-select mode, in which clicking items adds them to
+        /// the selection instead of opening them
+        ToggleMultiSelect,
+        /// Toggles the current item in the multi-selection and advances to
+        /// the next item, starting multi-select mode if it isn't already
+        /// active
+        MultiSelectNext,
     ]
 );
 
@@ -105,53 +100,133 @@ struct PendingUpdateMatches {
     _task: Task<Result<()>>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PickerItemId(SharedString);
+#[derive(Clone, Copy)]
+enum Presentation {
+    /// A self-contained modal: draws its own elevated background and dismisses
+    /// when it loses focus. May optionally be resized (persisting its size);
+    /// resizing only makes sense for modals.
+    Modal { resizable: bool },
+    /// A popover attached to a menu/trigger: draws its own elevated background
+    /// and dismisses when it loses focus, but is never resizable.
+    Popover,
+    /// Embedded inside a larger container (e.g. another modal) that provides its
+    /// own chrome and handles dismissal.
+    Embedded,
+}
 
-impl PickerItemId {
-    pub fn new(value: impl Into<SharedString>) -> Self {
-        Self(value.into())
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PickerSurfaceDensity {
+    Compact,
+    #[default]
+    Balanced,
+    Spacious,
+}
+
+impl PickerSurfaceDensity {
+    pub(crate) fn editor_height(self) -> Pixels {
+        match self {
+            Self::Compact => px(32.),
+            Self::Balanced => px(36.),
+            Self::Spacious => px(44.),
+        }
     }
 
-    pub fn as_str(&self) -> &str {
-        self.0.as_ref()
+    pub(crate) fn editor_padding_x(self) -> Pixels {
+        match self {
+            Self::Compact => px(8.),
+            Self::Balanced => px(10.),
+            Self::Spacious => px(14.),
+        }
     }
 
-    pub fn into_shared_string(self) -> SharedString {
-        self.0
+    pub(crate) fn empty_state_padding_y(self) -> Pixels {
+        match self {
+            Self::Compact => px(6.),
+            Self::Balanced => px(8.),
+            Self::Spacious => px(12.),
+        }
+    }
+
+    pub(crate) fn aside_padding(self) -> Pixels {
+        match self {
+            Self::Compact => px(6.),
+            Self::Balanced => px(8.),
+            Self::Spacious => px(12.),
+        }
+    }
+
+    pub(crate) fn footer_padding(self) -> Pixels {
+        match self {
+            Self::Compact => px(6.),
+            Self::Balanced => px(8.),
+            Self::Spacious => px(12.),
+        }
+    }
+
+    pub(crate) fn footer_gap(self) -> Pixels {
+        match self {
+            Self::Compact => px(4.),
+            Self::Balanced => px(6.),
+            Self::Spacious => px(8.),
+        }
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct PickerRestorationState {
-    pub query: String,
-    pub multi_select_enabled: bool,
-    pub selected_item_ids: Vec<PickerItemId>,
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PickerSurfaceRadius {
+    None,
+    Subtle,
+    #[default]
+    Rounded,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum PickerSurfaceContrast {
+    Low,
+    #[default]
+    Standard,
+    High,
+}
+
+/// The default size for a given preview layout. With the preview hidden the
+/// picker uses its standard size; showing a preview expands it to the larger
+/// "telescope" size so the results pane isn't cramped beside the preview.
+fn default_shape_for_layout(hidden: shape::Centered, layout: preview::Layout) -> shape::Centered {
+    match layout {
+        preview::Layout::Hidden => hidden,
+        preview::Layout::Right | preview::Layout::Below => shape::Centered::default(),
+    }
 }
 
 pub struct Picker<D: PickerDelegate> {
     pub delegate: D,
     element_container: ElementContainer,
     head: Head,
+    preview: Option<Preview>,
     pending_update_matches: Option<PendingUpdateMatches>,
     confirm_on_update: Option<bool>,
-    width: Option<Length>,
-    widest_item: Option<usize>,
-    max_height: Option<Length>,
+    select_instead_of_open: bool,
+    shape: shape::Shape,
+    /// The size the picker opens at (and resets to). Defaults depend on whether
+    /// the picker has a preview; see [`Picker::initial_width`] / [`Picker::max_height`].
+    default_shape: shape::Centered,
+    size_bounds: shape::SizeBounds,
     /// An external control to display a scrollbar in the `Picker`.
     show_scrollbar: bool,
-    /// Whether the `Picker` is rendered as a self-contained modal.
-    ///
-    /// Set this to `false` when rendering the `Picker` as part of a larger modal.
-    is_modal: bool,
+    /// How the picker is presented, which controls its chrome and behavior.
+    presentation: Presentation,
     /// Bounds tracking for the picker container (for aside positioning)
     picker_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
     /// Bounds tracking for items (for aside positioning) - maps item index to bounds
     item_bounds: Rc<RefCell<HashMap<usize, Bounds<Pixels>>>>,
-    preview: Option<Preview>,
-    preview_size: Option<Pixels>,
-    multi_select_enabled: bool,
-    selected_item_ids: Vec<PickerItemId>,
+    shape_loaded_from_persistence: bool,
+    /// Handle for the default footer's Actions popover menu. Used to keep the
+    /// picker open while that menu has focus.
+    actions_menu_handle: PopoverMenuHandle<ContextMenu>,
+    reopenable: bool,
+    surface_density: PickerSurfaceDensity,
+    surface_radius: PickerSurfaceRadius,
+    surface_contrast: PickerSurfaceContrast,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
@@ -166,10 +241,21 @@ pub enum PickerEditorPosition {
 pub trait PickerDelegate: Sized + 'static {
     type ListItem: IntoElement;
 
+    /// Name of the picker, this is the key for serialization. We could use the
+    /// typename of the delegate but then a rename would break persistence.
+    fn name() -> &'static str;
     fn match_count(&self) -> usize;
     fn selected_index(&self) -> usize;
     fn separators_after_indices(&self) -> Vec<usize> {
         Vec::new()
+    }
+    fn set_hovered_index(
+        &mut self,
+        ix: usize,
+        window: &mut Window,
+        cx: &mut Context<Picker<Self>>,
+    ) {
+        self.set_selected_index(ix, window, cx);
     }
     fn set_selected_index(
         &mut self,
@@ -201,38 +287,6 @@ pub trait PickerDelegate: Sized + 'static {
         true
     }
 
-    fn supports_multi_select(&self) -> bool {
-        false
-    }
-
-    fn item_id(&self, _index: usize) -> Option<PickerItemId> {
-        None
-    }
-
-    fn item_id_is_valid(&self, _id: &PickerItemId, _cx: &App) -> bool {
-        false
-    }
-
-    fn confirm_multi(
-        &mut self,
-        _ids: Vec<PickerItemId>,
-        _window: &mut Window,
-        _cx: &mut Context<Picker<Self>>,
-    ) {
-    }
-
-    fn workspace(&self, _cx: &App) -> Option<WeakEntity<workspace::Workspace>> {
-        None
-    }
-
-    fn reopen_request(
-        &self,
-        _state: &PickerRestorationState,
-        _cx: &App,
-    ) -> Option<Arc<dyn workspace::ReopenablePickerRequest>> {
-        None
-    }
-
     // Allows binding some optional effect to when the selection changes.
     fn selected_index_changed(
         &self,
@@ -244,7 +298,7 @@ pub trait PickerDelegate: Sized + 'static {
     }
     fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str>;
     fn no_matches_text(&self, _window: &mut Window, _cx: &mut App) -> Option<SharedString> {
-        Some(localization::text(_cx, "picker-no-matches"))
+        Some("No matches".into())
     }
     fn update_matches(
         &mut self,
@@ -276,6 +330,41 @@ pub trait PickerDelegate: Sized + 'static {
         None
     }
     fn confirm(&mut self, secondary: bool, window: &mut Window, cx: &mut Context<Picker<Self>>);
+    /// Whether this delegate supports selecting multiple items at once. When
+    /// `true`, the delegate owns the multi-selection state; the picker only
+    /// drives the generic UX (toggle action, indicator, click routing).
+    fn supports_multi_select(&self) -> bool {
+        false
+    }
+    /// Whether the item at `ix` is part of the current multi-selection.
+    fn is_item_selected(&self, _ix: usize) -> bool {
+        false
+    }
+    /// Toggle whether the item at `ix` is part of the multi-selection. Items
+    /// that cannot participate in multi-selection (e.g. non-file entries)
+    /// should leave the selection unchanged.
+    fn toggle_item_selected(
+        &mut self,
+        _ix: usize,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) {
+    }
+    /// Number of items currently in the multi-selection.
+    fn selected_item_count(&self) -> usize {
+        0
+    }
+    /// Clear the multi-selection.
+    fn clear_selection(&mut self, _cx: &mut Context<Picker<Self>>) {}
+    /// Open every item in the multi-selection. Called on confirm when the
+    /// selection is non-empty; implementations should clear the selection.
+    fn confirm_multi(
+        &mut self,
+        _secondary: bool,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) {
+    }
     /// Instead of interacting with currently selected entry, treats editor input literally,
     /// performing some kind of action on it.
     fn confirm_input(
@@ -297,35 +386,70 @@ pub trait PickerDelegate: Sized + 'static {
     ) -> Option<String> {
         None
     }
+    /// Called when `SelectChild` fires (e.g. shift-right-arrow). Return `Some(query)`
+    /// to step into the currently selected item (e.g. a directory); the picker
+    /// will set the query and refresh matches.
+    fn select_child(
+        &mut self,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) -> Option<String> {
+        None
+    }
+
+    /// Called when `SelectParent` fires (e.g. shift-left-arrow). Return `Some(query)`
+    /// to step back to the parent; the picker will set the query and refresh
+    /// matches.
+    fn select_parent(
+        &mut self,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) -> Option<String> {
+        None
+    }
 
     fn editor_position(&self) -> PickerEditorPosition {
         PickerEditorPosition::default()
     }
 
+    /// Prevent closing the modal on clicking in a popover menu that portrudes out
+    /// This is already set by the Actions menu from the picker, this is here to
+    /// support extra menus added by the delegate.
+    fn has_another_open_menu(&self, _window: &Window, _cx: &App) -> bool {
+        false
+    }
+
+    /// An optional control rendered at the trailing edge of the search bar, e.g.
+    /// a filter toggle. Returning `Some` is the easy way to add such a control;
+    /// for full control over the search bar, override [`Self::render_editor`].
+    fn searchbar_trailer(
+        &self,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) -> Option<AnyElement> {
+        None
+    }
+
+    /// Overrides the search bar entirely. Most delegates should return `None`
+    /// to get the picker-rendered default (which includes
+    /// [`Self::searchbar_trailer`] and the multi-select toggle); override for
+    /// full control over the search bar.
     fn render_editor(
         &self,
-        editor: &Arc<dyn ErasedEditor>,
-        window: &mut Window,
-        cx: &mut Context<Picker<Self>>,
-    ) -> Div {
-        v_flex()
-            .when(
-                self.editor_position() == PickerEditorPosition::End,
-                |this| this.child(Divider::horizontal()),
-            )
-            .child(
-                h_flex()
-                    .overflow_hidden()
-                    .flex_none()
-                    .h_9()
-                    .px_2p5()
-                    .child(editor.render(window, cx)),
-            )
-            .when(
-                self.editor_position() == PickerEditorPosition::Start,
-                |this| this.child(Divider::horizontal()),
-            )
+        _editor: &Arc<dyn ErasedEditor>,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) -> Option<Div> {
+        None
     }
+
+    fn try_get_preview_data_for_match(&self, _cx: &App) -> Option<PreviewUpdate> {
+        None
+    }
+
+    /// Called on the delegate when opening a preview to the side. Delegates can
+    /// then change how much space they use for rendering the match
+    fn preview_layout_changed(&mut self, _layout_is_horizontal: bool) {}
 
     fn render_match(
         &self,
@@ -335,15 +459,15 @@ pub trait PickerDelegate: Sized + 'static {
         cx: &mut Context<Picker<Self>>,
     ) -> Option<Self::ListItem>;
 
-    fn render_match_with_state(
+    fn render_match_with_checkbox(
         &self,
-        ix: usize,
-        selected: bool,
-        _multi_selected: bool,
-        window: &mut Window,
-        cx: &mut Context<Picker<Self>>,
+        _ix: usize,
+        _selected: bool,
+        _checkbox: AnyElement,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
     ) -> Option<Self::ListItem> {
-        self.render_match(ix, selected, window, cx)
+        None
     }
 
     fn render_header(
@@ -354,12 +478,25 @@ pub trait PickerDelegate: Sized + 'static {
         None
     }
 
+    /// Overrides the picker's footer.
+    ///
+    /// Note there normally isn't a footer unless this is set or the picker has
+    /// a preview. If the picker has a preview add actions to it using picker_actions.
     fn render_footer(
         &self,
         _window: &mut Window,
         _: &mut Context<Picker<Self>>,
     ) -> Option<AnyElement> {
         None
+    }
+
+    /// Make this non-empty to have an `Actions` menu show up in the footer
+    fn actions_menu(
+        &self,
+        _window: &mut Window,
+        _cx: &mut Context<Picker<Self>>,
+    ) -> Vec<footer::PickerAction> {
+        Vec::new()
     }
 
     fn documentation_aside(
@@ -376,24 +513,6 @@ pub trait PickerDelegate: Sized + 'static {
     fn documentation_aside_index(&self) -> Option<usize> {
         None
     }
-
-    /// A stable, human-readable identifier for this picker, used as the
-    /// persistence key for the preview layout. Delegates that support a preview
-    /// should override this so each picker remembers its own layout.
-    fn name() -> &'static str {
-        "picker"
-    }
-
-    /// Returns the data the preview should show for the currently selected
-    /// match, or `None` if there is nothing to preview. Called whenever the
-    /// selection or the matches change.
-    fn try_get_preview_data_for_match(&self, _cx: &App) -> Option<PreviewUpdate> {
-        None
-    }
-
-    /// Called after the preview layout changes so delegates can react (a
-    /// horizontal preview may want different sizing than a vertical one).
-    fn preview_layout_changed(&mut self, _layout_is_horizontal: bool) {}
 }
 
 impl<D: PickerDelegate> Focusable for Picker<D> {
@@ -427,10 +546,10 @@ impl<D: PickerDelegate> Picker<D> {
     }
 
     /// A picker similar to [`uniform_list()`](Self::uniform_list) however this picker has a
-    /// preview window where it shows extra information about the selected match.
+    /// preview window where it shows extra information.
     pub fn uniform_list_with_preview(
         delegate: D,
-        project: Entity<Project>,
+        preview: Arc<dyn PreviewBackend>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -441,10 +560,64 @@ impl<D: PickerDelegate> Picker<D> {
             cx,
         );
 
-        let preview = Preview::new_editor(project, window, cx);
+        let preview = Preview::new(preview);
         Self::new(
             delegate,
             ContainerKind::UniformList,
+            head,
+            Some(preview),
+            window,
+            cx,
+        )
+    }
+
+    /// A picker similar to [`list()`](Self::list) (variable-height rows) but with
+    /// a preview window. Use this instead of [`uniform_list_with_preview()`](Self::uniform_list_with_preview)
+    /// when [`PickerDelegate::render_match`] can return rows of different heights
+    /// (e.g. section headers and separators interleaved with matches).
+    pub fn list_with_preview(
+        delegate: D,
+        preview: Arc<dyn PreviewBackend>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let head = Head::editor(
+            delegate.placeholder_text(window, cx),
+            Self::on_input_editor_event,
+            window,
+            cx,
+        );
+
+        let preview = Preview::new(preview);
+        Self::new(
+            delegate,
+            ContainerKind::List,
+            head,
+            Some(preview),
+            window,
+            cx,
+        )
+    }
+
+    pub fn list_with_preview_and_query_editor(
+        delegate: D,
+        preview: Arc<dyn PreviewBackend>,
+        query_editor: Arc<dyn ErasedEditor>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let head = Head::with_editor(
+            query_editor,
+            delegate.placeholder_text(window, cx),
+            Self::on_input_editor_event,
+            window,
+            cx,
+        );
+
+        let preview = Preview::new(preview);
+        Self::new(
+            delegate,
+            ContainerKind::List,
             head,
             Some(preview),
             window,
@@ -473,33 +646,6 @@ impl<D: PickerDelegate> Picker<D> {
         Self::new(delegate, ContainerKind::List, head, None, window, cx)
     }
 
-    /// A picker similar to [`list()`](Self::list) (variable-height rows) but with
-    /// a preview window. Use this instead of [`uniform_list_with_preview()`](Self::uniform_list_with_preview)
-    /// when [`PickerDelegate::render_match`] can return rows of different heights.
-    pub fn list_with_preview(
-        delegate: D,
-        project: Entity<Project>,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> Self {
-        let head = Head::editor(
-            delegate.placeholder_text(window, cx),
-            Self::on_input_editor_event,
-            window,
-            cx,
-        );
-
-        let preview = Preview::new_editor(project, window, cx);
-        Self::new(
-            delegate,
-            ContainerKind::List,
-            head,
-            Some(preview),
-            window,
-            cx,
-        )
-    }
-
     /// A picker, which displays its matches using `gpui::list`, matches can have different heights.
     /// The picker allows the user to perform search items by text.
     /// If `PickerDelegate::render_match` only returns items with the same height, use `Picker::uniform_list` as its implementation is optimized for that.
@@ -524,29 +670,68 @@ impl<D: PickerDelegate> Picker<D> {
     ) -> Self {
         let element_container = Self::create_element_container(container);
         if let Some(preview) = &mut preview {
-            preview.layout = persistence::load_layout(D::name(), cx)
+            preview.layout = persistence::load_last_preview_layout(D::name(), cx)
                 .log_err()
                 .flatten()
                 .unwrap_or_default();
         };
+        let has_preview = preview.is_some();
+        let persisted_shape =
+            persistence::try_load_shape(D::name(), preview.as_ref().map(|p| p.layout), cx)
+                .log_err()
+                .flatten();
+        // Every picker opens at the standard "simple" size: a fixed width and a
+        // standard max height it shrinks below when there's little content.
+        // Showing a preview expands it to the larger "telescope" size (see
+        // `default_shape_for_layout`).
+        let default_shape = shape::Centered::simple();
+        let initial_layout = preview
+            .as_ref()
+            .map(|p| p.layout)
+            .unwrap_or(preview::Layout::Hidden);
+        let mut size_bounds = shape::SizeBounds::default();
+        // For a plain picker the whole-picker minimum is just its opening width,
+        // so it can't be resized/clamped narrower than it opens. Preview pickers
+        // keep the standard per-pane minimums.
+        if !has_preview && let Some(width) = default_shape.width.as_rems() {
+            size_bounds.min_results.width = width;
+        }
         let mut this = Self {
             delegate,
             head,
             element_container,
             pending_update_matches: None,
             confirm_on_update: None,
-            width: None,
-            widest_item: None,
-            max_height: Some(rems(24.).into()),
+            select_instead_of_open: false,
+            preview,
+            shape_loaded_from_persistence: persisted_shape.is_some(),
+            shape: persisted_shape.unwrap_or_else(|| {
+                shape::Shape::HorizontallyCentered(default_shape_for_layout(
+                    default_shape,
+                    initial_layout,
+                ))
+            }),
+            default_shape,
             show_scrollbar: false,
-            is_modal: true,
+            presentation: Presentation::Modal {
+                resizable: has_preview,
+            },
             picker_bounds: Rc::new(Cell::new(None)),
             item_bounds: Rc::new(RefCell::new(HashMap::default())),
-            preview,
-            preview_size: None,
-            multi_select_enabled: false,
-            selected_item_ids: Vec::new(),
+            size_bounds,
+            actions_menu_handle: PopoverMenuHandle::default(),
+            reopenable: true,
+            surface_density: PickerSurfaceDensity::default(),
+            surface_radius: PickerSurfaceRadius::default(),
+            surface_contrast: PickerSurfaceContrast::default(),
         };
+        // give delegate the initial preview layout
+        this.delegate
+            .preview_layout_changed(matches!(initial_layout, preview::Layout::Right));
+        if this.reopenable {
+            let focus_handle = this.focus_handle(cx);
+            workspace::register_reopenable_picker(&focus_handle, cx);
+        }
         this.update_matches("".to_string(), window, cx);
         // give the delegate 4ms to render the first set of suggestions.
         this.delegate
@@ -565,19 +750,58 @@ impl<D: PickerDelegate> Picker<D> {
         }
     }
 
-    pub fn width(mut self, width: impl Into<gpui::Length>) -> Self {
-        self.width = Some(width.into());
+    /// Overrides the width the picker opens at (and resets to). Plain pickers
+    /// default to [`DEFAULT_MODAL_WIDTH`]; only call this for pickers that need a
+    /// different width (e.g. narrow popover selectors).
+    ///
+    /// For a plain (no-preview) picker the opening width is also its minimum, so
+    /// it can't be resized or clamped narrower than it opens.
+    pub fn initial_width(mut self, width: impl Into<RelativeWidth>) -> Self {
+        let width = width.into();
+        self.default_shape.width = width;
+        if self.live_shape_is_hidden_default() {
+            self.shape.set_initial_width(width);
+        }
+        // A plain picker's whole-picker minimum tracks its opening width. Preview
+        // pickers keep the standard per-pane minimums.
+        if self.preview.is_none()
+            && let Some(rems) = width.as_rems()
+        {
+            self.size_bounds.min_results.width = rems;
+        }
         self
     }
 
-    pub fn widest_item(mut self, ix: Option<usize>) -> Self {
-        self.widest_item = ix;
+    /// Overrides the picker's max height. Plain pickers default to
+    /// [`DEFAULT_MODAL_MAX_HEIGHT`] and shrink below it to fit their content;
+    /// only call this for pickers that want a different cap (e.g. the outline
+    /// view, which is taller).
+    pub fn max_height(mut self, height: impl Into<RelativeHeight>) -> Self {
+        let height = height.into();
+        self.default_shape.height = height;
+        if self.live_shape_is_hidden_default() {
+            self.shape.set_initial_height(height);
+        }
         self
     }
 
-    pub fn max_height(mut self, max_height: Option<gpui::Length>) -> Self {
-        self.max_height = max_height;
-        self
+    /// Whether the live shape still reflects the hidden-layout default, i.e. it
+    /// was not restored from a persisted size and currently opens with no
+    /// preview. Only then may `initial_width`/`max_height` push their
+    /// hidden/no-preview defaults onto it; a picker reopened in a preview layout
+    /// keeps the larger telescope default, which those (smaller) no-preview
+    /// values must not shrink.
+    fn live_shape_is_hidden_default(&self) -> bool {
+        !self.shape_loaded_from_persistence
+            && self.preview_layout().unwrap_or(preview::Layout::Hidden) == preview::Layout::Hidden
+    }
+
+    /// Whether the picker fills its full height (preview visible) or shrinks to
+    /// fit its content, treating the height as a maximum (no preview visible).
+    fn fill_height(&self) -> bool {
+        self.preview
+            .as_ref()
+            .is_some_and(|preview| preview.layout != preview::Layout::Hidden)
     }
 
     pub fn show_scrollbar(mut self, show_scrollbar: bool) -> Self {
@@ -585,9 +809,81 @@ impl<D: PickerDelegate> Picker<D> {
         self
     }
 
-    pub fn modal(mut self, modal: bool) -> Self {
-        self.is_modal = modal;
+    pub fn surface_density(mut self, density: PickerSurfaceDensity) -> Self {
+        self.surface_density = density;
         self
+    }
+
+    pub fn surface_radius(mut self, radius: PickerSurfaceRadius) -> Self {
+        self.surface_radius = radius;
+        self
+    }
+
+    pub fn surface_contrast(mut self, contrast: PickerSurfaceContrast) -> Self {
+        self.surface_contrast = contrast;
+        self
+    }
+
+    /// Controls whether a modal hosting this picker can be revealed again with
+    /// `workspace::ReopenLastPicker` after it's dismissed. Defaults to `true`;
+    /// pass `false` to exclude this picker. As a builder, this only takes effect
+    /// while constructing the picker, before it's opened.
+    pub fn reopenable(mut self, reopenable: bool, cx: &mut App) -> Self {
+        if reopenable == self.reopenable {
+            return self;
+        }
+        self.reopenable = reopenable;
+        let focus_handle = self.focus_handle(cx);
+        if reopenable {
+            workspace::register_reopenable_picker(&focus_handle, cx);
+        } else {
+            workspace::deregister_reopenable_picker(&focus_handle, cx);
+        }
+        self
+    }
+
+    /// Presents the picker as embedded inside a larger container that provides
+    /// its own chrome and dismissal, rather than the default self-contained
+    /// modal. Use [`popover`](Self::popover) instead for menu-attached pickers.
+    pub fn embedded(mut self) -> Self {
+        self.presentation = Presentation::Embedded;
+        self
+    }
+
+    /// Presents the picker as a popover surface: it draws its own elevated
+    /// background (like a modal) but is not resizable. Use this for pickers
+    /// shown inside a menu/popover.
+    pub fn popover(mut self) -> Self {
+        self.set_popover();
+        self
+    }
+
+    pub(crate) fn set_popover(&mut self) {
+        self.presentation = Presentation::Popover;
+    }
+
+    /// Controls whether the user can drag to resize the picker (and whether its
+    /// size is persisted). Only applies to modal pickers; no-op otherwise.
+    /// Defaults to `true` for pickers with a preview and `false` otherwise.
+    pub fn resizable(mut self, resizable: bool) -> Self {
+        if let Presentation::Modal { resizable: r } = &mut self.presentation {
+            *r = resizable;
+        }
+        self
+    }
+
+    /// Whether the picker draws its own elevated background and dismisses on
+    /// blur (modals and popovers, but not embedded pickers).
+    fn draws_own_container(&self) -> bool {
+        matches!(
+            self.presentation,
+            Presentation::Modal { .. } | Presentation::Popover
+        )
+    }
+
+    /// Whether the picker can be resized (only ever true for modals).
+    fn is_resizable(&self) -> bool {
+        matches!(self.presentation, Presentation::Modal { resizable: true })
     }
 
     pub fn list_measure_all(mut self) -> Self {
@@ -602,6 +898,32 @@ impl<D: PickerDelegate> Picker<D> {
 
     pub fn focus(&self, window: &mut Window, cx: &mut App) {
         self.focus_handle(cx).focus(window, cx);
+    }
+
+    pub fn set_hovered_index(&mut self, ix: usize, window: &mut Window, cx: &mut Context<Self>) {
+        let match_count = self.delegate.match_count();
+        if match_count == 0 {
+            return;
+        }
+
+        if !self.delegate.can_select(ix, window, cx) {
+            return;
+        }
+
+        let previous_index = self.delegate.selected_index();
+        self.delegate.set_hovered_index(ix, window, cx);
+        let current_index = self.delegate.selected_index();
+
+        if previous_index != current_index {
+            if let Some(action) = self.delegate.selected_index_changed(ix, window, cx) {
+                action(window, cx);
+            }
+            if let Some(preview) = &mut self.preview
+                && let Some(update) = self.delegate.try_get_preview_data_for_match(cx)
+            {
+                preview.update(update, window, cx);
+            }
+        }
     }
 
     /// Handles the selecting an index, and passing the change to the delegate.
@@ -623,9 +945,6 @@ impl<D: PickerDelegate> Picker<D> {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let delegate = &self.delegate;
-        self.selected_item_ids
-            .retain(|item_id| delegate.item_id_is_valid(item_id, cx));
         let match_count = self.delegate.match_count();
         if match_count == 0 {
             return;
@@ -668,7 +987,11 @@ impl<D: PickerDelegate> Picker<D> {
             if let Some(action) = self.delegate.selected_index_changed(ix, window, cx) {
                 action(window, cx);
             }
-            self.update_preview(window, cx);
+            if let Some(preview) = &mut self.preview
+                && let Some(update) = self.delegate.try_get_preview_data_for_match(cx)
+            {
+                preview.update(update, window, cx);
+            }
             if scroll_to_index {
                 self.scroll_to_item_index(ix);
             }
@@ -758,107 +1081,13 @@ impl<D: PickerDelegate> Picker<D> {
         cx.notify();
     }
 
-    pub fn set_multi_select_enabled(&mut self, enabled: bool, cx: &mut Context<Self>) {
-        if !self.delegate.supports_multi_select() {
-            return;
+    pub fn cancel(&mut self, _: &menu::Cancel, window: &mut Window, cx: &mut Context<Self>) {
+        if self.delegate.should_dismiss() {
+            self.select_instead_of_open = false;
+            self.delegate.clear_selection(cx);
+            self.delegate.dismissed(window, cx);
+            cx.emit(DismissEvent);
         }
-        self.multi_select_enabled = enabled;
-        if !enabled {
-            self.selected_item_ids.clear();
-        }
-        cx.notify();
-    }
-
-    pub fn multi_select_enabled(&self) -> bool {
-        self.multi_select_enabled
-    }
-
-    pub fn selected_item_ids(&self) -> &[PickerItemId] {
-        &self.selected_item_ids
-    }
-
-    pub fn is_item_selected(&self, index: usize) -> bool {
-        self.delegate
-            .item_id(index)
-            .is_some_and(|item_id| self.selected_item_ids.contains(&item_id))
-    }
-
-    pub fn toggle_item_selection(
-        &mut self,
-        index: usize,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if !self.multi_select_enabled
-            || !self.delegate.supports_multi_select()
-            || !self.delegate.can_select(index, window, cx)
-        {
-            return;
-        }
-        let Some(item_id) = self.delegate.item_id(index) else {
-            return;
-        };
-        if !self.delegate.item_id_is_valid(&item_id, cx) {
-            return;
-        }
-
-        if let Some(selected_index) = self
-            .selected_item_ids
-            .iter()
-            .position(|selected| selected == &item_id)
-        {
-            self.selected_item_ids.remove(selected_index);
-        } else {
-            self.selected_item_ids.push(item_id);
-        }
-        cx.notify();
-    }
-
-    pub fn reconcile_multi_selection(&mut self, cx: &mut Context<Self>) {
-        self.selected_item_ids
-            .retain(|item_id| self.delegate.item_id_is_valid(item_id, cx));
-        cx.notify();
-    }
-
-    fn ordered_selected_item_ids(&self, cx: &App) -> Vec<PickerItemId> {
-        let mut ordered = Vec::with_capacity(self.selected_item_ids.len());
-        for index in 0..self.delegate.match_count() {
-            let Some(item_id) = self.delegate.item_id(index) else {
-                continue;
-            };
-            if self.selected_item_ids.contains(&item_id) && !ordered.contains(&item_id) {
-                ordered.push(item_id);
-            }
-        }
-        for item_id in &self.selected_item_ids {
-            if !ordered.contains(item_id) && self.delegate.item_id_is_valid(item_id, cx) {
-                ordered.push(item_id.clone());
-            }
-        }
-        ordered
-    }
-
-    pub fn restoration_state(&self, cx: &App) -> PickerRestorationState {
-        PickerRestorationState {
-            query: self.query(cx),
-            multi_select_enabled: self.multi_select_enabled,
-            selected_item_ids: self.selected_item_ids.clone(),
-        }
-    }
-
-    pub fn restore_state(
-        &mut self,
-        state: PickerRestorationState,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.multi_select_enabled =
-            state.multi_select_enabled && self.delegate.supports_multi_select();
-        self.selected_item_ids = state.selected_item_ids;
-        if self.query(cx) != state.query {
-            self.set_query(&state.query, window, cx);
-        }
-        cx.notify();
     }
 
     fn toggle_multi_select(
@@ -867,7 +1096,15 @@ impl<D: PickerDelegate> Picker<D> {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.set_multi_select_enabled(!self.multi_select_enabled, cx);
+        if !self.delegate.supports_multi_select() {
+            cx.propagate();
+            return;
+        }
+        self.select_instead_of_open = !self.select_instead_of_open;
+        if !self.select_instead_of_open {
+            self.delegate.clear_selection(cx);
+        }
+        cx.notify();
     }
 
     fn multi_select_next(
@@ -876,19 +1113,17 @@ impl<D: PickerDelegate> Picker<D> {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !self.multi_select_enabled {
-            self.set_multi_select_enabled(true, cx);
+        // Propagate so `tab` retains its other meanings (e.g.
+        // `ConfirmCompletion`) in pickers without multi-select.
+        if !self.delegate.supports_multi_select() {
+            cx.propagate();
+            return;
         }
-        self.toggle_item_selection(self.delegate.selected_index(), window, cx);
+        self.select_instead_of_open = true;
+        let ix = self.delegate.selected_index();
+        self.delegate.toggle_item_selected(ix, window, cx);
         self.select_next(&menu::SelectNext, window, cx);
-    }
-
-    pub fn cancel(&mut self, _: &menu::Cancel, window: &mut Window, cx: &mut Context<Self>) {
-        if self.delegate.should_dismiss() {
-            self.record_reopen_request(cx);
-            self.delegate.dismissed(window, cx);
-            cx.emit(DismissEvent);
-        }
+        cx.notify();
     }
 
     fn confirm(&mut self, _: &menu::Confirm, window: &mut Window, cx: &mut Context<Self>) {
@@ -943,6 +1178,62 @@ impl<D: PickerDelegate> Picker<D> {
             cx.propagate()
         }
     }
+    fn select_child(&mut self, _: &menu::SelectChild, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(new_query) = self.delegate.select_child(window, cx) {
+            self.set_query(&new_query, window, cx);
+        } else {
+            cx.propagate()
+        }
+    }
+
+    fn select_parent(
+        &mut self,
+        _: &menu::SelectParent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(new_query) = self.delegate.select_parent(window, cx) {
+            self.set_query(&new_query, window, cx);
+        } else {
+            cx.propagate()
+        }
+    }
+
+    fn set_preview_right(
+        &mut self,
+        _: &SetPreviewRight,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_preview_layout(preview::Layout::Right, window, cx);
+    }
+
+    fn set_preview_below(
+        &mut self,
+        _: &SetPreviewBelow,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_preview_layout(preview::Layout::Below, window, cx);
+    }
+
+    fn set_preview_hidden(
+        &mut self,
+        _: &SetPreviewHidden,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_preview_layout(preview::Layout::Hidden, window, cx);
+    }
+
+    fn toggle_actions_menu(
+        &mut self,
+        _: &ToggleActionsMenu,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.actions_menu_handle.toggle(window, cx);
+    }
 
     fn handle_click(
         &mut self,
@@ -957,57 +1248,25 @@ impl<D: PickerDelegate> Picker<D> {
             return;
         }
         self.set_selected_index(ix, None, false, window, cx);
-        if secondary && self.delegate.supports_multi_select() {
-            if !self.multi_select_enabled {
-                self.set_multi_select_enabled(true, cx);
-            }
-            self.toggle_item_selection(ix, window, cx);
+        if self.delegate.supports_multi_select() && (secondary || self.select_instead_of_open) {
+            self.select_instead_of_open = true;
+            self.delegate.toggle_item_selected(ix, window, cx);
+            cx.notify();
         } else {
-            self.do_confirm(secondary, window, cx)
+            self.do_confirm(secondary, window, cx);
         }
     }
 
     fn do_confirm(&mut self, secondary: bool, window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(update_query) = self.delegate.confirm_update_query(window, cx) {
+        if self.delegate.supports_multi_select() && self.delegate.selected_item_count() > 0 {
+            self.select_instead_of_open = false;
+            self.delegate.confirm_multi(secondary, window, cx);
+        } else if let Some(update_query) = self.delegate.confirm_update_query(window, cx) {
             self.set_query(&update_query, window, cx);
             self.set_selected_index(0, Some(Direction::Down), false, window, cx);
-        } else if self.multi_select_enabled && !self.selected_item_ids.is_empty() {
-            self.record_reopen_request(cx);
-            let item_ids = self.ordered_selected_item_ids(cx);
-            if item_ids.is_empty() {
-                return;
-            }
-            self.delegate.confirm_multi(item_ids, window, cx);
         } else {
-            self.record_reopen_request(cx);
             self.delegate.confirm(secondary, window, cx)
         }
-    }
-
-    fn record_reopen_request(&self, cx: &mut Context<Self>) {
-        let state = self.restoration_state(cx);
-        let Some(request) = self.delegate.reopen_request(&state, cx) else {
-            return;
-        };
-        let Some(workspace) = self.delegate.workspace(cx) else {
-            return;
-        };
-        workspace
-            .update(cx, |workspace, _| {
-                workspace.record_picker_request(
-                    request,
-                    workspace::StoredPickerState {
-                        query: state.query,
-                        multi_select_enabled: state.multi_select_enabled,
-                        selected_item_ids: state
-                            .selected_item_ids
-                            .into_iter()
-                            .map(PickerItemId::into_shared_string)
-                            .collect(),
-                    },
-                );
-            })
-            .log_err();
     }
 
     fn on_input_editor_event(
@@ -1025,7 +1284,12 @@ impl<D: PickerDelegate> Picker<D> {
                 self.update_matches(query, window, cx);
             }
             ErasedEditorEvent::Blurred => {
-                if self.is_modal && window.is_window_active() {
+                // Opening a footer/search-bar menu blurs the editor; don't
+                // dismiss the picker while such a menu is open/focused.
+                let menu_focused = self.actions_menu_handle.is_focused(window, cx)
+                    || self.actions_menu_handle.is_deployed()
+                    || self.delegate.has_another_open_menu(window, cx);
+                if self.draws_own_container() && window.is_window_active() && !menu_focused {
                     self.cancel(&menu::Cancel, window, cx);
                 }
             }
@@ -1104,6 +1368,12 @@ impl<D: PickerDelegate> Picker<D> {
         cx: &mut Context<Self>,
     ) {
         let match_count = self.delegate.match_count();
+        if match_count == 0
+            && let Some(preview) = &mut self.preview
+        {
+            preview.clear(cx)
+        }
+
         match &mut self.element_container {
             ElementContainer::List(state) => match scroll_behavior {
                 ScrollBehavior::RevealSelected => {
@@ -1126,7 +1396,11 @@ impl<D: PickerDelegate> Picker<D> {
             },
         }
         self.pending_update_matches = None;
-        self.update_preview(window, cx);
+        if let Some(update) = self.delegate.try_get_preview_data_for_match(cx)
+            && let Some(preview) = &mut self.preview
+        {
+            preview.update(update, window, cx);
+        }
         if let Some(secondary) = self.confirm_on_update.take() {
             self.do_confirm(secondary, window, cx);
         }
@@ -1147,6 +1421,8 @@ impl<D: PickerDelegate> Picker<D> {
         }
     }
 
+    /// Selects the entire query, so the next keystroke replaces it (and a single
+    /// backspace clears it). Matches the buffer search bar's seeded-query behavior.
     pub fn select_query(&self, window: &mut Window, cx: &mut App) {
         if let Head::Editor(editor) = &self.head {
             editor.select_all(window, cx);
@@ -1179,9 +1455,59 @@ impl<D: PickerDelegate> Picker<D> {
         let selectable =
             ix < self.delegate.match_count() && self.delegate.can_select(ix, window, cx);
 
+        let supports_multi_select = self.delegate.supports_multi_select();
+        let is_multi_selected = supports_multi_select && self.delegate.is_item_selected(ix);
+        let multi_select_active = supports_multi_select && self.select_instead_of_open;
+
+        let item_with_checkbox = if multi_select_active && selectable {
+            let checkbox = self
+                .render_multi_select_indicator(ix, is_multi_selected, cx)
+                .into_any_element();
+            self.delegate.render_match_with_checkbox(
+                ix,
+                ix == self.delegate.selected_index(),
+                checkbox,
+                window,
+                cx,
+            )
+        } else {
+            None
+        };
+
+        let use_fallback_indicator =
+            multi_select_active && selectable && item_with_checkbox.is_none();
+        let focus_handle = self.focus_handle(cx);
+
         div()
             .id(("item", ix))
             .when(selectable, |this| this.cursor_pointer())
+            .when(use_fallback_indicator, |this| {
+                this.hover(|s| s.bg(cx.theme().colors().ghost_element_hover))
+            })
+            .when(multi_select_active && selectable, |this| {
+                this.tooltip(Tooltip::element(move |_window, cx| {
+                    h_flex()
+                        .gap_2()
+                        .child(
+                            h_flex()
+                                .gap_1()
+                                .child(KeyBinding::for_action_in(
+                                    &MultiSelectNext,
+                                    &focus_handle,
+                                    cx,
+                                ))
+                                .child(Label::new("Select")),
+                        )
+                        .child(Divider::vertical())
+                        .child(
+                            h_flex()
+                                .gap_1()
+                                .child(KeyBinding::for_action_in(&menu::Confirm, &focus_handle, cx))
+                                .child(Label::new("Open")),
+                        )
+                        .into_any_element()
+                }))
+            })
             .child(
                 canvas(
                     move |bounds, _window, _cx| {
@@ -1194,6 +1520,11 @@ impl<D: PickerDelegate> Picker<D> {
                 .top_0()
                 .left_0(),
             )
+            .when(!self.delegate.select_on_hover(), |this| {
+                this.on_mouse_down(MouseButton::Left, |_, window, _cx| {
+                    window.prevent_default();
+                })
+            })
             .on_click(cx.listener(move |this, event: &ClickEvent, window, cx| {
                 this.handle_click(ix, event.modifiers().secondary(), window, cx)
             }))
@@ -1212,18 +1543,42 @@ impl<D: PickerDelegate> Picker<D> {
             .when(self.delegate.select_on_hover(), |this| {
                 this.on_hover(cx.listener(move |this, hovered: &bool, window, cx| {
                     if *hovered {
-                        this.set_selected_index(ix, None, false, window, cx);
+                        this.set_hovered_index(ix, window, cx);
                         cx.notify();
                     }
                 }))
             })
-            .children(self.delegate.render_match_with_state(
-                ix,
-                ix == self.delegate.selected_index(),
-                self.is_item_selected(ix),
-                window,
-                cx,
-            ))
+            .map(|row| {
+                if let Some(item) = item_with_checkbox {
+                    row.child(item)
+                } else if supports_multi_select {
+                    row.child(
+                        h_flex()
+                            // Headers and separators cannot be part of the
+                            // selection, so they get no indicator.
+                            .when(use_fallback_indicator, |this| {
+                                this.child(self.render_multi_select_indicator(
+                                    ix,
+                                    is_multi_selected,
+                                    cx,
+                                ))
+                            })
+                            .children(self.delegate.render_match(
+                                ix,
+                                ix == self.delegate.selected_index(),
+                                window,
+                                cx,
+                            )),
+                    )
+                } else {
+                    row.children(self.delegate.render_match(
+                        ix,
+                        ix == self.delegate.selected_index(),
+                        window,
+                        cx,
+                    ))
+                }
+            })
             .when(
                 self.delegate.separators_after_indices().contains(&ix),
                 |picker| {
@@ -1235,11 +1590,31 @@ impl<D: PickerDelegate> Picker<D> {
             )
     }
 
+    fn render_multi_select_indicator(
+        &self,
+        ix: usize,
+        is_selected: bool,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        Checkbox::new(("picker-multi-select-checkbox", ix), is_selected.into())
+            .fill()
+            .elevation(ui::ElevationIndex::ModalSurface)
+            .on_click(cx.listener(move |this, _: &ui::ToggleState, window, cx| {
+                // Don't let the row's click handler also toggle the item.
+                cx.stop_propagation();
+                this.delegate.toggle_item_selected(ix, window, cx);
+                cx.notify();
+            }))
+    }
+
     fn render_element_container(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let sizing_behavior = if self.max_height.is_some() {
-            ListSizingBehavior::Infer
-        } else {
+        // When the picker shrinks to fit its content, the list infers its size
+        // from its items. When it fills its full height (preview visible), the
+        // list fills the available space.
+        let sizing_behavior = if self.fill_height() {
             ListSizingBehavior::Auto
+        } else {
+            ListSizingBehavior::Infer
         };
 
         match &self.element_container {
@@ -1253,11 +1628,8 @@ impl<D: PickerDelegate> Picker<D> {
                 }),
             )
             .with_sizing_behavior(sizing_behavior)
-            .when_some(self.widest_item, |el, widest_item| {
-                el.with_width_from_item(Some(widest_item))
-            })
             .flex_grow_1()
-            .py(DynamicSpacing::Base04.rems(cx))
+            .py_1()
             .track_scroll(&scroll_handle)
             .into_any_element(),
             ElementContainer::List(state) => list(
@@ -1282,60 +1654,124 @@ impl<D: PickerDelegate> Picker<D> {
             }
         }
     }
+
+    fn preview_layout(&self) -> Option<preview::Layout> {
+        self.preview.as_ref().map(|p| p.layout)
+    }
+    fn is_auto_vertical(&self, window: &Window) -> bool {
+        self.preview_layout() == Some(preview::Layout::Right)
+            && self
+                .size_bounds
+                .would_clamp_width_if_horizontal(&self.shape, window)
+    }
+    /// To check whether we're rendering vertically instead of
+    /// horizontally due to the auto override
+    fn preview_layout_rendered(&self, window: &Window) -> Option<preview::Layout> {
+        let would_clamp = matches!(
+            self.preview,
+            Some(Preview {
+                layout: preview::Layout::Right,
+                ..
+            })
+        ) && self.is_auto_vertical(window);
+        if would_clamp {
+            Some(preview::Layout::Below)
+        } else {
+            self.preview_layout()
+        }
+    }
+
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn results_width(&self, window: &Window) -> gpui::Pixels {
+        let layout = self
+            .preview_layout_rendered(window)
+            .unwrap_or(preview::Layout::Hidden);
+        let pos = self
+            .shape
+            .results_position_and_size(layout, &self.size_bounds, window);
+        pos.right - pos.left
+    }
+
+    fn toggle_preview(&mut self, _: &TogglePreview, window: &mut Window, cx: &mut Context<Self>) {
+        self.toggle_preview_visible(window, cx);
+    }
+
+    fn toggle_preview_visible(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let next = match self.preview_layout() {
+            Some(preview::Layout::Hidden) | None => preview::Layout::Right,
+            Some(_) => preview::Layout::Hidden,
+        };
+        self.set_preview_layout(next, window, cx);
+    }
+
+    fn set_preview_layout(
+        &mut self,
+        layout: preview::Layout,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        persistence::store_last_layout(D::name(), self.preview.as_ref().map(|_| layout), cx);
+
+        let Some(preview) = &mut self.preview else {
+            return;
+        };
+        preview.layout = layout;
+        // Restore the size the user last left this layout at, or fall back to the
+        // layout's default (simple when hidden, larger when a preview is shown).
+        self.shape = persistence::try_load_shape(D::name(), layout, cx)
+            .log_err()
+            .flatten()
+            .unwrap_or_else(|| {
+                shape::Shape::HorizontallyCentered(default_shape_for_layout(
+                    self.default_shape,
+                    layout,
+                ))
+            });
+        self.delegate
+            .preview_layout_changed(matches!(layout, preview::Layout::Right));
+        cx.notify();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use gpui::TestAppContext;
-    use std::{
-        cell::{Cell, RefCell},
-        collections::HashSet,
-    };
+    use std::cell::Cell;
 
     struct TestDelegate {
-        items: Vec<(SharedString, bool)>,
-        valid_item_ids: HashSet<SharedString>,
+        items: Vec<bool>,
         selected_index: usize,
         confirmed_index: Rc<Cell<Option<usize>>>,
-        confirmed_item_ids: Rc<RefCell<Vec<PickerItemId>>>,
+        supports_multi_select: bool,
+        selected_items: Vec<usize>,
+        multi_confirmed: Rc<Cell<Option<Vec<usize>>>>,
     }
 
     impl TestDelegate {
         fn new(items: Vec<bool>) -> Self {
-            let items: Vec<(SharedString, bool)> = items
-                .into_iter()
-                .enumerate()
-                .map(|(index, selectable)| (index.to_string().into(), selectable))
-                .collect::<Vec<_>>();
-            let valid_item_ids = items.iter().map(|(id, _)| id.clone()).collect();
             Self {
                 items,
-                valid_item_ids,
                 selected_index: 0,
                 confirmed_index: Rc::new(Cell::new(None)),
-                confirmed_item_ids: Rc::default(),
+                supports_multi_select: false,
+                selected_items: Vec::new(),
+                multi_confirmed: Rc::new(Cell::new(None)),
             }
         }
 
-        fn with_ids(ids: &[&str]) -> Self {
-            let items: Vec<(SharedString, bool)> = ids
-                .iter()
-                .map(|id| (SharedString::from(*id), true))
-                .collect::<Vec<_>>();
-            let valid_item_ids = items.iter().map(|(id, _)| id.clone()).collect();
-            Self {
-                items,
-                valid_item_ids,
-                selected_index: 0,
-                confirmed_index: Rc::new(Cell::new(None)),
-                confirmed_item_ids: Rc::default(),
-            }
+        fn with_multi_select(mut self) -> Self {
+            self.supports_multi_select = true;
+            self
         }
     }
 
     impl PickerDelegate for TestDelegate {
         type ListItem = ui::ListItem;
+
+        fn name() -> &'static str {
+            "test"
+        }
 
         fn match_count(&self) -> usize {
             self.items.len()
@@ -1360,10 +1796,7 @@ mod tests {
             _window: &mut Window,
             _cx: &mut Context<Picker<Self>>,
         ) -> bool {
-            self.items
-                .get(ix)
-                .map(|(_, selectable)| *selectable)
-                .unwrap_or(false)
+            self.items.get(ix).copied().unwrap_or(false)
         }
 
         fn placeholder_text(&self, _window: &mut Window, _cx: &mut App) -> Arc<str> {
@@ -1389,24 +1822,42 @@ mod tests {
         }
 
         fn supports_multi_select(&self) -> bool {
-            true
+            self.supports_multi_select
         }
 
-        fn item_id(&self, index: usize) -> Option<PickerItemId> {
-            Some(PickerItemId::new(self.items.get(index)?.0.clone()))
+        fn is_item_selected(&self, ix: usize) -> bool {
+            self.selected_items.contains(&ix)
         }
 
-        fn item_id_is_valid(&self, id: &PickerItemId, _cx: &App) -> bool {
-            self.valid_item_ids.contains(id.as_str())
+        fn toggle_item_selected(
+            &mut self,
+            ix: usize,
+            _window: &mut Window,
+            _cx: &mut Context<Picker<Self>>,
+        ) {
+            if let Some(position) = self.selected_items.iter().position(|&item| item == ix) {
+                self.selected_items.remove(position);
+            } else {
+                self.selected_items.push(ix);
+            }
+        }
+
+        fn selected_item_count(&self) -> usize {
+            self.selected_items.len()
+        }
+
+        fn clear_selection(&mut self, _cx: &mut Context<Picker<Self>>) {
+            self.selected_items.clear();
         }
 
         fn confirm_multi(
             &mut self,
-            ids: Vec<PickerItemId>,
+            _secondary: bool,
             _window: &mut Window,
             _cx: &mut Context<Picker<Self>>,
         ) {
-            *self.confirmed_item_ids.borrow_mut() = ids;
+            self.multi_confirmed
+                .set(Some(std::mem::take(&mut self.selected_items)));
         }
 
         fn dismissed(&mut self, _window: &mut Window, _cx: &mut Context<Picker<Self>>) {}
@@ -1431,8 +1882,6 @@ mod tests {
         cx.update(|cx| {
             let store = settings::SettingsStore::test(cx);
             cx.set_global(store);
-            localization::init(localization::UiLanguage::English, cx)
-                .expect("test localization must load");
             theme_settings::init(theme::LoadThemes::JustBase, cx);
             editor::init(cx);
         });
@@ -1507,151 +1956,134 @@ mod tests {
     }
 
     #[gpui::test]
-    async fn test_multi_select_uses_stable_ids_across_reordering_and_filtering(
-        cx: &mut TestAppContext,
-    ) {
+    async fn test_multi_select_mode_routes_clicks(cx: &mut TestAppContext) {
         init_test(cx);
 
+        let confirmed_index = Rc::new(Cell::new(None));
+        let multi_confirmed = Rc::new(Cell::new(None));
         let (picker, cx) = cx.add_window_view(|window, cx| {
-            Picker::uniform_list(TestDelegate::with_ids(&["a", "b", "c"]), window, cx)
-        });
-
-        picker.update_in(cx, |picker, window, cx| {
-            picker.set_multi_select_enabled(true, cx);
-            picker.toggle_item_selection(1, window, cx);
-            assert_eq!(
-                picker
-                    .selected_item_ids()
-                    .iter()
-                    .map(PickerItemId::as_str)
-                    .collect::<Vec<_>>(),
-                vec!["b"]
-            );
-
-            picker.delegate.items =
-                vec![("c".into(), true), ("b".into(), true), ("a".into(), true)];
-            assert_eq!(
-                picker
-                    .selected_item_ids()
-                    .iter()
-                    .map(PickerItemId::as_str)
-                    .collect::<Vec<_>>(),
-                vec!["b"]
-            );
-
-            picker.delegate.items = vec![("a".into(), true)];
-            assert_eq!(
-                picker
-                    .selected_item_ids()
-                    .iter()
-                    .map(PickerItemId::as_str)
-                    .collect::<Vec<_>>(),
-                vec!["b"],
-                "filtering must not discard a still-valid identity"
-            );
-
-            picker.delegate.valid_item_ids.remove("b");
-            picker.reconcile_multi_selection(cx);
-            assert!(picker.selected_item_ids().is_empty());
-
-            picker.delegate.items = vec![("disabled".into(), false)];
-            picker.delegate.valid_item_ids.insert("disabled".into());
-            picker.toggle_item_selection(0, window, cx);
-            assert!(
-                picker.selected_item_ids().is_empty(),
-                "disabled entries must not become selected"
-            );
-        });
-    }
-
-    #[gpui::test]
-    async fn test_multi_confirm_follows_current_result_order(cx: &mut TestAppContext) {
-        init_test(cx);
-
-        let confirmed_item_ids = Rc::new(RefCell::new(Vec::new()));
-        let (picker, cx) = cx.add_window_view(|window, cx| {
-            let mut delegate = TestDelegate::with_ids(&["a", "b", "c"]);
-            delegate.confirmed_item_ids = confirmed_item_ids.clone();
+            let mut delegate = TestDelegate::new(vec![true, true, true]).with_multi_select();
+            delegate.confirmed_index = confirmed_index.clone();
+            delegate.multi_confirmed = multi_confirmed.clone();
             Picker::uniform_list(delegate, window, cx)
         });
 
+        // A plain click confirms just like in any picker.
         picker.update_in(cx, |picker, window, cx| {
-            picker.set_multi_select_enabled(true, cx);
-            picker.toggle_item_selection(2, window, cx);
-            picker.toggle_item_selection(0, window, cx);
-            picker.delegate.items =
-                vec![("b".into(), true), ("a".into(), true), ("c".into(), true)];
-            picker.do_confirm(false, window, cx);
+            picker.handle_click(1, false, window, cx);
+        });
+        assert_eq!(confirmed_index.take(), Some(1));
+        picker.update(cx, |picker, _cx| {
+            assert_eq!(picker.delegate.selected_item_count(), 0);
         });
 
+        // A secondary (cmd) click starts multi-select mode and toggles the
+        // clicked item into the selection instead of confirming.
+        picker.update_in(cx, |picker, window, cx| {
+            picker.handle_click(2, true, window, cx);
+        });
+        assert_eq!(confirmed_index.take(), None, "cmd+click must not confirm");
+        picker.update(cx, |picker, _cx| {
+            assert!(
+                picker.select_instead_of_open,
+                "cmd+click should start multi-select mode"
+            );
+            assert!(picker.delegate.is_item_selected(2));
+        });
+
+        // While the mode is on, plain clicks toggle items too.
+        picker.update_in(cx, |picker, window, cx| {
+            picker.handle_click(0, false, window, cx);
+        });
         assert_eq!(
-            confirmed_item_ids
-                .borrow()
-                .iter()
-                .map(PickerItemId::as_str)
-                .collect::<Vec<_>>(),
-            vec!["a", "c"]
+            confirmed_index.take(),
+            None,
+            "in-mode clicks must not confirm"
+        );
+        picker.update(cx, |picker, _cx| {
+            assert!(picker.delegate.is_item_selected(0));
+            assert!(picker.delegate.is_item_selected(2));
+            assert!(!picker.delegate.is_item_selected(1));
+        });
+
+        // Confirming opens the whole selection and exits the mode.
+        picker.update_in(cx, |picker, window, cx| {
+            picker.do_confirm(false, window, cx);
+        });
+        assert_eq!(multi_confirmed.take(), Some(vec![2, 0]));
+        picker.update_in(cx, |picker, window, cx| {
+            picker.handle_click(1, false, window, cx);
+        });
+        assert_eq!(
+            confirmed_index.take(),
+            Some(1),
+            "the mode should be off again after confirming"
         );
     }
 
     #[gpui::test]
-    async fn test_secondary_click_toggles_multi_selection(cx: &mut TestAppContext) {
+    async fn test_multi_select_next_starts_multi_select_mode(cx: &mut TestAppContext) {
         init_test(cx);
 
         let (picker, cx) = cx.add_window_view(|window, cx| {
-            Picker::uniform_list(TestDelegate::with_ids(&["a", "b"]), window, cx)
+            Picker::uniform_list(
+                TestDelegate::new(vec![true, true, true]).with_multi_select(),
+                window,
+                cx,
+            )
         });
 
         picker.update_in(cx, |picker, window, cx| {
-            picker.handle_click(1, true, window, cx);
-            assert!(picker.multi_select_enabled());
-            assert_eq!(
-                picker
-                    .selected_item_ids()
-                    .iter()
-                    .map(PickerItemId::as_str)
-                    .collect::<Vec<_>>(),
-                vec!["b"]
+            picker.multi_select_next(&MultiSelectNext, window, cx);
+        });
+        picker.update(cx, |picker, _cx| {
+            assert!(
+                picker.select_instead_of_open,
+                "selecting an item should start multi-select mode"
             );
+            assert!(picker.delegate.is_item_selected(0));
             assert_eq!(
-                picker.delegate.confirmed_index.get(),
-                None,
-                "secondary-clicking a multi-select delegate must not confirm"
+                picker.delegate.selected_index(),
+                1,
+                "selecting should advance the cursor to the next item"
             );
+        });
+
+        // In pickers without multi-select the action does nothing.
+        let (plain_picker, cx) = cx.add_window_view(|window, cx| {
+            Picker::uniform_list(TestDelegate::new(vec![true, true]), window, cx)
+        });
+        plain_picker.update_in(cx, |picker, window, cx| {
+            picker.multi_select_next(&MultiSelectNext, window, cx);
+        });
+        plain_picker.update(cx, |picker, _cx| {
+            assert!(!picker.select_instead_of_open);
+            assert_eq!(picker.delegate.selected_item_count(), 0);
         });
     }
 
     #[gpui::test]
-    async fn test_restoration_state_preserves_query_mode_and_stable_ids(cx: &mut TestAppContext) {
+    async fn test_exiting_multi_select_mode_clears_selection(cx: &mut TestAppContext) {
         init_test(cx);
 
         let (picker, cx) = cx.add_window_view(|window, cx| {
-            Picker::uniform_list(TestDelegate::with_ids(&["a", "b"]), window, cx)
+            Picker::uniform_list(
+                TestDelegate::new(vec![true, true]).with_multi_select(),
+                window,
+                cx,
+            )
         });
 
         picker.update_in(cx, |picker, window, cx| {
-            picker.restore_state(
-                PickerRestorationState {
-                    query: "needle".to_string(),
-                    multi_select_enabled: true,
-                    selected_item_ids: vec![PickerItemId::new("b")],
-                },
-                window,
-                cx,
-            );
+            picker.toggle_multi_select(&ToggleMultiSelect, window, cx);
+            picker.handle_click(0, false, window, cx);
+            picker.toggle_multi_select(&ToggleMultiSelect, window, cx);
         });
-        cx.run_until_parked();
-
-        picker.read_with(cx, |picker, cx| {
-            assert_eq!(picker.query(cx), "needle");
-            assert!(picker.multi_select_enabled());
+        picker.update(cx, |picker, _cx| {
             assert_eq!(
-                picker
-                    .selected_item_ids()
-                    .iter()
-                    .map(PickerItemId::as_str)
-                    .collect::<Vec<_>>(),
-                vec!["b"]
+                picker.delegate.selected_item_count(),
+                0,
+                "leaving the mode should clear the selection"
             );
         });
     }
@@ -1659,484 +2091,4 @@ mod tests {
 
 impl<D: PickerDelegate> EventEmitter<DismissEvent> for Picker<D> {}
 impl<D: PickerDelegate> ModalView for Picker<D> {}
-
-impl<D: PickerDelegate> Render for Picker<D> {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let ui_font_size = ThemeSettings::get_global(cx).ui_font_size(cx);
-        let window_size = window.viewport_size();
-        let rem_size = window.rem_size();
-        let is_wide_window = window_size.width / rem_size > rems_from_px(800.).0;
-
-        let aside = self.delegate.documentation_aside(window, cx);
-
-        let editor_position = self.delegate.editor_position();
-        let picker_bounds = self.picker_bounds.clone();
-        let menu = v_flex()
-            .key_context("Picker")
-            .size_full()
-            .when_some(self.width, |el, width| el.w(width))
-            .overflow_hidden()
-            .child(
-                canvas(
-                    move |bounds, _window, _cx| {
-                        picker_bounds.set(Some(bounds));
-                    },
-                    |_bounds, _state, _window, _cx| {},
-                )
-                .size_full()
-                .absolute()
-                .top_0()
-                .left_0(),
-            )
-            // This is a bit of a hack to remove the modal styling when we're rendering the `Picker`
-            // as a part of a modal rather than the entire modal.
-            //
-            // We should revisit how the `Picker` is styled to make it more composable.
-            .when(self.is_modal, |this| this.elevation_3(cx))
-            .on_action(cx.listener(Self::select_next))
-            .on_action(cx.listener(Self::select_previous))
-            .on_action(cx.listener(Self::editor_move_down))
-            .on_action(cx.listener(Self::editor_move_up))
-            .on_action(cx.listener(Self::select_first))
-            .on_action(cx.listener(Self::select_last))
-            .on_action(cx.listener(Self::cancel))
-            .on_action(cx.listener(Self::confirm))
-            .on_action(cx.listener(Self::secondary_confirm))
-            .on_action(cx.listener(Self::confirm_completion))
-            .on_action(cx.listener(Self::confirm_input))
-            .on_action(cx.listener(Self::toggle_multi_select))
-            .on_action(cx.listener(Self::multi_select_next))
-            .on_action(cx.listener(Self::toggle_preview))
-            .on_action(cx.listener(Self::set_preview_right))
-            .on_action(cx.listener(Self::set_preview_below))
-            .on_action(cx.listener(Self::set_preview_hidden))
-            .children(match &self.head {
-                Head::Editor(editor) => {
-                    if editor_position == PickerEditorPosition::Start {
-                        Some(self.delegate.render_editor(&editor.clone(), window, cx))
-                    } else {
-                        None
-                    }
-                }
-                Head::Empty(empty_head) => Some(div().child(empty_head.clone())),
-            })
-            .when(self.delegate.match_count() > 0, |el| {
-                el.child(
-                    v_flex()
-                        .id("element-container")
-                        .relative()
-                        .flex_grow_1()
-                        .when_some(self.max_height, |div, max_h| div.max_h(max_h))
-                        .overflow_hidden()
-                        .children(self.delegate.render_header(window, cx))
-                        .child(self.render_element_container(cx))
-                        .when(self.show_scrollbar, |this| {
-                            let base_scrollbar_config = Scrollbars::new(ScrollAxes::Vertical);
-
-                            this.map(|this| match &self.element_container {
-                                ElementContainer::List(state) => this.custom_scrollbars(
-                                    base_scrollbar_config.tracked_scroll_handle(state),
-                                    window,
-                                    cx,
-                                ),
-                                ElementContainer::UniformList(state) => this.custom_scrollbars(
-                                    base_scrollbar_config.tracked_scroll_handle(state),
-                                    window,
-                                    cx,
-                                ),
-                            })
-                        }),
-                )
-            })
-            .when(self.delegate.match_count() == 0, |el| {
-                el.when_some(self.delegate.no_matches_text(window, cx), |el, text| {
-                    el.child(
-                        v_flex()
-                            .flex_grow_1()
-                            .py(DynamicSpacing::Base04.rems(cx))
-                            .child(
-                                ListItem::new("empty_state")
-                                    .inset(true)
-                                    .spacing(ListItemSpacing::Sparse)
-                                    .disabled(true)
-                                    .child(Label::new(text).color(Color::Muted)),
-                            ),
-                    )
-                })
-            })
-            .when(self.delegate.supports_multi_select(), |picker| {
-                let selected_count = self.selected_item_ids.len();
-                picker.child(
-                    h_flex()
-                        .w_full()
-                        .px_2()
-                        .py_1()
-                        .justify_between()
-                        .border_t_1()
-                        .border_color(cx.theme().colors().border_variant)
-                        .child(
-                            Label::new(if self.multi_select_enabled {
-                                localization::tr!(
-                                    cx,
-                                    "picker-selected-count",
-                                    count = selected_count as i64
-                                )
-                            } else {
-                                localization::text(cx, "picker-select-multiple")
-                            })
-                            .size(ui::LabelSize::Small)
-                            .color(Color::Muted),
-                        )
-                        .child(
-                            Button::new(
-                                "toggle-picker-multi-select",
-                                if self.multi_select_enabled {
-                                    localization::text(cx, "picker-done")
-                                } else {
-                                    localization::text(cx, "picker-select-multiple-action")
-                                },
-                            )
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(ToggleMultiSelect.boxed_clone(), cx);
-                            }),
-                        ),
-                )
-            })
-            .children(self.delegate.render_footer(window, cx))
-            .when(self.preview.is_some(), |menu| {
-                menu.child(self.render_preview_controls(cx))
-            })
-            .children(match &self.head {
-                Head::Editor(editor) => {
-                    if editor_position == PickerEditorPosition::End {
-                        Some(self.delegate.render_editor(&editor.clone(), window, cx))
-                    } else {
-                        None
-                    }
-                }
-                Head::Empty(empty_head) => Some(div().child(empty_head.clone())),
-            });
-
-        let results: AnyElement = if let Some(aside) = aside {
-            let render_aside = |aside: DocumentationAside, cx: &mut Context<Self>| {
-                WithRemSize::new(ui_font_size)
-                    .occlude()
-                    .elevation_2(cx)
-                    .w_full()
-                    .p_2()
-                    .overflow_hidden()
-                    .when(is_wide_window, |this| this.max_w_96())
-                    .when(!is_wide_window, |this| this.max_w_48())
-                    .child((aside.render)(cx))
-            };
-
-            if is_wide_window {
-                let aside_index = self.delegate.documentation_aside_index();
-                let picker_bounds = self.picker_bounds.get();
-                let item_bounds =
-                    aside_index.and_then(|ix| self.item_bounds.borrow().get(&ix).copied());
-
-                let item_position = match (picker_bounds, item_bounds) {
-                    (Some(picker_bounds), Some(item_bounds)) => {
-                        let relative_top = item_bounds.origin.y - picker_bounds.origin.y;
-                        let height = item_bounds.size.height;
-                        Some((relative_top, height))
-                    }
-                    _ => None,
-                };
-
-                div()
-                    .relative()
-                    .child(menu)
-                    // Only render the aside once we have bounds to avoid flicker
-                    .when_some(item_position, |this, (top, height)| {
-                        this.child(
-                            h_flex()
-                                .absolute()
-                                .when(aside.side == DocumentationSide::Left, |el| {
-                                    el.right_full().mr_1()
-                                })
-                                .when(aside.side == DocumentationSide::Right, |el| {
-                                    el.left_full().ml_1()
-                                })
-                                .top(top)
-                                .h(height)
-                                .child(render_aside(aside, cx)),
-                        )
-                    })
-                    .into_any_element()
-            } else {
-                v_flex()
-                    .w_full()
-                    .gap_1()
-                    .justify_end()
-                    .child(render_aside(aside, cx))
-                    .child(menu)
-                    .into_any_element()
-            }
-        } else {
-            menu.into_any_element()
-        };
-
-        self.render_with_preview(results, window, cx)
-    }
-}
-
-impl<D: PickerDelegate> Picker<D> {
-    fn update_preview(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(preview) = &mut self.preview else {
-            return;
-        };
-        match self.delegate.try_get_preview_data_for_match(cx) {
-            Some(update) => preview.update(update, window, cx),
-            None => preview.clear(cx),
-        }
-    }
-
-    fn render_with_preview(
-        &mut self,
-        results: AnyElement,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let Some(preview) = self.preview.as_ref() else {
-            return results;
-        };
-        match preview.layout {
-            PreviewLayout::Hidden => results,
-            PreviewLayout::Right => {
-                let preview_width = self.preview_width(window);
-                let preview_element = preview.render(cx);
-                let border_color = cx.theme().colors().border_variant;
-                h_flex()
-                    .id("picker-preview-split-right")
-                    .size_full()
-                    .child(div().flex_1().min_w_0().overflow_hidden().child(results))
-                    .child(
-                        div()
-                            .id("picker-preview-divider-right")
-                            .w(px(1.))
-                            .h_full()
-                            .bg(border_color)
-                            .cursor(CursorStyle::ResizeColumn)
-                            .on_drag(
-                                DividerDrag::Right {
-                                    start_x: window.mouse_position().x,
-                                    start_width: preview_width,
-                                },
-                                |_, _, _, cx| cx.new(|_| DividerDragView),
-                            )
-                            .on_drag_move::<DividerDrag>(cx.listener(
-                                |this, event: &DragMoveEvent<DividerDrag>, _window, cx| {
-                                    let DividerDrag::Right {
-                                        start_x,
-                                        start_width,
-                                    } = event.drag(cx)
-                                    else {
-                                        return;
-                                    };
-                                    let delta = event.event.position.x - *start_x;
-                                    this.set_preview_size(Some(*start_width - delta), _window, cx);
-                                },
-                            )),
-                    )
-                    .child(
-                        div()
-                            .w(preview_width)
-                            .h_full()
-                            .overflow_hidden()
-                            .child(preview_element),
-                    )
-                    .into_any_element()
-            }
-            PreviewLayout::Below => {
-                let preview_height = self.preview_height(window);
-                let preview_element = preview.render(cx);
-                let border_color = cx.theme().colors().border_variant;
-                v_flex()
-                    .id("picker-preview-split-below")
-                    .size_full()
-                    .child(div().flex_1().min_h_0().overflow_hidden().child(results))
-                    .child(
-                        div()
-                            .id("picker-preview-divider-below")
-                            .h(px(1.))
-                            .w_full()
-                            .bg(border_color)
-                            .cursor(CursorStyle::ResizeRow)
-                            .on_drag(
-                                DividerDrag::Below {
-                                    start_y: window.mouse_position().y,
-                                    start_height: preview_height,
-                                },
-                                |_, _, _, cx| cx.new(|_| DividerDragView),
-                            )
-                            .on_drag_move::<DividerDrag>(cx.listener(
-                                |this, event: &DragMoveEvent<DividerDrag>, _window, cx| {
-                                    let DividerDrag::Below {
-                                        start_y,
-                                        start_height,
-                                    } = event.drag(cx)
-                                    else {
-                                        return;
-                                    };
-                                    let delta = event.event.position.y - *start_y;
-                                    this.set_preview_size(Some(*start_height - delta), _window, cx);
-                                },
-                            )),
-                    )
-                    .child(
-                        div()
-                            .h(preview_height)
-                            .w_full()
-                            .overflow_hidden()
-                            .child(preview_element),
-                    )
-                    .into_any_element()
-            }
-        }
-    }
-
-    pub fn preview_layout(&self) -> Option<PreviewLayout> {
-        self.preview.as_ref().map(|preview| preview.layout)
-    }
-
-    pub fn preview_current_path(
-        &self,
-        cx: &App,
-    ) -> Option<std::sync::Arc<util::rel_path::RelPath>> {
-        self.preview
-            .as_ref()
-            .and_then(|preview| preview.current_path(cx))
-    }
-
-    pub fn preview_width(&self, window: &mut Window) -> Pixels {
-        let viewport = window.viewport_size().width;
-        let max = (viewport - MIN_PREVIEW_PX).max(MIN_PREVIEW_PX);
-        self.preview_size
-            .unwrap_or_else(|| (viewport * 0.4).clamp(MIN_PREVIEW_PX, max))
-            .clamp(MIN_PREVIEW_PX, max)
-    }
-
-    pub fn preview_height(&self, window: &mut Window) -> Pixels {
-        let viewport = window.viewport_size().height;
-        let max = (viewport - MIN_PREVIEW_PX).max(MIN_PREVIEW_PX);
-        self.preview_size
-            .unwrap_or_else(|| (viewport * 0.3).clamp(MIN_PREVIEW_PX, max))
-            .clamp(MIN_PREVIEW_PX, max)
-    }
-
-    pub fn set_preview_size(
-        &mut self,
-        size: Option<Pixels>,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.preview_size = size;
-        cx.notify();
-    }
-
-    fn toggle_preview(&mut self, _: &TogglePreview, window: &mut Window, cx: &mut Context<Self>) {
-        self.toggle_preview_visible(window, cx);
-    }
-
-    fn toggle_preview_visible(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let next = match self.preview_layout() {
-            Some(PreviewLayout::Hidden) | None => PreviewLayout::Right,
-            Some(_) => PreviewLayout::Hidden,
-        };
-        self.set_preview_layout(next, window, cx);
-    }
-
-    fn render_preview_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let current_layout = self.preview_layout().unwrap_or(PreviewLayout::Hidden);
-        let preview_visible = current_layout != PreviewLayout::Hidden;
-
-        h_flex()
-            .w_full()
-            .p_1p5()
-            .gap_1()
-            .border_t_1()
-            .border_color(cx.theme().colors().border_variant)
-            .child(
-                Button::new(
-                    "picker-preview-toggle",
-                    localization::text(cx, "picker-preview"),
-                )
-                .when(preview_visible, |button| button.color(Color::Accent))
-                .on_click(cx.listener(|picker, _, window, cx| {
-                    picker.toggle_preview_visible(window, cx);
-                })),
-            )
-            .when(preview_visible, |controls| {
-                controls
-                    .child(Divider::vertical())
-                    .child(
-                        IconButton::new("picker-preview-right", IconName::DiffSplit)
-                            .toggle_state(current_layout == PreviewLayout::Right)
-                            .tooltip(Tooltip::text(localization::text(
-                                cx,
-                                "picker-preview-right",
-                            )))
-                            .on_click(cx.listener(|picker, _, window, cx| {
-                                picker.set_preview_layout(PreviewLayout::Right, window, cx);
-                            })),
-                    )
-                    .child(
-                        IconButton::new("picker-preview-below", IconName::DiffUnified)
-                            .toggle_state(current_layout == PreviewLayout::Below)
-                            .tooltip(Tooltip::text(localization::text(
-                                cx,
-                                "picker-preview-below",
-                            )))
-                            .on_click(cx.listener(|picker, _, window, cx| {
-                                picker.set_preview_layout(PreviewLayout::Below, window, cx);
-                            })),
-                    )
-            })
-    }
-
-    fn set_preview_right(
-        &mut self,
-        _: &SetPreviewRight,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.set_preview_layout(PreviewLayout::Right, window, cx);
-    }
-
-    fn set_preview_below(
-        &mut self,
-        _: &SetPreviewBelow,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.set_preview_layout(PreviewLayout::Below, window, cx);
-    }
-
-    fn set_preview_hidden(
-        &mut self,
-        _: &SetPreviewHidden,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.set_preview_layout(PreviewLayout::Hidden, window, cx);
-    }
-
-    fn set_preview_layout(
-        &mut self,
-        layout: PreviewLayout,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        let Some(preview) = &mut self.preview else {
-            return;
-        };
-        preview.layout = layout;
-        self.preview_size = None;
-        persistence::store_layout(D::name(), Some(layout), cx);
-        self.delegate
-            .preview_layout_changed(matches!(layout, PreviewLayout::Right));
-        cx.notify();
-    }
-}
+impl<D: PickerDelegate> ui::FluentBuilder for Picker<D> {}

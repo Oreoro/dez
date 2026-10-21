@@ -1,22 +1,24 @@
 use bitflags::bitflags;
 pub use buffer_search::BufferSearchBar;
-pub use dez_actions::search::ToggleIncludeIgnored;
 pub use editor::HighlightKey;
 use editor::SearchSettings;
-use gpui::{Action, App, ClickEvent, FocusHandle, IntoElement, actions};
+use gpui::{Action, App, ClickEvent, Entity, FocusHandle, IntoElement, actions};
 use project::search::SearchQuery;
 pub use project_search::ProjectSearchView;
-use ui::{ButtonStyle, IconButton, IconButtonShape};
-use ui::{Tooltip, prelude::*};
+use ui::{IconButtonShape, Tooltip, prelude::*};
 use util::paths::PathMatcher;
 use workspace::notifications::NotificationId;
 use workspace::{Toast, Workspace};
+pub use zed_actions::search::{
+    FocusSearch, SelectNextMatch, SelectPreviousMatch, ToggleCaseSensitive, ToggleIncludeIgnored,
+};
 
 pub use search_status_button::SEARCH_ICON;
 
 use crate::project_search::ProjectSearchBar;
 
 pub mod buffer_search;
+pub(crate) mod canvas;
 pub mod project_search;
 pub(crate) mod search_bar;
 pub mod search_status_button;
@@ -32,22 +34,14 @@ pub fn init(cx: &mut App) {
 actions!(
     search,
     [
-        /// Focuses on the search input field.
-        FocusSearch,
         /// Toggles whole word matching.
         ToggleWholeWord,
-        /// Toggles case-sensitive search.
-        ToggleCaseSensitive,
         /// Toggles regular expression mode.
         ToggleRegex,
         /// Toggles the replace interface.
         ToggleReplace,
         /// Toggles searching within selection only.
         ToggleSelection,
-        /// Selects the next search match.
-        SelectNextMatch,
-        /// Selects the previous search match.
-        SelectPreviousMatch,
         /// Selects all search matches.
         SelectAllMatches,
         /// Cycles through search modes.
@@ -88,6 +82,17 @@ pub enum SearchOption {
     Backwards,
 }
 
+const INCLUDE_PLACEHOLDER: &str = "Include: e.g. src/**/*.rs";
+const EXCLUDE_PLACEHOLDER: &str = "Exclude: e.g. vendor/*, *.lock";
+
+pub(crate) fn workspace_replace_placeholder(app_name: &str) -> &'static str {
+    if app_name == "Zed" {
+        "Replace in project…"
+    } else {
+        "Replace across Workspace…"
+    }
+}
+
 pub enum SearchSource<'a, 'b> {
     Buffer,
     Project(&'a Context<'b, ProjectSearchBar>),
@@ -98,23 +103,23 @@ impl SearchOption {
         SearchOptions::from_bits(1 << *self as u8).unwrap()
     }
 
-    pub fn label(&self, cx: &App) -> SharedString {
+    pub fn label(&self) -> &'static str {
         match self {
-            SearchOption::WholeWord => localization::text(cx, "search-option-whole-word"),
-            SearchOption::CaseSensitive => localization::text(cx, "search-option-case-sensitive"),
-            SearchOption::IncludeIgnored => localization::text(cx, "search-option-include-ignored"),
-            SearchOption::Regex => localization::text(cx, "search-option-regex"),
-            SearchOption::OneMatchPerLine => localization::text(cx, "search-option-one-per-line"),
-            SearchOption::Backwards => localization::text(cx, "search-option-backwards"),
+            SearchOption::WholeWord => "Match Whole Words",
+            SearchOption::CaseSensitive => "Match Case Sensitivity",
+            SearchOption::IncludeIgnored => "Also search files ignored by configuration",
+            SearchOption::Regex => "Use Regular Expressions",
+            SearchOption::OneMatchPerLine => "One Match Per Line",
+            SearchOption::Backwards => "Search Backwards",
         }
     }
 
     pub fn icon(&self) -> ui::IconName {
         match self {
-            SearchOption::WholeWord => ui::IconName::WholeWord,
-            SearchOption::CaseSensitive => ui::IconName::CaseSensitive,
-            SearchOption::IncludeIgnored => ui::IconName::Sliders,
-            SearchOption::Regex => ui::IconName::Regex,
+            SearchOption::WholeWord => IconName::WholeWord,
+            SearchOption::CaseSensitive => IconName::CaseSensitive,
+            SearchOption::IncludeIgnored => IconName::FileIgnored,
+            SearchOption::Regex => IconName::Regex,
             _ => panic!("{self:?} is not a named SearchOption"),
         }
     }
@@ -134,15 +139,12 @@ impl SearchOption {
         active: SearchOptions,
         search_source: SearchSource,
         focus_handle: FocusHandle,
-        cx: &App,
     ) -> impl IntoElement {
         let action = self.to_toggle_action();
-        let label = self.label(cx);
+        let label = self.label();
+
         IconButton::new(
-            (
-                "search-option",
-                (*self as u32) * 2 + matches!(search_source, SearchSource::Buffer) as u32,
-            ),
+            (label, matches!(search_source, SearchSource::Buffer) as u32),
             self.icon(),
         )
         .map(|button| match search_source {
@@ -162,12 +164,9 @@ impl SearchOption {
                 }))
             }
         })
-        .style(ButtonStyle::Subtle)
         .shape(IconButtonShape::Square)
         .toggle_state(active.contains(self.as_options()))
-        .tooltip(move |_window, cx| {
-            Tooltip::for_action_in(label.clone(), action, &focus_handle, cx)
-        })
+        .tooltip(move |_window, cx| Tooltip::for_action_in(label, action, &focus_handle, cx))
     }
 }
 
@@ -194,13 +193,16 @@ impl SearchOptions {
         options
     }
 
+    /// Build a [`SearchQuery`] from these options, selecting the regex or text
+    /// constructor based on [`SearchOptions::REGEX`]. Inverse of
+    /// [`SearchOptions::from_query`].
     pub fn build_query(
         &self,
         query: impl ToString,
         files_to_include: PathMatcher,
         files_to_exclude: PathMatcher,
         match_full_paths: bool,
-        buffers: Option<Vec<gpui::Entity<language::Buffer>>>,
+        buffers: Option<Vec<Entity<language::Buffer>>>,
     ) -> anyhow::Result<SearchQuery> {
         if self.contains(SearchOptions::REGEX) {
             SearchQuery::regex(
@@ -239,46 +241,9 @@ pub(crate) fn show_no_more_matches(window: &mut Window, cx: &mut App) {
         };
         workspace.update(cx, |workspace, cx| {
             workspace.show_toast(
-                Toast::new(
-                    notification_id.clone(),
-                    localization::text(cx, "search-no-more-matches").to_string(),
-                )
-                .autohide(),
+                Toast::new(notification_id.clone(), "No more matches").autohide(),
                 cx,
             );
         })
     });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use util::paths::{PathMatcher, PathStyle};
-
-    #[test]
-    fn search_options_build_the_shared_project_query() {
-        let include = PathMatcher::new(["src/**/*.rs"], PathStyle::Posix)
-            .expect("include glob should be valid");
-        let exclude = PathMatcher::new(["target/**"], PathStyle::Posix)
-            .expect("exclude glob should be valid");
-        let options =
-            SearchOptions::REGEX | SearchOptions::CASE_SENSITIVE | SearchOptions::INCLUDE_IGNORED;
-
-        let query = options
-            .build_query("dez\\s+Finder", include, exclude, true, None)
-            .expect("regex should be valid");
-
-        assert!(query.is_regex());
-        assert!(query.case_sensitive());
-        assert!(query.include_ignored());
-        assert!(query.match_full_paths());
-        assert_eq!(
-            query.files_to_include().sources().collect::<Vec<_>>(),
-            ["src/**/*.rs"]
-        );
-        assert_eq!(
-            query.files_to_exclude().sources().collect::<Vec<_>>(),
-            ["target/**"]
-        );
-    }
 }

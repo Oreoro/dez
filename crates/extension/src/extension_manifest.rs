@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -11,7 +12,8 @@ use language::LanguageName;
 use lsp::LanguageServerName;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use util::rel_path::{PathExt, RelPathBuf};
+use util::paths::PathStyle;
+use util::rel_path::{RelPath, RelPathBuf};
 
 use crate::ExtensionCapability;
 
@@ -201,7 +203,7 @@ impl RemoteLoad<'_> {
         self.manifest
             .language_servers
             .values()
-            .flat_map(|language_server| language_server.languages())
+            .flat_map(|language_server_config| language_server_config.languages())
     }
 }
 
@@ -211,9 +213,12 @@ pub fn build_debug_adapter_schema_path(
 ) -> anyhow::Result<RelPathBuf> {
     match &meta.schema_path {
         Some(path) => Ok(path.clone()),
-        None => Path::new("debug_adapter_schemas")
-            .join(Path::new(adapter_name.as_ref()).with_extension("json"))
-            .to_rel_path_buf(),
+        None => RelPath::new(
+            &Path::new("debug_adapter_schemas")
+                .join(Path::new(adapter_name.as_ref()).with_extension("json")),
+            PathStyle::local(),
+        )
+        .map(Cow::into_owned),
     }
 }
 
@@ -249,7 +254,7 @@ pub struct AgentServerManifestEntry {
     /// ```
     ///
     /// For Node.js-based agents, you can use "node" as the cmd to automatically
-    /// use dez's managed Node.js runtime instead of relying on the user's PATH:
+    /// use Zed's managed Node.js runtime instead of relying on the user's PATH:
     /// ```toml
     /// [agent_servers.nodeagent.targets.darwin-aarch64]
     /// archive = "https://example.com/nodeagent.zip"
@@ -363,7 +368,7 @@ pub struct SlashCommandManifestEntry {
     pub requires_argument: bool,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+#[derive(Clone, Default, PartialEq, Eq, Debug, Deserialize, Serialize)]
 pub struct DebugAdapterManifestEntry {
     pub schema_path: Option<RelPathBuf>,
 }
@@ -427,14 +432,14 @@ fn manifest_from_old_manifest(
         lib: Default::default(),
         themes: {
             let mut themes = manifest_json.themes.into_values().collect::<Vec<_>>();
-            themes.sort();
+            themes.sort_unstable();
             themes.dedup();
             themes
         },
         icon_themes: Vec::new(),
         languages: {
             let mut languages = manifest_json.languages.into_values().collect::<Vec<_>>();
-            languages.sort();
+            languages.sort_unstable();
             languages.dedup();
             languages
         },
@@ -502,7 +507,7 @@ mod tests {
     #[test]
     fn test_build_adapter_schema_path_without_schema_path() {
         let adapter_name = Arc::from("my_adapter");
-        let entry = DebugAdapterManifestEntry { schema_path: None };
+        let entry = DebugAdapterManifestEntry::default();
 
         let path = build_debug_adapter_schema_path(&adapter_name, &entry).unwrap();
         assert_eq!(path, rel_path_buf("debug_adapter_schemas/my_adapter.json"));

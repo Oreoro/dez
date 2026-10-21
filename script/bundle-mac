@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+source script/lib/blob-store.sh
 
 build_flag="--release"
 target_dir="release"
 open_result=false
 local_install=false
 can_code_sign=false
+debug_build=false
 
-# This must match the team in the provisioning profile.
-IDENTITY="dez Industries, Inc."
-APPLE_NOTARIZATION_TEAM="MQ55VZLNZQ"
+# Release signing must be supplied by the Dez publisher. Never fall back to an
+# upstream Zed signing identity for a fork artifact.
+IDENTITY="${MACOS_SIGNING_IDENTITY:-}"
 
 # Function for displaying help info
 help_info() {
@@ -19,7 +21,7 @@ Usage: ${0##*/} [options] [architecture=host]
 Build the application bundle for macOS.
 
 Options:
-  -d    Compile in debug mode
+  -d    Create a debug bundle (reuses complete host debug binaries when present)
   -o    Open dir with the resulting DMG or launch the app itself in local mode.
   -i    Install the resulting DMG into /Applications.
   -h    Display this help and exit.
@@ -35,6 +37,7 @@ do
             export CARGO_BUNDLE_SKIP_BUILD=true
             build_flag="";
             target_dir="debug"
+            debug_build=true
             ;;
         i) local_install=true;;
         h)
@@ -47,18 +50,27 @@ done
 shift $((OPTIND-1))
 
 
-# Get release channel
-pushd crates/dez
-channel=$(<RELEASE_CHANNEL)
+# Get release channel. Manual fork builds may select one of the existing Dez
+# bundle identities without rewriting the checked-in development channel.
+pushd crates/zed
+source_channel=$(<RELEASE_CHANNEL)
+channel="${DEZ_BUNDLE_CHANNEL:-$source_channel}"
+case "$channel" in
+    dev|nightly|preview|stable) ;;
+    *)
+        echo "Unsupported Dez bundle channel: $channel"
+        exit 1
+        ;;
+esac
 export ZED_RELEASE_CHANNEL="${channel}"
+export RELEASE_CHANNEL="${channel}"
 popd
 
 export ZED_BUNDLE=true
 
 cargo_bundle_version=$(cargo -q bundle --help 2>&1 | head -n 1 || echo "")
 if [ "$cargo_bundle_version" != "cargo-bundle v0.6.1-zed" ]; then
-    # Disable the macOS Keychain credential helper so it doesn't block cloning public repos
-    GIT_TERMINAL_PROMPT=0 cargo install cargo-bundle --git https://github.com/zed-industries/cargo-bundle.git --branch zed-deploy
+    cargo install cargo-bundle --git https://github.com/zed-industries/cargo-bundle.git --branch zed-deploy
 fi
 
 # Deal with versions of macOS that don't include libstdc++ headers
@@ -67,7 +79,8 @@ export CXXFLAGS="-stdlib=libc++"
 version_info=$(rustc --version --verbose)
 host_line=$(echo "$version_info" | grep host)
 target_triple=${host_line#*: }
-if [[ $# -gt 0 && -n "$1" ]]; then
+requested_target="${1:-}"
+if [[ -n "$requested_target" ]]; then
     target_triple="$1"
 fi
 arch_suffix=""
@@ -81,41 +94,57 @@ else
     exit 1
 fi
 
-# Generate the licenses first, so they can be baked into the binaries
-script/generate-licenses
+cargo_target_arg="--target $target_triple"
+artifact_dir="target/${target_triple}/${target_dir}"
+if [[ "$debug_build" = true && -z "$requested_target" ]]; then
+    # Reuse the consolidated host build for a local debug bundle instead of
+    # materializing the same graph again under target/<host>/debug.
+    cargo_target_arg=""
+    artifact_dir="target/debug"
+fi
+
+reuse_debug_artifacts=false
+if [[ "$debug_build" = true && -x "${artifact_dir}/dez" && -x "${artifact_dir}/cli" && -x "${artifact_dir}/dez-terminal-host" ]]; then
+    reuse_debug_artifacts=true
+else
+    # Generate the licenses first, so they can be baked into newly compiled
+    # binaries. A reused debug artifact already contains its generated copy.
+    script/generate-licenses
+fi
 
 rustup target add $target_triple
 
-echo "Compiling dez binaries"
-cargo build ${build_flag} --package dez --package cli --package agent_control_cli --target $target_triple
-# Build remote_server in separate invocation to prevent feature unification from other crates
-# from influencing dynamic libraries required by it.
-cargo build ${build_flag} --package remote_server --target $target_triple
+echo "Compiling zed binaries"
+cargo --config .cargo/bundle-config.toml build ${build_flag} --package zed --package cli --package dez_terminal_host --target $target_triple
+# Build remote_server in a separate invocation so feature unification from the
+# app does not influence its required dynamic libraries. Machine-focused builds
+# can omit the unrelated remote server entirely.
+if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then
+    cargo --config .cargo/bundle-config.toml build ${build_flag} --package remote_server --target $target_triple
+fi
 
 echo "Creating application bundle"
-pushd crates/dez
+pushd crates/zed
 cp Cargo.toml Cargo.toml.backup
-restore_bundle_manifest() {
-    if [[ -f Cargo.toml.backup ]]; then
-        mv Cargo.toml.backup Cargo.toml
-    fi
-}
-trap restore_bundle_manifest EXIT
 sed \
     -i.backup \
     "s/package.metadata.bundle-${channel}/package.metadata.bundle/" \
     Cargo.toml
 
-app_path=$(TERM=xterm-256color cargo bundle ${build_flag} --target $target_triple --select-workspace-root | xargs)
-
-restore_bundle_manifest
-trap - EXIT
+# cargo-bundle's legacy term backend returns an error when TERM names a
+# terminal whose colour capability cannot be resolved (including some CI and
+# Codex PTYs). Unsetting TERM makes its existing plain-output fallback reliable.
+if ! app_path=$(env -u TERM cargo bundle ${build_flag} ${cargo_target_arg} --select-workspace-root | xargs); then
+    mv Cargo.toml.backup Cargo.toml
+    exit 1
+fi
+mv Cargo.toml.backup Cargo.toml
 popd
 echo "Bundled ${app_path}"
 
 # DocumentTypes.plist references CFBundleTypeIconFile "Document", so the bundle must contain Document.icns.
 # We use the app icon as a placeholder document icon for now.
-document_icon_source="crates/dez/resources/Document.icns"
+document_icon_source="crates/zed/resources/Document.icns"
 document_icon_target="${app_path}/Contents/Resources/Document.icns"
 if [[ -f "${document_icon_source}" ]]; then
     mkdir -p "$(dirname "${document_icon_target}")"
@@ -124,24 +153,24 @@ else
     echo "cargo::warning=Missing ${document_icon_source}; macOS document icons may not appear in Finder."
 fi
 
-if [[ -n "${MACOS_CERTIFICATE:-}" && -n "${MACOS_CERTIFICATE_PASSWORD:-}" && -n "${APPLE_NOTARIZATION_KEY:-}" && -n "${APPLE_NOTARIZATION_KEY_ID:-}" && -n "${APPLE_NOTARIZATION_ISSUER_ID:-}" ]]; then
+if [[ -n "$IDENTITY" && -n "${MACOS_CERTIFICATE:-}" && -n "${MACOS_CERTIFICATE_PASSWORD:-}" && -n "${APPLE_NOTARIZATION_KEY:-}" && -n "${APPLE_NOTARIZATION_KEY_ID:-}" && -n "${APPLE_NOTARIZATION_ISSUER_ID:-}" ]]; then
     can_code_sign=true
 
     echo "Setting up keychain for code signing..."
-    security create-keychain -p "$MACOS_CERTIFICATE_PASSWORD" dez.keychain || echo ""
-    security default-keychain -s dez.keychain
-    security unlock-keychain -p "$MACOS_CERTIFICATE_PASSWORD" dez.keychain
+    security create-keychain -p "$MACOS_CERTIFICATE_PASSWORD" zed.keychain || echo ""
+    security default-keychain -s zed.keychain
+    security unlock-keychain -p "$MACOS_CERTIFICATE_PASSWORD" zed.keychain
     # Calling set-keychain-settings without `-t` disables the auto-lock timeout
-    security set-keychain-settings dez.keychain
-    echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/dez-certificate.p12
-    security import /tmp/dez-certificate.p12 -k dez.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-    rm /tmp/dez-certificate.p12
-    security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CERTIFICATE_PASSWORD" dez.keychain
+    security set-keychain-settings zed.keychain
+    echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/zed-certificate.p12
+    security import /tmp/zed-certificate.p12 -k zed.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+    rm /tmp/zed-certificate.p12
+    security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$MACOS_CERTIFICATE_PASSWORD" zed.keychain
 
     function cleanup() {
         echo "Cleaning up keychain"
         security default-keychain -s login.keychain
-        security delete-keychain dez.keychain
+        security delete-keychain zed.keychain
     }
 
     trap cleanup EXIT
@@ -202,32 +231,39 @@ function sign_app_binaries() {
     echo "Downloading git binary"
     download_git "${target_triple}" "${app_path}/Contents/MacOS/git"
 
-    # Note: The app identifier for our development builds is the same as the app identifier for nightly.
-    cp crates/dez/contents/$channel/embedded.provisionprofile "${app_path}/Contents/"
+    if [[ -n "${MACOS_PROVISIONING_PROFILE:-}" ]]; then
+        cp "${MACOS_PROVISIONING_PROFILE}" "${app_path}/Contents/embedded.provisionprofile"
+    fi
 
     if [[ $can_code_sign = true ]]; then
         echo "Code signing binaries"
         # sequence of codesign commands modeled after this example: https://developer.apple.com/forums/thread/701514
         /usr/bin/codesign --deep --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/cli" -v
-        /usr/bin/codesign --deep --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/dezctl" -v
+        /usr/bin/codesign --deep --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/dez-terminal-host" -v
         /usr/bin/codesign --deep --force --timestamp --options runtime --sign "$IDENTITY" "${app_path}/Contents/MacOS/git" -v
-        /usr/bin/codesign --deep --force --timestamp --options runtime --entitlements crates/dez/resources/dez.entitlements --sign "$IDENTITY" "${app_path}/Contents/MacOS/dez" -v
-        /usr/bin/codesign --force --timestamp --options runtime --entitlements crates/dez/resources/dez.entitlements --sign "$IDENTITY" "${app_path}" -v
+        /usr/bin/codesign --deep --force --timestamp --options runtime --entitlements crates/zed/resources/zed.entitlements --sign "$IDENTITY" "${app_path}/Contents/MacOS/dez" -v
+        /usr/bin/codesign --force --timestamp --options runtime --entitlements crates/zed/resources/zed.entitlements --sign "$IDENTITY" "${app_path}" -v
     else
-        echo "One or more of the following variables are missing: MACOS_CERTIFICATE, MACOS_CERTIFICATE_PASSWORD, APPLE_NOTARIZATION_KEY, APPLE_NOTARIZATION_KEY_ID, APPLE_NOTARIZATION_ISSUER_ID"
+        echo "Release signing is not configured. Set MACOS_SIGNING_IDENTITY, MACOS_CERTIFICATE, MACOS_CERTIFICATE_PASSWORD, APPLE_NOTARIZATION_KEY, APPLE_NOTARIZATION_KEY_ID, and APPLE_NOTARIZATION_ISSUER_ID."
 
         echo "====== WARNING ======"
         echo "This bundle is being signed without all entitlements, some features (e.g. universal links) will not work"
         echo "====== WARNING ======"
 
-        # NOTE: if you need to test universal links you have a few paths forward:
-        # - create a PR and tag it with the `run-bundling` label, and download the .dmg file from there.
-        # - get a signing key for the MQ55VZLNZQ team from Nathan.
-        # - create your own signing key, and update references to MQ55VZLNZQ to your own team ID
-        # then comment out this line.
-        cat crates/dez/resources/dez.entitlements | sed '/com.apple.developer.associated-domains/,+1d' > "${app_path}/Contents/Resources/dez.entitlements"
+        # Ad-hoc local signatures intentionally omit the associated-domain
+        # entitlement. A public artifact must use the Dez publisher's identity.
+        cat crates/zed/resources/zed.entitlements | sed '/com.apple.developer.associated-domains/,+1d' > "${app_path}/Contents/Resources/zed.entitlements"
 
-        codesign --force --deep --entitlements "${app_path}/Contents/Resources/dez.entitlements" --sign ${MACOS_SIGNING_KEY:- -} "${app_path}" -v
+        # Sign inside-out just like the release path. A single `--deep` pass can
+        # leave large debug bundles with a linker signature on the main binary
+        # but no sealed resources on the app, and has produced intermittent
+        # Code Signing subsystem failures on macOS.
+        local local_identity="${MACOS_SIGNING_KEY:--}"
+        /usr/bin/codesign --force --sign "$local_identity" "${app_path}/Contents/MacOS/cli" -v
+        /usr/bin/codesign --force --sign "$local_identity" "${app_path}/Contents/MacOS/dez-terminal-host" -v
+        /usr/bin/codesign --force --sign "$local_identity" "${app_path}/Contents/MacOS/git" -v
+        /usr/bin/codesign --force --entitlements "${app_path}/Contents/Resources/zed.entitlements" --sign "$local_identity" "${app_path}/Contents/MacOS/dez" -v
+        /usr/bin/codesign --force --entitlements "${app_path}/Contents/Resources/zed.entitlements" --sign "$local_identity" "${app_path}" -v
     fi
 
     bundle_name=$(basename "$app_path")
@@ -253,22 +289,22 @@ function sign_app_binaries() {
     else
         dmg_target_directory="target/${target_triple}/${target_dir}"
         dmg_source_directory="${dmg_target_directory}/dmg"
-        dmg_file_path="${dmg_target_directory}/dez-${arch_suffix}.dmg"
+        dmg_file_path="${dmg_target_directory}/Dez-${arch_suffix}.dmg"
         xcode_bin_dir_path="$(xcode-select -p)/usr/bin"
 
-        rm -rf "${dmg_source_directory}"
-        mkdir -p "${dmg_source_directory}"
+        rm -rf ${dmg_source_directory}
+        mkdir -p ${dmg_source_directory}
         mv "${app_path}" "${dmg_source_directory}"
         notarization_key_file=$(mktemp)
 
         echo "Adding symlink to /Applications to ${dmg_source_directory}"
-        ln -s /Applications "${dmg_source_directory}"
+        ln -s /Applications ${dmg_source_directory}
 
         echo "Creating final DMG at ${dmg_file_path} using ${dmg_source_directory}"
-        create_dmg "${dmg_source_directory}" "${dmg_file_path}"
+        hdiutil create -volname Dez -srcfolder "${dmg_source_directory}" -ov -format UDZO "${dmg_file_path}"
 
         # If someone runs this bundle script locally, a symlink will be placed in `dmg_source_directory`.
-        # This symlink causes CPU issues with dez if the dez codebase is the project being worked on, so we simply remove it for now.
+        # This symlink causes CPU issues with Zed if the Zed codebase is the project being worked on, so we simply remove it for now.
         echo "Removing symlink to /Applications from ${dmg_source_directory}"
         rm ${dmg_source_directory}/Applications
 
@@ -291,45 +327,81 @@ function sign_app_binaries() {
     fi
 }
 
-function create_dmg() {
-    local source_directory=$1
-    local output_path=$2
-    local attempt
-
-    for attempt in 1 2 3; do
-        rm -f "${output_path}"
-        sync
-
-        if hdiutil create -volname dez -srcfolder "${source_directory}" -ov -format UDZO "${output_path}"; then
-            return 0
-        fi
-
-        if [[ "${attempt}" -eq 3 ]]; then
-            return 1
-        fi
-
-        echo "hdiutil create failed; retrying in 10 seconds (${attempt}/3)"
-        sleep 10
-    done
-}
-
 function sign_binary() {
     local binary_path=$1
 
     if [[ $can_code_sign = true ]]; then
         echo "Code signing executable $binary_path"
-        /usr/bin/codesign --deep --force --timestamp --options runtime --entitlements crates/dez/resources/dez.entitlements --sign "$IDENTITY" "${binary_path}" -v
+        /usr/bin/codesign --deep --force --timestamp --options runtime --entitlements crates/zed/resources/zed.entitlements --sign "$IDENTITY" "${binary_path}" -v
     fi
 }
 
+debug_symbols_extracted=false
+function extract_debug_symbols() {
+    if [ "$debug_symbols_extracted" = true ]; then
+        return
+    fi
+    debug_symbols_extracted=true
+    if ! dsymutil --flat "target/${target_triple}/${target_dir}/dez" 2> target/dsymutil.log; then
+        echo "dsymutil failed"
+        cat target/dsymutil.log
+        exit 1
+    fi
+    if [[ -f "target/${target_triple}/${target_dir}/remote_server" ]]; then
+        if ! dsymutil --flat "target/${target_triple}/${target_dir}/remote_server" 2> target/dsymutil.log; then
+            echo "dsymutil failed"
+            cat target/dsymutil.log
+            exit 1
+        fi
+    fi
+}
+
+function upload_debug_symbols() {
+    if [ "$local_install" = true ]; then
+        echo "local install; skipping sentry upload."
+    elif [[ -n "${SENTRY_AUTH_TOKEN:-}" ]]; then
+        echo "Uploading zed debug symbols to sentry..."
+        extract_debug_symbols
+        # Try uploading up to 3 times
+        for attempt in 1 2 3; do
+            echo "Sentry upload attempt $attempt..."
+            if sentry-cli debug-files upload --include-sources --wait -p "$SENTRY_PROJECT" -o "$SENTRY_ORG" \
+                "target/${target_triple}/${target_dir}/dez.dwarf" \
+                "target/${target_triple}/${target_dir}/remote_server.dwarf"; then
+                break
+            else
+                echo "Sentry upload failed on attempt $attempt"
+                if [ $attempt -eq 3 ]; then
+                    echo "All sentry upload attempts failed"
+                    exit 1
+                fi
+            fi
+        done
+    else
+        echo "SENTRY_AUTH_TOKEN, SENTRY_ORG, or SENTRY_PROJECT is missing; skipping Sentry upload."
+    fi
+}
+
+upload_debug_symbols
+
+# Sentry receives the extracted zed.dwarf, not the binary, so debug symbols
+# must be extracted before the binaries are stripped below. The .dwarf files
+# also keep symbols recoverable when the sentry upload is skipped.
+if [[ "$target_dir" == "release" && "$local_install" != true ]]; then
+    extract_debug_symbols
+    strip -x "target/${target_triple}/${target_dir}/dez"
+    strip -x "target/${target_triple}/${target_dir}/cli"
+    if [[ -f "target/${target_triple}/${target_dir}/remote_server" ]]; then
+        strip -x "target/${target_triple}/${target_dir}/remote_server"
+    fi
+fi
+
 cp target/${target_triple}/${target_dir}/dez "${app_path}/Contents/MacOS/dez"
 cp target/${target_triple}/${target_dir}/cli "${app_path}/Contents/MacOS/cli"
-cp target/${target_triple}/${target_dir}/dezctl "${app_path}/Contents/MacOS/dezctl"
+cp target/${target_triple}/${target_dir}/dez-terminal-host "${app_path}/Contents/MacOS/dez-terminal-host"
 sign_app_binaries
 
-if [ "$target_dir" = "debug" ]; then
-    echo "Debug build detected - skipping remote server artifact"
-else
-    sign_binary "target/$target_triple/release/remote_server"
-    gzip -f --stdout --best target/$target_triple/release/remote_server > target/dez-remote-server-macos-$arch_suffix.gz
+if [[ "$debug_build" = false && "${DEZ_BUNDLE_SKIP_REMOTE_SERVER:-false}" != "true" ]]; then
+    sign_binary "${artifact_dir}/remote_server"
+    gzip -f --stdout --best "${artifact_dir}/remote_server" > target/zed-remote-server-macos-$arch_suffix.gz
 fi

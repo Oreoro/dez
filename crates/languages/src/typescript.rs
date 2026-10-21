@@ -12,7 +12,7 @@ use language::{
 use lsp::{CodeActionKind, LanguageServerBinary, LanguageServerName, Uri};
 use node_runtime::{NodeRuntime, VersionStrategy};
 use project::{Fs, lsp_store::language_server_settings};
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde_json::{Value, json};
 use smol::lock::RwLock;
 use std::{
@@ -601,6 +601,9 @@ fn replace_test_name_parameters(test_name: &str) -> String {
     PATTERN.split(test_name).map(regex::escape).join("(.+?)")
 }
 
+static TYPESCRIPT_VERSION_REQ: LazyLock<VersionReq> =
+    LazyLock::new(|| VersionReq::parse("^6").expect("Failed to parse TypeScript version req"));
+
 pub struct TypeScriptLspAdapter {
     fs: Arc<dyn Fs>,
     node: NodeRuntime,
@@ -611,7 +614,6 @@ impl TypeScriptLspAdapter {
     const NEW_SERVER_PATH: &str = "node_modules/typescript-language-server/lib/cli.mjs";
 
     const PACKAGE_NAME: &str = "typescript";
-    const PACKAGE_VERSION_QUERY: &str = "typescript@^6";
     const SERVER_PACKAGE_NAME: &str = "typescript-language-server";
 
     const SERVER_NAME: LanguageServerName =
@@ -623,7 +625,9 @@ impl TypeScriptLspAdapter {
 
     async fn tsdk_path(&self, adapter: &Arc<dyn LspAdapterDelegate>) -> Option<&'static str> {
         let is_yarn = adapter
-            .read_text_file(RelPath::unix(".yarn/sdks/typescript/lib/typescript.js").unwrap())
+            .read_text_file(
+                RelPath::from_unix_str(".yarn/sdks/typescript/lib/typescript.js").unwrap(),
+            )
             .await
             .is_ok();
 
@@ -633,6 +637,8 @@ impl TypeScriptLspAdapter {
             "node_modules/typescript/lib"
         };
 
+        // typescript-language-server doesn't support TypeScript 7+, which no longer
+        // ships `tsserver.js`.
         if self
             .fs
             .is_file(
@@ -667,7 +673,10 @@ impl LspInstaller for TypeScriptLspAdapter {
         Ok(TypeScriptVersions {
             typescript_version: self
                 .node
-                .npm_package_latest_version(Self::PACKAGE_VERSION_QUERY)
+                .npm_package_latest_version_with_requirement(
+                    Self::PACKAGE_NAME,
+                    Some(&TYPESCRIPT_VERSION_REQ),
+                )
                 .await?,
             server_version: self
                 .node
@@ -690,6 +699,7 @@ impl LspInstaller for TypeScriptLspAdapter {
         async move {
             let server_path = container_dir.join(Self::NEW_SERVER_PATH);
 
+            // Pin rather than Latest so an unusable TypeScript 7.x install gets downgraded.
             if node
                 .should_install_npm_package(
                     Self::PACKAGE_NAME,
@@ -820,7 +830,7 @@ impl LspAdapter for TypeScriptLspAdapter {
         let tsdk_path = self.tsdk_path(adapter).await;
         Ok(Some(json!({
             "provideFormatter": true,
-            "hostInfo": "dez",
+            "hostInfo": "zed",
             "tsserver": {
                 "path": tsdk_path,
             },
@@ -898,70 +908,45 @@ async fn get_cached_ts_server_binary(
 mod tests {
     use std::path::Path;
 
-    use gpui::{AppContext as _, BackgroundExecutor, TestAppContext};
-    use node_runtime::NodeRuntime;
+    use gpui::{AppContext as _, BackgroundExecutor, Hsla, TestAppContext};
     use project::FakeFs;
+    use rope::Rope;
     use serde_json::json;
     use task::TaskTemplates;
+    use theme::SyntaxTheme;
     use unindent::Unindent;
     use util::{path, rel_path::rel_path};
 
-    use crate::test_support::TestLspAdapterDelegate;
     use crate::typescript::{
-        PackageJsonData, TypeScriptContextProvider, TypeScriptLspAdapter,
-        replace_test_name_parameters,
+        PackageJsonData, TypeScriptContextProvider, replace_test_name_parameters,
     };
 
-    #[gpui::test]
-    async fn typescript_7_project_sdk_is_not_passed_to_typescript_language_server(
-        executor: BackgroundExecutor,
-    ) {
-        let fs = FakeFs::new(executor);
-        fs.insert_tree(
-            path!("/root"),
-            json!({
-                "node_modules": {
-                    "typescript": {
-                        "lib": {
-                            "typescript.js": "",
-                        }
-                    }
-                }
-            }),
-        )
-        .await;
-        let delegate = TestLspAdapterDelegate::new(path!("/root").into());
-        let adapter = TypeScriptLspAdapter::new(NodeRuntime::unavailable(), fs);
+    #[test]
+    fn test_class_instantiation_highlighting() {
+        let source = Rope::from("class Dog {}\nconst dog = new Dog();");
+        let theme = SyntaxTheme::new_test([("type", Hsla::blue()), ("type.class", Hsla::green())]);
 
-        assert_eq!(adapter.tsdk_path(&delegate).await, None);
-    }
+        for language in [
+            crate::language(
+                "typescript",
+                tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            ),
+            crate::language("tsx", tree_sitter_typescript::LANGUAGE_TSX.into()),
+            crate::language("javascript", tree_sitter_typescript::LANGUAGE_TSX.into()),
+        ] {
+            language.set_theme(&theme);
+            let class_highlight = language
+                .grammar()
+                .and_then(|grammar| grammar.highlight_id_for_name("type.class"))
+                .expect("type.class highlight should be defined");
 
-    #[gpui::test]
-    async fn typescript_6_project_sdk_is_passed_to_typescript_language_server(
-        executor: BackgroundExecutor,
-    ) {
-        let fs = FakeFs::new(executor);
-        fs.insert_tree(
-            path!("/root"),
-            json!({
-                "node_modules": {
-                    "typescript": {
-                        "lib": {
-                            "tsserver.js": "",
-                            "typescript.js": "",
-                        }
-                    }
-                }
-            }),
-        )
-        .await;
-        let delegate = TestLspAdapterDelegate::new(path!("/root").into());
-        let adapter = TypeScriptLspAdapter::new(NodeRuntime::unavailable(), fs);
-
-        assert_eq!(
-            adapter.tsdk_path(&delegate).await,
-            Some("node_modules/typescript/lib")
-        );
+            assert_eq!(
+                language.highlight_text(&source, 0..source.len()),
+                vec![(6..9, class_highlight), (29..32, class_highlight)],
+                "{} class instantiations should use the type.class highlight",
+                language.name()
+            );
+        }
     }
 
     #[gpui::test]
@@ -989,7 +974,6 @@ mod tests {
             .unindent();
 
             let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
-            cx.run_until_parked();
             let outline = buffer.read_with(cx, |buffer, _| buffer.snapshot().outline(None));
             assert_eq!(
                 outline
@@ -1049,7 +1033,6 @@ mod tests {
             .unindent();
 
             let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
-            cx.run_until_parked();
             let outline = buffer.read_with(cx, |buffer, _| buffer.snapshot().outline(None));
             assert_eq!(
                 outline
@@ -1410,7 +1393,6 @@ mod tests {
             .unindent();
 
             let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
-            cx.run_until_parked();
             let outline = buffer.read_with(cx, |buffer, _| buffer.snapshot().outline(None));
             assert_eq!(
                 outline
@@ -1482,7 +1464,6 @@ mod tests {
         .unindent();
 
         let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
-        cx.run_until_parked();
         let outline = buffer.read_with(cx, |buffer, _| buffer.snapshot().outline(None));
         assert_eq!(
             outline
@@ -1500,6 +1481,184 @@ mod tests {
                 ("async *asyncMethodGenerator()", 1),
             ]
         );
+    }
+
+    #[gpui::test]
+    async fn test_conditional_test_wrappers(cx: &mut TestAppContext) {
+        for language in [
+            crate::language(
+                "typescript",
+                tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
+            ),
+            crate::language("tsx", tree_sitter_typescript::LANGUAGE_TSX.into()),
+            crate::language("javascript", tree_sitter_typescript::LANGUAGE_TSX.into()),
+        ] {
+            let text = r#"
+                it.runIf(true)("runIf test", () => {
+                    true;
+                });
+
+                it.skipIf(false)("skipIf test", () => {
+                    true;
+                });
+
+                test.runIf(true)("runIf test 2", () => {
+                    true;
+                });
+
+                test.skipIf(false)("skipIf test 2", () => {
+                    true;
+                });
+
+                describe.runIf(true)("runIf describe", () => {
+                    it("inner test", () => {
+                        true;
+                    });
+                });
+
+                describe.skipIf(false)("skipIf describe", () => {
+                    it("inner test 2", () => {
+                        true;
+                    });
+                });
+
+                it.todoIf(false)("todoIf test", () => {
+                    true;
+                });
+
+                it.if(true)("if test", () => {
+                    true;
+                });
+
+                test.todoIf(false)("todoIf test 2", () => {
+                    true;
+                });
+
+                test.if(true)("if test 2", () => {
+                    true;
+                });
+
+                describe.todoIf(false)("todoIf describe", () => {
+                    it("inner todoIf", () => {
+                        true;
+                    });
+                });
+
+                describe.if(true)("if describe", () => {
+                    it("inner if", () => {
+                        true;
+                    });
+                });
+
+                test.failing("failing test", () => {
+                    true;
+                });
+
+                it.failing("failing it", () => {
+                    true;
+                });
+
+                it.each([1, 2, 3])("each test", () => {
+                    true;
+                });
+
+                describe.each([1, 2])("each describe", () => {
+                    it("inner each", () => {
+                        true;
+                    });
+                });
+
+                it.skip("skip test", () => {
+                    true;
+                });
+
+                it.only("only test", () => {
+                    true;
+                });
+
+                it.todo("todo test");
+            "#
+            .unindent();
+
+            let text_len = text.len();
+            let buffer = cx.new(|cx| language::Buffer::local(text, cx).with_language(language, cx));
+            cx.executor().run_until_parked();
+
+            let outline = buffer.update(cx, |buffer, _cx| buffer.snapshot().outline(None));
+            let outline_names = outline
+                .items
+                .iter()
+                .map(|item| item.text.as_str())
+                .collect::<Vec<_>>();
+            assert_eq!(
+                outline_names,
+                [
+                    "runIf test",
+                    "skipIf test",
+                    "runIf test 2",
+                    "skipIf test 2",
+                    "runIf describe",
+                    "it inner test",
+                    "skipIf describe",
+                    "it inner test 2",
+                    "todoIf test",
+                    "if test",
+                    "todoIf test 2",
+                    "if test 2",
+                    "todoIf describe",
+                    "it inner todoIf",
+                    "if describe",
+                    "it inner if",
+                    "test.failing failing test",
+                    "it.failing failing it",
+                    "each test",
+                    "each describe",
+                    "it inner each",
+                    "it.skip skip test",
+                    "it.only only test",
+                    "it.todo todo test",
+                ]
+            );
+
+            let snapshot = buffer.update(cx, |buffer, _| buffer.snapshot());
+            let runnable_names = snapshot
+                .runnable_ranges(0..text_len)
+                .map(|runnable| {
+                    snapshot
+                        .text_for_range(runnable.run_range)
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                runnable_names,
+                [
+                    "runIf test",
+                    "skipIf test",
+                    "runIf test 2",
+                    "skipIf test 2",
+                    "runIf describe",
+                    "inner test",
+                    "skipIf describe",
+                    "inner test 2",
+                    "todoIf test",
+                    "if test",
+                    "todoIf test 2",
+                    "if test 2",
+                    "todoIf describe",
+                    "inner todoIf",
+                    "if describe",
+                    "inner if",
+                    "failing test",
+                    "failing it",
+                    "each test",
+                    "each describe",
+                    "inner each",
+                    "skip test",
+                    "only test",
+                    "todo test",
+                ]
+            );
+        }
     }
 
     #[gpui::test]

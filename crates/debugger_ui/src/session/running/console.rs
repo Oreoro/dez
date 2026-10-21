@@ -2,6 +2,10 @@ use super::{
     stack_frame_list::{StackFrameList, StackFrameListEvent},
     variable_list::VariableList,
 };
+use crate::canvas::{
+    debugger_background, debugger_panel_padding, debugger_radius, debugger_row_border_color,
+    debugger_row_hover_border_color,
+};
 use anyhow::Result;
 use collections::HashMap;
 use dap::{CompletionItem, CompletionItemType, OutputEvent};
@@ -23,7 +27,7 @@ use project::{
     search_history::{SearchHistory, SearchHistoryCursor},
 };
 use settings::Settings;
-use std::{ops::Range, rc::Rc, usize};
+use std::{ops::Range, rc::Rc};
 use theme::Theme;
 use theme_settings::ThemeSettings;
 use ui::{ContextMenu, Divider, PopoverMenu, SplitButton, Tooltip, prelude::*};
@@ -358,15 +362,12 @@ impl Console {
                     .is_some(),
                 |this| {
                     this.menu(move |window, cx| {
-                        Some(ContextMenu::build(window, cx, |context_menu, _, cx| {
+                        Some(ContextMenu::build(window, cx, |context_menu, _, _| {
                             context_menu
                                 .when_some(keybinding_target.clone(), |el, keybinding_target| {
                                     el.context(keybinding_target)
                                 })
-                                .action(
-                                    localization::text(cx, "debugger-watch-expression"),
-                                    WatchExpression.boxed_clone(),
-                                )
+                                .action("Watch Expression", WatchExpression.boxed_clone())
                         }))
                     })
                 },
@@ -396,7 +397,7 @@ impl Console {
             ..Default::default()
         };
         EditorStyle {
-            background: theme.colors().editor_background,
+            background: debugger_background(cx),
             local_player: theme.players().local(),
             text: text_style,
             ..Default::default()
@@ -451,6 +452,10 @@ impl Render for Console {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let query_focus_handle = self.query_bar.focus_handle(cx);
         self.update_output(window, cx);
+        let background = debugger_background(cx);
+        let border_color = debugger_row_border_color(background, false, cx);
+        let focus_border_color = debugger_row_hover_border_color(background, false, cx);
+        let panel_padding = debugger_panel_padding(cx);
 
         v_flex()
             .track_focus(&self.focus_handle)
@@ -458,18 +463,30 @@ impl Render for Console {
             .on_action(cx.listener(Self::evaluate))
             .on_action(cx.listener(Self::watch_expression))
             .size_full()
-            .border_2()
-            .bg(cx.theme().colors().editor_background)
+            .border_1()
+            .border_color(border_color)
+            .bg(background)
             .child(self.render_console(cx))
             .when(self.is_running(cx), |this| {
                 this.child(Divider::horizontal()).child(
                     h_flex()
                         .on_action(cx.listener(Self::previous_query))
                         .on_action(cx.listener(Self::next_query))
-                        .p_1()
+                        .p(panel_padding)
                         .gap_1()
-                        .bg(cx.theme().colors().editor_background)
-                        .child(self.render_query_bar(cx))
+                        .bg(background)
+                        .child(debugger_radius(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .border_1()
+                                .border_color(border_color)
+                                .bg(background)
+                                .track_focus(&query_focus_handle)
+                                .focus(move |this| this.border_color(focus_border_color))
+                                .child(self.render_query_bar(cx)),
+                            cx,
+                        ))
                         .child(SplitButton::new(
                             ui::ButtonLike::new_rounded_all(ElementId::Name(
                                 "split-button-left-confirm-button".into(),
@@ -479,13 +496,13 @@ impl Render for Console {
                             })
                             .layer(ui::ElevationIndex::ModalSurface)
                             .size(ui::ButtonSize::Compact)
-                            .child(Label::new(localization::text(cx, "debugger-evaluate")))
+                            .child(Label::new("Evaluate"))
                             .tooltip({
                                 let query_focus_handle = query_focus_handle.clone();
 
                                 move |_window, cx| {
                                     Tooltip::for_action_in(
-                                        localization::text(cx, "debugger-evaluate"),
+                                        "Evaluate",
                                         &Confirm,
                                         &query_focus_handle,
                                         cx,
@@ -655,6 +672,7 @@ impl ConsoleQueryBarCompletionProvider {
                         match_start: None,
                         snippet_deduplication_key: None,
                         icon_path: None,
+                        icon_color: None,
                         documentation: Some(CompletionDocumentation::MultiLineMarkdown(
                             variable_value.into(),
                         )),
@@ -765,6 +783,7 @@ impl ConsoleQueryBarCompletionProvider {
                         new_text,
                         label: CodeLabel::plain(completion.label, None),
                         icon_path: None,
+                        icon_color: None,
                         documentation: completion.detail.map(|detail| {
                             CompletionDocumentation::MultiLineMarkdown(detail.into())
                         }),

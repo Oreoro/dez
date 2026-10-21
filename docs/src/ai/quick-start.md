@@ -89,4 +89,4 @@ You can also add this to your settings file:
 }
 ```
 
-When AI is turned off, all AI features are disabled. This includes the Threads Sidebar, Agent Panel, Edit Prediction, and Inline Assistant.
+When AI is turned off, all AI features are disabled. This includes the Agent Panel, Edit Prediction, and Inline Assistant.

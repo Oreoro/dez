@@ -10,10 +10,12 @@ on:
     - '!extensions/test-extension/**'
     - '!extensions/workflows/**'
     - '!extensions/*.md'
+permissions:
+  contents: read
 jobs:
   detect_changed_extensions:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro')
-    runs-on: namespace-profile-2x4-ubuntu-2404
+    runs-on: ubuntu-24.04
     steps:
     - name: steps::checkout_repo
       uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd

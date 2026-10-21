@@ -1,5 +1,5 @@
 [package]
-description = "Shared protocol for dez"
+description = "Shared protocol for communication between the Zed app and the zed.dev server"
 edition.workspace = true
 name = "proto"
 version = "0.1.0"
@@ -23,5 +23,6 @@ serde.workspace = true
 
 [build-dependencies]
 prost-build.workspace = true
+protox.workspace = true
 
 [dev-dependencies]

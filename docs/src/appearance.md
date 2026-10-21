@@ -1,17 +1,26 @@
 ---
-title: Appearance and Visual Customization - dez
-description: Customize dez's themes, fonts, icons, UI density, and other visual settings to match your preferences.
+title: Appearance and Visual Customization - Dez
+description: Customize Dez's themes, fonts, icons, UI density, and other visual settings to match your preferences.
 ---
 
 # Appearance
 
-Customize dez's visual appearance to match your preferences. This guide covers themes, fonts, icons, and other visual settings.
+Dez starts with the translucent Lumin theme and JetBrains Mono across the
+interface, editor, terminal, prompts, and review surfaces. This guide shows how
+to customize those visual defaults.
+
+If imported or older settings make Dez look like plain Zed, choose
+**Dez → Settings → Restore Dez Visual Profile** or run
+{#action dez::RestoreVisualProfile}. The command restores only Lumin
+Light/Blur, JetBrains Mono, and the built-in Dez icons. It preserves font sizes
+and every non-visual preference, and reports success only after the settings
+file is updated.
 
 For information on how the settings system works, see [All Settings](./reference/all-settings.md).
 
-## Customize dez in 5 Minutes
+## Customize Dez in 5 Minutes
 
-Here's how to make dez feel like home:
+Here's how to make Dez feel like home:
 
 1. **Pick a theme**: Press {#kb theme_selector::Toggle} to open the Theme Selector. Arrow through the list to preview themes in real time, and press Enter to apply.
 
@@ -19,24 +28,27 @@ Here's how to make dez feel like home:
 
 3. **Choose an icon theme**: Run {#action icon_theme_selector::Toggle} from the command palette to browse icon themes.
 
-4. **Set your font**: Open the Settings Editor with {#kb dez::OpenSettings} and search for `buffer_font_family`. Set it to your preferred coding font.
+4. **Set your font**: Open the Settings Editor with {#kb zed::OpenSettings} and search for `buffer_font_family`. Set it to your preferred coding font.
 
 5. **Adjust font size**: In the same Settings Editor, search for `buffer_font_size` and `ui_font_size` to tweak the editor and interface text sizes.
 
-That's it. You now have a personalized dez setup.
+That's it. You now have a personalized Dez setup.
+
+To return to the cohesive shipped appearance without resetting the rest of
+your configuration, run {#action dez::RestoreVisualProfile}.
 
 ## Themes
 
-Install themes from the Extensions page ({#action dez::Extensions}), then switch between them with the Theme Selector ({#kb theme_selector::Toggle}).
+Install themes from the Extensions page ({#action zed::Extensions}), then switch between them with the Theme Selector ({#kb theme_selector::Toggle}).
 
-dez supports separate themes for light and dark mode with automatic switching based on your system preference:
+Dez bundles Lumin and follows your system appearance by default:
 
 ```json [settings]
 {
   "theme": {
     "mode": "system",
-    "light": "One Light",
-    "dark": "One Dark"
+    "light": "Lumin Light",
+    "dark": "Lumin Blur"
   }
 }
 ```
@@ -47,7 +59,7 @@ You can also override specific theme attributes for fine-grained control.
 
 ## Icon Themes
 
-Customize file and folder icons in the Project Panel and tabs. Browse available icon themes with the Icon Theme Selector ({#action icon_theme_selector::Toggle} in the command palette).
+Customize file and folder icons in Files and tabs. Browse available icon themes with the Icon Theme Selector ({#action icon_theme_selector::Toggle} in the command palette).
 
 Like color themes, icon themes support separate light and dark variants:
 
@@ -55,8 +67,8 @@ Like color themes, icon themes support separate light and dark variants:
 {
   "icon_theme": {
     "mode": "system",
-    "light": "dez (Default)",
-    "dark": "dez (Default)"
+    "light": "Dez (Default)",
+    "dark": "Dez (Default)"
   }
 }
 ```
@@ -65,24 +77,30 @@ Like color themes, icon themes support separate light and dark variants:
 
 ## Fonts
 
-dez uses three font settings for different contexts:
+Zed uses three font settings and their fallback counterparts for different contexts:
 
-| Setting                | Used for                  |
-| ---------------------- | ------------------------- |
-| `buffer_font_family`   | Editor text               |
-| `ui_font_family`       | Interface elements        |
-| `terminal.font_family` | [Terminal](./terminal.md) |
+| Setting                   | Used for                  |
+| ------------------------- | ------------------------- |
+| `buffer_font_family`      | Editor text               |
+| `buffer_font_fallbacks`   | Editor text               |
+| `ui_font_family`          | Interface elements        |
+| `ui_font_fallbacks`       | Interface elements        |
+| `terminal.font_family`    | [Terminal](./terminal.md) |
+| `terminal.font_fallbacks` | [Terminal](./terminal.md) |
 
 Example configuration:
 
 ```json [settings]
 {
   "buffer_font_family": "JetBrains Mono",
+  "buffer_font_fallbacks": ["Nerd Font"],
   "buffer_font_size": 14,
   "ui_font_family": "Inter",
+  "ui_font_fallbacks": ["Nerd Font"],
   "ui_font_size": 16,
   "terminal": {
     "font_family": "JetBrains Mono",
+    "font_fallbacks": ["Nerd Font"],
     "font_size": 14
   }
 }
@@ -110,14 +128,14 @@ Adjust line spacing with `buffer_line_height`:
 
 ## UI Elements
 
-dez provides extensive control over UI elements including:
+Dez provides extensive control over UI elements including:
 
 - **Tab bar** — Show/hide, navigation buttons, file icons, git status
 - **Status bar** — Language selector, cursor position, line endings
 - **Scrollbar** — Visibility, git diff indicators, search results
 - **Minimap** — Code overview display
 - **Gutter** — Line numbers, fold indicators, breakpoints
-- **Panels** — Project Panel, Terminal, Agent Panel sizing and docking
+- **Workspace Tools and Agent** — Tool-pane sizing, visibility, and placement
 
 → [Visual Customization documentation](./visual-customization.md) for all UI element settings
 

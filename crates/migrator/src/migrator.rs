@@ -42,7 +42,7 @@ fn migrate(text: &str, patterns: MigrationPatterns, query: &Query) -> Result<Opt
         }
     }
 
-    edits.sort_by_key(|(range, _)| (range.start, Reverse(range.end)));
+    edits.sort_unstable_by_key(|(range, _)| (range.start, Reverse(range.end)));
     edits.dedup_by(|(range_b, _), (range_a, _)| {
         range_a.contains(&range_b.start) || range_a.contains(&range_b.end)
     });
@@ -195,10 +195,6 @@ pub fn migrate_settings(text: &str) -> Result<Option<String>> {
             &SETTINGS_QUERY_2025_05_08,
         ),
         MigrationType::TreeSitter(
-            migrations::m_2025_06_16::SETTINGS_PATTERNS,
-            &SETTINGS_QUERY_2025_06_16,
-        ),
-        MigrationType::TreeSitter(
             migrations::m_2025_06_25::SETTINGS_PATTERNS,
             &SETTINGS_QUERY_2025_06_25,
         ),
@@ -257,7 +253,9 @@ pub fn migrate_settings(text: &str) -> Result<Option<String>> {
             migrations::m_2026_05_04::SETTINGS_PATTERNS,
             &SETTINGS_QUERY_2026_05_04,
         ),
-        MigrationType::Json(migrations::m_2026_07_27::migrate_git_panel_sort_by_path),
+        MigrationType::Json(migrations::m_2026_08_17::make_git_gutter_width_an_enum),
+        MigrationType::Json(migrations::m_2026_08_26::rename_folder_icons_to_folder_indicator),
+        MigrationType::Json(migrations::m_2026_08_30::nest_markdown_preview_settings),
     ];
     run_migrations(text, migrations)
 }
@@ -353,10 +351,6 @@ define_query!(
     migrations::m_2025_05_08::SETTINGS_PATTERNS
 );
 define_query!(
-    SETTINGS_QUERY_2025_06_16,
-    migrations::m_2025_06_16::SETTINGS_PATTERNS
-);
-define_query!(
     SETTINGS_QUERY_2025_06_25,
     migrations::m_2025_06_25::SETTINGS_PATTERNS
 );
@@ -417,6 +411,7 @@ static EDIT_PREDICTION_SETTINGS_MIGRATION_QUERY: LazyLock<Query> = LazyLock::new
 #[cfg(test)]
 mod tests {
     use super::*;
+    use indoc::indoc;
     use unindent::Unindent as _;
 
     #[track_caller]
@@ -692,7 +687,7 @@ mod tests {
             &r#"
             {
                 "features": {
-                    "inline_completion_provider": "dez"
+                    "inline_completion_provider": "zed"
                 },
             }
             "#
@@ -701,7 +696,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "dez"
+                        "provider": "zed"
                     }
                 }
                 "#
@@ -997,207 +992,6 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_settings_migration() {
-        assert_migrate_with_migrations(
-            &[MigrationType::TreeSitter(
-                migrations::m_2025_06_16::SETTINGS_PATTERNS,
-                &SETTINGS_QUERY_2025_06_16,
-            )],
-            r#"{
-    "context_servers": {
-        "empty_server": {},
-        "extension_server": {
-            "settings": {
-                "foo": "bar"
-            }
-        },
-        "custom_server": {
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            }
-        },
-        "invalid_server": {
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "settings": {
-                "foo": "bar"
-            }
-        },
-        "empty_server2": {},
-        "extension_server2": {
-            "foo": "bar",
-            "settings": {
-                "foo": "bar"
-            },
-            "bar": "foo"
-        },
-        "custom_server2": {
-            "foo": "bar",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "bar": "foo"
-        },
-        "invalid_server2": {
-            "foo": "bar",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "bar": "foo",
-            "settings": {
-                "foo": "bar"
-            }
-        }
-    }
-}"#,
-            Some(
-                r#"{
-    "context_servers": {
-        "empty_server": {
-            "source": "extension",
-            "settings": {}
-        },
-        "extension_server": {
-            "source": "extension",
-            "settings": {
-                "foo": "bar"
-            }
-        },
-        "custom_server": {
-            "source": "custom",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            }
-        },
-        "invalid_server": {
-            "source": "custom",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "settings": {
-                "foo": "bar"
-            }
-        },
-        "empty_server2": {
-            "source": "extension",
-            "settings": {}
-        },
-        "extension_server2": {
-            "source": "extension",
-            "foo": "bar",
-            "settings": {
-                "foo": "bar"
-            },
-            "bar": "foo"
-        },
-        "custom_server2": {
-            "source": "custom",
-            "foo": "bar",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "bar": "foo"
-        },
-        "invalid_server2": {
-            "source": "custom",
-            "foo": "bar",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "bar": "foo",
-            "settings": {
-                "foo": "bar"
-            }
-        }
-    }
-}"#,
-            ),
-        );
-    }
-
-    #[test]
-    fn test_mcp_settings_migration_doesnt_change_valid_settings() {
-        let settings = r#"{
-    "context_servers": {
-        "empty_server": {
-            "source": "extension",
-            "settings": {}
-        },
-        "extension_server": {
-            "source": "extension",
-            "settings": {
-                "foo": "bar"
-            }
-        },
-        "custom_server": {
-            "source": "custom",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            }
-        },
-        "invalid_server": {
-            "source": "custom",
-            "command": {
-                "path": "foo",
-                "args": ["bar"],
-                "env": {
-                    "FOO": "BAR"
-                }
-            },
-            "settings": {
-                "foo": "bar"
-            }
-        }
-    }
-}"#;
-        assert_migrate_with_migrations(
-            &[MigrationType::TreeSitter(
-                migrations::m_2025_06_16::SETTINGS_PATTERNS,
-                &SETTINGS_QUERY_2025_06_16,
-            )],
-            settings,
-            None,
-        );
-    }
-
-    #[test]
     fn test_custom_agent_server_settings_migration() {
         assert_migrate_with_migrations(
             &[MigrationType::TreeSitter(
@@ -1276,7 +1070,7 @@ mod tests {
         "default_width": 640,
         "default_height": 320,
         "default_model": {
-            "provider": "anthropic",
+            "provider": "zed.dev",
             "model": "claude-sonnet-4"
         }
     }
@@ -1298,7 +1092,7 @@ mod tests {
         "default_width": 640,
         "default_height": 320,
         "default_model": {
-            "provider": "anthropic",
+            "provider": "zed.dev",
             "model": "claude-sonnet-4"
         }
     }
@@ -1320,6 +1114,44 @@ mod tests {
     }
 }"#,
             None,
+        );
+    }
+
+    #[test]
+    fn test_flatten_context_server_command_alongside_source() {
+        assert_migrate_settings(
+            indoc! {r#"
+                {
+                    "context_servers": {
+                        "custom_server": {
+                            "source": "custom",
+                            "command": {
+                                "path": "npx",
+                                "args": ["-y", "some-mcp-server"]
+                            }
+                        },
+                        "hand_edited_server": {
+                            "source": "extension",
+                            "command": {
+                                "path": "other-server"
+                            }
+                        }
+                    }
+                }
+            "#},
+            Some(indoc! {r#"
+                {
+                    "context_servers": {
+                        "custom_server": {
+                            "command": "npx",
+                            "args": ["-y", "some-mcp-server"]
+                        },
+                        "hand_edited_server": {
+                            "command": "other-server"
+                        }
+                    }
+                }
+            "#}),
         );
     }
 
@@ -2891,7 +2723,7 @@ mod tests {
             &r#"
             {
                 "features": {
-                    "edit_prediction_provider": "dez"
+                    "edit_prediction_provider": "zed"
                 },
                 "edit_predictions": {
                     "mode": "eager"
@@ -2903,7 +2735,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "dez",
+                        "provider": "zed",
                         "mode": "eager"
                     }
                 }
@@ -2946,7 +2778,7 @@ mod tests {
             &r#"
             {
                 "edit_predictions": {
-                    "provider": "dez"
+                    "provider": "zed"
                 }
             }
             "#
@@ -3053,7 +2885,7 @@ mod tests {
                 },
                 "macos": {
                     "features": {
-                        "edit_prediction_provider": "dez"
+                        "edit_prediction_provider": "zed"
                     }
                 },
                 "profiles": {
@@ -3074,7 +2906,7 @@ mod tests {
                     },
                     "macos": {
                         "edit_predictions": {
-                            "provider": "dez"
+                            "provider": "zed"
                         }
                     },
                     "profiles": {
@@ -3186,7 +3018,7 @@ mod tests {
             &r#"
             {
                 "edit_predictions": {
-                    "provider": "dez"
+                    "provider": "zed"
                 }
             }
             "#
@@ -3212,7 +3044,7 @@ mod tests {
                 &r#"
                 {
                     "edit_predictions": {
-                        "provider": "dez"
+                        "provider": "zed"
                     }
                 }
                 "#
@@ -3887,7 +3719,7 @@ mod tests {
             Some(&"{\n    \"agent\": {\n        \n    }\n}\n"),
         );
 
-        // Project-local settings (.dez/settings.json) with always_allow_tool_actions
+        // Project-local settings (.zed/settings.json) with always_allow_tool_actions
         // These files have no platform/channel overrides or root-level profiles.
         assert_migrate_with_migrations(
             &[MigrationType::Json(
@@ -5095,48 +4927,32 @@ mod tests {
     }
 
     #[test]
-    fn test_mcp_settings_migration_adds_settings_to_extension_servers() {
+    fn test_context_server_types_report_no_migration() {
         assert_migrate_settings(
-            r#"{
-    "context_servers": {
-        "extension_server": {},
-        "stdio_server": {
-            "command": "npx",
-            "args": ["-y", "some-server"]
-        },
-        "http_server": {
-            "url": "https://example.com/mcp"
-        },
-        "http_server_with_headers": {
-            "url": "https://example.com/mcp",
-            "headers": {
-                "Authorization": "Bearer token"
-            }
-        }
-    }
-}"#,
-            Some(
-                r#"{
-    "context_servers": {
-        "extension_server": {
-            "settings": {}
-        },
-        "stdio_server": {
-            "command": "npx",
-            "args": ["-y", "some-server"]
-        },
-        "http_server": {
-            "url": "https://example.com/mcp"
-        },
-        "http_server_with_headers": {
-            "url": "https://example.com/mcp",
-            "headers": {
-                "Authorization": "Bearer token"
-            }
-        }
-    }
-}"#,
-            ),
+            indoc! {r#"
+                {
+                    "context_servers": {
+                        "extension_server": {},
+                        "disabled_extension_server": {
+                            "enabled": false
+                        },
+                        "stdio_server": {
+                            "command": "npx",
+                            "args": ["-y", "some-server"]
+                        },
+                        "http_server": {
+                            "url": "https://example.com/mcp"
+                        },
+                        "http_server_with_headers": {
+                            "url": "https://example.com/mcp",
+                            "headers": {
+                                "Authorization": "Bearer token"
+                            }
+                        }
+                    }
+                }
+            "#},
+            None,
         );
     }
 
@@ -5145,7 +4961,7 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_icon": true,
                     "show_branch_name": true
                 }
@@ -5155,7 +4971,7 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_status_icon": true,
                         "show_branch_name": true
                     }
@@ -5171,7 +4987,7 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_icon": false,
                     "show_branch_name": true
                 }
@@ -5181,7 +4997,7 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_name": true
                     }
                 }
@@ -5197,7 +5013,7 @@ mod tests {
             &r#"
             {
                 "macos": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
@@ -5209,7 +5025,7 @@ mod tests {
                 &r#"
                 {
                     "macos": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
@@ -5227,7 +5043,7 @@ mod tests {
             &r#"
             {
                 "preview": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
@@ -5239,7 +5055,7 @@ mod tests {
                 &r#"
                 {
                     "preview": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
@@ -5258,7 +5074,7 @@ mod tests {
             {
                 "profiles": {
                     "work": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_icon": true,
                             "show_branch_name": true
                         }
@@ -5273,7 +5089,7 @@ mod tests {
                     "profiles": {
                         "work": {
                             "settings": {
-                                "title_bar": {
+                                "sidebar": {
                                     "show_branch_status_icon": true,
                                     "show_branch_name": true
                                 }
@@ -5292,25 +5108,25 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_icon": true,
                     "show_branch_name": true
                 },
                 "macos": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
                 },
                 "preview": {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_icon": true,
                         "show_branch_name": true
                     }
                 },
                 "profiles": {
                     "work": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_icon": true,
                             "show_branch_name": true
                         }
@@ -5322,18 +5138,18 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "title_bar": {
+                    "sidebar": {
                         "show_branch_status_icon": true,
                         "show_branch_name": true
                     },
                     "macos": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
                     },
                     "preview": {
-                        "title_bar": {
+                        "sidebar": {
                             "show_branch_status_icon": true,
                             "show_branch_name": true
                         }
@@ -5341,7 +5157,7 @@ mod tests {
                     "profiles": {
                         "work": {
                             "settings": {
-                                "title_bar": {
+                                "sidebar": {
                                     "show_branch_status_icon": true,
                                     "show_branch_name": true
                                 }
@@ -5397,7 +5213,7 @@ mod tests {
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_status_icon": true,
                     "show_branch_name": true
                 }
@@ -5407,14 +5223,14 @@ mod tests {
             None,
         );
 
-        // No title_bar key — should be unchanged
+        // No sidebar key — should be unchanged
         assert_migrate_settings(&r#"{ "theme": "One Dark" }"#.unindent(), None);
 
-        // title_bar without show_branch_icon — should be unchanged
+        // sidebar without show_branch_icon — should be unchanged
         assert_migrate_settings(
             &r#"
             {
-                "title_bar": {
+                "sidebar": {
                     "show_branch_name": true
                 }
             }
@@ -5425,12 +5241,12 @@ mod tests {
     }
 
     #[test]
-    fn test_migrate_git_panel_sort_by_path() {
+    fn test_make_git_gutter_width_an_enum_from_number() {
         assert_migrate_settings(
             &r#"
             {
-                "git_panel": {
-                    "sort_by_path": true
+                "gutter": {
+                    "git_gutter_width": 4.0
                 }
             }
             "#
@@ -5438,20 +5254,106 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "git_panel": {
-                        "sort_by": "path"
+                    "gutter": {
+                        "git_gutter_width": {
+                            "custom": 4.0
+                        }
                     }
                 }
                 "#
                 .unindent(),
             ),
         );
+    }
 
+    #[test]
+    fn test_make_git_gutter_width_an_enum_no_change_when_already_migrated() {
+        // already "default" string — no change
         assert_migrate_settings(
             &r#"
             {
+                "gutter": {
+                    "git_gutter_width": "default"
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+
+        // already custom object — no change
+        assert_migrate_settings(
+            &r#"
+            {
+                "gutter": {
+                    "git_gutter_width": { "custom": 4.0 }
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+
+        // no gutter key — no change
+        assert_migrate_settings(&r#"{ "theme": "One Dark" }"#.unindent(), None);
+    }
+
+    #[test]
+    fn test_url_only_context_servers_are_left_alone() {
+        assert_migrate_settings(
+            indoc! {r#"
+                {
+                    "context_servers": { "grep": { "url": "https://mcp.grep.app" } }
+                }
+            "#},
+            None,
+        );
+
+        assert_migrate_settings(
+            indoc! {r#"
+                {
+                    "context_servers": {
+                        "grep": { "url": "https://mcp.grep.app" },
+                        "local": {
+                            "source": "custom",
+                            "command": {
+                                "path": "npx",
+                                "args": ["-y", "some-mcp-server"]
+                            }
+                        }
+                    }
+                }
+            "#},
+            Some(indoc! {r#"
+                {
+                    "context_servers": {
+                        "grep": { "url": "https://mcp.grep.app" },
+                        "local": {
+                            "command": "npx",
+                            "args": ["-y", "some-mcp-server"]
+                        }
+                    }
+                }
+            "#}),
+        )
+    }
+
+    #[test]
+    fn test_rename_folder_icons_to_folder_indicator_in_all_panels() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_26::rename_folder_icons_to_folder_indicator,
+            )],
+            &r#"
+            {
+                "project_panel": {
+                    "folder_icons": true
+                },
+                "outline_panel": {
+                    "folder_icons": false
+                },
                 "git_panel": {
-                    "sort_by_path": false
+                    "folder_icons": true
                 }
             }
             "#
@@ -5459,21 +5361,38 @@ mod tests {
             Some(
                 &r#"
                 {
+                    "project_panel": {
+                        "folder_indicator": "icon"
+                    },
+                    "outline_panel": {
+                        "folder_indicator": "chevron"
+                    },
                     "git_panel": {
-                        "sort_by": "name"
+                        "folder_indicator": "icon"
                     }
                 }
                 "#
                 .unindent(),
             ),
         );
+    }
 
-        assert_migrate_settings(
+    // The shared JSON migration driver applies a rename as a delete plus an add, and
+    // added keys are written to the front of their object. Comments and sibling values
+    // survive; only the renamed key's position moves.
+    #[test]
+    fn test_rename_folder_icons_to_folder_indicator_preserves_comments_and_siblings() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_26::rename_folder_icons_to_folder_indicator,
+            )],
             &r#"
             {
-                "git_panel": {
-                    "sort_by_path": true,
-                    "sort_by": "name"
+                // Keep this comment.
+                "project_panel": {
+                    "file_icons": true,
+                    "folder_icons": false,
+                    "indent_size": 20
                 }
             }
             "#
@@ -5481,8 +5400,337 @@ mod tests {
             Some(
                 &r#"
                 {
-                    "git_panel": {
-                        "sort_by": "name"
+                    // Keep this comment.
+                    "project_panel": {
+                        "folder_indicator": "chevron",
+                        "file_icons": true,
+                        "indent_size": 20
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_rename_folder_icons_to_folder_indicator_in_platform_overrides() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_26::rename_folder_icons_to_folder_indicator,
+            )],
+            &r#"
+            {
+                "macos": {
+                    "project_panel": {
+                        "folder_icons": false
+                    }
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "macos": {
+                        "project_panel": {
+                            "folder_indicator": "chevron"
+                        }
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_rename_folder_icons_to_folder_indicator_does_not_clobber_new_key() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_26::rename_folder_icons_to_folder_indicator,
+            )],
+            &r#"
+            {
+                "project_panel": {
+                    "folder_icons": true,
+                    "folder_indicator": "both"
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "project_panel": {
+                        "folder_indicator": "both"
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_rename_folder_icons_to_folder_indicator_no_change_cases() {
+        let migrations = &[MigrationType::Json(
+            migrations::m_2026_08_26::rename_folder_icons_to_folder_indicator,
+        )];
+
+        // Already migrated.
+        assert_migrate_with_migrations(
+            migrations,
+            &r#"
+            {
+                "project_panel": {
+                    "folder_indicator": "both"
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+
+        // A non-boolean value is already invalid; leave it rather than guess.
+        assert_migrate_with_migrations(
+            migrations,
+            &r#"
+            {
+                "project_panel": {
+                    "folder_icons": 3
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+
+        // `folder_icons` outside the three panels is not ours to rename.
+        assert_migrate_with_migrations(
+            migrations,
+            &r#"
+            {
+                "terminal": {
+                    "folder_icons": true
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+    }
+
+    #[test]
+    fn test_rename_folder_icons_to_folder_indicator_is_registered() {
+        assert_migrate_settings(
+            &r#"
+            {
+                "project_panel": {
+                    "folder_icons": false
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "project_panel": {
+                        "folder_indicator": "chevron"
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_nest_markdown_preview_settings_across_all_scopes() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_30::nest_markdown_preview_settings,
+            )],
+            &r#"
+            {
+                "markdown_preview_font_size": 14,
+                "macos": {
+                    "markdown_preview_font_size": 15
+                },
+                "preview": {
+                    "markdown_preview_font_size": 16
+                },
+                "profiles": {
+                    "work": {
+                        "settings": {
+                            "markdown_preview_font_size": 17
+                        }
+                    }
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "markdown_preview": {
+                        "font_size": 14
+                    },
+                    "macos": {
+                        "markdown_preview": {
+                            "font_size": 15
+                        }
+                    },
+                    "preview": {
+                        "markdown_preview": {
+                            "font_size": 16
+                        }
+                    },
+                    "profiles": {
+                        "work": {
+                            "settings": {
+                                "markdown_preview": {
+                                    "font_size": 17
+                                }
+                            }
+                        }
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_nest_markdown_preview_settings_merges_without_clobbering() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_30::nest_markdown_preview_settings,
+            )],
+            &r#"
+            {
+                "markdown_preview_font_size": 15,
+                "markdown_preview_font_family": "Zed Sans",
+                "markdown_preview_code_font_family": "Zed Mono",
+                "markdown_preview_theme": "One Dark",
+                "markdown_preview": {
+                    "font_size": 18,
+                    "limit_content_width": false,
+                    "max_width": 900
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "markdown_preview": {
+                        "theme": "One Dark",
+                        "code_font_family": "Zed Mono",
+                        "font_family": "Zed Sans",
+                        "font_size": 18,
+                        "limit_content_width": false,
+                        "max_width": 900
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_nest_markdown_preview_settings_leaves_malformed_object() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_30::nest_markdown_preview_settings,
+            )],
+            &r#"
+            {
+                "markdown_preview_font_size": 15,
+                "markdown_preview": false
+            }
+            "#
+            .unindent(),
+            None,
+        );
+    }
+
+    #[test]
+    fn test_nest_markdown_preview_settings_replaces_null_when_legacy_settings_exist() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_30::nest_markdown_preview_settings,
+            )],
+            &r#"
+            {
+                "markdown_preview": null,
+                "markdown_preview_font_size": 15,
+                "preview": {
+                    "markdown_preview": null,
+                    "markdown_preview_theme": "One Dark"
+                }
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "markdown_preview": {
+                        "font_size": 15
+                    },
+                    "preview": {
+                        "markdown_preview": {
+                            "theme": "One Dark"
+                        }
+                    }
+                }
+                "#
+                .unindent(),
+            ),
+        );
+    }
+
+    #[test]
+    fn test_nest_markdown_preview_settings_leaves_null_without_legacy_settings() {
+        assert_migrate_with_migrations(
+            &[MigrationType::Json(
+                migrations::m_2026_08_30::nest_markdown_preview_settings,
+            )],
+            &r#"
+            {
+                "markdown_preview": null,
+                "preview": {
+                    "markdown_preview": null
+                }
+            }
+            "#
+            .unindent(),
+            None,
+        );
+    }
+
+    #[test]
+    fn test_nest_markdown_preview_settings_is_registered() {
+        assert_migrate_settings(
+            &r#"
+            {
+                "markdown_preview_font_size": 15,
+                "markdown_preview_font_family": "Zed Sans",
+                "markdown_preview_code_font_family": "Zed Mono",
+                "markdown_preview_theme": "One Dark"
+            }
+            "#
+            .unindent(),
+            Some(
+                &r#"
+                {
+                    "markdown_preview": {
+                        "font_size": 15,
+                        "font_family": "Zed Sans",
+                        "code_font_family": "Zed Mono",
+                        "theme": "One Dark"
                     }
                 }
                 "#

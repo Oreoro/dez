@@ -1,6 +1,17 @@
 # Summary
 
-# Welcome
+# Dez
+
+- [What is Dez?](./dez.md)
+- [Terminal Sessions](./terminal.md)
+- [Workspace Navigation and Access Recovery](./development/dez/v0.2-workspace-polish.md)
+- [Native Surface Contract](./development/dez/surface-contract.md)
+- [Navigation Wireframe Proposal](./development/dez/tmux-claude-navigation-wireframe.md)
+- [Annotated Workspace Workflow](./development/dez/annotated-workspace-workflow-wireframe.md)
+- [Settings and Shortcuts](./dez.md#settings-and-navigation-visibility)
+- [Release Status](./development/dez/release-evidence.md)
+
+# Upstream Zed reference
 
 - [Getting Started](./getting-started.md)
 - [Installation](./installation.md)
@@ -22,12 +33,17 @@
   - [Project Panel](./project-panel.md)
   - [Tab Switcher](./tab-switcher.md)
 - [Running & Testing](./running-testing.md)
-  - [Terminal](./terminal.md)
   - [Tasks](./tasks.md)
   - [Debugger](./debugger.md)
   - [REPL](./repl.md)
 - [Git](./git.md)
 - [Modelines](./modelines.md)
+
+# Collaboration
+
+- [Overview](./collaboration/overview.md)
+  - [Channels](./collaboration/channels.md)
+  - [Contacts and Private Calls](./collaboration/contacts-and-private-calls.md)
 
 # Remote Development
 
@@ -41,14 +57,15 @@
 - [AI Quick Start](./ai/quick-start.md)
 - [AI by Company](./ai/by-company.md)
 - [Agents](./ai/agents.md)
-  - [dez Agent](./ai/dez-agent.md)
+  - [Zed Agent](./ai/zed-agent.md)
   - [External Agents](./ai/external-agents.md)
-  - [Terminal Threads](./ai/terminal-threads.md)
+  - [Terminal Sessions](./ai/terminal-threads.md)
 - [Agent Panel](./ai/agent-panel.md)
   - [Agent Settings](./ai/agent-settings.md)
   - [Agent Profiles](./ai/agent-profiles.md)
   - [Tools](./ai/tools.md)
     - [Tool Permissions](./ai/tool-permissions.md)
+    - [Agent Sandboxing](./ai/sandboxing.md)
     - [Model Context Protocol](./ai/mcp.md)
   - [Skills](./ai/skills.md)
   - [Instructions](./ai/instructions.md)
@@ -63,10 +80,26 @@
 - [AI Privacy](./ai/privacy-and-security.md)
   - [Feedback and Training Data](./ai/ai-improvement.md)
 
+# Account & Billing
+
+- [Authenticate](./authentication.md)
+- [Plans & Pricing](./account/plans-and-pricing.md)
+- [Zed-Hosted Models](./account/zed-hosted-models.md)
+- [Billing](./account/billing.md)
+
+# Zed Business
+
+- [Overview](./business/overview.md)
+- [Organizations](./business/organizations.md)
+- [Roles & Permissions](./roles.md)
+- [Admin Controls](./business/admin-controls.md)
+- [Business Support](./business/business-support.md)
+
 # Privacy & Security
 
 - [Worktree Trust](./worktree-trust.md)
-- [Local Diagnostics](./telemetry.md)
+- [Privacy for Business](./business/privacy.md)
+- [Telemetry](./telemetry.md)
 - [SOC2](./soc2.md)
 
 # Platform Support
@@ -159,7 +192,7 @@
 - [Vue](./languages/vue.md)
 - [XML](./languages/xml.md)
 - [YAML](./languages/yaml.md)
-- [Yara](./languages/yara.md)
+- [YARA](./languages/yara.md)
 - [Yarn](./languages/yarn.md)
 - [Zig](./languages/zig.md)
 
@@ -168,6 +201,12 @@
 - [Overview](./extensions.md)
 - [Installing Extensions](./extensions/installing-extensions.md)
 - [Developing Extensions](./extensions/developing-extensions.md)
+- [Publishing Your Extension](./extensions/publishing/overview.md)
+  - [License Requirements](./extensions/publishing/license-requirements.md)
+  - [Publishing Prerequisites](./extensions/publishing/prerequisites.md)
+  - [Publishing Guide](./extensions/publishing/publishing-guide.md)
+  - [Updating an Extension](./extensions/publishing/updating-and-maintenance.md)
+  - [Frequently Asked Questions](./extensions/publishing/faq.md)
 - [Extension Capabilities](./extensions/capabilities.md)
 - [Language Extensions](./extensions/languages.md)
 - [Debugger Extensions](./extensions/debugger-extensions.md)
@@ -191,16 +230,43 @@
 - [All Actions](./all-actions.md)
 - [CLI Reference](./reference/cli.md)
 
-# Developing dez
+# Developing Zed
 
-- [Developing dez](./development.md)
+- [Developing Zed](./development.md)
   - [macOS](./development/macos.md)
   - [Linux](./development/linux.md)
   - [Windows](./development/windows.md)
   - [FreeBSD](./development/freebsd.md)
   - [Using Debuggers](./development/debuggers.md)
-  - [Wayland Surface Reconfiguration Design](./development/wayland-surface-reconfiguration-design.md)
   - [Performance](./performance.md)
+  - [Historical: inherited Zed Canvas](./development/zed-canvas.md)
+  - [Historical: inherited Zed Canvas Design System](./development/zed-canvas-design-system.md)
+  - [Historical: Superzed Canvas Implementation Plan](./development/superzed-canvas-plan.md)
+  - [Dez Development](./development/dez/index.md)
+    - [Fork Notes](./development/dez/fork-notes.md)
+    - [v0.5 Surface Readiness](./development/dez/v0.5-surface-readiness.md)
+    - [v0.4 Readiness](./development/dez/v0.4-readiness.md)
+    - [v0.2 Workspace Polish](./development/dez/v0.2-workspace-polish.md)
+    - [Native Surface Contract](./development/dez/surface-contract.md)
+    - [Navigation Wireframe Proposal](./development/dez/tmux-claude-navigation-wireframe.md)
+    - [Annotated Workspace Workflow](./development/dez/annotated-workspace-workflow-wireframe.md)
+    - [v0.1 Product Hardening](./development/dez/v0.1-product-hardening.md)
+    - [v0.0.4 External Sessions](./development/dez/v0.0.4-external-sessions.md)
+    - [v0.0.3 Production Readiness](./development/dez/v0.0.3-production-readiness.md)
+    - [v0.0.2 Completion Plan](./development/dez/v0.0.2-completion-plan.md)
+    - [v0.0.2 Source Ledger](./development/dez/v0.0.2-active-plan.md)
+    - [v0.0.2 Installed-build UX Audit](./development/dez/v0.0.2-runtime-ux-recovery-plan.md)
+    - [Product Strategy](./development/dez/product-strategy.md)
+    - [Upstream Synchronization](./development/dez/upstream-sync.md)
+    - [Upstream Feature Ledger](./development/dez/upstream-ledger.md)
+    - [Architecture Baseline](./development/dez/architecture-baseline.md)
+    - [Codex Terminal Adapter](./development/dez/codex-adapter.md)
+    - [Live Preview and Agent Model](./development/dez/live-preview-and-agent-model.md)
+    - [Consolidated Plan Reconciliation](./development/dez/consolidated-plan-reconciliation.md)
+    - [Roadmap](./development/dez/roadmap.md)
+    - [Release Evidence](./development/dez/release-evidence.md)
+    - [v0.0.1 Release Runbook](./development/dez/v0.0.1-release-runbook.md)
+    - [v0.0.1 Launch Record](./development/dez-v0.0.1.md)
   - [Glossary](./development/glossary.md)
 - [Release Notes](./development/release-notes.md)
 - [Debugging Crashes](./development/debugging-crashes.md)

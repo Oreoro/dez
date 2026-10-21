@@ -1,15 +1,18 @@
 mod persistence;
 
+use client::UserStore;
 use collections::HashMap;
 use component::{ComponentId, ComponentMetadata, ComponentStatus, components};
 use gpui::{
-    App, Entity, EventEmitter, FocusHandle, Focusable, Task, WeakEntity, Window, list, prelude::*,
+    App, Div, Entity, EventEmitter, FocusHandle, Focusable, Hsla, Pixels, Task, WeakEntity, Window,
+    list, prelude::*, px,
 };
 use gpui::{ListState, ScrollHandle, ScrollStrategy, UniformListScrollHandle};
 use language::LanguageRegistry;
 use notifications::status_toast::StatusToast;
 use persistence::ComponentPreviewDb;
 use project::Project;
+use settings::Settings;
 use std::{iter::Iterator, ops::Range, sync::Arc};
 use ui::{
     ButtonLike, Divider, HighlightedLabel, ListItem, ListSubHeader, Scrollbars, Tooltip,
@@ -18,7 +21,8 @@ use ui::{
 use ui_input::InputField;
 use workspace::AppState;
 use workspace::{
-    Item, ItemId, SerializableItem, Workspace, WorkspaceId, delete_unloaded_items, item::ItemEvent,
+    DesignSystemSettings, Item, ItemId, SerializableItem, Workspace, WorkspaceId,
+    delete_unloaded_items, item::ItemEvent,
 };
 
 pub fn init(app_state: Arc<AppState>, cx: &mut App) {
@@ -34,11 +38,14 @@ pub fn init(app_state: Arc<AppState>, cx: &mut App) {
                 let app_state = app_state.clone();
 
                 let language_registry = app_state.languages.clone();
+                let user_store = app_state.user_store.clone();
+
                 let component_preview = cx.new(|cx| {
                     ComponentPreview::new(
                         weak_workspace.clone(),
                         project.clone(),
                         language_registry,
+                        user_store,
                         None,
                         None,
                         window,
@@ -58,6 +65,82 @@ pub fn init(app_state: Arc<AppState>, cx: &mut App) {
         );
     })
     .detach();
+}
+
+fn canvas_component_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background,
+    }
+}
+
+fn canvas_component_panel_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.surface_background,
+        settings::CanvasContrast::Standard => colors.surface_background,
+        settings::CanvasContrast::High => colors.panel_background,
+    }
+}
+
+fn canvas_component_card_background(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.editor_background,
+        settings::CanvasContrast::Standard => colors.editor_background,
+        settings::CanvasContrast::High => colors.element_background.opacity(0.7),
+    }
+}
+
+fn canvas_component_border(cx: &App) -> Hsla {
+    let colors = cx.theme().colors();
+    match DesignSystemSettings::get_global(cx).contrast {
+        settings::CanvasContrast::Low => colors.border.opacity(0.5),
+        settings::CanvasContrast::Standard => colors.border,
+        settings::CanvasContrast::High => colors.border_variant,
+    }
+}
+
+fn canvas_component_padding(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(6.),
+        settings::CanvasDensity::Balanced => px(8.),
+        settings::CanvasDensity::Spacious => px(12.),
+    }
+}
+
+fn canvas_component_card_padding_x(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(18.),
+        settings::CanvasDensity::Balanced => px(24.),
+        settings::CanvasDensity::Spacious => px(32.),
+    }
+}
+
+fn canvas_component_card_padding_y(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(12.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(24.),
+    }
+}
+
+fn canvas_component_gap(cx: &App) -> Pixels {
+    match DesignSystemSettings::get_global(cx).density {
+        settings::CanvasDensity::Compact => px(12.),
+        settings::CanvasDensity::Balanced => px(16.),
+        settings::CanvasDensity::Spacious => px(24.),
+    }
+}
+
+fn canvas_component_radius(element: Div, cx: &App) -> Div {
+    match DesignSystemSettings::get_global(cx).radius {
+        settings::CanvasRadius::None => element,
+        settings::CanvasRadius::Subtle => element.rounded_sm(),
+        settings::CanvasRadius::Rounded => element.rounded_md(),
+    }
 }
 
 enum PreviewEntry {
@@ -100,6 +183,7 @@ pub struct ComponentPreview {
     language_registry: Arc<LanguageRegistry>,
     nav_scroll_handle: UniformListScrollHandle,
     project: Entity<Project>,
+    user_store: Entity<UserStore>,
     workspace: WeakEntity<Workspace>,
     workspace_id: Option<WorkspaceId>,
     _view_scroll_handle: ScrollHandle,
@@ -110,6 +194,7 @@ impl ComponentPreview {
         workspace: WeakEntity<Workspace>,
         project: Entity<Project>,
         language_registry: Arc<LanguageRegistry>,
+        user_store: Entity<UserStore>,
         selected_index: impl Into<Option<usize>>,
         active_page: Option<PreviewPage>,
         window: &mut Window,
@@ -141,6 +226,7 @@ impl ComponentPreview {
             language_registry,
             nav_scroll_handle: UniformListScrollHandle::new(),
             project,
+            user_store,
             workspace,
             workspace_id: None,
             _view_scroll_handle: ScrollHandle::new(),
@@ -443,12 +529,13 @@ impl ComponentPreview {
             .child(
                 v_flex()
                     .border_1()
-                    .border_color(cx.theme().colors().border)
-                    .rounded_sm()
+                    .border_color(canvas_component_border(cx))
+                    .bg(canvas_component_card_background(cx))
+                    .map(|card| canvas_component_radius(card, cx))
                     .w_full()
-                    .gap_4()
-                    .py_4()
-                    .px_6()
+                    .gap(canvas_component_gap(cx))
+                    .py(canvas_component_card_padding_y(cx))
+                    .px(canvas_component_card_padding_x(cx))
                     .flex_none()
                     .child(
                         v_flex()
@@ -548,7 +635,7 @@ impl ComponentPreview {
         if let Some(workspace) = self.workspace.upgrade() {
             workspace.update(cx, |workspace, cx| {
                 let status_toast =
-                    StatusToast::new("`dez/new-notification-system` created!", cx, |this, _cx| {
+                    StatusToast::new("`zed/new-notification-system` created!", cx, |this, _cx| {
                         this.icon(
                             Icon::new(IconName::GitBranch)
                                 .size(IconSize::Small)
@@ -581,7 +668,10 @@ impl Render for ComponentPreview {
         }
         let sidebar_entries = self.scope_ordered_entries();
         let active_page = self.active_page.clone();
-        let background_color = cx.theme().colors().editor_background;
+        let background_color = canvas_component_background(cx);
+        let panel_background = canvas_component_panel_background(cx);
+        let border_color = canvas_component_border(cx);
+        let panel_padding = canvas_component_padding(cx);
 
         h_flex()
             .id("component-preview")
@@ -594,8 +684,9 @@ impl Render for ComponentPreview {
             .child(
                 v_flex()
                     .h_full()
+                    .bg(panel_background)
                     .border_r_1()
-                    .border_color(cx.theme().colors().border)
+                    .border_color(border_color)
                     .child(
                         div()
                             .size_full()
@@ -617,14 +708,14 @@ impl Render for ComponentPreview {
                                     }),
                                 )
                                 .track_scroll(&self.nav_scroll_handle)
-                                .p_2p5()
+                                .p(panel_padding)
                                 .w(px(231.)) // Matches perfectly with the size of the "Component Preview" tab, if that's the first one in the pane
                                 .h_full()
                                 .flex_1(),
                             )
                             .custom_scrollbars(
                                 Scrollbars::new(ui::ScrollAxes::Vertical)
-                                    .with_track_along(ui::ScrollAxes::Vertical, background_color)
+                                    .with_track_along(ui::ScrollAxes::Vertical, panel_background)
                                     .tracked_scroll_handle(&self.nav_scroll_handle),
                                 window,
                                 cx,
@@ -633,9 +724,9 @@ impl Render for ComponentPreview {
                     .child(
                         div()
                             .w_full()
-                            .p_2p5()
+                            .p(panel_padding)
                             .border_t_1()
-                            .border_color(cx.theme().colors().border)
+                            .border_color(border_color)
                             .child(
                                 Button::new("toast-test", "Launch Toast")
                                     .full_width()
@@ -654,10 +745,11 @@ impl Render for ComponentPreview {
                     .size_full()
                     .child(
                         div()
-                            .p_2()
+                            .p(panel_padding)
                             .w_full()
+                            .bg(panel_background)
                             .border_b_1()
-                            .border_color(cx.theme().colors().border)
+                            .border_color(border_color)
                             .child(self.filter_editor.clone()),
                     )
                     .child(
@@ -706,6 +798,10 @@ impl Item for ComponentPreview {
         "Component Preview".into()
     }
 
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        None
+    }
+
     fn show_toolbar(&self) -> bool {
         false
     }
@@ -724,6 +820,7 @@ impl Item for ComponentPreview {
         Self: Sized,
     {
         let language_registry = self.language_registry.clone();
+        let user_store = self.user_store.clone();
         let weak_workspace = self.workspace.clone();
         let project = self.project.clone();
         let selected_index = self.cursor_index;
@@ -733,6 +830,7 @@ impl Item for ComponentPreview {
             weak_workspace,
             project,
             language_registry,
+            user_store,
             selected_index,
             Some(active_page),
             window,
@@ -790,6 +888,7 @@ impl SerializableItem for ComponentPreview {
                 Err(_) => ActivePageId::default(),
             };
 
+        let user_store = project.read(cx).user_store();
         let language_registry = project.read(cx).languages().clone();
         let preview_page = if deserialized_active_page.0 == ActivePageId::default().0 {
             Some(PreviewPage::default())
@@ -807,6 +906,7 @@ impl SerializableItem for ComponentPreview {
         };
 
         window.spawn(cx, async move |cx| {
+            let user_store = user_store.clone();
             let language_registry = language_registry.clone();
             let weak_workspace = workspace.clone();
             let project = project.clone();
@@ -816,6 +916,7 @@ impl SerializableItem for ComponentPreview {
                         weak_workspace,
                         project,
                         language_registry,
+                        user_store,
                         None,
                         preview_page,
                         window,
@@ -847,7 +948,6 @@ impl SerializableItem for ComponentPreview {
         _workspace: &mut Workspace,
         item_id: ItemId,
         _closing: bool,
-        _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Task<anyhow::Result<()>>> {
         let active_page = self.active_page_id(cx);
@@ -926,11 +1026,11 @@ impl ComponentPreviewPage {
         v_flex()
             .min_w_0()
             .w_full()
-            .p_12()
-            .gap_6()
-            .bg(cx.theme().colors().surface_background)
+            .p(canvas_component_card_padding_x(cx))
+            .gap(canvas_component_gap(cx))
+            .bg(canvas_component_panel_background(cx))
             .border_b_1()
-            .border_color(cx.theme().colors().border)
+            .border_color(canvas_component_border(cx))
             .child(
                 v_flex()
                     .gap_1()
@@ -957,9 +1057,9 @@ impl ComponentPreviewPage {
             .id(("component-preview", self.reset_key))
             .size_full()
             .flex_1()
-            .px_12()
-            .py_6()
-            .bg(cx.theme().colors().editor_background)
+            .px(canvas_component_card_padding_x(cx))
+            .py(canvas_component_card_padding_y(cx))
+            .bg(canvas_component_background(cx))
             .child((self.component.preview())(window, cx))
     }
 }

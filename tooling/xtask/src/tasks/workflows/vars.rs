@@ -19,10 +19,6 @@ macro_rules! var {
     };
 }
 
-secret!(ANTHROPIC_API_KEY);
-secret!(OPENAI_API_KEY);
-secret!(GOOGLE_AI_API_KEY);
-secret!(GOOGLE_CLOUD_PROJECT);
 secret!(APPLE_NOTARIZATION_ISSUER_ID);
 secret!(APPLE_NOTARIZATION_KEY);
 secret!(APPLE_NOTARIZATION_KEY_ID);
@@ -30,18 +26,22 @@ secret!(AZURE_SIGNING_CLIENT_ID);
 secret!(AZURE_SIGNING_CLIENT_SECRET);
 secret!(AZURE_SIGNING_TENANT_ID);
 secret!(CACHIX_AUTH_TOKEN);
+secret!(CLUSTER_NAME);
+secret!(DIGITALOCEAN_ACCESS_TOKEN);
 secret!(DIGITALOCEAN_SPACES_ACCESS_KEY);
 secret!(DIGITALOCEAN_SPACES_SECRET_KEY);
 secret!(GITHUB_TOKEN);
 secret!(MACOS_CERTIFICATE);
 secret!(MACOS_CERTIFICATE_PASSWORD);
+secret!(SENTRY_AUTH_TOKEN);
+secret!(ZED_CLIENT_CHECKSUM_SEED);
 secret!(ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON);
-secret!(SLACK_APP_ZED_UNIT_EVALS_BOT_TOKEN);
+secret!(ZED_SENTRY_MINIDUMP_ENDPOINT);
 secret!(ZED_ZIPPY_APP_ID);
 secret!(ZED_ZIPPY_APP_PRIVATE_KEY);
 secret!(DISCORD_WEBHOOK_RELEASE_NOTES);
 secret!(WINGET_TOKEN);
-secret!(VERCEL_TOKEN);
+secret!(ZED_DEV_REVALIDATE_TOKEN);
 secret!(SLACK_WEBHOOK_WORKFLOW_FAILURES);
 secret!(R2_ACCOUNT_ID);
 secret!(R2_ACCESS_KEY_ID);
@@ -57,7 +57,10 @@ var!(AZURE_SIGNING_CERT_PROFILE_NAME);
 var!(AZURE_SIGNING_ENDPOINT);
 
 pub fn bundle_envs(platform: Platform) -> Env {
-    let env = Env::default().add("CARGO_INCREMENTAL", 0);
+    let env = Env::default()
+        .add("CARGO_INCREMENTAL", 0)
+        .add("ZED_CLIENT_CHECKSUM_SEED", ZED_CLIENT_CHECKSUM_SEED)
+        .add("ZED_MINIDUMP_ENDPOINT", ZED_SENTRY_MINIDUMP_ENDPOINT);
 
     match platform {
         Platform::Linux => env,
@@ -93,12 +96,6 @@ pub fn one_workflow_per_non_main_branch_and_token<T: AsRef<str>>(token: T) -> Co
             ),
             token.as_ref()
         ))
-        .cancel_in_progress(true)
-}
-
-pub(crate) fn allow_concurrent_runs() -> Concurrency {
-    Concurrency::default()
-        .group("${{ github.workflow }}-${{ github.ref_name }}-${{ github.run_id }}")
         .cancel_in_progress(true)
 }
 
@@ -160,7 +157,7 @@ impl<'a> PathContextCondition<'a> {
             job: job.job.add_need(set_by_step.clone()).cond(Expression::new(
                 format!(
                     "needs.{}.outputs.{} == 'true' {merge_queue_condition}",
-                    &set_by_step,
+                    set_by_step,
                     self.condition.name,
                     merge_queue_condition = self
                         .run_in_merge_queue
@@ -373,19 +370,21 @@ impl serde::Serialize for WorkflowSecret {
 
 pub mod assets {
     // NOTE: these asset names also exist in the zed.dev codebase.
-    pub const MAC_AARCH64: &str = "dez-aarch64.dmg";
-    pub const MAC_X86_64: &str = "dez-x86_64.dmg";
-    pub const LINUX_AARCH64: &str = "dez-linux-aarch64.tar.gz";
-    pub const LINUX_X86_64: &str = "dez-linux-x86_64.tar.gz";
-    pub const WINDOWS_X86_64: &str = "dez-x86_64.exe";
-    pub const WINDOWS_AARCH64: &str = "dez-aarch64.exe";
+    pub const MAC_AARCH64: &str = "Zed-aarch64.dmg";
+    pub const MAC_X86_64: &str = "Zed-x86_64.dmg";
+    pub const LINUX_AARCH64: &str = "zed-linux-aarch64.tar.gz";
+    pub const LINUX_X86_64: &str = "zed-linux-x86_64.tar.gz";
+    pub const BWRAP_LINUX_AARCH64: &str = "bwrap-linux-aarch64.gz";
+    pub const BWRAP_LINUX_X86_64: &str = "bwrap-linux-x86_64.gz";
+    pub const WINDOWS_X86_64: &str = "Zed-x86_64.exe";
+    pub const WINDOWS_AARCH64: &str = "Zed-aarch64.exe";
 
-    pub const REMOTE_SERVER_MAC_AARCH64: &str = "dez-remote-server-macos-aarch64.gz";
-    pub const REMOTE_SERVER_MAC_X86_64: &str = "dez-remote-server-macos-x86_64.gz";
-    pub const REMOTE_SERVER_LINUX_AARCH64: &str = "dez-remote-server-linux-aarch64.gz";
-    pub const REMOTE_SERVER_LINUX_X86_64: &str = "dez-remote-server-linux-x86_64.gz";
-    pub const REMOTE_SERVER_WINDOWS_AARCH64: &str = "dez-remote-server-windows-aarch64.zip";
-    pub const REMOTE_SERVER_WINDOWS_X86_64: &str = "dez-remote-server-windows-x86_64.zip";
+    pub const REMOTE_SERVER_MAC_AARCH64: &str = "zed-remote-server-macos-aarch64.gz";
+    pub const REMOTE_SERVER_MAC_X86_64: &str = "zed-remote-server-macos-x86_64.gz";
+    pub const REMOTE_SERVER_LINUX_AARCH64: &str = "zed-remote-server-linux-aarch64.gz";
+    pub const REMOTE_SERVER_LINUX_X86_64: &str = "zed-remote-server-linux-x86_64.gz";
+    pub const REMOTE_SERVER_WINDOWS_AARCH64: &str = "zed-remote-server-windows-aarch64.zip";
+    pub const REMOTE_SERVER_WINDOWS_X86_64: &str = "zed-remote-server-windows-x86_64.zip";
 
     pub fn all() -> Vec<&'static str> {
         vec![
@@ -393,6 +392,8 @@ pub mod assets {
             MAC_X86_64,
             LINUX_AARCH64,
             LINUX_X86_64,
+            BWRAP_LINUX_AARCH64,
+            BWRAP_LINUX_X86_64,
             WINDOWS_X86_64,
             WINDOWS_AARCH64,
             REMOTE_SERVER_MAC_AARCH64,

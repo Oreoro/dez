@@ -14,6 +14,7 @@ use settings::Settings;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
+use std::fmt::Display;
 use std::sync::Arc;
 use ui::ActiveTheme;
 use ui::Button;
@@ -34,8 +35,7 @@ use serde::Deserialize;
 use ui::{
     AnyElement, App, Color, CommonAnimationExt, Context, Headline, HeadlineSize, Icon, IconName,
     InteractiveElement, IntoElement, Label, ListItem, ListSeparator, ModalHeader, Navigable,
-    NavigableEntry, ParentElement, Render, SharedString, Styled, StyledExt, Toggleable, Window,
-    div, rems,
+    NavigableEntry, ParentElement, Render, Styled, StyledExt, Toggleable, Window, div, rems,
 };
 use util::ResultExt;
 use util::rel_path::RelPath;
@@ -98,6 +98,7 @@ fn get_safe_id(input: &str) -> String {
 pub struct DevContainerContext {
     pub project_directory: Arc<Path>,
     pub use_podman: bool,
+    pub use_buildkit: Option<bool>,
     pub fs: Arc<dyn Fs>,
     pub http_client: Arc<dyn HttpClient>,
     pub environment: WeakEntity<ProjectEnvironment>,
@@ -106,13 +107,16 @@ pub struct DevContainerContext {
 impl DevContainerContext {
     pub fn from_workspace(workspace: &Workspace, cx: &App) -> Option<Self> {
         let project_directory = workspace.project().read(cx).active_project_directory(cx)?;
-        let use_podman = DevContainerSettings::get_global(cx).use_podman;
+        let settings = DevContainerSettings::get_global(cx);
+        let use_podman = settings.use_podman;
+        let use_buildkit = settings.use_buildkit;
         let http_client = cx.http_client().clone();
         let fs = workspace.app_state().fs.clone();
         let environment = workspace.project().read(cx).environment().downgrade();
         Some(Self {
             project_directory,
             use_podman,
+            use_buildkit,
             fs,
             http_client,
             environment,
@@ -134,6 +138,7 @@ impl DevContainerContext {
 #[derive(RegisterSetting)]
 struct DevContainerSettings {
     use_podman: bool,
+    use_buildkit: Option<bool>,
 }
 
 pub fn use_podman(cx: &App) -> bool {
@@ -144,6 +149,7 @@ impl Settings for DevContainerSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         Self {
             use_podman: content.remote.use_podman.unwrap_or(false),
+            use_buildkit: content.remote.dev_container_use_buildkit,
         }
     }
 }
@@ -297,6 +303,10 @@ impl TemplatePickerDelegate {
 impl PickerDelegate for TemplatePickerDelegate {
     type ListItem = AnyElement;
 
+    fn name() -> &'static str {
+        "dev container template picker"
+    }
+
     fn match_count(&self) -> usize {
         self.matching_indices.len()
     }
@@ -419,10 +429,10 @@ impl PickerDelegate for TemplatePickerDelegate {
                 .border_t_1()
                 .border_color(cx.theme().colors().border_variant)
                 .child(
-                    Button::new("run-action", localization::text(cx, "common-continue"))
+                    Button::new("run-action", "Continue")
                         .key_binding(
                             KeyBinding::for_action(&menu::Confirm, cx)
-                                .map(|kb| kb.size(rems_from_px(12.))),
+                                .map(|kb| kb.size(rems_from_px(12_f32))),
                         )
                         .on_click(|_, window, cx| {
                             window.dispatch_action(menu::Confirm.boxed_clone(), cx)
@@ -479,6 +489,10 @@ impl FeaturePickerDelegate {
 
 impl PickerDelegate for FeaturePickerDelegate {
     type ListItem = AnyElement;
+
+    fn name() -> &'static str {
+        "dev container feature picker"
+    }
 
     fn match_count(&self) -> usize {
         self.matching_indices.len()
@@ -612,30 +626,24 @@ impl PickerDelegate for FeaturePickerDelegate {
                 .border_t_1()
                 .border_color(cx.theme().colors().border_variant)
                 .child(
-                    Button::new(
-                        "run-action",
-                        localization::text(cx, "common-select-feature"),
-                    )
-                    .key_binding(
-                        KeyBinding::for_action(&menu::Confirm, cx)
-                            .map(|kb| kb.size(rems_from_px(12.))),
-                    )
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(menu::Confirm.boxed_clone(), cx)
-                    }),
+                    Button::new("run-action", "Select Feature")
+                        .key_binding(
+                            KeyBinding::for_action(&menu::Confirm, cx)
+                                .map(|kb| kb.size(rems_from_px(12_f32))),
+                        )
+                        .on_click(|_, window, cx| {
+                            window.dispatch_action(menu::Confirm.boxed_clone(), cx)
+                        }),
                 )
                 .child(
-                    Button::new(
-                        "run-action-secondary",
-                        localization::text(cx, "common-confirm-selections"),
-                    )
-                    .key_binding(
-                        KeyBinding::for_action(&menu::SecondaryConfirm, cx)
-                            .map(|kb| kb.size(rems_from_px(12.))),
-                    )
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(menu::SecondaryConfirm.boxed_clone(), cx)
-                    }),
+                    Button::new("run-action-secondary", "Confirm Selections")
+                        .key_binding(
+                            KeyBinding::for_action(&menu::SecondaryConfirm, cx)
+                                .map(|kb| kb.size(rems_from_px(12_f32))),
+                        )
+                        .on_click(|_, window, cx| {
+                            window.dispatch_action(menu::SecondaryConfirm.boxed_clone(), cx)
+                        }),
                 )
                 .into_any_element(),
         )
@@ -662,8 +670,7 @@ impl DevContainerModal {
                 .child(
                     div().track_focus(&self.focus_handle).child(
                         ModalHeader::new().child(
-                            Headline::new(localization::text(cx, "dev-container-create"))
-                                .size(HeadlineSize::XSmall),
+                            Headline::new("Create Dev Container").size(HeadlineSize::XSmall),
                         ),
                     ),
                 )
@@ -692,10 +699,7 @@ impl DevContainerModal {
                                     );
                                     cx.notify();
                                 }))
-                                .child(Label::new(localization::text(
-                                    cx,
-                                    "common-search-dev-container-templates",
-                                ))),
+                                .child(Label::new("Search for Dev Container Templates")),
                         ),
                 )
                 .into_any_element(),
@@ -707,7 +711,7 @@ impl DevContainerModal {
     fn render_error(
         &self,
         error_title: String,
-        error: SharedString,
+        error: impl Display,
         _window: &mut Window,
         _cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -717,7 +721,11 @@ impl DevContainerModal {
                 ModalHeader::new().child(Headline::new(error_title).size(HeadlineSize::XSmall)),
             ))
             .child(ListSeparator)
-            .child(v_flex().child(Label::new(error)).whitespace_normal())
+            .child(
+                v_flex()
+                    .child(Label::new(format!("{}", error)))
+                    .whitespace_normal(),
+            )
             .into_any_element()
     }
 
@@ -757,12 +765,7 @@ impl DevContainerModal {
                         .child(
                             ModalHeader::new()
                                 .child(
-                                    Headline::new(localization::tr!(
-                                        cx,
-                                        "common-template-option",
-                                        name = next_option_entries.option_name.as_str()
-                                    ))
-                                    .size(HeadlineSize::XSmall),
+                                    Headline::new("Template Option: ").size(HeadlineSize::XSmall),
                                 )
                                 .child(
                                     Headline::new(&next_option_entries.option_name)
@@ -842,7 +845,7 @@ impl DevContainerModal {
                                     this.accept_message(DevContainerMessage::GoBack, window, cx);
                                     cx.notify();
                                 }))
-                                .child(Label::new(localization::text(cx, "common-go-back"))),
+                                .child(Label::new("Go Back")),
                         ),
                 )
                 .into_any_element(),
@@ -884,11 +887,8 @@ impl DevContainerModal {
                         ModalHeader::new()
                             .icon(Icon::new(IconName::Warning).color(Color::Warning))
                             .child(
-                                Headline::new(localization::text(
-                                    cx,
-                                    "dev-container-overwrite-configuration",
-                                ))
-                                .size(HeadlineSize::XSmall),
+                                Headline::new("Overwrite Existing Configuration?")
+                                    .size(HeadlineSize::XSmall),
                             ),
                     ),
                 )
@@ -923,7 +923,7 @@ impl DevContainerModal {
                                     );
                                     cx.notify();
                                 }))
-                                .child(Label::new(localization::text(cx, "common-overwrite"))),
+                                .child(Label::new("Overwrite")),
                         ),
                 )
                 .child(
@@ -944,7 +944,7 @@ impl DevContainerModal {
                                     this.dismiss(&menu::Cancel, window, cx);
                                     cx.notify();
                                 }))
-                                .child(Label::new(localization::text(cx, "common-cancel"))),
+                                .child(Label::new("Cancel")),
                         ),
                 )
                 .into_any_element(),
@@ -961,8 +961,7 @@ impl DevContainerModal {
                 .child(
                     div().track_focus(&self.focus_handle).child(
                         ModalHeader::new().child(
-                            Headline::new(localization::text(cx, "common-create-dev-container"))
-                                .size(HeadlineSize::XSmall),
+                            Headline::new("Create Dev Container").size(HeadlineSize::XSmall),
                         ),
                     ),
                 )
@@ -977,10 +976,7 @@ impl DevContainerModal {
                                     .color(Color::Muted)
                                     .with_rotate_animation(2),
                             )
-                            .child(Label::new(localization::text(
-                                cx,
-                                "common-querying-template-registry",
-                            ))),
+                            .child(Label::new("Querying template registry...")),
                     ),
                 )
                 .child(ListSeparator)
@@ -1002,7 +998,7 @@ impl DevContainerModal {
                                     this.accept_message(DevContainerMessage::GoBack, window, cx);
                                     cx.notify();
                                 }))
-                                .child(Label::new(localization::text(cx, "common-go-back"))),
+                                .child(Label::new("Go Back")),
                         ),
                 )
                 .into_any_element(),
@@ -1017,8 +1013,7 @@ impl DevContainerModal {
                 .child(
                     div().track_focus(&self.focus_handle).child(
                         ModalHeader::new().child(
-                            Headline::new(localization::text(cx, "common-create-dev-container"))
-                                .size(HeadlineSize::XSmall),
+                            Headline::new("Create Dev Container").size(HeadlineSize::XSmall),
                         ),
                     ),
                 )
@@ -1033,10 +1028,7 @@ impl DevContainerModal {
                                     .color(Color::Muted)
                                     .with_rotate_animation(2),
                             )
-                            .child(Label::new(localization::text(
-                                cx,
-                                "common-querying-features",
-                            ))),
+                            .child(Label::new("Querying features...")),
                     ),
                 )
                 .child(ListSeparator)
@@ -1058,7 +1050,7 @@ impl DevContainerModal {
                                     this.accept_message(DevContainerMessage::GoBack, window, cx);
                                     cx.notify();
                                 }))
-                                .child(Label::new(localization::text(cx, "common-go-back"))),
+                                .child(Label::new("Go Back")),
                         ),
                 )
                 .into_any_element(),
@@ -1100,17 +1092,14 @@ impl StatefulModal for DevContainerModal {
                 self.render_confirming_write_dev_container(template_entry, window, cx)
             }
             DevContainerState::TemplateWriteFailed(dev_container_error) => self.render_error(
-                localization::text(cx, "dev-container-error-create-definition").to_string(),
-                dev_container_error.localized_description(cx),
+                "Error Creating Dev Container Definition".to_string(),
+                dev_container_error,
                 window,
                 cx,
             ),
-            DevContainerState::TemplateQueryReturned(Err(e)) => self.render_error(
-                localization::text(cx, "dev-container-error-retrieve-templates").to_string(),
-                e.into(),
-                window,
-                cx,
-            ),
+            DevContainerState::TemplateQueryReturned(Err(e)) => {
+                self.render_error("Error Retrieving Templates".to_string(), e, window, cx)
+            }
         }
     }
 
@@ -1183,7 +1172,7 @@ impl StatefulModal for DevContainerModal {
                     .collect::<Vec<TemplateEntry>>();
                 if self.state == DevContainerState::QueryingTemplates {
                     let delegate = TemplatePickerDelegate::new(
-                        localization::text(cx, "dev-container-select-template").to_string(),
+                        "Select a template".to_string(),
                         cx.weak_entity(),
                         items.clone(),
                         Box::new(|entry, this, window, cx| {
@@ -1195,8 +1184,7 @@ impl StatefulModal for DevContainerModal {
                         }),
                     );
 
-                    let picker =
-                        cx.new(|cx| Picker::uniform_list(delegate, window, cx).modal(false));
+                    let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx).embedded());
                     self.picker = Some(picker);
                     Some(DevContainerState::TemplateQueryReturned(Ok(items)))
                 } else {
@@ -1314,7 +1302,7 @@ impl StatefulModal for DevContainerModal {
                         })
                         .collect::<Vec<FeatureEntry>>();
                     let delegate = FeaturePickerDelegate::new(
-                        localization::text(cx, "dev-container-select-features").to_string(),
+                        "Select features to add".to_string(),
                         cx.weak_entity(),
                         features,
                         template_entry.clone(),
@@ -1327,8 +1315,7 @@ impl StatefulModal for DevContainerModal {
                         }),
                     );
 
-                    let picker =
-                        cx.new(|cx| Picker::uniform_list(delegate, window, cx).modal(false));
+                    let picker = cx.new(|cx| Picker::uniform_list(delegate, window, cx).embedded());
                     self.features_picker = Some(picker);
                     Some(DevContainerState::FeaturesQueryReturned(template_entry))
                 } else {
@@ -1592,11 +1579,12 @@ fn dispatch_apply_templates(
             };
 
             if files.project_files.contains(&Arc::from(
-                RelPath::unix(".devcontainer/devcontainer.json").unwrap(),
+                RelPath::from_unix_str(".devcontainer/devcontainer.json").unwrap(),
             )) {
                 let Some(workspace_task) = workspace
                     .update_in(cx, |workspace, window, cx| {
-                        let Ok(path) = RelPath::unix(".devcontainer/devcontainer.json") else {
+                        let Ok(path) = RelPath::from_unix_str(".devcontainer/devcontainer.json")
+                        else {
                             return Task::ready(Err(anyhow!(
                                 "Couldn't create path for .devcontainer/devcontainer.json"
                             )));

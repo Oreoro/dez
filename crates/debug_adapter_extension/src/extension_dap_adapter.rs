@@ -15,7 +15,7 @@ use dap::{
 };
 use extension::{Extension, WorktreeDelegate};
 use gpui::AsyncApp;
-use task::{DebugScenario, DezDebugConfig};
+use task::{DebugScenario, ZedDebugConfig};
 use util::rel_path::RelPath;
 
 pub(crate) struct ExtensionDapAdapter {
@@ -106,8 +106,8 @@ impl DebugAdapter for ExtensionDapAdapter {
             .await
     }
 
-    async fn config_from_dez_format(&self, dez_scenario: DezDebugConfig) -> Result<DebugScenario> {
-        self.extension.dap_config_to_scenario(dez_scenario).await
+    async fn config_from_zed_format(&self, zed_scenario: ZedDebugConfig) -> Result<DebugScenario> {
+        self.extension.dap_config_to_scenario(zed_scenario).await
     }
 
     async fn request_kind(

@@ -6,9 +6,6 @@ publish.workspace = true
 license = "GPL-3.0-or-later"
 
 [features]
-# The out-of-process terminal host transport and adapters are a partial port
-# from dez v0 and are not yet wired into the GUI. Enable to build them.
-hosted-terminal = []
 test-support = [
     "collections/test-support",
     "gpui/test-support",
@@ -34,7 +31,6 @@ itertools.workspace = true
 libc.workspace = true
 log.workspace = true
 net.workspace = true
-polling = "3.11.0"
 regex.workspace = true
 release_channel.workspace = true
 schemars.workspace = true
@@ -53,6 +49,7 @@ uuid.workspace = true
 vte.workspace = true
 parking_lot.workspace = true
 percent-encoding.workspace = true
+polling.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows.workspace = true
@@ -61,5 +58,4 @@ windows.workspace = true
 gpui = { workspace = true, features = ["test-support"] }
 rand.workspace = true
 settings = { workspace = true, features = ["test-support"] }
-tempfile.workspace = true
 util_macros.workspace = true

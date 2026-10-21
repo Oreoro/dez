@@ -22,6 +22,8 @@ pub struct EditorSettingsContent {
     ///
     /// Default: bar
     pub cursor_shape: Option<CursorShape>,
+    /// Cursor movement animation settings.
+    pub cursor_animation: Option<CursorAnimationSettingsContent>,
     /// Determines how snippets are sorted relative to other completion items.
     ///
     /// Default: inline
@@ -169,6 +171,12 @@ pub struct EditorSettingsContent {
     /// Default: false
     pub auto_signature_help: Option<bool>,
 
+    /// Whether to automatically detect the language of an untitled buffer from its contents.
+    /// Languages explicitly selected from the language selector are not changed.
+    ///
+    /// Default: true
+    pub language_detection: Option<bool>,
+
     /// Whether to show the signature help pop-up after completions or bracket pairs inserted.
     ///
     /// Default: false
@@ -269,7 +277,7 @@ pub struct EditorSettingsContent {
 
     /// How to display diffs in the editor.
     ///
-    /// Default: split
+    /// Default: unified
     pub diff_view_style: Option<DiffViewStyle>,
 
     /// The minimum width (in em-widths) at which the split diff view is used.
@@ -358,6 +366,15 @@ impl RelativeLineNumbers {
     }
 }
 
+#[with_fallible_options]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
+pub struct CursorAnimationSettingsContent {
+    /// Whether cursor movement animation is enabled.
+    ///
+    /// Default: false
+    pub enabled: Option<bool>,
+}
+
 // Toolbar related settings
 #[with_fallible_options]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]
@@ -366,6 +383,14 @@ pub struct ToolbarContent {
     ///
     /// Default: true
     pub breadcrumbs: Option<bool>,
+    /// Whether to render the editor toolbar with compact height.
+    ///
+    /// Default: true
+    pub compact_mode: Option<bool>,
+    /// Whether to display document symbols in editor breadcrumbs.
+    ///
+    /// Default: false
+    pub show_breadcrumb_symbols: Option<bool>,
     /// Whether to display quick action buttons in the editor toolbar.
     ///
     /// Default: true
@@ -374,6 +399,11 @@ pub struct ToolbarContent {
     ///
     /// Default: true
     pub selections_menu: Option<bool>,
+    /// Whether to display Agent review buttons in the editor toolbar.
+    /// Only applicable while reviewing a file edited by the Agent.
+    ///
+    /// Default: true
+    pub agent_review: Option<bool>,
     /// Whether to display code action buttons in the editor toolbar.
     ///
     /// Default: false
@@ -388,6 +418,10 @@ pub struct ScrollbarContent {
     ///
     /// Default: auto
     pub show: Option<ShowScrollbar>,
+    /// Size of the editor scrollbar in pixels. This controls vertical scrollbar width and horizontal scrollbar height.
+    ///
+    /// Default: 15
+    pub size: Option<f32>,
     /// Whether to show git diff indicators in the scrollbar.
     ///
     /// Default: true
@@ -476,9 +510,32 @@ pub struct ScrollbarAxesContent {
     pub vertical: Option<bool>,
 }
 
+/// Controls the width of the git diff hunk indicators in the gutter.
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    Serialize,
+    Deserialize,
+    JsonSchema,
+    MergeFrom,
+    PartialEq,
+    strum::EnumDiscriminants,
+)]
+#[strum_discriminants(derive(strum::VariantArray, strum::VariantNames, strum::FromRepr))]
+#[serde(rename_all = "snake_case")]
+pub enum GitGutterWidth {
+    /// Width scales automatically with the buffer font size.
+    #[default]
+    Default,
+    /// A fixed pixel width for the git diff indicators.
+    Custom(crate::PixelSetting),
+}
+
 /// Gutter related settings
 #[with_fallible_options]
-#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq)]
 pub struct GutterContent {
     /// Whether to show line numbers in the gutter.
     ///
@@ -486,24 +543,29 @@ pub struct GutterContent {
     pub line_numbers: Option<bool>,
     /// Minimum number of characters to reserve space for in the gutter.
     ///
-    /// Default: 4
+    /// Default: 0
     pub min_line_number_digits: Option<usize>,
     /// Whether to show runnable buttons in the gutter.
     ///
-    /// Default: true
+    /// Default: false
     pub runnables: Option<bool>,
     /// Whether to show breakpoints in the gutter.
     ///
     /// Default: true
+    pub breakpoints: Option<bool>,
     /// Whether to show bookmarks in the gutter.
     ///
     /// Default: true
     pub bookmarks: Option<bool>,
-    pub breakpoints: Option<bool>,
     /// Whether to show fold buttons in the gutter.
     ///
-    /// Default: true
+    /// Default: false
     pub folds: Option<bool>,
+    /// The width of the git diff hunk indicators in the gutter.
+    /// Use "default" to scale with the buffer font size, or {"custom": <pixels>} for a fixed width.
+    ///
+    /// Default: "default"
+    pub git_gutter_width: Option<GitGutterWidth>,
 }
 
 /// Whether to display code lenses from language servers above code elements.
@@ -968,6 +1030,8 @@ pub struct SearchSettingsContent {
     pub regex: Option<bool>,
     /// Whether to center the cursor on each search match when navigating.
     pub center_on_match: Option<bool>,
+    /// Start searching as you type in project search, without pressing Enter.
+    pub search_on_type: Option<bool>,
 }
 
 #[with_fallible_options]

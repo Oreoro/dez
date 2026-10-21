@@ -1,6 +1,9 @@
 use anyhow::Result;
 use buffer_diff::BufferDiff;
-use editor::{Editor, EditorEvent, MultiBuffer, multibuffer_context_lines};
+use editor::{
+    Editor, EditorEvent, HiddenUnstagedDiffHunkRenderer, MultiBuffer, multibuffer_context_lines,
+};
+use git_ui_core::file_diff_view::build_buffer_diff;
 use gpui::{
     AnyElement, App, AppContext as _, AsyncApp, Context, Entity, EventEmitter, FocusHandle,
     Focusable, Font, IntoElement, Render, SharedString, Task, Window,
@@ -13,7 +16,7 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use ui::{Color, Icon, IconName, Label, LabelCommon as _};
+use ui::{Color, Icon, IconName, Label, prelude::*};
 use util::paths::PathStyle;
 use util::rel_path::RelPath;
 use workspace::{
@@ -90,7 +93,7 @@ fn register_entry(
             RelPath::new(rel, PathStyle::local())
                 .map(|r| r.into_owned().into())
                 .unwrap_or_else(|_| {
-                    RelPath::new(Path::new("untitled"), PathStyle::Posix)
+                    RelPath::new(Path::new(MultiBuffer::DEFAULT_TITLE), PathStyle::Unix)
                         .unwrap()
                         .into_owned()
                         .into()
@@ -101,10 +104,10 @@ fn register_entry(
                 .new_path
                 .file_name()
                 .and_then(|n| n.to_str())
-                .and_then(|s| RelPath::new(Path::new(s), PathStyle::Posix).ok())
+                .and_then(|s| RelPath::new(Path::new(s), PathStyle::Unix).ok())
                 .map(|r| r.into_owned().into())
                 .unwrap_or_else(|| {
-                    RelPath::new(Path::new("untitled"), PathStyle::Posix)
+                    RelPath::new(Path::new(MultiBuffer::DEFAULT_TITLE), PathStyle::Unix)
                         .unwrap()
                         .into_owned()
                         .into()
@@ -138,36 +141,6 @@ fn common_prefix(paths: &[PathBuf]) -> Option<PathBuf> {
     }
 
     Some(prefix)
-}
-
-async fn build_buffer_diff(
-    old_buffer: &Entity<Buffer>,
-    new_buffer: &Entity<Buffer>,
-    cx: &mut AsyncApp,
-) -> Result<Entity<BufferDiff>> {
-    let old_buffer_snapshot = old_buffer.read_with(cx, |buffer, _| buffer.snapshot());
-    let new_buffer_snapshot = new_buffer.read_with(cx, |buffer, _| buffer.snapshot());
-
-    let diff = cx.new(|cx| BufferDiff::new(&new_buffer_snapshot.text, cx));
-
-    let update = diff
-        .update(cx, |diff, cx| {
-            diff.update_diff(
-                new_buffer_snapshot.text.clone(),
-                Some(old_buffer_snapshot.text().into()),
-                Some(true),
-                new_buffer_snapshot.language().cloned(),
-                cx,
-            )
-        })
-        .await;
-
-    diff.update(cx, |diff, cx| {
-        diff.set_snapshot(update, &new_buffer_snapshot.text, cx)
-    })
-    .await;
-
-    Ok(diff)
 }
 
 impl MultiDiffView {
@@ -225,21 +198,22 @@ impl MultiDiffView {
         let editor = cx.new(|cx| {
             let mut editor =
                 Editor::for_multibuffer(multibuffer, Some(project.clone()), window, cx);
-            editor.start_temporary_diff_override();
+            editor.set_diff_hunk_renderer(Some(Arc::new(HiddenUnstagedDiffHunkRenderer)), cx);
             editor.disable_diagnostics(cx);
             editor.set_expand_all_diff_hunks(cx);
-            editor.set_render_diff_hunk_controls(
-                Arc::new(|_, _, _, _, _, _, _, _| gpui::Empty.into_any_element()),
-                cx,
-            );
             editor
         });
 
         Self { editor, file_count }
     }
 
-    fn title(&self, cx: &App) -> SharedString {
-        localization::tr!(cx, "git-multi-diff-title", count = self.file_count)
+    fn title(&self) -> SharedString {
+        let suffix = if self.file_count == 1 {
+            "1 file".to_string()
+        } else {
+            format!("{} files", self.file_count)
+        };
+        format!("Diff ({suffix})").into()
     }
 }
 
@@ -258,26 +232,35 @@ impl Item for MultiDiffView {
         Some(Icon::new(IconName::Diff).color(Color::Muted))
     }
 
-    fn tab_content(&self, params: TabContentParams, _window: &Window, cx: &App) -> AnyElement {
-        Label::new(self.title(cx))
-            .color(if params.selected {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .into_any_element()
+    fn tab_content(&self, params: TabContentParams, _window: &Window, _cx: &App) -> AnyElement {
+        let title = self.title();
+        Label::new(crate::diff_surface_tab_label(
+            paths::APP_NAME,
+            title.as_ref(),
+        ))
+        .truncate()
+        .color(if params.selected {
+            Color::Default
+        } else {
+            Color::Muted
+        })
+        .into_any_element()
     }
 
-    fn tab_tooltip_text(&self, cx: &App) -> Option<ui::SharedString> {
-        Some(self.title(cx))
+    fn tab_tooltip_text(&self, _cx: &App) -> Option<ui::SharedString> {
+        Some(self.title())
     }
 
-    fn tab_content_text(&self, _detail: usize, cx: &App) -> SharedString {
-        self.title(cx)
+    fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
+        self.title()
     }
 
     fn to_item_events(event: &EditorEvent, f: &mut dyn FnMut(ItemEvent)) {
         Editor::to_item_events(event, f)
+    }
+
+    fn telemetry_event_text(&self) -> Option<&'static str> {
+        Some("Diff View Opened")
     }
 
     fn deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {

@@ -16,21 +16,21 @@
 //!
 //! This module uses the [`merman`] crate for rendering, rather than
 //! `mermaid-rs`, which was used in the previous implementation of mermaid
-//! rendering in dez.
+//! rendering in Zed.
 //!
 //! Historically, this crate also carried generic `usvg`/`resvg` cleanup for SVG
 //! constructs that merman's parity output could emit, such as HTML labels in
 //! `<foreignObject>` and CSS/attribute forms that rasterizers do not handle.
 //! Since merman 0.6, that generic cleanup is exposed as merman's raster-safe SVG
-//! pipeline. dez opts into that pipeline during rendering, then keeps
+//! pipeline. Zed opts into that pipeline during rendering, then keeps
 //! editor-specific theme and accent color rules in this crate. The [`gpui`]
 //! dependency is only needed for the [`Hsla`] and [`Rgba`] color types.
 //!
 //! The [`render_to_svg`] function operates in two stages:
 //! - [`render`] the mermaid text to raster-safe SVG using [`merman`].
-//! - [`postprocess`] the SVG to add dez theme and accent styling.
+//! - [`postprocess`] the SVG to add Zed theme and accent styling.
 //!
-//! dez's postprocessing is split up into stages. We parse the generated SVG
+//! Zed's postprocessing is split up into stages. We parse the generated SVG
 //! using [`quick_xml`], which produces an iterator of
 //! [`Event<'_>`](quick_xml::events::Event)s. This iterator is then repeatedly
 //! transformed, and finally collected back into an SVG string.
@@ -49,7 +49,7 @@
 //!
 //! We try to match the users theme, and also apply accent colors to diagrams to
 //! make them more visually interesting. Accent colors are derived from the
-//! `player_colors` in the dez theme.
+//! `player_colors` in the Zed theme.
 //!
 //! There are three parts to color handling:
 //!
@@ -58,7 +58,7 @@
 //!    it's not possible to color nodes individually, and not all parts of the
 //!    diagrams are correctly themed.
 //! 2. `postprocess::accent_colors` injects custom CSS classes (e.g.
-//!    `dez-accent-0`) to specific elements, based on the diagram type and
+//!    `zed-accent-0`) to specific elements, based on the diagram type and
 //!    node.
 //! 3. `postprocess::inject_css` injects CSS rules for the classes applied by
 //!    `accent_colors`
@@ -158,7 +158,7 @@ impl Default for MermaidTheme {
 ///
 /// Emits `#rrggbb` for fully opaque colors and `#rrggbbaa` when the input
 /// has any transparency, so translucent theme colors (e.g. `ghost_element_hover`
-/// from dez's UI palette) round-trip without silently losing their alpha.
+/// from Zed's UI palette) round-trip without silently losing their alpha.
 pub(crate) fn css_color(color: Hsla) -> String {
     let rgba = Rgba::from(color);
     let r = (rgba.r.clamp(0.0, 1.0) * 255.0).round() as u8;
@@ -175,6 +175,7 @@ pub(crate) fn css_color(color: Hsla) -> String {
 pub use postprocess::util::text_color_for_background;
 
 /// See the [module-level docs][crate] for more info.
+#[ztracing::instrument(skip_all)]
 pub fn render_to_svg(source: &str, theme: &MermaidTheme) -> Result<String> {
     let svg = render::render_mermaid(source, theme)?;
     let svg = postprocess::postprocess(&svg, theme)?;
@@ -184,6 +185,40 @@ pub fn render_to_svg(source: &str, theme: &MermaidTheme) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mermaid_diagram_with_mixed_weight_combining_marks_does_not_panic() {
+        const IBM_PLEX_REGULAR: &[u8] =
+            include_bytes!("../../../assets/fonts/ibm-plex-sans/IBMPlexSans-Regular.ttf");
+        const IBM_PLEX_SEMIBOLD: &[u8] =
+            include_bytes!("../../../assets/fonts/ibm-plex-sans/IBMPlexSans-SemiBold.ttf");
+
+        let zalgo = "Ne\u{0301}\u{0302}\u{0303}\u{0304}\u{0306}\u{0307}\u{0308}\u{030a}d";
+        let source = format!("flowchart TD\n  A[\"**{zalgo}** {zalgo}\"]");
+        let svg = render_to_svg(&source, &MermaidTheme::default())
+            .expect("mermaid diagram should render to SVG");
+
+        let mut db = usvg::fontdb::Database::new();
+        db.load_font_data(IBM_PLEX_REGULAR.to_vec());
+        db.load_font_data(IBM_PLEX_SEMIBOLD.to_vec());
+        db.set_sans_serif_family("IBM Plex Sans");
+        let options = usvg::Options {
+            fontdb: std::sync::Arc::new(db),
+            ..Default::default()
+        };
+
+        usvg::Tree::from_data(svg.as_bytes(), &options)
+            .expect("rasterizing mermaid text should not panic");
+    }
+
+    /// An ER diagram whose attribute-block tokens begin with a multibyte
+    /// UTF-8 character (e.g. CJK type/field names) must not panic while the
+    /// lexer probes for the two-character `PK`/`FK`/`UK` keys.
+    #[test]
+    fn er_multibyte_attribute_does_not_crash() {
+        let source = "erDiagram\n顧客 {\n  文字列 名前\n}";
+        let _ = render_to_svg(source, &MermaidTheme::default());
+    }
 
     /// A flowchart with mutually nested subgraphs (`A` contains `B` and `B`
     /// contains `A`) is an invalid containment cycle. Rendering it must return

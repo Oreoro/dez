@@ -9,11 +9,15 @@ on:
     types:
     - labeled
     - synchronize
+permissions:
+  contents: read
 jobs:
   build_nix_linux_x86_64:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && ((github.event.action == 'labeled' && (github.event.label.name == 'run-nix' || github.event.label.name == 'run-bundling')) || (github.event.action == 'synchronize' && (contains(github.event.pull_request.labels.*.name, 'run-nix') || contains(github.event.pull_request.labels.*.name, 'run-bundling'))))
-    runs-on: namespace-profile-32x64-ubuntu-2004
+    runs-on: ubuntu-24.04
     env:
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON: ${{ secrets.ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON }}
       GIT_LFS_SKIP_SMUDGE: '1'
     steps:
@@ -22,9 +26,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_nix_dependencies_namespace
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
-        cache: nix
+        path: /nix/store
+        key: dez-nix-store-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-store-${{ runner.os }}-
     - name: nix_build::build_nix::install_nix
       uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
       with:
@@ -32,18 +38,20 @@ jobs:
     - name: nix_build::build_nix::cachix_action
       uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad
       with:
-        name: dez
+        name: zed
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         cachixArgs: -v
-        pushFilter: -dez-editor-[0-9.]*
+        pushFilter: -zed-editor-[0-9.]*
     - name: nix_build::build_nix::build
       run: nix build .#default -L --accept-flake-config
     timeout-minutes: 60
     continue-on-error: true
   build_nix_mac_aarch64:
     if: (github.repository_owner == 'zed-industries' || github.repository_owner == 'zed-extensions' || github.repository_owner == 'Oreoro') && ((github.event.action == 'labeled' && (github.event.label.name == 'run-nix' || github.event.label.name == 'run-bundling')) || (github.event.action == 'synchronize' && (contains(github.event.pull_request.labels.*.name, 'run-nix') || contains(github.event.pull_request.labels.*.name, 'run-bundling'))))
-    runs-on: namespace-profile-mac-large
+    runs-on: macos-15
     env:
+      ZED_CLIENT_CHECKSUM_SEED: ${{ secrets.ZED_CLIENT_CHECKSUM_SEED }}
+      ZED_MINIDUMP_ENDPOINT: ${{ secrets.ZED_SENTRY_MINIDUMP_ENDPOINT }}
       ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON: ${{ secrets.ZED_CLOUD_PROVIDER_ADDITIONAL_MODELS_JSON }}
       GIT_LFS_SKIP_SMUDGE: '1'
     steps:
@@ -52,9 +60,11 @@ jobs:
       with:
         clean: false
     - name: steps::cache_nix_store_macos
-      uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
       with:
         path: ~/nix-cache
+        key: dez-nix-macos-${{ hashFiles('flake.lock') }}
+        restore-keys: dez-nix-macos-
     - name: nix_build::build_nix::install_nix
       uses: cachix/install-nix-action@02a151ada4993995686f9ed4f1be7cfbb229e56f
       with:
@@ -68,10 +78,10 @@ jobs:
     - name: nix_build::build_nix::cachix_action
       uses: cachix/cachix-action@0fc020193b5a1fa3ac4575aa3a7d3aa6a35435ad
       with:
-        name: dez
+        name: zed
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         cachixArgs: -v
-        pushFilter: -dez-editor-[0-9.]*
+        pushFilter: -zed-editor-[0-9.]*
     - name: nix_build::build_nix::build
       run: nix build .#default -L --accept-flake-config
     - name: nix_build::build_nix::export_to_local_nix_cache
