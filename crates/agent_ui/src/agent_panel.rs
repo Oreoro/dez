@@ -6908,6 +6908,9 @@ impl AgentPanel {
     }
 
     fn should_render_new_user_onboarding(&mut self, cx: &mut Context<Self>) -> bool {
+        if paths::APP_NAME != "Zed" {
+            return false;
+        }
         if self
             .new_user_onboarding_upsell_dismissed
             .load(Ordering::Acquire)

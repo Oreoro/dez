@@ -1412,6 +1412,9 @@ impl crate::SerializableItem for WelcomePage {
         window: &mut Window,
         cx: &mut App,
     ) -> Task<gpui::Result<Entity<Self>>> {
+        if paths::APP_NAME != "Zed" && !crate::dez_installation_required(cx) {
+            return Task::ready(Err(anyhow::anyhow!("No welcome page to deserialize")));
+        }
         if persistence::WelcomePagesDb::global(cx)
             .get_welcome_page(item_id, workspace_id)
             .ok()

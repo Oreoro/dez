@@ -253,7 +253,7 @@ require_multiline_pattern crates/diagnostics/src/toolbar_controls.rs \
     'IconButton::new\("inline_assist", ui::assistant_icon_for_app\(paths::APP_NAME\)\).*?aria_label\("Inline Assist"\)' \
     'the diagnostics Inline Assist icon can lose its neutral product identity or accessible name'
 require_multiline_pattern assets/settings/default.json \
-    '"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "high"' \
+    '"theme": \{.*?"mode": "dark".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "high"' \
     'the Dez default appearance no longer follows the Lumin pair with spacious product density'
 require_pattern assets/settings/default.json \
     '^  "buffer_font_family": "Lilex",$' \
@@ -262,10 +262,10 @@ require_pattern assets/settings/default.json \
     '^  "ui_font_family": "IBM Plex Sans",$' \
     'interface chrome no longer uses the bundled IBM Plex Sans face'
 require_multiline_pattern assets/settings/default.json \
-    '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "Lilex",$' \
-    'the terminal no longer shares the polished Lilex coding profile'
+    '^  "terminal": \{.*?^    "font_size": 14,.*?^    "font_family": "JetBrains Mono",$' \
+    'the terminal no longer uses the dedicated bundled JetBrains Mono terminal face'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"ui_font_family": "IBM Plex Sans".*?"ui_font_size": 13.*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "system".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "standard".*?"terminal": \{.*?"font_family": "Lilex".*?"font_size": 14' \
+    '"ui_font_family": "IBM Plex Sans".*?"ui_font_size": 13.*?"buffer_font_family": "Lilex".*?"theme": \{.*?"mode": "dark".*?"light": "Lumin Light".*?"dark": "Lumin Blur".*?"design_system": \{.*?"density": "spacious".*?"radius": "rounded".*?"contrast": "standard".*?"terminal": \{.*?"font_family": "JetBrains Mono".*?"font_size": 14' \
     'first-run settings can override Dez with stale themes or typography'
 require_pattern assets/settings/initial_user_settings.json \
     'Workspaces stays closed until cross-Workspace supervision is useful' \
@@ -283,7 +283,7 @@ require_multiline_pattern assets/settings/initial_user_settings.json \
     '"status_bar": \{.*?"experimental\.show": true.*?"show_active_file": true.*?"active_language_button": true.*?"cursor_position_button": true.*?"line_endings_button": true.*?"active_encoding_button": "non_utf8"' \
     'first-run Dez can regress to duplicating editor identity or hiding actionable status context'
 require_multiline_pattern assets/settings/initial_user_settings.json \
-    '"terminal": \{.*?"font_family": "Lilex".*?"line_height": "standard".*?"alternate_scroll": "on".*?"button": true.*?"toolbar": \{.*?"breadcrumbs": false' \
+    '"terminal": \{.*?"font_family": "JetBrains Mono".*?"line_height": "standard".*?"alternate_scroll": "on".*?"button": true.*?"toolbar": \{.*?"breadcrumbs": false' \
     'first-run Dez can regress from the native TUI-optimized terminal profile'
 require_multiline_pattern crates/zed/src/zed.rs \
     'fn restore_dez_visual_profile.*?terminal\.line_height = Some\(settings::TerminalLineHeight::Standard\).*?terminal\.alternate_scroll = Some\(settings::AlternateScroll::On\).*?terminal\.button = Some\(true\).*?terminal\.toolbar\.get_or_insert_default\(\)\.breadcrumbs = Some\(false\)' \
@@ -481,7 +481,7 @@ require_multiline_pattern crates/zed_actions/src/lib.rs \
     'pub mod dez.*?actions!\([[:space:]]*dez.*?RestoreVisualProfile' \
     'the explicit Dez visual-profile recovery action is no longer registered'
 require_multiline_pattern crates/zed/src/zed.rs \
-    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview.*?code_font_family = Some\(code_font\.clone\(\)\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::System.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Spacious.*?CanvasRadius::Rounded.*?CanvasContrast::High.*?terminal.*?font_family = Some\(code_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(false\).*?status_bar\.active_language_button = Some\(true\).*?status_bar\.cursor_position_button = Some\(true\).*?status_bar\.line_endings_button = Some\(false\).*?status_bar\.active_encoding_button = Some\(settings::EncodingDisplayOptions::NonUtf8\)' \
+    'fn restore_dez_visual_profile.*?IBM Plex Sans.*?Lilex.*?JetBrains Mono.*?ui_font_family = Some\(ui_font\).*?buffer_font_family = Some\(code_font\.clone\(\)\).*?markdown_preview.*?code_font_family = Some\(code_font\).*?ThemeSelection::Dynamic.*?ThemeAppearanceMode::Dark.*?Lumin Light.*?Lumin Blur.*?IconThemeSelection::Static.*?Dez \(Default\).*?design_system.*?CanvasDensity::Spacious.*?CanvasRadius::Rounded.*?CanvasContrast::High.*?terminal.*?font_family = Some\(terminal_font\).*?tab_bar\.show = Some\(true\).*?tab_bar\.show_nav_history_buttons = Some\(true\).*?tab_bar\.show_tab_bar_buttons = Some\(true\).*?status_bar\.show = Some\(true\).*?status_bar\.show_active_file = Some\(false\).*?status_bar\.active_language_button = Some\(true\).*?status_bar\.cursor_position_button = Some\(true\).*?status_bar\.line_endings_button = Some\(false\).*?status_bar\.active_encoding_button = Some\(settings::EncodingDisplayOptions::NonUtf8\)' \
     'visual-profile recovery can stop restoring the complete scoped Dez identity'
 require_multiline_pattern crates/workspace/src/pane.rs \
     'fn pane_tab_selected_label_weight.*?app_name != "Zed".*?FontWeight::MEDIUM.*?\.when_some\([[:space:]]*pane_tab_selected_label_weight\(paths::APP_NAME\).*?selected_label_weight.*?fn dez_selected_tabs_use_interface_emphasis_without_changing_upstream_tabs.*?pane_tab_selected_label_weight\("Dez"\).*?FontWeight::MEDIUM.*?pane_tab_selected_label_weight\("Zed"\), None' \

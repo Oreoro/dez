@@ -142,6 +142,13 @@ pub(crate) fn seed_empty_workspace_with_home(
         return;
     }
 
+    if !workspace::dez_installation_required(cx)
+        && should_seed_empty_workspace_with_blank_file(APP_NAME)
+    {
+        Editor::new_file(workspace, &Default::default(), window, cx);
+        return;
+    }
+
     let home = cx
         .new(|cx| workspace::welcome::WelcomePage::new(workspace.weak_handle(), true, window, cx));
     workspace.add_item_to_active_pane(Box::new(home), None, true, window, cx);
@@ -915,15 +922,16 @@ async fn initialize_agent_panel(
 fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     let ui_font = settings::FontFamilyName(Arc::from("IBM Plex Sans"));
     let code_font = settings::FontFamilyName(Arc::from("Lilex"));
+    let terminal_font = settings::FontFamilyName(Arc::from("JetBrains Mono"));
 
     settings.theme.ui_font_family = Some(ui_font);
     settings.theme.buffer_font_family = Some(code_font.clone());
     settings
         .markdown_preview
         .get_or_insert_default()
-        .code_font_family = Some(code_font.clone());
+        .code_font_family = Some(code_font);
     settings.theme.theme = Some(settings::ThemeSelection::Dynamic {
-        mode: settings::ThemeAppearanceMode::System,
+        mode: settings::ThemeAppearanceMode::Dark,
         light: settings::ThemeName(Arc::from("Lumin Light")),
         dark: settings::ThemeName(Arc::from("Lumin Blur")),
     });
@@ -935,7 +943,7 @@ fn restore_dez_visual_profile(settings: &mut settings::SettingsContent) {
     design_system.radius = Some(settings::CanvasRadius::Rounded);
     design_system.contrast = Some(settings::CanvasContrast::High);
     let terminal = settings.terminal.get_or_insert_default();
-    terminal.font_family = Some(code_font);
+    terminal.font_family = Some(terminal_font);
     terminal.line_height = Some(settings::TerminalLineHeight::Standard);
     terminal.alternate_scroll = Some(settings::AlternateScroll::On);
     terminal.button = Some(true);
@@ -3455,7 +3463,7 @@ mod tests {
         assert_eq!(
             settings["theme"],
             json!({
-                "mode": "system",
+                "mode": "dark",
                 "light": "Lumin Light",
                 "dark": "Lumin Blur"
             })
@@ -3464,7 +3472,7 @@ mod tests {
         assert_eq!(settings["design_system"]["density"], "spacious");
         assert_eq!(settings["design_system"]["radius"], "rounded");
         assert_eq!(settings["design_system"]["contrast"], "high");
-        assert_eq!(settings["terminal"]["font_family"], "Lilex");
+        assert_eq!(settings["terminal"]["font_family"], "JetBrains Mono");
         assert_eq!(settings["terminal"]["line_height"], "standard");
         assert_eq!(settings["terminal"]["alternate_scroll"], "on");
         assert_eq!(settings["terminal"]["button"], true);

@@ -2094,6 +2094,8 @@ struct SerializedSidebar {
     #[serde(default)]
     width: Option<f32>,
     #[serde(default)]
+    width_set_by_user: bool,
+    #[serde(default)]
     active_view: SerializedSidebarView,
     #[serde(default)]
     manual_entry_order: Vec<ManualEntryOrderKey>,
@@ -6465,6 +6467,7 @@ fn create_worktree_in_workspace(
 pub struct Sidebar {
     multi_workspace: WeakEntity<MultiWorkspace>,
     width: Pixels,
+    width_set_by_user: bool,
     responsive_projection_width: Pixels,
     focus_handle: FocusHandle,
     filter_editor: Entity<Editor>,
@@ -6584,6 +6587,9 @@ impl Sidebar {
             )
         });
         let settings_subscription = cx.observe_global::<SettingsStore>(|this, cx| {
+            if !this.width_set_by_user {
+                this.width = AgentSettings::get_global(cx).threads_sidebar_default_width;
+            }
             this.schedule_update_entries(false, cx);
             cx.notify();
         });
@@ -6760,7 +6766,8 @@ impl Sidebar {
 
         Self {
             multi_workspace: multi_workspace.downgrade(),
-            width: DEFAULT_WIDTH,
+            width: AgentSettings::get_global(cx).threads_sidebar_default_width,
+            width_set_by_user: false,
             responsive_projection_width: DEFAULT_WIDTH,
             focus_handle,
             filter_editor,
@@ -7657,7 +7664,10 @@ impl Sidebar {
                         live_terminal_runtime.contains_key(&metadata.terminal_id),
                         host_snapshot.map(|snapshot| snapshot.session_id),
                         legacy_session_id,
-                    )?;
+                    )
+                    .or_else(|| {
+                        (APP_NAME == "Dez").then_some(TerminalEntrySourceKind::AgentPanel)
+                    })?;
                     let (workspace, source) = match source_kind {
                         TerminalEntrySourceKind::WorkspaceItem => {
                             let (live_workspace, terminal_view) = live_workspace_terminal?;
@@ -7705,10 +7715,12 @@ impl Sidebar {
                     let identity_from_live_process = agent.is_some() || foreground_kind.is_some();
                     if !terminal_entry_visible_in_session_rail(
                         APP_NAME,
-                        matches!(
-                            &source,
-                            TerminalEntrySource::AgentPanel | TerminalEntrySource::LegacySession
-                        ),
+                        APP_NAME == "Dez"
+                            || matches!(
+                                &source,
+                                TerminalEntrySource::AgentPanel
+                                    | TerminalEntrySource::LegacySession
+                            ),
                         detected_agent_kind,
                         agent.is_some(),
                     ) {
@@ -7861,7 +7873,7 @@ impl Sidebar {
                             agent.is_some() || identity_from_live_process;
                         if !terminal_entry_visible_in_session_rail(
                             APP_NAME,
-                            false,
+                            APP_NAME == "Dez",
                             detected_agent_kind,
                             agent.is_some(),
                         ) {
@@ -7936,7 +7948,7 @@ impl Sidebar {
                     let identity_from_live_process = agent.is_some() || foreground_kind.is_some();
                     if !terminal_entry_visible_in_session_rail(
                         APP_NAME,
-                        false,
+                        APP_NAME == "Dez",
                         detected_agent_kind,
                         agent.is_some(),
                     ) {
@@ -7996,7 +8008,7 @@ impl Sidebar {
                         entry.is_active_terminal(terminal.metadata.terminal_id)
                     }),
                     terminal.needs_attention || terminal.has_notification,
-                )
+                ) || APP_NAME == "Dez"
             });
             // Empty workspaces are valid terminal-first canvases. Keep hiding a
             // completely empty group, but do not discard live terminal rows just
@@ -8354,7 +8366,7 @@ impl Sidebar {
                         is_active_thread,
                         notified_threads.contains(&thread.metadata.thread_id),
                         has_reviewable_changes,
-                    )
+                    ) || APP_NAME == "Dez"
                 });
 
                 threads.sort_by(|a, b| {
@@ -8610,6 +8622,7 @@ impl Sidebar {
                 let activity_count = activity_entries.len() + external_activity_row_count;
                 let activity_disclosure_available = !is_collapsed
                     && !self.attention_only
+                    && APP_NAME != "Dez"
                     && activity_count > WORKSPACE_ACTIVITY_PREVIEW_LIMIT;
                 let activity_expanded = !activity_disclosure_available
                     || self.workspace_activity_expanded.contains(group_key);
@@ -9576,24 +9589,24 @@ impl Sidebar {
                     .flex_none()
                     .gap(px(1.0))
                     .children(
-                        workspace_header_terminal_action_visible(
+                        (workspace_header_terminal_action_visible(
                             APP_NAME,
                             has_threads || (APP_NAME == "Dez" && !external_sessions.is_empty()),
                             is_collapsed,
                             is_active,
-                        )
-                        .then(|| {
-                            self.render_new_session_button(
-                                ix,
-                                id_prefix,
-                                key,
-                                &group_name,
-                                &workspace_name,
-                                is_active,
-                                is_focused,
-                                cx,
-                            )
-                        }),
+                        ) || APP_NAME == "Dez")
+                            .then(|| {
+                                self.render_new_session_button(
+                                    ix,
+                                    id_prefix,
+                                    key,
+                                    &group_name,
+                                    &workspace_name,
+                                    is_active,
+                                    is_focused,
+                                    cx,
+                                )
+                            }),
                     )
                     .child(self.render_project_header_ellipsis_menu(
                         ix,
@@ -9641,12 +9654,13 @@ impl Sidebar {
         // stored-but-unloaded threads count toward `has_threads` but produce no
         // Activity rows, which would otherwise render an empty "Activity 0"
         // heading.
-        let workspace_activity_visible = workspace_activity_section_visible(
-            APP_NAME,
-            is_sticky,
-            is_collapsed,
-            activity_count > 0,
-        );
+        let workspace_activity_visible = APP_NAME != "Dez"
+            && workspace_activity_section_visible(
+                APP_NAME,
+                is_sticky,
+                is_collapsed,
+                activity_count > 0,
+            );
 
         if !is_sticky && !is_collapsed && !external_sessions.is_empty() {
             let external_sessions_expanded =
@@ -9874,7 +9888,7 @@ impl Sidebar {
         } else if !is_collapsed
             && !is_sticky
             && !has_threads
-            && (APP_NAME == "Dez" || (APP_NAME == "Zed" && labels_visible))
+            && ((APP_NAME == "Dez" && false) || (APP_NAME == "Zed" && labels_visible))
             && workspace_empty_terminal_row_visible_for_active_state(APP_NAME, is_active)
         {
             let configured_terminal_command = AgentSettings::get_global(cx)
@@ -13268,6 +13282,44 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if APP_NAME != "Zed" {
+            let matching_terminal_view =
+                workspace
+                    .read(cx)
+                    .items_of_type::<TerminalView>(cx)
+                    .find(|terminal_view| {
+                        standalone_terminal_id(workspace, terminal_view, cx) == metadata.terminal_id
+                            || metadata.session_ref.is_some_and(|session_ref| {
+                                terminal_view.read(cx).terminal().read(cx).session_id()
+                                    == session_ref.session_id
+                            })
+                    });
+            if let Some(terminal_view) = matching_terminal_view {
+                self.activate_workspace_terminal_item(
+                    workspace,
+                    &terminal_view,
+                    metadata,
+                    retain,
+                    true,
+                    window,
+                    cx,
+                );
+                return;
+            }
+            if let Some(session_ref) = metadata.session_ref {
+                self.attach_host_terminal_session(
+                    workspace,
+                    metadata,
+                    session_ref.session_id,
+                    retain,
+                    true,
+                    window,
+                    cx,
+                );
+                return;
+            }
+        }
+
         let Some(multi_workspace) = self.multi_workspace.upgrade() else {
             return;
         };
@@ -13285,6 +13337,20 @@ impl Sidebar {
                 multi_workspace.retain_active_workspace(cx);
             }
         });
+
+        if APP_NAME != "Zed" {
+            workspace.read(cx).focus_handle(cx).dispatch_action(
+                &NewCenterTerminal {
+                    local: false,
+                    startup_command: None,
+                    working_directory: metadata.working_directory.clone(),
+                },
+                window,
+                cx,
+            );
+            self.update_entries(cx);
+            return;
+        }
 
         Self::load_agent_terminal_in_workspace(workspace, &metadata, true, window, cx);
 
@@ -15332,6 +15398,47 @@ impl Sidebar {
                             );
                         }
                         TerminalEntrySource::AgentPanel => {
+                            if APP_NAME != "Zed" {
+                                let matching_terminal_view = workspace
+                                    .read(cx)
+                                    .items_of_type::<TerminalView>(cx)
+                                    .find(|terminal_view| {
+                                        standalone_terminal_id(workspace, terminal_view, cx)
+                                            == metadata.terminal_id
+                                            || metadata.session_ref.is_some_and(|session_ref| {
+                                                terminal_view
+                                                    .read(cx)
+                                                    .terminal()
+                                                    .read(cx)
+                                                    .session_id()
+                                                    == session_ref.session_id
+                                            })
+                                    });
+                                if let Some(terminal_view) = matching_terminal_view {
+                                    self.activate_workspace_terminal_item(
+                                        workspace,
+                                        &terminal_view,
+                                        metadata.clone(),
+                                        false,
+                                        false,
+                                        window,
+                                        cx,
+                                    );
+                                    return;
+                                }
+                                if let Some(session_ref) = metadata.session_ref {
+                                    self.attach_host_terminal_session(
+                                        workspace,
+                                        metadata.clone(),
+                                        session_ref.session_id,
+                                        false,
+                                        false,
+                                        window,
+                                        cx,
+                                    );
+                                    return;
+                                }
+                            }
                             if let Some(multi_workspace) = self.multi_workspace.upgrade() {
                                 multi_workspace.update(cx, |multi_workspace, cx| {
                                     multi_workspace.activate(workspace.clone(), None, window, cx);
@@ -16468,6 +16575,7 @@ impl Sidebar {
                 let source = terminal.source.clone();
                 move |this, _, window, cx| {
                     if !is_opening {
+                        this.selection = None;
                         this.activate_terminal_entry(
                             metadata.clone(),
                             workspace.clone(),
@@ -19353,6 +19461,9 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
+        if APP_NAME == "Dez" && !dez_installation_required(cx) {
+            return None;
+        }
         let mut notices = Vec::with_capacity(5);
         if let Some(workspace_access_status) = self.render_workspace_access_status(cx) {
             notices.push(workspace_access_status);
@@ -19413,7 +19524,7 @@ impl Sidebar {
             .collect::<Vec<_>>();
         let tab_count = pane_items.iter().map(|(_, items)| items.len()).sum();
 
-        if !workspace_tabs_section_visible(APP_NAME, tab_count) {
+        if APP_NAME == "Dez" || !workspace_tabs_section_visible(APP_NAME, tab_count) {
             return None;
         }
 
@@ -20647,8 +20758,10 @@ impl WorkspaceSidebar for Sidebar {
     }
 
     fn set_width(&mut self, width: Option<Pixels>, cx: &mut Context<Self>) {
+        self.width_set_by_user = width.is_some();
+        let default_width = AgentSettings::get_global(cx).threads_sidebar_default_width;
         let width = width
-            .unwrap_or(DEFAULT_WIDTH)
+            .unwrap_or(default_width)
             .clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
         if self.width == width {
             return;
@@ -20788,6 +20901,7 @@ impl WorkspaceSidebar for Sidebar {
     fn serialized_state(&self, _cx: &App) -> Option<String> {
         let serialized = SerializedSidebar {
             width: Some(f32::from(self.width)),
+            width_set_by_user: self.width_set_by_user,
             active_view: match self.view {
                 SidebarView::ThreadList => SerializedSidebarView::ThreadList,
                 SidebarView::Archive(_) => SerializedSidebarView::History,
@@ -20804,8 +20918,11 @@ impl WorkspaceSidebar for Sidebar {
         cx: &mut Context<Self>,
     ) {
         if let Some(serialized) = serde_json::from_str::<SerializedSidebar>(state).log_err() {
-            if let Some(width) = serialized.width {
-                self.width = px(width).clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
+            if serialized.width_set_by_user {
+                if let Some(width) = serialized.width {
+                    self.width = px(width).clamp(MIN_WIDTH, session_rail_max_width(APP_NAME));
+                    self.width_set_by_user = true;
+                }
             }
             self.manual_entry_order = serialized.manual_entry_order;
             if serialized.active_view == SerializedSidebarView::History {
@@ -21075,8 +21192,10 @@ impl Render for Sidebar {
                                                                     cx,
                                                                 ),
                                                             )
-                                                        } else {
+                                                        } else if APP_NAME == "Zed" {
                                                             this.child(self.render_no_results(cx))
+                                                        } else {
+                                                            this
                                                         }
                                                     } else {
                                                         this.when(has_workspace_rows, |this| {

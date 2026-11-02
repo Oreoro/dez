@@ -936,6 +936,7 @@ impl Pane {
                     .insert(active_item.item_id(), focused.downgrade());
             }
         } else if self.should_display_welcome_page
+            && (paths::APP_NAME == "Zed" || crate::dez_installation_required(cx))
             && let Some(welcome_page) = self.welcome_page.as_ref()
         {
             if self.focus_handle.is_focused(window) {
@@ -6598,9 +6599,14 @@ impl Render for Pane {
                                 ));
                             if self.pane_kind != PaneKind::Tabs {
                                 placeholder.child(self.render_empty_panel_state(cx))
-                            } else if self.should_render_project_launch_surface(has_worktrees) {
+                            } else if paths::APP_NAME == "Zed"
+                                && self.should_render_project_launch_surface(has_worktrees)
+                            {
                                 placeholder.child(self.render_empty_project_state(cx))
-                            } else if !self.should_display_welcome_page {
+                            } else if !self.should_display_welcome_page
+                                || (paths::APP_NAME != "Zed"
+                                    && !crate::dez_installation_required(cx))
+                            {
                                 placeholder
                             } else {
                                 if self.welcome_page.is_none() {

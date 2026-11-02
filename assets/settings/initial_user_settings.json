@@ -25,7 +25,7 @@
   "buffer_font_size": 13,
   "markdown_preview_font_size": 13.0,
   "theme": {
-    "mode": "system",
+    "mode": "dark",
     "light": "Lumin Light",
     "dark": "Lumin Blur"
   },
@@ -53,7 +53,7 @@
     "active_encoding_button": "non_utf8"
   },
   "terminal": {
-    "font_family": "Lilex",
+    "font_family": "JetBrains Mono",
     "font_size": 14,
     "line_height": "standard",
     "alternate_scroll": "on",
