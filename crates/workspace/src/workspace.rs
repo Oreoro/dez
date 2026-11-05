@@ -442,6 +442,16 @@ pub fn set_workspace_startup_state(state: WorkspaceStartupState, cx: &mut App) {
     cx.refresh_windows();
 }
 
+/// Whether Dez must be installed into /Applications before it can open a
+/// Workspace or start a terminal. Always `false` for Zed builds and for Dez
+/// instances launched from a proper installation.
+pub fn dez_installation_required(cx: &App) -> bool {
+    matches!(
+        workspace_startup_state(cx),
+        WorkspaceStartupState::InstallationRequired { .. }
+    )
+}
+
 pub fn workspace_startup_is_ready(cx: &App) -> bool {
     matches!(workspace_startup_state(cx), WorkspaceStartupState::Ready)
 }
