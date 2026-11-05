@@ -530,6 +530,7 @@ pub struct AgentSettings {
     pub dock: DockPosition,
     pub flexible: bool,
     pub default_width: Pixels,
+    pub threads_sidebar_default_width: Pixels,
     pub default_height: Pixels,
     pub max_content_width: Option<Pixels>,
     pub default_model: Option<LanguageModelSelection>,
@@ -1101,6 +1102,10 @@ impl Settings for AgentSettings {
             button: agent.button.unwrap(),
             dock: agent.dock.unwrap(),
             default_width: agent.default_width.unwrap().into_gpui(),
+            threads_sidebar_default_width: agent
+                .threads_sidebar_default_width
+                .unwrap()
+                .into_gpui(),
             default_height: agent.default_height.unwrap().into_gpui(),
             max_content_width: if agent.limit_content_width.unwrap() {
                 agent

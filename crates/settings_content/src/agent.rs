@@ -280,6 +280,11 @@ pub struct AgentSettingsContent {
     ///
     /// Default: 640
     pub default_width: Option<crate::PixelSetting>,
+    /// Default width in pixels of the native Workspaces navigator when the user
+    /// has not chosen a width.
+    ///
+    /// Default: 300
+    pub threads_sidebar_default_width: Option<crate::PixelSetting>,
     /// Default height in pixels when the agent panel is docked to the bottom.
     ///
     /// Default: 320

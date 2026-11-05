@@ -1283,6 +1283,8 @@
     "flexible": true,
     // Default width when the agent panel is docked to the left or right.
     "default_width": 640,
+    // Default width of the native Workspaces navigator when the user has not chosen one.
+    "threads_sidebar_default_width": 300,
     // Default height when the agent panel is docked to the bottom.
     "default_height": 320,
     // Whether to limit the content width in the agent panel. When enabled,
